@@ -4,13 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
-#include "ceilimGameModeBase.generated.h"
+#include "cielimGameModeBase.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class CEILIM_API AceilimGameModeBase : public AGameModeBase
+class CIELIM_API AcielimGameModeBase : public AGameModeBase
 {
 	GENERATED_BODY()
 	

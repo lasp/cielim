@@ -1,0 +1,12 @@
+diff --git a/src/google/protobuf/port_undef.inc b/src/google/protobuf/port_undef.inc
+index 82fe794b8..3516e3999 100644
+--- a/src/google/protobuf/port_undef.inc
++++ b/src/google/protobuf/port_undef.inc
+@@ -123,6 +123,6 @@
+ #endif
+ 
+ // Pop the warning(push) from port_def.inc
+-#if _MSC_VER
++#ifdef _MSC_VER
+ #pragma warning(pop)
+ #endif

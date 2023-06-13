@@ -40,6 +40,8 @@
 *.sdf
 *.VC.db
 *.VC.opendb
+.vscode
+.idea
 
 # Precompiled Assets
 SourceArt/**/*.png
@@ -72,3 +74,7 @@ Plugins/*/Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+
+*.DS_Store
+Source/ThirdParty/ProtobufLibrary/include
+*.code-workspace

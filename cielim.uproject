@@ -1,0 +1,37 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "5.2",
+	"Category": "",
+	"Description": "",
+	"Modules": [
+		{
+			"Name": "cielim",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"Engine"
+			]
+		}
+	],
+	"PreBuildSteps":
+	{
+    	"Mac": [
+        	"tcsh $(ProjectDir)\/Source\/ThirdParty\/ProtobufLibrary\/build-protobuf-library.sh \"$(ProjectDir)\/Source\/ThirdParty\/ProtobufLibrary\/\" "
+    	]
+	},
+	"Plugins": [
+		{
+			"Name": "ModelingToolsEditorMode",
+			"Enabled": true,
+			"TargetAllowList": [
+				"Editor"
+			]
+		}
+	],
+	"TargetPlatforms": [
+		"Linux",
+		"LinuxArm64",
+		"Mac",
+		"Windows"
+	]
+}
