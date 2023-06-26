@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "vizMessage.pb.h"
+#include "ProtobufReader.h"
 #include "ProtobufActor.generated.h"
 
 UCLASS()
@@ -24,4 +25,8 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
+private:
+	ProtobufReader* protobufreader;
+	vizProtobufferMessage::VizMessage vizmessage;
 };
+
