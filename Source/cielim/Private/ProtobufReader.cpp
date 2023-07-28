@@ -1,8 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
+#include "ProtobufReader.h"
 #include <iostream>
 #include <fstream>
 
-#include "ProtobufReader.h"
 
 ProtobufReader::ProtobufReader(std::string filename)
 {
