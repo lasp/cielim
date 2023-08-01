@@ -73,7 +73,13 @@ void AProtobufActor::SpawnCelestialBodies()
         FQuat q_lefthand = RightQuat2LeftQuat(q);
         FRotator celestialbodyRotation = FRotator(q_lefthand);
         // Create Celestialbody Actor instance
-        ACelestialBody* TempCb = GetWorld()->SpawnActor<ACelestialBody>(BpCelestialBody, sigma_celestialbody_lefthand, celestialbodyRotation);
+        ACelestialBody* TempCb; 
+        if (celestialbody.bodyname() == "sun") {
+            TempCb = GetWorld()->SpawnActor<ACelestialBody>(BpSun, sigma_celestialbody_lefthand, celestialbodyRotation);
+        }
+        else {
+            TempCb = GetWorld()->SpawnActor<ACelestialBody>(BpCelestialBody, sigma_celestialbody_lefthand, celestialbodyRotation);
+        }
         FString CbName = FString(celestialbody.bodyname().c_str());
         TempCb->name = CbName;
         TempCb->SetRadiusEvent(celestialbody.radiuseq());

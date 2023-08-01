@@ -39,6 +39,9 @@ public:
     TSubclassOf<ACelestialBody> BpCelestialBody;
 
     UPROPERTY(EditDefaultsOnly)
+    TSubclassOf<ACelestialBody> BpSun;
+
+    UPROPERTY(EditDefaultsOnly)
     TSubclassOf<ASpacecraft> BpSpacecraft;
 
     void DebugVizmessage();
