@@ -41,6 +41,7 @@ public:
     UPROPERTY(EditDefaultsOnly)
     TSubclassOf<ASpacecraft> BpSpacecraft;
 
+    UFUNCTION(BlueprintCallable)
     void DebugVizmessage();
 
 private:
