@@ -132,6 +132,9 @@ void AProtobufActor::SpawnSpacecraft()
     // Set camera
     if (this->hasCameras) {
         const vizProtobufferMessage::VizMessage_CameraConfig& camera = vizmessage.cameras(0);
+        TempSc->SetFOV(camera.fieldofview()); // Set camera settings
+        TempSc->SetResolution(camera.resolution(0), camera.resolution(1));
+        // Set camera location and orientation
         FVector3d sigma_camera = FVector3d(camera.camerapos_b(0), camera.camerapos_b(1), camera.camerapos_b(2));
         FVector3d sigma_camera_lefthand = Right2LeftVector(sigma_camera);
         TempSc->SetCameraPosition(sigma_camera_lefthand);

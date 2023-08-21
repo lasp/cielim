@@ -27,6 +27,12 @@ public:
     FString name;
 
     UFUNCTION(BlueprintImplementableEvent)
+    void SetFOV(const double fov);
+
+    UFUNCTION(BlueprintImplementableEvent)
+    void SetResolution(const int resolution_width, const int resolution_height);
+
+    UFUNCTION(BlueprintImplementableEvent)
     void SetCameraPosition(const FVector& Position);
 
     UFUNCTION(BlueprintImplementableEvent)
