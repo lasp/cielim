@@ -77,6 +77,9 @@ void AProtobufActor::SpawnCelestialBodies()
         if (celestialbody.bodyname() == "sun") {
             TempCb = GetWorld()->SpawnActor<ACelestialBody>(BpSun, sigma_celestialbody_lefthand, celestialbodyRotation);
         }
+        else if (celestialbody.bodyname() == "Justitia") {
+            TempCb = GetWorld()->SpawnActor<ACelestialBody>(BpAsteroid, sigma_celestialbody_lefthand, celestialbodyRotation);
+        }
         else {
             TempCb = GetWorld()->SpawnActor<ACelestialBody>(BpCelestialBody, sigma_celestialbody_lefthand, celestialbodyRotation);
         }
