@@ -19,7 +19,16 @@ AProtobufActor::AProtobufActor()
 void AProtobufActor::BeginPlay()
 {
     Super::BeginPlay();
-
+    
+    // Check for console log
+    if (FParse::Param(FCommandLine::Get(), TEXT("myflag")))
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Red, TEXT("parsed myflag"));
+    }
+    else
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Red, TEXT("No command line arguments given"));
+    }
     this->protobufreader = new ProtobufReader("simulation_protobuffer.bin");
     this->vizmessage = this->protobufreader->ReadInputData();
     // Check if message has cameras
