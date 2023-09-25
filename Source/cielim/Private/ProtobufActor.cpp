@@ -49,10 +49,6 @@ void AProtobufActor::Tick(float DeltaTime)
     // Update Actor postions and rotatons
     this->UpdateCelestialBodies();
     this->UpdateSpacecraft();
-
-    std::string debugstr = this->vizmessage.DebugString();
-    // UE_LOG(LogTemp, Warning, TEXT("vizmessage: %hs"), debugstr.c_str());
-    GEngine->AddOnScreenDebugMessage(-1, 30.f, FColor::White, FString::Printf(TEXT("vizmessage: %hs"), debugstr.c_str()));
 }
 
 /**
