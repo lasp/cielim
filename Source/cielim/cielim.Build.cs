@@ -6,7 +6,7 @@ public class cielim : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "ZeroMQ"});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { "ProtobufLibrary" });
 	}

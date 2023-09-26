@@ -3,6 +3,10 @@
 #include "ProtobufActor.h"
 #include "KinematicsUtilities.h"
 #include "Engine/World.h"
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <zmq.hpp>
 
 // Sets default values
 AProtobufActor::AProtobufActor()
@@ -15,6 +19,7 @@ AProtobufActor::AProtobufActor()
 void AProtobufActor::BeginPlay()
 {
     Super::BeginPlay();
+
     this->protobufreader = new ProtobufReader("simulation_protobuffer.bin");
     this->vizmessage = this->protobufreader->ReadInputData();
     // Check if message has cameras
@@ -23,6 +28,16 @@ void AProtobufActor::BeginPlay()
     }
     this->SpawnCelestialBodies();
     this->SpawnSpacecraft();
+    
+    int major;
+    int minor;
+    int patch;
+    zmq::version(&major, &minor, &patch);
+    UE_LOG(LogTemp, Log, TEXT("ZeroMQ version: v%d.%d.%d"), major, minor, patch);
+    
+    // Verify that the version of the library that we linked against is
+    // compatible with the version of the headers we compiled against.
+    GOOGLE_PROTOBUF_VERIFY_VERSION;
 }
 
 // Called every frame
@@ -34,7 +49,6 @@ void AProtobufActor::Tick(float DeltaTime)
     // Update Actor postions and rotatons
     this->UpdateCelestialBodies();
     this->UpdateSpacecraft();
-
 }
 
 /**
