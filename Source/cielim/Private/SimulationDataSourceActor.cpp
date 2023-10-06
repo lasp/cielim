@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "ProtobufActor.h"
+#include "SimulationDataSourceActor.h"
 #include "KinematicsUtilities.h"
 #include "Engine/World.h"
 #include <iostream>
@@ -9,29 +9,30 @@
 #include <zmq.hpp>
 
 // Sets default values
-AProtobufActor::AProtobufActor()
+ASimulationDataSourceActor::ASimulationDataSourceActor()
 {
     PrimaryActorTick.bCanEverTick = true;
 }
 
 // Called when the game starts or when spawned
-void AProtobufActor::BeginPlay()
+void ASimulationDataSourceActor::BeginPlay()
 {
     Super::BeginPlay();
-
+    
     this->bHasCameras = false;
     
-    // Check for console log
-    if (FParse::Param(FCommandLine::Get(), TEXT("myflag")))
+    FString CommAddress;
+    FString SimulationDataFile;
+    if(FParse::Value(FCommandLine::Get(), TEXT("directComm"), CommAddress))
     {
-        GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Red, TEXT("parsed myflag"));
+        
+    } else if(FParse::Value(FCommandLine::Get(), TEXT("simulationDataFile"), SimulationDataFile)) {
+        
     }
-    else
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Red, TEXT("No command line arguments given"));
-    }
-    this->Protobufreader = new ProtobufReader("protofile_proxOps.bin");
+    
+    this->Protobufreader = new ProtobufReader("simulation_protobuffer.bin");
     this->Vizmessage = this->Protobufreader->ReadInputData();
+
     // Check if message has cameras
     if (Vizmessage.cameras().size() > 0) {
         this->bHasCameras = true;
@@ -51,7 +52,7 @@ void AProtobufActor::BeginPlay()
 }
 
 // Called every frame
-void AProtobufActor::Tick(float DeltaTime)
+void ASimulationDataSourceActor::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime); 
     // Read input
@@ -100,7 +101,7 @@ FRotator GetCelestialBodyRotation(const vizProtobufferMessage::VizMessage_Celest
  * @brief SpawnCelestialBodies() Spawns all celestial bodies from the VizMessage into the level
  * 
  */
-void AProtobufActor::SpawnCelestialBodies()
+void ASimulationDataSourceActor::SpawnCelestialBodies()
 {
     for (const auto& CelestialBody : Vizmessage.celestialbodies()) {
         // Set Location 
@@ -182,7 +183,7 @@ FRotator GetCameraRotation(const vizProtobufferMessage::VizMessage_CameraConfig&
  * @brief SpawnSpacecraft() Spawns all spacecraft from the VizMessage into the level
  * 
  */
-void AProtobufActor::SpawnSpacecraft()
+void ASimulationDataSourceActor::SpawnSpacecraft()
 {
     const vizProtobufferMessage::VizMessage_Spacecraft& VizSpacecraft = Vizmessage.spacecraft(0);
     // Set Location 
@@ -211,7 +212,7 @@ void AProtobufActor::SpawnSpacecraft()
  * @brief UpdateCelestialBodies() Updates all celestial body positions and rotations
  * 
  */
-void AProtobufActor::UpdateCelestialBodies() const
+void ASimulationDataSourceActor::UpdateCelestialBodies() const
 {
     int Index = 0;
     for (const auto& CelestialBody : Vizmessage.celestialbodies()) {
@@ -226,7 +227,7 @@ void AProtobufActor::UpdateCelestialBodies() const
  * @brief UpdateSpacecraft() Updates Spacecraft and camera positions and rotations 
  * 
  */
-void AProtobufActor::UpdateSpacecraft() const
+void ASimulationDataSourceActor::UpdateSpacecraft() const 
 {
     const vizProtobufferMessage::VizMessage_Spacecraft& VizSpacecraft = Vizmessage.spacecraft(0);
     const FVector3d PositionSpacecraft = GetSpacecraftPosition(VizSpacecraft);
@@ -244,7 +245,7 @@ void AProtobufActor::UpdateSpacecraft() const
  * @brief DebugVizMessage() Prints VizMessage to the console
  * 
  */
-void AProtobufActor::DebugVizmessage() const
+void ASimulationDataSourceActor::DebugVizmessage() const
 {
     const std::string DebugStr = this->Vizmessage.DebugString();
     UE_LOG(LogTemp, Warning, TEXT("%hs"),DebugStr.c_str());

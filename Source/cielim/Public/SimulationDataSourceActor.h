@@ -10,16 +10,16 @@
 #include "ProtobufReader.h"
 #include "CelestialBody.h"
 #include "Spacecraft.h"
-#include "ProtobufActor.generated.h"
+#include "SimulationDataSourceActor.generated.h"
 
 UCLASS(Blueprintable)
-class CIELIM_API AProtobufActor : public AActor
+class CIELIM_API ASimulationDataSourceActor : public AActor
 {
     GENERATED_BODY()
     
 public:	
     // Sets default values for this actor's properties
-    AProtobufActor();
+    ASimulationDataSourceActor();
 
 protected:
     // Called when the game starts or when spawned
