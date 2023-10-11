@@ -25,7 +25,7 @@ void ACelestialBody::Tick(float DeltaTime)
  * @param NewPosition The new position
  * @param NewRotation The new rotation
  */
-void ACelestialBody::Update(const FVector3d& NewPosition, const FQuat& NewRotation)
+void ACelestialBody::Update(const FVector3d& NewPosition, const FRotator& NewRotation)
 {
     SetActorLocation(NewPosition);
     SetActorRotation(NewRotation);

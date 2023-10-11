@@ -32,6 +32,6 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     FString name;
 
-    void Update(const FVector3d& NewPosition, const FQuat& NewRotation);
+    void Update(const FVector3d& NewPosition, const FRotator& NewRotation);
 };
 
