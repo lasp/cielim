@@ -28,3 +28,16 @@ picks up your default terminal environment variables)
 
 NB: if you recieve a compilation error where certain protobuf headers aren't found, try deleting the Intermediate 
 directory and touching the `ProtobufLibrary.Build.cs` file.
+
+## Packaging Game as Standalone Build
+- Follow Guide in Unreal Documentation for [Releasing Your Project](https://docs.unrealengine.com/5.2/en-US/preparing-unreal-engine-projects-for-release/)
+  - **Note:** Set build configuration to `Developement` instead of `Shipping`
+  - In **Build** -> **Advanced Settings** make sure `Build UAT` is unchecked
+  - Under **Cooked Platforms** check `Mac`
+  - Under **Cooked Cultures** check `En`
+  - Under **Cooked Maps** check only `Lvl_Visualization`
+    - **Optional:** If you would like to build with the Main Menu UI check `Lvl_MainMenu` as well
+- Once Project Launcher has completed locate the application in `/Binaries` and launch from there
+- To use command line arguments locate application in `/Binaries` in a terminal and run:
+  - **For Mac**: 
+    - `open cielim.app --args -myflag`	
