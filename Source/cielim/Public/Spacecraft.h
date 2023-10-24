@@ -24,13 +24,13 @@ public:
     virtual void Tick(float DeltaTime) override;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-    FString name;
+    FString Name;
 
     UFUNCTION(BlueprintImplementableEvent)
-    void SetFOV(const double fov);
+    void SetFOV(const double Fov);
 
     UFUNCTION(BlueprintImplementableEvent)
-    void SetResolution(const int resolution_width, const int resolution_height);
+    void SetResolution(const int ResolutionWidth, const int ResolutionHeight);
 
     UFUNCTION(BlueprintImplementableEvent)
     void SetCameraPosition(const FVector& Position);

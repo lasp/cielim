@@ -12,13 +12,14 @@
 AProtobufActor::AProtobufActor()
 {
     PrimaryActorTick.bCanEverTick = true;
-    this->hasCameras = false;
 }
 
 // Called when the game starts or when spawned
 void AProtobufActor::BeginPlay()
 {
     Super::BeginPlay();
+
+    this->bHasCameras = false;
     
     // Check for console log
     if (FParse::Param(FCommandLine::Get(), TEXT("myflag")))
@@ -29,11 +30,15 @@ void AProtobufActor::BeginPlay()
     {
         GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::Red, TEXT("No command line arguments given"));
     }
-    this->protobufreader = new ProtobufReader("simulation_protobuffer.bin");
-    this->vizmessage = this->protobufreader->ReadInputData();
+    this->Protobufreader = new ProtobufReader("protofile_proxOps.bin");
+    this->Vizmessage = this->Protobufreader->ReadInputData();
     // Check if message has cameras
-    if (vizmessage.cameras().size() > 0) {
-        this->hasCameras = true;
+    if (Vizmessage.cameras().size() > 0) {
+        this->bHasCameras = true;
+    }
+    if (!BpCelestialBody || !BpSpacecraft) {
+        UE_LOG(LogTemp, Warning, TEXT("Defualt BluePrint Classes have not been set in BP_ProtobufActor"));
+        return;
     }
     this->SpawnCelestialBodies();
     this->SpawnSpacecraft();
@@ -43,10 +48,6 @@ void AProtobufActor::BeginPlay()
     int patch;
     zmq::version(&major, &minor, &patch);
     UE_LOG(LogTemp, Log, TEXT("ZeroMQ version: v%d.%d.%d"), major, minor, patch);
-    
-    // Verify that the version of the library that we linked against is
-    // compatible with the version of the headers we compiled against.
-    GOOGLE_PROTOBUF_VERIFY_VERSION;
 }
 
 // Called every frame
@@ -54,125 +55,154 @@ void AProtobufActor::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime); 
     // Read input
-    this->vizmessage = this->protobufreader->ReadInputData();
+    this->Vizmessage = this->Protobufreader->ReadInputData();
     // Update Actor postions and rotatons
+    if (!BpCelestialBody || !BpSpacecraft) {
+        UE_LOG(LogTemp, Warning, TEXT("Defualt BluePrint Classes have not been set in BP_ProtobufActor"));
+        return;
+    }
     this->UpdateCelestialBodies();
     this->UpdateSpacecraft();
 }
 
 /**
- * @brief CreateCelestialBodyRotationQuat(celestialbody) Creates a Celestial Body Rotation Quaternion
- * 
- * @param celestialbody A celestial body object
- * @return FQuat celestial body's Quaternion 
+ * @brief GetCelestialBodyPosition(CelestialBody) Gets the positions of a CelestialBody Object
+ * @param CelestialBody A CelestialBody Object
+ * @return FVector3d CelestialBody's position
  */
-FQuat CreateCelestialBodyRotationQuat(const vizProtobufferMessage::VizMessage_CelestialBody& celestialbody) {
-    
-    FVector Rotation1 = FVector4d(celestialbody.rotation(0), celestialbody.rotation(1), celestialbody.rotation(2), 0);
-    FVector Rotation2 = FVector4d(celestialbody.rotation(3), celestialbody.rotation(4), celestialbody.rotation(5), 0);
-    FVector Rotation3 = FVector4d(celestialbody.rotation(6), celestialbody.rotation(7), celestialbody.rotation(8), 0);
-    FVector Rotation4 = FVector4d(0, 0, 0, 1);
-    FMatrix Mat = FMatrix(Rotation1, Rotation2, Rotation3, Rotation4);
-    return FQuat(Mat);
+FVector3d GetCelestialBodyPosition(const vizProtobufferMessage::VizMessage_CelestialBody& CelestialBody)
+{
+    const FVector3d PositionCelestialBody = FVector3d(CelestialBody.position(0), CelestialBody.position(1), CelestialBody.position(2));
+    return Right2LeftVector(PositionCelestialBody);
+}  
+
+/**
+ * @brief GetCelestialBodyRotation(CelestialBody) Gets the rotation of a CelestialBody object
+ * 
+ * @param CelestialBody A CelestialBody object
+ * @return FRotator celestial body's rotation 
+ */
+FRotator GetCelestialBodyRotation(const vizProtobufferMessage::VizMessage_CelestialBody& CelestialBody)
+{
+    // Create CelestialBody Rotation Quat
+    const FVector Rotation1 = FVector4d(CelestialBody.rotation(0), CelestialBody.rotation(1), CelestialBody.rotation(2), 0);
+    const FVector Rotation2 = FVector4d(CelestialBody.rotation(3), CelestialBody.rotation(4), CelestialBody.rotation(5), 0);
+    const FVector Rotation3 = FVector4d(CelestialBody.rotation(6), CelestialBody.rotation(7), CelestialBody.rotation(8), 0);
+    const FVector Rotation4 = FVector4d(0, 0, 0, 1);
+    const FMatrix Mat = FMatrix(Rotation1, Rotation2, Rotation3, Rotation4);
+    const FQuat Q = FQuat(Mat);
+    // Get FRotator 
+    const FQuat QLeftHand = RightQuat2LeftQuat(Q);
+    return FRotator(QLeftHand);
 }
 
 /**
- * @brief SpawnCelestialBodies() Spawns all celestial bodies from the vizmessage into the level
+ * @brief SpawnCelestialBodies() Spawns all celestial bodies from the VizMessage into the level
  * 
  */
 void AProtobufActor::SpawnCelestialBodies()
 {
-    if (!BpCelestialBody) {
-        UE_LOG(LogTemp, Warning, TEXT("Defualt BpCelestialBody has not been set in BP_ProtobufActor"));
-        return;
-    }
-    for (const auto& celestialbody : vizmessage.celestialbodies()) {
-
+    for (const auto& CelestialBody : Vizmessage.celestialbodies()) {
         // Set Location 
-        FVector3d sigma_celestialbody = FVector3d(celestialbody.position(0), celestialbody.position(1), celestialbody.position(2));
-        FVector3d sigma_celestialbody_lefthand = Right2LeftVector(sigma_celestialbody);
+        FVector3d PositionCelestialBody =GetCelestialBodyPosition(CelestialBody);
         // Set Rotation
-        FQuat q = CreateCelestialBodyRotationQuat(celestialbody);
-        FQuat q_lefthand = RightQuat2LeftQuat(q);
-        FRotator celestialbodyRotation = FRotator(q_lefthand);
-        // Create Celestialbody Actor instance
-        ACelestialBody* TempCb; 
-        if (celestialbody.bodyname() == "sun") {
-            TempCb = GetWorld()->SpawnActor<ACelestialBody>(BpSun, sigma_celestialbody_lefthand, celestialbodyRotation);
+        FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
+        // Create CelestialBody Actor instance
+        ACelestialBody* TempCelestialBody; 
+        if (CelestialBody.bodyname() == "sun") {
+            TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>(BpSun, PositionCelestialBody, CelestialBodyRotation);
         }
-        else if (celestialbody.bodyname() == "Justitia") {
-            TempCb = GetWorld()->SpawnActor<ACelestialBody>(BpAsteroid, sigma_celestialbody_lefthand, celestialbodyRotation);
+        else if (CelestialBody.bodyname() == "Justitia") {
+            TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>(BpAsteroid, PositionCelestialBody, CelestialBodyRotation);
         }
         else {
-            TempCb = GetWorld()->SpawnActor<ACelestialBody>(BpCelestialBody, sigma_celestialbody_lefthand, celestialbodyRotation);
+            TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>(BpCelestialBody, PositionCelestialBody, CelestialBodyRotation);
         }
-        FString CbName = FString(celestialbody.bodyname().c_str());
-        TempCb->name = CbName;
-        TempCb->SetRadiusEvent(celestialbody.radiuseq());
-        CelestialBodyArray.Add(TempCb);
+        FString CbName = FString(CelestialBody.bodyname().c_str());
+        TempCelestialBody->Name = CbName;
+        TempCelestialBody->SetRadiusEvent(CelestialBody.radiuseq());
+        CelestialBodyArray.Add(TempCelestialBody);
     }
 }
 
 /**
- * @brief GetRotatorFromMRP(sigma) Converts an MRP into an Unreal Rotation Container (FRotator) 
+ * @brief GetRotatorFromMrp(Sigma) Converts an MRP into an Unreal Rotation Container (FRotator) 
  * 
- * @param sigma The MRP vector
- * @return FRotator Unreal Rotaiton Container
+ * @param Sigma The MRP vector
+ * @return FRotator Unreal Rotation Container
  */
-FRotator GetRotatorFromMRP(FVector3d sigma)
+FRotator GetRotatorFromMrp(const FVector3d& Sigma)
 {
-    FQuat q = MRPtoQuaternion(sigma);
-    FQuat q_lefthand = RightQuat2LeftQuat(q);
-    return FRotator(q_lefthand); 
+    FQuat Q = MRPtoQuaternion(Sigma);
+    const FQuat QLeftHand = RightQuat2LeftQuat(Q);
+    return FRotator(QLeftHand); 
 }
 
 /**
- * @brief Basilisk2UnrealCamera(sigma_CB) maps basilisk right-handed camera orientation 
- * to unreal left-handed camera orientation 
- * 
- * @param sigma_CB 
- * @return FVector3d 
+ * @brief GetSpacecraftPosition(Spacecraft) Gets the positions of a Spacecraft Object
+ * @param Spacecraft A Spacecraft Object
+ * @return FVector3d Spacecraft's position
  */
-FVector3d Basilisk2UnrealCamera(FVector3d sigma_CB)
+FVector3d GetSpacecraftPosition(const vizProtobufferMessage::VizMessage_Spacecraft& Spacecraft)
 {
-    FQuat q = MRPtoQuaternion(sigma_CB); 
-    FQuat q_temp = MRPtoQuaternion(FVector3d(-1./3, -1./3, 1./3)); // Temporary correction for Basilisk output CrCu (r unreal u basilisk)
-    FQuat q_correction = FQuat(0.5, -0.5, 0.5, 0.5);
-    return QuaterniontoMRP(q * q_correction * q_temp);
+    const FVector3d PositionSpacecraft = FVector3d(Spacecraft.position(0), Spacecraft.position(1), Spacecraft.position(2));
+    return Right2LeftVector(PositionSpacecraft);
+}
+
+
+/**
+ * @brief GetCameraPosition(Camera) Gets the position of a Camera Object
+ * @param Camera A Camera Object
+ * @return FVector3d Camera's position
+ */
+FVector3d GetCameraPosition(const vizProtobufferMessage::VizMessage_CameraConfig& Camera)
+{
+    const FVector3d SigmaCamera = FVector3d(Camera.camerapos_b(0), Camera.camerapos_b(1), Camera.camerapos_b(2));
+    return Right2LeftVector(SigmaCamera);
+}
+
+
+/**
+ * @brief GetCameraRotation(Camera) Gets the rotation of a Camera Object
+ * @param Camera A Camera Object
+ * @return FRotator Camera's Rotation
+ */
+FRotator GetCameraRotation(const vizProtobufferMessage::VizMessage_CameraConfig& Camera)
+{
+    // Map basilisk right-handed camera orientation to unreal left-handed camera orientation
+    const FVector3d SigmaCB = FVector3d(Camera.cameradir_b(0), Camera.cameradir_b(1), Camera.cameradir_b(2));
+    const FQuat Q = MRPtoQuaternion(SigmaCB); 
+    const FQuat QTemp = MRPtoQuaternion(FVector3d(-1./3, -1./3, 1./3)); // Temporary correction for Basilisk output CrCu (r unreal u basilisk)
+    const FQuat QCorrection = FQuat(0.5, -0.5, 0.5, 0.5);
+    const FVector3d SigmaCorrection = QuaterniontoMRP(Q * QCorrection * QTemp);
+    return GetRotatorFromMrp(SigmaCorrection);
 }
 
 /**
- * @brief SpawnSpacecraft() Spawns all spacecraft from the vizmessage into the level
+ * @brief SpawnSpacecraft() Spawns all spacecraft from the VizMessage into the level
  * 
  */
 void AProtobufActor::SpawnSpacecraft()
 {
-    if (!BpSpacecraft) {
-        UE_LOG(LogTemp, Warning, TEXT("Defualt BpSpacecraft has not been set in BP_ProtobufActor"));
-        return;
-    }
-    const vizProtobufferMessage::VizMessage_Spacecraft& spacecraft = vizmessage.spacecraft(0);
+    const vizProtobufferMessage::VizMessage_Spacecraft& VizSpacecraft = Vizmessage.spacecraft(0);
     // Set Location 
-    FVector3d sigma_spacecraft = FVector3d(spacecraft.position(0), spacecraft.position(1), spacecraft.position(2));
-    FVector3d sigma_spacecraft_lefthand = Right2LeftVector(sigma_spacecraft);
+    const FVector3d PositionSpacecraft = GetSpacecraftPosition(VizSpacecraft);
     // Set Rotation
-    FRotator spacecraftRotation = GetRotatorFromMRP(FVector3d(spacecraft.rotation(0), spacecraft.rotation(1), spacecraft.rotation(2)));
-    FString ScName = FString(spacecraft.spacecraftname().c_str());
+    const FRotator SpacecraftRotation = GetRotatorFromMrp(FVector3d(VizSpacecraft.rotation(0), VizSpacecraft.rotation(1), VizSpacecraft.rotation(2)));
+    FString ScName = FString(VizSpacecraft.spacecraftname().c_str());
     // Create Spacecraft Actor instance
-    ASpacecraft* TempSc = GetWorld()->SpawnActor<ASpacecraft>(BpSpacecraft, sigma_spacecraft_lefthand, spacecraftRotation);
-    TempSc->name = ScName;
+    ASpacecraft* TempSc = GetWorld()->SpawnActor<ASpacecraft>(BpSpacecraft, PositionSpacecraft, SpacecraftRotation);
+    TempSc->Name = ScName;
     // Set camera
-    if (this->hasCameras) {
-        const vizProtobufferMessage::VizMessage_CameraConfig& camera = vizmessage.cameras(0);
-        TempSc->SetFOV(camera.fieldofview()); // Set camera settings
-        TempSc->SetResolution(camera.resolution(0), camera.resolution(1));
+    if (this->bHasCameras) {
+        const vizProtobufferMessage::VizMessage_CameraConfig& Camera = Vizmessage.cameras(0);
+        TempSc->SetFOV(Camera.fieldofview()); // Set camera settings
+        TempSc->SetResolution(Camera.resolution(0), Camera.resolution(1));
         // Set camera location and orientation
-        FVector3d sigma_camera = FVector3d(camera.camerapos_b(0), camera.camerapos_b(1), camera.camerapos_b(2));
-        FVector3d sigma_camera_lefthand = Right2LeftVector(sigma_camera);
-        TempSc->SetCameraPosition(sigma_camera_lefthand);
-        FVector3d sigma_correction = Basilisk2UnrealCamera(FVector3d(camera.cameradir_b(0), camera.cameradir_b(1), camera.cameradir_b(2)));
-        FRotator cameraRotation = GetRotatorFromMRP(sigma_correction);
-        TempSc->UpdateCameraOrientation(cameraRotation);
+        const FVector3d CameraPosition = GetCameraPosition(Camera);
+        TempSc->SetCameraPosition(CameraPosition);
+        const FRotator CameraRotation = GetCameraRotation(Camera);
+        TempSc->UpdateCameraOrientation(CameraRotation);
     }
     this->Spacecraft = TempSc;
 }
@@ -181,18 +211,14 @@ void AProtobufActor::SpawnSpacecraft()
  * @brief UpdateCelestialBodies() Updates all celestial body positions and rotations
  * 
  */
-void AProtobufActor::UpdateCelestialBodies() 
+void AProtobufActor::UpdateCelestialBodies() const
 {
-    if (BpCelestialBody) {
-        int CBindex = 0;
-        for (const auto& celestialbody : vizmessage.celestialbodies()) {
-            FVector3d sigma_celestialbody = FVector3d(celestialbody.position(0), celestialbody.position(1), celestialbody.position(2));
-            FVector3d sigma_celestialbody_lefthand = Right2LeftVector(sigma_celestialbody);
-            FQuat celestialbodyRotation = CreateCelestialBodyRotationQuat(celestialbody);
-            FQuat celestialbodyRotation_lefthand = RightQuat2LeftQuat(celestialbodyRotation);
-            CelestialBodyArray[CBindex]->Update(sigma_celestialbody_lefthand, celestialbodyRotation);
-            CBindex ++;
-        }
+    int Index = 0;
+    for (const auto& CelestialBody : Vizmessage.celestialbodies()) {
+        FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
+        FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
+        CelestialBodyArray[Index]->Update(PositionCelestialBody, CelestialBodyRotation);
+        Index ++;
     }
 }
 
@@ -200,32 +226,27 @@ void AProtobufActor::UpdateCelestialBodies()
  * @brief UpdateSpacecraft() Updates Spacecraft and camera positions and rotations 
  * 
  */
-void AProtobufActor::UpdateSpacecraft() 
+void AProtobufActor::UpdateSpacecraft() const
 {
-    if (BpSpacecraft) {
-        const vizProtobufferMessage::VizMessage_Spacecraft& spacecraft = vizmessage.spacecraft(0);
-        FVector3d sigma_spacecraft = FVector3d(spacecraft.position(0), spacecraft.position(1), spacecraft.position(2));
-        FVector3d sigma_spacecraft_lefthand = Right2LeftVector(sigma_spacecraft);
-        FRotator spacecraftRotation = GetRotatorFromMRP(FVector3d(spacecraft.rotation(0), spacecraft.rotation(1), spacecraft.rotation(2)));
-        this->Spacecraft->Update(sigma_spacecraft_lefthand, spacecraftRotation);
-
-        // Update camera
-        if (this->hasCameras) {
-            const vizProtobufferMessage::VizMessage_CameraConfig& camera = vizmessage.cameras(0);
-            FVector3d sigma_correction = Basilisk2UnrealCamera(FVector3d(camera.cameradir_b(0), camera.cameradir_b(1), camera.cameradir_b(2)));
-            FRotator cameraRotation = GetRotatorFromMRP(sigma_correction);
-            this->Spacecraft->UpdateCameraOrientation(cameraRotation);
-        }
+    const vizProtobufferMessage::VizMessage_Spacecraft& VizSpacecraft = Vizmessage.spacecraft(0);
+    const FVector3d PositionSpacecraft = GetSpacecraftPosition(VizSpacecraft);
+    const FRotator SpacecraftRotation = GetRotatorFromMrp(FVector3d(VizSpacecraft.rotation(0), VizSpacecraft.rotation(1), VizSpacecraft.rotation(2)));
+    this->Spacecraft->Update(PositionSpacecraft, SpacecraftRotation);
+    // Update camera
+    if (this->bHasCameras) {
+        const vizProtobufferMessage::VizMessage_CameraConfig& Camera = Vizmessage.cameras(0);
+        const FRotator CameraRotation = GetCameraRotation(Camera);
+        this->Spacecraft->UpdateCameraOrientation(CameraRotation);
     }
 }
 
 /**
- * @brief DebugVizmessage() Prints vizmessage to the console
+ * @brief DebugVizMessage() Prints VizMessage to the console
  * 
  */
-void AProtobufActor::DebugVizmessage()
+void AProtobufActor::DebugVizmessage() const
 {
-    std::string debugstr = this->vizmessage.DebugString();
-    UE_LOG(LogTemp, Warning, TEXT("%hs"),debugstr.c_str());
+    const std::string DebugStr = this->Vizmessage.DebugString();
+    UE_LOG(LogTemp, Warning, TEXT("%hs"),DebugStr.c_str());
 }
 

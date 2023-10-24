@@ -30,8 +30,8 @@ public:
     virtual void Tick(float DeltaTime) override;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-    FString name;
+    FString Name;
 
-    void Update(const FVector3d& NewPosition, const FQuat& NewRotation);
+    void Update(const FVector3d& NewPosition, const FRotator& NewRotation);
 };
 

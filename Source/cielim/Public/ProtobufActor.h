@@ -32,8 +32,8 @@ public:
     void SpawnCelestialBodies();
     void SpawnSpacecraft();
 
-    void UpdateCelestialBodies();
-    void UpdateSpacecraft();
+    void UpdateCelestialBodies() const;
+    void UpdateSpacecraft() const;
 
     UPROPERTY(EditDefaultsOnly)
     TSubclassOf<ACelestialBody> BpCelestialBody;
@@ -48,13 +48,13 @@ public:
     TSubclassOf<ASpacecraft> BpSpacecraft;
 
     UFUNCTION(BlueprintCallable)
-    void DebugVizmessage();
+    void DebugVizmessage() const;
 
 private:
-    ProtobufReader* protobufreader;
-    vizProtobufferMessage::VizMessage vizmessage;
+    ProtobufReader* Protobufreader;
+    vizProtobufferMessage::VizMessage Vizmessage;
     TArray<ACelestialBody*> CelestialBodyArray;
     ASpacecraft* Spacecraft;
-    bool hasCameras;
+    bool bHasCameras;
 };
 
