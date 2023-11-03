@@ -1,10 +1,24 @@
 #include "Spacecraft.h"
 
+#include "Components/StaticMeshComponent.h"
+#include "Components/SceneCaptureComponent2D.h"
+
 // Sets default values
 ASpacecraft::ASpacecraft()
 {
     // Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
     PrimaryActorTick.bCanEverTick = true;
+
+    Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+    RootComponent = Root;
+
+    Body = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Body"));
+    // RootComponent = Body;
+    Body->SetupAttachment(RootComponent);
+
+    SceneCaptureComponent2D = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCaptureComponent2D"));
+    // Add settings
+    SceneCaptureComponent2D->SetupAttachment(Body);
 }
 
 // Called when the game starts or when spawned
