@@ -42,6 +42,10 @@ void AProtobufActor::BeginPlay()
     }
     this->SpawnCelestialBodies();
     this->SpawnSpacecraft();
+    if (bHasCameras)
+    {
+        this->SpawnCaptureManager();
+    }
     
     int major;
     int minor;
@@ -206,6 +210,14 @@ void AProtobufActor::SpawnSpacecraft()
     }
     this->Spacecraft = TempSc;
 }
+
+void AProtobufActor::SpawnCaptureManager()
+{
+    CaptureManager = GetWorld()->SpawnActor<ACaptureManager>();
+    CaptureManager->SetupRenderTarget(Spacecraft->SceneCaptureComponent2D->TextureTarget);
+    UE_LOG(LogTemp, Warning, TEXT("Set Capture Texture Target"));
+}
+
 
 /**
  * @brief UpdateCelestialBodies() Updates all celestial body positions and rotations
