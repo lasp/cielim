@@ -51,6 +51,12 @@ void ASimulationDataSourceActor::BeginPlay()
     }
     // this->SpawnCelestialBodies();
     // this->SpawnSpacecraft();
+    this->SpawnCelestialBodies();
+    this->SpawnSpacecraft();
+    if (bHasCameras)
+    {
+        this->SpawnCaptureManager();
+    }
     
     int major;
     int minor;
@@ -231,6 +237,14 @@ void ASimulationDataSourceActor::SpawnSpacecraft()
     }
     this->Spacecraft = TempSc;
 }
+
+void ASimulationDataSourceActor::SpawnCaptureManager()
+{
+    CaptureManager = GetWorld()->SpawnActor<ACaptureManager>();
+    CaptureManager->SetupRenderTarget(Spacecraft->SceneCaptureComponent2D->TextureTarget);
+    UE_LOG(LogTemp, Warning, TEXT("Set Capture Texture Target"));
+}
+
 
 /**
  * @brief UpdateCelestialBodies() Updates all celestial body positions and rotations

@@ -12,6 +12,7 @@
 #include "ProtobufDirectCommReader.h"
 #include "CelestialBody.h"
 #include "Spacecraft.h"
+#include "CaptureManager.h"
 #include "SimulationDataSourceActor.generated.h"
 
 UCLASS(Blueprintable)
@@ -33,6 +34,7 @@ public:
 
     void SpawnCelestialBodies();
     void SpawnSpacecraft();
+    void SpawnCaptureManager();
 
     void UpdateCelestialBodies() const;
     void UpdateSpacecraft() const;
@@ -57,6 +59,7 @@ private:
     vizProtobufferMessage::VizMessage Vizmessage;
     TArray<ACelestialBody*> CelestialBodyArray;
     ASpacecraft* Spacecraft;
+    ACaptureManager* CaptureManager;
     bool bHasCameras;
     bool IsCelestialBodiesSpawned=false;
     bool IsSpacecraftSpawned=false;
