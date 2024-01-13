@@ -17,7 +17,7 @@ create an issue.
 	from a manual invocaiton of the build from the terminal (replacing any user specific paths) invoke the following
 	- `/Users/Shared/Epic\ Games/UE_5.2/Engine/Binaries/ThirdParty/DotNet/6.0.302/mac-arm64/dotnet 
 	"/Users/Shared/Epic\ Games/UE_5.2/Engine/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll" 
-	Development Mac -Project=/Users/pake0095/Documents/Repositories/cielim/cielim.uproject -TargetType=Editor 
+	Development Mac -Project=/Users/<user_name>/Documents/Repositories/cielim/cielim.uproject -TargetType=Editor 
 	-Progress -NoEngineChanges -NoHotReloadFromIDE`
 - Generate project files
     - From the editor Tools > Refresh/Generate Visual Studio Code Project
