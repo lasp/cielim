@@ -25,13 +25,21 @@ void ASimulationDataSourceActor::BeginPlay()
     FString SimulationDataFile;
     if(FParse::Value(FCommandLine::Get(), TEXT("directComm"), CommAddress))
     {
-        
+        UE_LOG(LogTemp, Log, TEXT("Parsed command line parameter (directComm) : %s"), *CommAddress);
+        this->SimulationDataSource = std::make_unique<ProtobufDirectCommReader>(
+            std::string(TCHAR_TO_UTF8(*CommAddress)),
+            GetWorld());    
     } else if(FParse::Value(FCommandLine::Get(), TEXT("simulationDataFile"), SimulationDataFile)) {
-        
+        UE_LOG(LogTemp, Log, TEXT("Parsed command line parameter (simulationDataFile) : %s"), *SimulationDataFile);
+        this->SimulationDataSource = std::make_unique<ProtobufFileReader>(std::string(TCHAR_TO_UTF8(*SimulationDataFile)));
+        this->Vizmessage = this->SimulationDataSource->GetNextSimulationData();
+    } else {
+        UE_LOG(LogTemp, Error, TEXT("Did not receive start up mode from command line parameter"));
+        UE_LOG(LogTemp, Log, TEXT("Defaulted to (simulationDataFile) : %s"), "simulation_protobuffer.bin");
+        this->SimulationDataSource = std::make_unique<ProtobufFileReader>("simulation_protobuffer.bin");
+        this->Vizmessage = this->SimulationDataSource->GetNextSimulationData();
     }
-    
-    this->Protobufreader = new ProtobufFileReader("simulation_protobuffer.bin");
-    this->Vizmessage = this->Protobufreader->GetNextSimulationData();
+
 
     // Check if message has cameras
     if (Vizmessage.cameras().size() > 0) {
@@ -41,8 +49,8 @@ void ASimulationDataSourceActor::BeginPlay()
         UE_LOG(LogTemp, Warning, TEXT("Defualt BluePrint Classes have not been set in BP_ProtobufActor"));
         return;
     }
-    this->SpawnCelestialBodies();
-    this->SpawnSpacecraft();
+    // this->SpawnCelestialBodies();
+    // this->SpawnSpacecraft();
     
     int major;
     int minor;
@@ -55,16 +63,28 @@ void ASimulationDataSourceActor::BeginPlay()
 void ASimulationDataSourceActor::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime); 
-    // Read input
-    this->Vizmessage = this->Protobufreader->GetNextSimulationData();
 
-    // Update Actor postions and rotatons
-    if (!BpCelestialBody || !BpSpacecraft) {
-        UE_LOG(LogTemp, Warning, TEXT("Defualt BluePrint Classes have not been set in BP_ProtobufActor"));
-        return;
+    this->Vizmessage = this->SimulationDataSource->GetNextSimulationData();
+
+    // Check if message has cameras
+    if (Vizmessage.cameras().size() > 0) {
+        this->bHasCameras = true;
     }
-    this->UpdateCelestialBodies();
-    this->UpdateSpacecraft();
+    if (!this->IsSpacecraftSpawned && !this->Vizmessage.spacecraft().empty()) {
+        this->SpawnSpacecraft();
+        this->IsSpacecraftSpawned = true;
+    }
+    if (!this->IsCelestialBodiesSpawned && !this->Vizmessage.celestialbodies().empty()) {
+        this->SpawnCelestialBodies();
+        this->IsCelestialBodiesSpawned = true;
+    }
+    
+    if (!this->Vizmessage.spacecraft().empty() && this->IsSpacecraftSpawned) {
+        this->UpdateSpacecraft();
+    }
+    if (!this->Vizmessage.celestialbodies().empty() && this->IsCelestialBodiesSpawned) { 
+        this->UpdateCelestialBodies();
+    }
 }
 
 /**
@@ -115,6 +135,9 @@ void ASimulationDataSourceActor::SpawnCelestialBodies()
             TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>(BpSun, PositionCelestialBody, CelestialBodyRotation);
         }
         else if (CelestialBody.bodyname() == "Justitia") {
+            TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>(BpAsteroid, PositionCelestialBody, CelestialBodyRotation);
+        }
+        else if (CelestialBody.bodyname() == "Chimera") {
             TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>(BpAsteroid, PositionCelestialBody, CelestialBodyRotation);
         }
         else {

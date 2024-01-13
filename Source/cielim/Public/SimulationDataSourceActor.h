@@ -4,10 +4,12 @@
 
 #include "Math/Vector.h"
 
+#include <memory>
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "vizMessage.pb.h"
 #include "ProtobufFileReader.h"
+#include "ProtobufDirectCommReader.h"
 #include "CelestialBody.h"
 #include "Spacecraft.h"
 #include "SimulationDataSourceActor.generated.h"
@@ -51,10 +53,12 @@ public:
     void DebugVizmessage() const;
 
 private:
-    ProtobufFileReader* Protobufreader;
+    std::unique_ptr<SimulationDataSource> SimulationDataSource;
     vizProtobufferMessage::VizMessage Vizmessage;
     TArray<ACelestialBody*> CelestialBodyArray;
     ASpacecraft* Spacecraft;
     bool bHasCameras;
+    bool IsCelestialBodiesSpawned=false;
+    bool IsSpacecraftSpawned=false;
 };
 
