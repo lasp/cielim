@@ -4,7 +4,7 @@
 #include <fstream>
 
 
-ProtobufFileReader::ProtobufFileReader(std::string filename)
+ProtobufFileReader::ProtobufFileReader(std::string filename) : SimulationDataSource(filename)
 {
     // Verify that the version of the library that we linked against is
     // compatible with the version of the headers we compiled against.
@@ -40,7 +40,7 @@ ProtobufFileReader::~ProtobufFileReader()
  * Parses data from input stream and returns vizmessage object
  *   
  */
-vizProtobufferMessage::VizMessage& ProtobufFileReader::ReadInputData()
+vizProtobufferMessage::VizMessage& ProtobufFileReader::GetNextSimulationData()
 {
     vizProtobufferMessage::VizMessage tempMessage;
     google::protobuf::util::ParseDelimitedFromCodedStream(&tempMessage, coded_input, &eof);

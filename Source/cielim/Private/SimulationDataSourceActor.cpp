@@ -31,7 +31,7 @@ void ASimulationDataSourceActor::BeginPlay()
     }
     
     this->Protobufreader = new ProtobufFileReader("simulation_protobuffer.bin");
-    this->Vizmessage = this->Protobufreader->ReadInputData();
+    this->Vizmessage = this->Protobufreader->GetNextSimulationData();
 
     // Check if message has cameras
     if (Vizmessage.cameras().size() > 0) {
@@ -56,7 +56,8 @@ void ASimulationDataSourceActor::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime); 
     // Read input
-    this->Vizmessage = this->Protobufreader->ReadInputData();
+    this->Vizmessage = this->Protobufreader->GetNextSimulationData();
+
     // Update Actor postions and rotatons
     if (!BpCelestialBody || !BpSpacecraft) {
         UE_LOG(LogTemp, Warning, TEXT("Defualt BluePrint Classes have not been set in BP_ProtobufActor"));
