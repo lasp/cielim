@@ -7,19 +7,19 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "vizMessage.pb.h"
-#include "ProtobufReader.h"
+#include "ProtobufFileReader.h"
 #include "CelestialBody.h"
 #include "Spacecraft.h"
-#include "ProtobufActor.generated.h"
+#include "SimulationDataSourceActor.generated.h"
 
 UCLASS(Blueprintable)
-class CIELIM_API AProtobufActor : public AActor
+class CIELIM_API ASimulationDataSourceActor : public AActor
 {
     GENERATED_BODY()
     
 public:	
     // Sets default values for this actor's properties
-    AProtobufActor();
+    ASimulationDataSourceActor();
 
 protected:
     // Called when the game starts or when spawned
@@ -51,7 +51,7 @@ public:
     void DebugVizmessage() const;
 
 private:
-    ProtobufReader* Protobufreader;
+    ProtobufFileReader* Protobufreader;
     vizProtobufferMessage::VizMessage Vizmessage;
     TArray<ACelestialBody*> CelestialBodyArray;
     ASpacecraft* Spacecraft;

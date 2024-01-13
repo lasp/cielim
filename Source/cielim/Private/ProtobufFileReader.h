@@ -9,17 +9,18 @@
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <google/protobuf/io/coded_stream.h>
 #include <fstream>
+#include "SimulationDataSource.h"
 
 /**
  * 
  */
-class CIELIM_API ProtobufReader
+class CIELIM_API ProtobufFileReader : public SimulationDataSource
 {
 public:
-	ProtobufReader(std::string filename);
-	~ProtobufReader();
+	ProtobufFileReader(std::string filename);
+	~ProtobufFileReader();
 
-	vizProtobufferMessage::VizMessage& ReadInputData();
+	vizProtobufferMessage::VizMessage& GetNextSimulationData();
 
 	bool get_eof() const { return eof; }
 
