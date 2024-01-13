@@ -30,7 +30,7 @@ void ASimulationDataSourceActor::BeginPlay()
         
     }
     
-    this->Protobufreader = new ProtobufReader("simulation_protobuffer.bin");
+    this->Protobufreader = new ProtobufFileReader("simulation_protobuffer.bin");
     this->Vizmessage = this->Protobufreader->ReadInputData();
 
     // Check if message has cameras

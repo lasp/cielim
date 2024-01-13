@@ -1,10 +1,10 @@
 // Fill out your copyright notice in the Description page of Project Settings.
-#include "ProtobufReader.h"
+#include "ProtobufFileReader.h"
 #include <iostream>
 #include <fstream>
 
 
-ProtobufReader::ProtobufReader(std::string filename)
+ProtobufFileReader::ProtobufFileReader(std::string filename)
 {
     // Verify that the version of the library that we linked against is
     // compatible with the version of the headers we compiled against.
@@ -26,7 +26,7 @@ ProtobufReader::ProtobufReader(std::string filename)
     this->coded_input = new google::protobuf::io::CodedInputStream(raw_input);
 }
 
-ProtobufReader::~ProtobufReader()
+ProtobufFileReader::~ProtobufFileReader()
 {
     // Optional:  Delete all global objects allocated by libprotobuf.
     google::protobuf::ShutdownProtobufLibrary();
@@ -40,7 +40,7 @@ ProtobufReader::~ProtobufReader()
  * Parses data from input stream and returns vizmessage object
  *   
  */
-vizProtobufferMessage::VizMessage& ProtobufReader::ReadInputData()
+vizProtobufferMessage::VizMessage& ProtobufFileReader::ReadInputData()
 {
     vizProtobufferMessage::VizMessage tempMessage;
     google::protobuf::util::ParseDelimitedFromCodedStream(&tempMessage, coded_input, &eof);

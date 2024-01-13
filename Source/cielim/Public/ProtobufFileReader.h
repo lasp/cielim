@@ -13,11 +13,11 @@
 /**
  * 
  */
-class CIELIM_API ProtobufReader
+class CIELIM_API ProtobufFileReader
 {
 public:
-	ProtobufReader(std::string filename);
-	~ProtobufReader();
+	ProtobufFileReader(std::string filename);
+	~ProtobufFileReader();
 
 	vizProtobufferMessage::VizMessage& ReadInputData();
 

@@ -7,7 +7,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "vizMessage.pb.h"
-#include "ProtobufReader.h"
+#include "ProtobufFileReader.h"
 #include "CelestialBody.h"
 #include "Spacecraft.h"
 #include "SimulationDataSourceActor.generated.h"
@@ -51,7 +51,7 @@ public:
     void DebugVizmessage() const;
 
 private:
-    ProtobufReader* Protobufreader;
+    ProtobufFileReader* Protobufreader;
     vizProtobufferMessage::VizMessage Vizmessage;
     TArray<ACelestialBody*> CelestialBodyArray;
     ASpacecraft* Spacecraft;
