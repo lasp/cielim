@@ -34,19 +34,18 @@ public:
 	std::string ConnectionAddress;
 	std::shared_ptr<CielimCircularQueue> MultiThreadDataQueue = nullptr;
 
-//Multi-Threading
-public:
-	
-	//Game Thread
+	//
+	// Multi-Threading
+	//
 	static int32 ThreadNameCounter;
 	std::unique_ptr<Connector> ConnectorThread = nullptr;
 	
-	void ThreadInit();
-	void ThreadShutdown();
+	void ConnectorThreadInit();
+	void ConnectorThreadShutdown();
 	
 	// Do not call BP callable functions or do anything that interacts with the game, from a thread
 	// that is not the game's main thread
-	void ThreadTick();
+	void ConnectorThreadTick();
 	
 	virtual void BeginPlay() override;
 	

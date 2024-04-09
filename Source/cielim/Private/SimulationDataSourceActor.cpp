@@ -2,11 +2,11 @@
 
 #include "SimulationDataSourceActor.h"
 
-#include "CielimLoggingMacros.h"
 #include "KinematicsUtilities.h"
 #include "ProtobufFileReader.h"
 #include "ZmqConnection/ZmqMultiThreadActor.h"
 #include "Engine/World.h"
+#include "CielimLoggingMacros.h"
 #include <zmq.hpp>
 #include "ZmqConnection/Commands.h"
 
@@ -197,11 +197,13 @@ void ASimulationDataSourceActor::Tick(float DeltaTime)
  * @param CelestialBody A CelestialBody Object
  * @return FVector3d CelestialBody's position
  */
-FVector3d GetCelestialBodyPosition(const vizProtobufferMessage::VizMessage_CelestialBody& CelestialBody)
+FVector3d GetCelestialBodyPosition(const vizProtobufferMessage::VizMessage_CelestialBody &CelestialBody)
 {
-    const FVector3d PositionCelestialBody = FVector3d(CelestialBody.position(0), CelestialBody.position(1), CelestialBody.position(2));
-    return Right2LeftVector(PositionCelestialBody);
-}  
+	const FVector3d PositionCelestialBody = FVector3d(CelestialBody.position(0),
+	                                                  CelestialBody.position(1),
+	                                                  CelestialBody.position(2));
+	return Right2LeftVector(PositionCelestialBody);
+}
 
 /**
  * @brief GetCelestialBodyRotation(CelestialBody) Gets the rotation of a CelestialBody object
@@ -209,18 +211,27 @@ FVector3d GetCelestialBodyPosition(const vizProtobufferMessage::VizMessage_Celes
  * @param CelestialBody A CelestialBody object
  * @return FRotator celestial body's rotation 
  */
-FRotator GetCelestialBodyRotation(const vizProtobufferMessage::VizMessage_CelestialBody& CelestialBody)
+FRotator GetCelestialBodyRotation(const vizProtobufferMessage::VizMessage_CelestialBody &CelestialBody)
 {
-    // Create CelestialBody Rotation Quat
-    const FVector Rotation1 = FVector4d(CelestialBody.rotation(0), CelestialBody.rotation(1), CelestialBody.rotation(2), 0);
-    const FVector Rotation2 = FVector4d(CelestialBody.rotation(3), CelestialBody.rotation(4), CelestialBody.rotation(5), 0);
-    const FVector Rotation3 = FVector4d(CelestialBody.rotation(6), CelestialBody.rotation(7), CelestialBody.rotation(8), 0);
-    const FVector Rotation4 = FVector4d(0, 0, 0, 1);
-    const FMatrix Mat = FMatrix(Rotation1, Rotation2, Rotation3, Rotation4);
-    const FQuat Q = FQuat(Mat);
-    // Get FRotator 
-    const FQuat QLeftHand = RightQuat2LeftQuat(Q);
-    return FRotator(QLeftHand);
+	// Create CelestialBody Rotation Quat
+	const FVector Rotation1 = FVector4d(CelestialBody.rotation(0),
+	                                    CelestialBody.rotation(1),
+	                                    CelestialBody.rotation(2),
+	                                    0);
+	const FVector Rotation2 = FVector4d(CelestialBody.rotation(3),
+	                                    CelestialBody.rotation(4),
+	                                    CelestialBody.rotation(5),
+	                                    0);
+	const FVector Rotation3 = FVector4d(CelestialBody.rotation(6),
+	                                    CelestialBody.rotation(7),
+	                                    CelestialBody.rotation(8),
+	                                    0);
+	const FVector Rotation4 = FVector4d(0, 0, 0, 1);
+	const FMatrix Mat = FMatrix(Rotation1, Rotation2, Rotation3, Rotation4);
+	const FQuat Q = FQuat(Mat);
+	// Get FRotator 
+	const FQuat QLeftHand = RightQuat2LeftQuat(Q);
+	return FRotator(QLeftHand);
 }
 
 /**
@@ -343,7 +354,6 @@ void ASimulationDataSourceActor::UpdateSpacecraft() const
  */
 void ASimulationDataSourceActor::DebugVizmessage() const
 {
-    const std::string DebugStr = this->Vizmessage.DebugString();
-    UE_LOG(LogTemp, Warning, TEXT("%hs"),DebugStr.c_str());
+	const std::string DebugStr = this->Vizmessage.DebugString();
+	UE_LOG(LogCielim, Display, TEXT("%hs"), DebugStr.c_str());
 }
-
