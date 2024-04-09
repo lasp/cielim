@@ -18,6 +18,8 @@ public:
 	~AZmqMultiThreadActor()=default;
 	
 	std::optional<FCircularQueueData> GetQueueData() const;
+	void PutQueueData(std::string Data) const;
+	void PutImageQueueData(const TArray64<uint8>& PNGData) const;
 	/** Start a timer in BP to *safely* check for thread updates! */
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category=Cielim)
 	void StartThreadTimerUpdate();

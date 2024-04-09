@@ -92,6 +92,21 @@ std::optional<FCircularQueueData> AZmqMultiThreadActor::GetQueueData() const
 	}
 }
 
+void AZmqMultiThreadActor::PutQueueData(std::string Data) const
+{
+	FCircularQueueData NextCommand;
+	NextCommand.Query = BSKError();
+	this->MultiThreadDataQueue->Responses.Enqueue(NextCommand);
+}
+
+void AZmqMultiThreadActor::PutImageQueueData(const TArray64<uint8>& PNGData) const
+{
+	auto Query = RequestImage();
+	Query.payload = PNGData;
+	FCircularQueueData NextCommand;
+	NextCommand.Query = Query;
+	UE_LOG(LogTemp, Warning, TEXT("Enqueue image response: AZmqMultiThreadActor"));
+	this->MultiThreadDataQueue->Responses.Enqueue(NextCommand);
 }
 
 bool AZmqMultiThreadActor::IsThreadPaused()

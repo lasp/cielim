@@ -58,7 +58,6 @@ void Connector::CustomTick()
 	//1. Creates or destroys objects
 	//2. Modifies the game world in any way
 	//3. Tries to debug draw anything
-	//4. Simple raw data calculations are best!
 	this->Listen();
 }
 
@@ -138,11 +137,38 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage)
 					std::string camIDstring = TmpCommand.substr(14);
 					CameraID = std::stoi(camIDstring);
 				}
-				UE_LOG(LogTemp, Warning, TEXT("Camera ID: %d"), CameraID);
-				this->RequestImage(CameraID);
-				auto ImageTransmitStartTime = std::chrono::system_clock::now();
-				Message.pushstr("IMAGE_SUCCESS");
-				Message.pushstr("SECOND_MESSAGE");
+				UE_LOG(LogTemp, Display, TEXT("Camera ID: %d"), CameraID);
+
+				// A request is received and is put in the queue to be handled
+				// by the main (game) thread
+				auto Request = FCircularQueueData();
+				Request.Query = RequestImage();
+				bool EnqueueResult = false;
+				UE_LOG(LogTemp, Display, TEXT("Waiting to enqueue REQUEST_IMAGE..."));
+				while(!EnqueueResult)
+				{
+					// this->Wait(0.5);
+					EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(Request);
+				}
+
+				// Loop until we get the response from the main (game) thread
+				auto Response = FCircularQueueData();
+				bool DequeueResult = false;
+				UE_LOG(LogTemp, Display, TEXT("Waiting for reposnse to REQUEST_IMAGE..."));
+				while(!DequeueResult)
+				{
+					// I can call this directly so the thread blocks on the image return.
+					// This assumes that the next item placed in the queue is the image response.
+					// this->Wait(0.5);
+					DequeueResult = this->MultiThreadQueue->Responses.Dequeue(Response);
+				}
+				UE_LOG(LogTemp, Display, TEXT("Reposnse to REQUEST_IMAGE received..."));
+				
+				auto ResponseImage = std::get<RequestImage>(Response.Query);
+				Message.pushmem(ResponseImage.payload.GetData(), ResponseImage.payload.GetAllocatedSize());
+				
+				uint64_t Size = ResponseImage.payload.GetAllocatedSize();
+				Message.pushmem(&Size, sizeof(uint64_t));
 				break;
 			}
 		default:
@@ -159,25 +185,16 @@ void Connector::Listen()
 	//Very Long While Loop
 	if(IsListenerConnected)
 	{
-		// CielimLog("Listening");
 		UE_LOG(LogTemp, Warning, TEXT("Listening"));
-
-		//! Always check Your Pointers!
 		if(!this->MultiThreadQueue)
 		{
 			return;
 		}
-		   
-		//! Make sure to come all the way out of all function routines with this same check
-		//! so as to ensure thread exits as quickly as possible, allowing game thread to finish
-		//! See EndPlay for more information. 
+		
 		if(this->ThreadIsPaused())
 		{   
-			//Exit as quickly as possible!
 			return;
 		}
-		
-		FCircularQueueData threadData;	
 		
 		zmq::multipart_t Message = zmq::multipart_t(); 
 		if (!Message.recv(this->ReplySocket))
@@ -185,19 +202,8 @@ void Connector::Listen()
 			return;
 		}
 		auto Response = this->ParseMessage(Message);
-		while (this->IsListenerConnected)
-		{
-			if (Response.send(this->ReplySocket))
-			{
-				break;
-			}
-		}
+		Response.send(this->ReplySocket);
 	}
-}
-
-void Connector::RequestImage(uint32_t CameraId)
-{
-	UE_LOG(LogTemp, Warning, TEXT("Request Image"));
 }
 
 void Connector::SetThreadSafeQueue(std::shared_ptr<CielimCircularQueue> Queue)
