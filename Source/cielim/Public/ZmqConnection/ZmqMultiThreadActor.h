@@ -25,7 +25,7 @@ public:
 	void StartThreadTimerUpdate();
 	
 	UFUNCTION(BlueprintPure, Category=Cielim)
-	bool IsThreadPaused();
+	bool IsThreadPaused() const;
 	
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category=Cielim)
 	void CielimLog(const FString& Str, FLinearColor Color=FLinearColor::Yellow, float Duration=2);

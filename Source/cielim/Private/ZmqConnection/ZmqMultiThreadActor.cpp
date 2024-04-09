@@ -109,7 +109,7 @@ void AZmqMultiThreadActor::PutImageQueueData(const TArray64<uint8>& PNGData) con
 	this->MultiThreadDataQueue->Responses.Enqueue(NextCommand);
 }
 
-bool AZmqMultiThreadActor::IsThreadPaused()
+bool AZmqMultiThreadActor::IsThreadPaused() const
 {
 	if(this->ConnectorThread)
 	{

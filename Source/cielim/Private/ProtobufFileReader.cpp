@@ -11,9 +11,9 @@ ProtobufFileReader::ProtobufFileReader(std::string filename) : SimulationDataSou
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
     // Read the existing vizmessage file
-    FString ContentDir = FPaths::ProjectDir(); 
-    std::string filepath = std::string(TCHAR_TO_UTF8(*ContentDir)) + "/Content/FlybyData/bin/" + filename;
-    this->input.open(filepath, std::ios::in | std::ios::binary);
+    const FString ContentDir = FPaths::ProjectDir(); 
+    const std::string Filepath = std::string(TCHAR_TO_UTF8(*ContentDir)) + "/Content/FlybyData/bin/" + filename;
+    this->input.open(Filepath, std::ios::in | std::ios::binary);
 
     if (!this->input) 
     {
