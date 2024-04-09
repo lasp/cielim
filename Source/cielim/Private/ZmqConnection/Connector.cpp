@@ -1,5 +1,6 @@
 #include "ZmqConnection/Connector.h"
 #include "ZmqConnection/ZmqMultiThreadActor.h"
+#include "CielimLoggingMacros.h"
 #include "GenericPlatform/GenericPlatform.h"
 #include "google/protobuf/util/internal/testdata/oneofs.pb.h"
 #include <string>
@@ -35,7 +36,7 @@ void Connector::CustomTick()
 { 
 	//Throttle Thread to avoid consuming un-needed resources
 	// Set during thread startup, can be modified any time!
-	UE_LOG(LogTemp, Warning, TEXT("Connector::CustomTick"));
+	UE_LOG(LogCielim, Display, TEXT("Connector::CustomTick"));
 	if(this->ThreadTickRate.GetTotalSeconds() > 0)
 	{
 		this->Wait(this->ThreadTickRate.GetTotalSeconds());
@@ -89,7 +90,7 @@ CommandType Connector::ParseCommand(std::string CommandString)
 
 zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage) 
 {
-	UE_LOG(LogTemp, Display, TEXT("Connector::ParseMessage"));
+	UE_LOG(LogCielim, Display, TEXT("Connector::ParseMessage"));
 	zmq::multipart_t Message;
 	
 	std::string TmpCommand = RequestMessage.popstr();
@@ -99,7 +100,7 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage)
 		TrimmedCommand = "REQUEST_IMAGE";
 	}
 	FString PrintCommandString(TrimmedCommand.c_str());
-	UE_LOG(LogTemp, Warning, TEXT("Basilisk command: %s"), *PrintCommandString);
+	UE_LOG(LogCielim, Display, TEXT("Basilisk command: %s"), *PrintCommandString);
 	switch (this->ParseCommand(TrimmedCommand))
 	{
 		case CommandType::PING:
@@ -117,7 +118,7 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage)
 				command.payload = tempMessage;
 				data.Query = command;
 				bool EnqueueResult = false;
-				UE_LOG(LogTemp, Display, TEXT("Waiting to enqueue SIM_UPDATE..."));
+				UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue SIM_UPDATE..."));
 				while(!EnqueueResult)
 				{
 					EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(data);
@@ -135,14 +136,14 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage)
 					std::string camIDstring = TmpCommand.substr(14);
 					CameraID = std::stoi(camIDstring);
 				}
-				UE_LOG(LogTemp, Display, TEXT("Camera ID: %d"), CameraID);
+				UE_LOG(LogCielim, Display, TEXT("Camera ID: %d"), CameraID);
 
 				// A request is received and is put in the queue to be handled
 				// by the main (game) thread
 				auto Request = FCircularQueueData();
 				Request.Query = RequestImage();
 				bool EnqueueResult = false;
-				UE_LOG(LogTemp, Display, TEXT("Waiting to enqueue REQUEST_IMAGE..."));
+				UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue REQUEST_IMAGE..."));
 				while(!EnqueueResult)
 				{
 					// this->Wait(0.5);
@@ -152,7 +153,7 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage)
 				// Loop until we get the response from the main (game) thread
 				auto Response = FCircularQueueData();
 				bool DequeueResult = false;
-				UE_LOG(LogTemp, Display, TEXT("Waiting for reposnse to REQUEST_IMAGE..."));
+				UE_LOG(LogCielim, Display, TEXT("Waiting for reposnse to REQUEST_IMAGE..."));
 				while(!DequeueResult)
 				{
 					// I can call this directly so the thread blocks on the image return.
@@ -160,7 +161,7 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage)
 					// this->Wait(0.5);
 					DequeueResult = this->MultiThreadQueue->Responses.Dequeue(Response);
 				}
-				UE_LOG(LogTemp, Display, TEXT("Reposnse to REQUEST_IMAGE received..."));
+				UE_LOG(LogCielim, Display, TEXT("Reposnse to REQUEST_IMAGE received..."));
 				
 				auto ResponseImage = std::get<RequestImage>(Response.Query);
 				Message.pushmem(ResponseImage.payload.GetData(), ResponseImage.payload.GetAllocatedSize());
@@ -179,11 +180,11 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage)
 
 void Connector::Listen()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Connector::Listen"));
+	UE_LOG(LogCielim, Display, TEXT("Connector::Listen"));
 	//Very Long While Loop
 	if(IsListenerConnected)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Listening"));
+		UE_LOG(LogCielim, Display, TEXT("Listening"));
 		if(!this->MultiThreadQueue)
 		{
 			return;

@@ -19,7 +19,7 @@ ProtobufFileReader::ProtobufFileReader(std::string filename) : SimulationDataSou
     if (!this->input) 
     {
         // Print error message
-        UE_LOG(LogTemp, Warning, TEXT("Failed to open %hs"), filepath.c_str());
+        UE_LOG(LogCielim, Warning, TEXT("Failed to open %hs"), Filepath.c_str());
     }
 
     this->eof = false;
@@ -31,7 +31,7 @@ ProtobufFileReader::~ProtobufFileReader()
 {
     // Optional:  Delete all global objects allocated by libprotobuf.
     google::protobuf::ShutdownProtobufLibrary();
-    UE_LOG(LogTemp, Warning, TEXT("Protobuf Shutdown Success"));
+    UE_LOG(LogCielim, Warning, TEXT("Protobuf Shutdown Success"));
 
     delete this->raw_input;
     delete this->coded_input;
