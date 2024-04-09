@@ -64,9 +64,9 @@ private:
 	std::unique_ptr<ProtobufFileReader> SimulationDataSource;
     vizProtobufferMessage::VizMessage Vizmessage;
     TArray<ACelestialBody*> CelestialBodyArray;
-    ASpacecraft* Spacecraft;
-    ACaptureManager* CaptureManager;
-    bool bHasCameras;
+    ASpacecraft* Spacecraft=nullptr;
+    ACaptureManager* CaptureManager=nullptr;
+    bool bHasCameras=false;
     bool IsCelestialBodiesSpawned=false;
     bool IsSpacecraftSpawned=false;
     bool IsSceneEstablished=false;
