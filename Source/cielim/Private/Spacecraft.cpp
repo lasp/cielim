@@ -28,7 +28,7 @@ void ASpacecraft::BeginPlay()
 }
 
 // Called every frame
-void ASpacecraft::Tick(float DeltaTime)
+void ASpacecraft::Tick(const float DeltaTime)
 {
     Super::Tick(DeltaTime);
 }

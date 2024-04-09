@@ -14,18 +14,18 @@
 class CIELIM_API ProtobufFileReader : public SimulationDataSource
 {
 public:
-	ProtobufFileReader(std::string filename);
+	ProtobufFileReader(std::string Filename);
 	~ProtobufFileReader();
 
-	vizProtobufferMessage::VizMessage& GetNextSimulationData();
+	vizProtobufferMessage::VizMessage& GetNextSimulationData() override;
 
-	bool get_eof() const { return eof; }
+	bool get_eof() const { return Eof; }
 
 private:
-	vizProtobufferMessage::VizMessage vizmessage;
-	std::fstream input;
-	google::protobuf::io::ZeroCopyInputStream* raw_input;
-	google::protobuf::io::CodedInputStream* coded_input;
-	bool eof;
+	vizProtobufferMessage::VizMessage VizMessage;
+	std::fstream Input;
+	google::protobuf::io::ZeroCopyInputStream* RawInput;
+	google::protobuf::io::CodedInputStream* CodedInput;
+	bool Eof;
 };
 

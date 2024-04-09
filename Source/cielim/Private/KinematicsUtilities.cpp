@@ -5,23 +5,23 @@
   @param FVector3d The MRP vector
  */
 UE::Math::TMatrix<double> MRPtoDCM(FVector3d q) {
-    auto rotationMatrix = UE::Math::TRotationMatrix<double>::Make(MRPtoQuaternion(q));
-    return rotationMatrix;
+    const auto RotationMatrix = UE::Math::TRotationMatrix<double>::Make(MRPtoQuaternion(q));
+    return RotationMatrix;
 }
 
 /* MRPtoQuaternion(Q) translates the 3x1 MRP vector v into the Euler parameter (quaternion) vector.
   @return UE::Math::TQuat<double> quaternion vector
   @param FVector3d The MRP vector
  */
-UE::Math::TQuat<double> MRPtoQuaternion(FVector3d v)
+UE::Math::TQuat<double> MRPtoQuaternion(const FVector3d& v)
 {
-    double normSquared = v.SizeSquared();
-    double ps = 1 + normSquared;
-    return UE::Math::TQuat<double>(
-                2 * v.X / ps,
-                2 * v.Y / ps,
-                2 * v.Z / ps,
-                (1 - normSquared) / ps);
+    const double NormSquared = v.SizeSquared();
+    const double Ps = 1 + NormSquared;
+    return UE::Math::TQuat(
+                2 * v.X / Ps,
+                2 * v.Y / Ps,
+                2 * v.Z / Ps,
+                (1 - NormSquared) / Ps);
 }
 
 /**
@@ -30,10 +30,10 @@ UE::Math::TQuat<double> MRPtoQuaternion(FVector3d v)
  * @param q The Euler parameter (quaternion)
  * @return UE::Math::TVector<double> MRP vector 
  */
-UE::Math::TVector<double> QuaterniontoMRP(FQuat q)
+UE::Math::TVector<double> QuaterniontoMRP(const FQuat& q)
 {
-  double denom = 1 + q.W;
-  return UE::Math::TVector<double>(q.X / denom, q.Y / denom, q.Z / denom);
+  const double Denom = 1 + q.W;
+  return UE::Math::TVector<double>(q.X / Denom, q.Y / Denom, q.Z / Denom);
 }
 
 /**
@@ -42,7 +42,7 @@ UE::Math::TVector<double> QuaterniontoMRP(FQuat q)
  * @param q The right-handed quaternion
  * @return UE::Math::TQuat<double> The left-handed quaternion
  */
-UE::Math::TQuat<double> RightQuat2LeftQuat(FQuat q) 
+UE::Math::TQuat<double> RightQuat2LeftQuat(const FQuat& q) 
 {
   return UE::Math::TQuat<double>(-q.X, q.Y, -q.Z, q.W);
 }
@@ -53,7 +53,7 @@ UE::Math::TQuat<double> RightQuat2LeftQuat(FQuat q)
  * @param v The right-handed vector
  * @return UE::Math::TVector<double> The left-handed vector
  */
-UE::Math::TVector<double> Right2LeftVector(FVector3d v)
+UE::Math::TVector<double> Right2LeftVector(const FVector3d& v)
 {
   return UE::Math::TVector<double>(v.X, -v.Y, v.Z);
 }

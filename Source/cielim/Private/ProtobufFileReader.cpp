@@ -5,26 +5,25 @@
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <string>
 
-ProtobufFileReader::ProtobufFileReader(std::string filename) : SimulationDataSource(filename)
+ProtobufFileReader::ProtobufFileReader(const std::string Filename) : SimulationDataSource(Filename)
 {
     // Verify that the version of the library that we linked against is
     // compatible with the version of the headers we compiled against.
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-    // Read the existing vizmessage file
+    // Read the existing VizMessage file
     const FString ContentDir = FPaths::ProjectDir(); 
-    const std::string Filepath = std::string(TCHAR_TO_UTF8(*ContentDir)) + "/Content/FlybyData/bin/" + filename;
-    this->input.open(Filepath, std::ios::in | std::ios::binary);
+    const std::string Filepath = std::string(TCHAR_TO_UTF8(*ContentDir)) + "/Content/FlybyData/bin/" + Filename;
+    this->Input.open(Filepath, std::ios::in | std::ios::binary);
 
-    if (!this->input) 
+    if (!this->Input) 
     {
-        // Print error message
         UE_LOG(LogCielim, Warning, TEXT("Failed to open %hs"), Filepath.c_str());
     }
 
-    this->eof = false;
-    this->raw_input = new google::protobuf::io::IstreamInputStream(&this->input);
-    this->coded_input = new google::protobuf::io::CodedInputStream(raw_input);
+    this->Eof = false;
+    this->RawInput = new google::protobuf::io::IstreamInputStream(&this->Input);
+    this->CodedInput = new google::protobuf::io::CodedInputStream(RawInput);
 }
 
 ProtobufFileReader::~ProtobufFileReader()
@@ -33,8 +32,8 @@ ProtobufFileReader::~ProtobufFileReader()
     google::protobuf::ShutdownProtobufLibrary();
     UE_LOG(LogCielim, Warning, TEXT("Protobuf Shutdown Success"));
 
-    delete this->raw_input;
-    delete this->coded_input;
+    delete this->RawInput;
+    delete this->CodedInput;
 }
 
 /**
@@ -43,12 +42,11 @@ ProtobufFileReader::~ProtobufFileReader()
  */
 vizProtobufferMessage::VizMessage& ProtobufFileReader::GetNextSimulationData()
 {
-    vizProtobufferMessage::VizMessage tempMessage;
-    google::protobuf::util::ParseDelimitedFromCodedStream(&tempMessage, coded_input, &eof);
-    if (tempMessage.ByteSizeLong() != 0) {
-        this->vizmessage.Clear();
-        this->vizmessage = tempMessage;
+    vizProtobufferMessage::VizMessage TempMessage;
+    google::protobuf::util::ParseDelimitedFromCodedStream(&TempMessage, CodedInput, &Eof);
+    if (TempMessage.ByteSizeLong() != 0) {
+        this->VizMessage.Clear();
+        this->VizMessage = TempMessage;
     }
-    return this->vizmessage;
+    return this->VizMessage;
 }
-

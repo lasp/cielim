@@ -12,13 +12,12 @@ Connector::Connector(const FTimespan& ThreadTickRate,
 : Super(ThreadTickRate, ThreadDescription) 
 , Actor(Actor)
 {
-	// this->Context = std::make_shared<zmq::context_t>();
 	this->MultiThreadQueue = std::shared_ptr<CielimCircularQueue>(Queue);
-	this->context = zmq::context_t();
-	this->ReplySocket = zmq::socket_t(this->context, zmq::socket_type::rep);
+	this->Context = zmq::context_t();
+	this->ReplySocket = zmq::socket_t(this->Context, zmq::socket_type::rep);
 	this->ReplySocket.bind("tcp://127.0.0.1:5556");
 
-	FString UniqueThreadName = "ZMQ Connector ";
+	const FString UniqueThreadName = "ZMQ Connector ";
 	Thread = FRunnableThread::Create(this, 
 										*UniqueThreadName, 
 										128 * 1024,  //allocated memory
@@ -29,7 +28,6 @@ Connector::Connector(const FTimespan& ThreadTickRate,
 
 void Connector::Connect()
 {
-	// this->ReplySocket.bind("tpc://localhost:5556");
 }
 
 void Connector::CustomTick()
@@ -76,13 +74,13 @@ void Connector::ThreadShutdown()
 	//Any third party C++ to do on shutdown
 }
 
-CommandType Connector::ParseCommand(std::string CommandString)
+CommandType Connector::ParseCommand(const std::string& CommandString)
 {
 	static std::unordered_map<std::string, CommandType> const table = {{"PING", CommandType::PING},
 																	{"SIM_UPDATE", CommandType::SIM_UPDATE},
 																	{"REQUEST_IMAGE", CommandType::REQUEST_IMAGE}};
-	auto it = table.find(CommandString);
-	if (it != table.end()) {
+	
+	if (const auto it = table.find(CommandString); it != table.end()) {
 		return it->second;
 	} 
 	return CommandType::ERROR;
@@ -113,15 +111,15 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage)
 				vizProtobufferMessage::VizMessage tempMessage = vizProtobufferMessage::VizMessage();
 				// @TODO: fix this message parsing. It's a mad hack!
 				tempMessage.ParseFromArray(RequestMessage[2].data(), RequestMessage[2].size()*sizeof(char));
-				auto data = FCircularQueueData();
-				auto command = SimUpdate();
-				command.payload = tempMessage;
-				data.Query = command;
+				auto Data = FCircularQueueData();
+				auto Command = SimUpdate();
+				Command.payload = tempMessage;
+				Data.Query = Command;
 				bool EnqueueResult = false;
 				UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue SIM_UPDATE..."));
 				while(!EnqueueResult)
 				{
-					EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(data);
+					EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(Data);
 				}
 				Message.pushstr("OK");
 				break;	
@@ -129,14 +127,12 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage)
 		case CommandType::REQUEST_IMAGE:
 			{
 				// TODO get name from basilisk side and make RequestScreenshot robust to spelling mistakes
-				auto ImageRequestStartTime = std::chrono::system_clock::now();
-				//Set cameraID to message once that information is being sent in the message
+				// Set cameraID to message once that information is being sent in the message
 				uint32_t CameraID = -1;
 				if (TmpCommand.length() > 13) {
-					std::string camIDstring = TmpCommand.substr(14);
-					CameraID = std::stoi(camIDstring);
+					CameraID = std::stoi(TmpCommand.substr(14));
+					UE_LOG(LogCielim, Display, TEXT("Camera ID: %d"), CameraID);
 				}
-				UE_LOG(LogCielim, Display, TEXT("Camera ID: %d"), CameraID);
 
 				// A request is received and is put in the queue to be handled
 				// by the main (game) thread
@@ -205,7 +201,7 @@ void Connector::Listen()
 	}
 }
 
-void Connector::SetThreadSafeQueue(std::shared_ptr<CielimCircularQueue> Queue)
+void Connector::SetThreadSafeQueue(const std::shared_ptr<CielimCircularQueue>& Queue)
 {
-	this->MultiThreadQueue = std::shared_ptr<CielimCircularQueue>(Queue);
+	this->MultiThreadQueue = std::shared_ptr(Queue);
 }

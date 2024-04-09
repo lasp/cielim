@@ -19,7 +19,7 @@
  */
 FRotator GetRotatorFromMrp(const FVector3d &Sigma)
 {
-	FQuat Q = MRPtoQuaternion(Sigma);
+	const FQuat Q = MRPtoQuaternion(Sigma);
 	const FQuat QLeftHand = RightQuat2LeftQuat(Q);
 	return FRotator(QLeftHand);
 }
@@ -305,7 +305,6 @@ void ASimulationDataSourceActor::SpawnSpacecraft()
 void ASimulationDataSourceActor::SpawnCaptureManager()
 {
 	this->CaptureManager = GetWorld()->SpawnActor<ACaptureManager>();
-	// this->CaptureManager->SetupRenderTarget(Spacecraft->SceneCaptureComponent2D->TextureTarget);
 	this->CaptureManager->SetSceneCaptureComponent(this->Spacecraft->SceneCaptureComponent2D);
 	UE_LOG(LogCielim, Display, TEXT("Set Capture Texture Target"));
 }
