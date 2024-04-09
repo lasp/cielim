@@ -78,51 +78,57 @@ void Connector::ThreadShutdown()
 	//Any third party C++ to do on shutdown
 }
 
-Command Connector::ParseCommand(std::string str)
+CommandType Connector::ParseCommand(std::string CommandString)
 {
-	static std::unordered_map<std::string, Command> const table = {{"PING", Command::PING},
-																	{"SIM_UPDATE", Command::SIM_UPDATE},
-																	{"REQUEST_IMAGE", Command::REQUEST_IMAGE}};
-	auto it = table.find(str);
+	static std::unordered_map<std::string, CommandType> const table = {{"PING", CommandType::PING},
+																	{"SIM_UPDATE", CommandType::SIM_UPDATE},
+																	{"REQUEST_IMAGE", CommandType::REQUEST_IMAGE}};
+	auto it = table.find(CommandString);
 	if (it != table.end()) {
 		return it->second;
 	} 
-	return Command::ERROR;
+	return CommandType::ERROR;
 }
 
-zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& Request) 
+zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage) 
 {
-	UE_LOG(LogTemp, Warning, TEXT("Connector::ParseMessage"));
-	zmq::message_t Response;
+	UE_LOG(LogTemp, Display, TEXT("Connector::ParseMessage"));
 	zmq::multipart_t Message;
 	
-	std::string TmpCommand = Request.popstr();
-	std::string Command = TmpCommand;
+	std::string TmpCommand = RequestMessage.popstr();
+	std::string TrimmedCommand = TmpCommand;
 	if (TmpCommand.find("REQUEST_IMAGE") != std::string::npos)
 	{
-		Command = "REQUEST_IMAGE";
+		TrimmedCommand = "REQUEST_IMAGE";
 	}
-	FString PrintCommandString(Command.c_str());
+	FString PrintCommandString(TrimmedCommand.c_str());
 	UE_LOG(LogTemp, Warning, TEXT("Basilisk command: %s"), *PrintCommandString);
-	switch (this->ParseCommand(Command))
+	switch (this->ParseCommand(TrimmedCommand))
 	{
-		case Command::PING:
+		case CommandType::PING:
 			{
 				Message.pushstr("PONG");
 				break;
 			}
-		case Command::SIM_UPDATE:
+		case CommandType::SIM_UPDATE:
 			{
 				vizProtobufferMessage::VizMessage tempMessage = vizProtobufferMessage::VizMessage();
 				// @TODO: fix this message parsing. It's a mad hack!
-				tempMessage.ParseFromArray(Request[2].data(), Request[2].size()*sizeof(char));
+				tempMessage.ParseFromArray(RequestMessage[2].data(), RequestMessage[2].size()*sizeof(char));
 				auto data = FCircularQueueData();
-				data.Message = tempMessage;
-				this->MultiThreadQueue->Responses.Enqueue(data);
+				auto command = SimUpdate();
+				command.payload = tempMessage;
+				data.Query = command;
+				bool EnqueueResult = false;
+				UE_LOG(LogTemp, Display, TEXT("Waiting to enqueue SIM_UPDATE..."));
+				while(!EnqueueResult)
+				{
+					EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(data);
+				}
 				Message.pushstr("OK");
 				break;	
 			}
-		case Command::REQUEST_IMAGE:
+		case CommandType::REQUEST_IMAGE:
 			{
 				// TODO get name from basilisk side and make RequestScreenshot robust to spelling mistakes
 				auto ImageRequestStartTime = std::chrono::system_clock::now();

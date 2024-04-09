@@ -1,4 +1,7 @@
 #include "ZmqConnection/ZmqMultiThreadActor.h"
+#include <fstream>
+#include "../Public/ZmqConnection/Commands.h"
+
 
 //Static counter for thread creation process, for unique identification of the thread
 int32 AZmqMultiThreadActor::ThreadNameCounter = 0;
@@ -26,16 +29,7 @@ void AZmqMultiThreadActor::ThreadInit()
 	UE_LOG(LogTemp, Warning, TEXT("AZmqMultiThreadActor::ThreadInit"));
 	this->MultiThreadDataQueue = std::make_shared<CielimCircularQueue>();
 	
-	if(this->MultiThreadDataQueue)
-	{
-		FCircularQueueData InitialData{};
-		this->MultiThreadDataQueue->Responses.Enqueue(InitialData);
-	}
-	
-	// Don't allow starting twice!
-	// this->ThreadShutdown();
-	
-	// Thread tick rate - prevent thread from spinning if a fast update is not needed
+	// Thread tick rate to prevent thread from spinning if a fast update is not needed
 	FTimespan ThreadWaitTime = FTimespan::FromSeconds(0.01);
 	
 	FString UniqueThreadName = "ZMQ Connector ";
@@ -82,14 +76,22 @@ void AZmqMultiThreadActor::ThreadShutdown()
 	this->ConnectorThread = nullptr;
 }
 
-void AZmqMultiThreadActor::GetNextMessageFromQueue(FCircularQueueData& NewMessage)
+std::optional<FCircularQueueData> AZmqMultiThreadActor::GetQueueData() const
 {
-	if(!this->MultiThreadDataQueue)
+	if(!this->MultiThreadDataQueue || this->MultiThreadDataQueue->Requests.IsEmpty())
 	{
-		return;
+		return std::nullopt;
 	}
 	
-	this->MultiThreadDataQueue->Responses.Dequeue(NewMessage); 
+	if (FCircularQueueData NextCommand; this->MultiThreadDataQueue->Requests.Dequeue(NextCommand)) {
+		UE_LOG(LogTemp, Warning, TEXT("Dequeue command: AZmqMultiThreadActor"));
+		return NextCommand;
+	} else {
+		UE_LOG(LogTemp, Warning, TEXT("No command received: AZmqMultiThreadActor"));
+		return std::nullopt;
+	}
+}
+
 }
 
 bool AZmqMultiThreadActor::IsThreadPaused()

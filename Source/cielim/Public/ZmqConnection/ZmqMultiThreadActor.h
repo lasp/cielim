@@ -2,31 +2,34 @@
 
 #include "CielimCircularQueue.h"
 #include "Connector.h"
-
+#include "SimulationDataSource.h"
 #include "GameFramework/Actor.h"
-
+#include "vizMessage.pb.h"
+#include "Engine/World.h"
 #include "ZmqMultiThreadActor.generated.h"
 
 UCLASS()
-class CIELIM_API AZmqMultiThreadActor : public AActor
+class CIELIM_API AZmqMultiThreadActor : public AActor 
 {
 	GENERATED_BODY()
 
 public:
+	AZmqMultiThreadActor()=default;
+	~AZmqMultiThreadActor()=default;
 	
+	std::optional<FCircularQueueData> GetQueueData() const;
 	/** Start a timer in BP to *safely* check for thread updates! */
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category=Cielim)
 	void StartThreadTimerUpdate();
-	
-	UFUNCTION(BlueprintCallable, Category=Cielim)
-	void GetNextMessageFromQueue(FCircularQueueData& NewMessage);
 	
 	UFUNCTION(BlueprintPure, Category=Cielim)
 	bool IsThreadPaused();
 	
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category=Cielim)
 	void CielimLog(const FString& Str, FLinearColor Color=FLinearColor::Yellow, float Duration=2);
-	
+
+	UWorld* WorldContext = nullptr;
+	std::string ConnectionAddress;
 	std::shared_ptr<CielimCircularQueue> MultiThreadDataQueue = nullptr;
 
 //Multi-Threading

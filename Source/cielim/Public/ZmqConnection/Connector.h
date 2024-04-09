@@ -1,5 +1,6 @@
 #pragma once
 #include "ThreadBase.h"
+#include "Commands.h"
 #include "CoreMinimal.h"
 #include <zmq.hpp>
 #include <zmq_addon.hpp>
@@ -8,13 +9,7 @@
 class CielimCircularQueue;
 class AZmqMultiThreadActor;
 
-enum Command
-{
-	PING,
-	SIM_UPDATE,
-	REQUEST_IMAGE,
-	ERROR
-};
+
 
 class CIELIM_API Connector : public FThreadBase
 {
@@ -50,7 +45,7 @@ private:
 	// void ThreadTick();
 	zmq::multipart_t ParseMessage(zmq::multipart_t& Request); 
 	void RequestImage(uint32_t CameraId);
-	Command ParseCommand(std::string str);
+	CommandType ParseCommand(std::string CommandString);
 
 	std::shared_ptr<CielimCircularQueue> MultiThreadQueue = nullptr;
 	bool IsListenerConnected = false;

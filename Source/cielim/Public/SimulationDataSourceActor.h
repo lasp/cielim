@@ -8,12 +8,14 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "vizMessage.pb.h"
-#include "ProtobufFileReader.h"
-#include "ProtobufDirectCommReader.h"
 #include "CelestialBody.h"
 #include "Spacecraft.h"
 #include "CaptureManager.h"
+#include "ProtobufFileReader.h"
+#include "ZmqConnection/ZmqMultiThreadActor.h"
 #include "SimulationDataSourceActor.generated.h"
+
+enum class DataSourceType {Network, File};
 
 UCLASS(Blueprintable)
 class CIELIM_API ASimulationDataSourceActor : public AActor
@@ -55,7 +57,11 @@ public:
     void DebugVizmessage() const;
 
 private:
-    std::unique_ptr<SimulationDataSource> SimulationDataSource;
+	void NetworkTick(float DeltaTime);
+	void FileReaderTick(float DeltaTime);
+
+    std::unique_ptr<AZmqMultiThreadActor> NetworkSimulationDataSource;
+	std::unique_ptr<ProtobufFileReader> SimulationDataSource;
     vizProtobufferMessage::VizMessage Vizmessage;
     TArray<ACelestialBody*> CelestialBodyArray;
     ASpacecraft* Spacecraft;
@@ -63,5 +69,7 @@ private:
     bool bHasCameras;
     bool IsCelestialBodiesSpawned=false;
     bool IsSpacecraftSpawned=false;
+    bool IsSceneEstablished=false;
+	DataSourceType DataSource=DataSourceType::File;
 };
 
