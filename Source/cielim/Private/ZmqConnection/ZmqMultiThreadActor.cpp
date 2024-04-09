@@ -11,19 +11,19 @@ void AZmqMultiThreadActor::BeginPlay()
 	Super::BeginPlay();
 	UE_LOG(LogTemp, Warning, TEXT("AZmqMultiThreadActor::BeginPlay"));
 
-	this->ThreadInit();
+	this->ConnectorThreadInit();
 }
 
 void AZmqMultiThreadActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {   
 	//Allows thread to finish current task / tick cycle
 	//! Freezing game thread exit process in meantime
-	this->ThreadShutdown();
+	this->ConnectorThreadShutdown();
 	
 	Super::EndPlay(EndPlayReason);
 }
 
-void AZmqMultiThreadActor::ThreadInit()
+void AZmqMultiThreadActor::ConnectorThreadInit()
 {
 	//	Thread-Safe queue to pass data and commands between queue and game thread
 	UE_LOG(LogTemp, Warning, TEXT("AZmqMultiThreadActor::ThreadInit"));
@@ -40,7 +40,7 @@ void AZmqMultiThreadActor::ThreadInit()
 														this,
 														this->MultiThreadDataQueue);
 	
-	if(ConnectorThread) 
+	if(this->ConnectorThread) 
 	{ 
 		this->ConnectorThread->ThreadInit();
 		this->ConnectorThread->Init();
@@ -55,7 +55,7 @@ void AZmqMultiThreadActor::ThreadInit()
 	this->StartThreadTimerUpdate();
 }
 
-void AZmqMultiThreadActor::ThreadShutdown()
+void AZmqMultiThreadActor::ConnectorThreadShutdown()
 {
 	UE_LOG(LogTemp, Warning, TEXT("AZmqMultiThreadActor::ThreadShutdown"));
 	if(this->ConnectorThread) 

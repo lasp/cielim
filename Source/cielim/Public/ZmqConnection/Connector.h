@@ -44,7 +44,6 @@ private:
 	void Listen();
 	// void ThreadTick();
 	zmq::multipart_t ParseMessage(zmq::multipart_t& Request); 
-	void RequestImage(uint32_t CameraId);
 	CommandType ParseCommand(std::string CommandString);
 
 	std::shared_ptr<CielimCircularQueue> MultiThreadQueue = nullptr;
