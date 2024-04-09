@@ -3,13 +3,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include <string>
+#include "SimulationDataSource.h"
 #include "vizMessage.pb.h"
-#include <google/protobuf/util/delimited_message_util.h>
-#include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <google/protobuf/io/coded_stream.h>
 #include <fstream>
-#include "SimulationDataSource.h"
 
 /**
  * 

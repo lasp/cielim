@@ -1,8 +1,8 @@
 #pragma once
 
-#include <string>
 #include "CoreMinimal.h"
 #include "vizMessage.pb.h"
+#include <string>
 
 class SimulationDataSource
 {

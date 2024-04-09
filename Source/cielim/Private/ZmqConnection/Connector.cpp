@@ -1,9 +1,7 @@
 #include "ZmqConnection/Connector.h"
-
 #include "ZmqConnection/ZmqMultiThreadActor.h"
 #include "GenericPlatform/GenericPlatform.h"
 #include "google/protobuf/util/internal/testdata/oneofs.pb.h"
-
 #include <string>
 
 Connector::Connector(const FTimespan& ThreadTickRate, 

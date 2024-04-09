@@ -4,7 +4,6 @@
 #include "Connector.h"
 #include "SimulationDataSource.h"
 #include "GameFramework/Actor.h"
-#include "vizMessage.pb.h"
 #include "Engine/World.h"
 #include "ZmqMultiThreadActor.generated.h"
 

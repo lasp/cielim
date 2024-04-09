@@ -5,11 +5,8 @@
 #include <zmq.hpp>
 #include <zmq_addon.hpp>
 
-
 class CielimCircularQueue;
 class AZmqMultiThreadActor;
-
-
 
 class CIELIM_API Connector : public FThreadBase
 {

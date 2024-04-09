@@ -1,8 +1,9 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 #include "ProtobufFileReader.h"
-#include <iostream>
-#include <fstream>
-
+#include "CielimLoggingMacros.h"
+#include <google/protobuf/util/delimited_message_util.h>
+#include <google/protobuf/io/zero_copy_stream_impl.h>
+#include <string>
 
 ProtobufFileReader::ProtobufFileReader(std::string filename) : SimulationDataSource(filename)
 {

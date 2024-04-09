@@ -1,7 +1,7 @@
 #include "Spacecraft.h"
 
-#include "Components/StaticMeshComponent.h"
 #include "Components/SceneCaptureComponent2D.h"
+#include "Components/StaticMeshComponent.h"
 
 // Sets default values
 ASpacecraft::ASpacecraft()
