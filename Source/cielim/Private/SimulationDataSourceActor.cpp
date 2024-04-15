@@ -234,6 +234,18 @@ FRotator GetCelestialBodyRotation(const vizProtobufferMessage::VizMessage_Celest
 	return FRotator(QLeftHand);
 }
 
+static bool IsAsteroid(const std::string& BodyName)
+{
+	return BodyName == "Justitia"
+	|| BodyName == "Chimera"
+	|| BodyName == "Westerwald"
+	|| BodyName == "2010253"
+	|| BodyName == "88055"
+	|| BodyName == "59980"
+	|| BodyName == "Rockox"
+	|| BodyName == "Itokawa";
+}
+
 /**
  * @brief SpawnCelestialBodies() Spawns all celestial bodies from the VizMessage into the level
  * 
@@ -251,7 +263,7 @@ void ASimulationDataSourceActor::SpawnCelestialBodies()
 			TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>(BpSun,
 			                                                           PositionCelestialBody,
 			                                                           CelestialBodyRotation);
-		} else if (CelestialBody.bodyname() == "Justitia" || CelestialBody.bodyname() == "Chimera") {
+		} else if (IsAsteroid(CelestialBody.bodyname())) {
 			TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>(BpAsteroid,
 			                                                           PositionCelestialBody,
 			                                                           CelestialBodyRotation);
