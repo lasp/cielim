@@ -16,7 +16,9 @@
 	"PreBuildSteps":
 	{
     	"Mac": [
-        	"tcsh $(ProjectDir)\/Source\/ThirdParty\/ProtobufLibrary\/build-protobuf-library.sh \"$(ProjectDir)\/Source\/ThirdParty\/ProtobufLibrary\/\" "
+			"export PATH=/opt/homebrew/bin:$PATH",
+        	"tcsh $(ProjectDir)\/Source\/ThirdParty\/ProtobufLibrary\/build-protobuf-library.sh \"$(ProjectDir)\/Source\/ThirdParty\/ProtobufLibrary\/\" ",
+			"tcsh $(ProjectDir)\/Source\/ThirdParty\/ZMQ\/download-zmq-and-cppzmq.sh \"$(ProjectDir)\/Source\/ThirdParty\/ZMQ\/\" "
     	]
 	},
 	"Plugins": [
