@@ -18,7 +18,8 @@
     	"Mac": [
 			"export PATH=/opt/homebrew/bin:$PATH",
         	"tcsh $(ProjectDir)\/Source\/ThirdParty\/ProtobufLibrary\/build-protobuf-library.sh \"$(ProjectDir)\/Source\/ThirdParty\/ProtobufLibrary\/\" ",
-			"tcsh $(ProjectDir)\/Source\/ThirdParty\/ZMQ\/download-zmq-and-cppzmq.sh \"$(ProjectDir)\/Source\/ThirdParty\/ZMQ\/\" "
+			"tcsh $(ProjectDir)\/Source\/ThirdParty\/ZMQ\/download-zmq-and-cppzmq.sh \"$(ProjectDir)\/Source\/ThirdParty\/ZMQ\/\" ",
+			"tcsh $(ProjectDir)\/Source\/ThirdParty\/OpenCV\/download-and-build-opencv.sh \"$(ProjectDir)\/Source\/ThirdParty\/OpenCV\/\" "
     	]
 	},
 	"Plugins": [

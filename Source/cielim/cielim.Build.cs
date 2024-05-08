@@ -8,6 +8,6 @@ public class cielim : ModuleRules
 	
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore"});
 
-		PrivateDependencyModuleNames.AddRange(new string[] { "ProtobufLibrary", "ZMQ"});
+		PrivateDependencyModuleNames.AddRange(new string[] { "ProtobufLibrary", "ZMQ", "OpenCV"});
 	}
 }
