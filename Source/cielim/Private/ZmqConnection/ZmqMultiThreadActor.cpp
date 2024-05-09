@@ -1,4 +1,8 @@
 #include "ZmqConnection/ZmqMultiThreadActor.h"
+#include "CielimLoggingMacros.h"
+#include <fstream>
+#include "../Public/ZmqConnection/Commands.h"
+
 
 //Static counter for thread creation process, for unique identification of the thread
 int32 AZmqMultiThreadActor::ThreadNameCounter = 0;
@@ -6,36 +10,27 @@ int32 AZmqMultiThreadActor::ThreadNameCounter = 0;
 void AZmqMultiThreadActor::BeginPlay() 
 {
 	Super::BeginPlay();
-	UE_LOG(LogTemp, Warning, TEXT("AZmqMultiThreadActor::BeginPlay"));
+	UE_LOG(LogCielim, Display, TEXT("AZmqMultiThreadActor::BeginPlay"));
 
-	this->ThreadInit();
+	this->ConnectorThreadInit();
 }
 
 void AZmqMultiThreadActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {   
 	//Allows thread to finish current task / tick cycle
 	//! Freezing game thread exit process in meantime
-	this->ThreadShutdown();
+	this->ConnectorThreadShutdown();
 	
 	Super::EndPlay(EndPlayReason);
 }
 
-void AZmqMultiThreadActor::ThreadInit()
+void AZmqMultiThreadActor::ConnectorThreadInit()
 {
 	//	Thread-Safe queue to pass data and commands between queue and game thread
-	UE_LOG(LogTemp, Warning, TEXT("AZmqMultiThreadActor::ThreadInit"));
+	UE_LOG(LogCielim, Display, TEXT("AZmqMultiThreadActor::ThreadInit"));
 	this->MultiThreadDataQueue = std::make_shared<CielimCircularQueue>();
 	
-	if(this->MultiThreadDataQueue)
-	{
-		FCircularQueueData InitialData{};
-		this->MultiThreadDataQueue->Responses.Enqueue(InitialData);
-	}
-	
-	// Don't allow starting twice!
-	// this->ThreadShutdown();
-	
-	// Thread tick rate - prevent thread from spinning if a fast update is not needed
+	// Thread tick rate to prevent thread from spinning if a fast update is not needed
 	FTimespan ThreadWaitTime = FTimespan::FromSeconds(0.01);
 	
 	FString UniqueThreadName = "ZMQ Connector ";
@@ -46,24 +41,24 @@ void AZmqMultiThreadActor::ThreadInit()
 														this,
 														this->MultiThreadDataQueue);
 	
-	if(ConnectorThread) 
+	if(this->ConnectorThread) 
 	{ 
 		this->ConnectorThread->ThreadInit();
 		this->ConnectorThread->Init();
 		this->ConnectorThread->SetThreadSafeQueue(this->MultiThreadDataQueue);
 		CielimLog("Thread Initialized");
 		
-		UE_LOG(LogTemp, Warning, TEXT("Thread Initialized"));
+		UE_LOG(LogCielim, Display, TEXT("Thread Initialized"));
 	}
 	 
-	UE_LOG(LogTemp, Warning, TEXT("AZmqMultiThreadActor::ThreadInit end"));
+	UE_LOG(LogCielim, Display, TEXT("AZmqMultiThreadActor::ThreadInit end"));
 	
 	this->StartThreadTimerUpdate();
 }
 
-void AZmqMultiThreadActor::ThreadShutdown()
+void AZmqMultiThreadActor::ConnectorThreadShutdown()
 {
-	UE_LOG(LogTemp, Warning, TEXT("AZmqMultiThreadActor::ThreadShutdown"));
+	UE_LOG(LogCielim, Display, TEXT("AZmqMultiThreadActor::ThreadShutdown"));
 	if(this->ConnectorThread) 
 	{
 		this->ConnectorThread->ThreadShutdown();
@@ -82,17 +77,40 @@ void AZmqMultiThreadActor::ThreadShutdown()
 	this->ConnectorThread = nullptr;
 }
 
-void AZmqMultiThreadActor::GetNextMessageFromQueue(FCircularQueueData& NewMessage)
+std::optional<FCircularQueueData> AZmqMultiThreadActor::GetQueueData() const
 {
-	if(!this->MultiThreadDataQueue)
+	if(!this->MultiThreadDataQueue || this->MultiThreadDataQueue->Requests.IsEmpty())
 	{
-		return;
+		return std::nullopt;
 	}
 	
-	this->MultiThreadDataQueue->Responses.Dequeue(NewMessage); 
+	if (FCircularQueueData NextCommand; this->MultiThreadDataQueue->Requests.Dequeue(NextCommand)) {
+		UE_LOG(LogCielim, Display, TEXT("Dequeue command: AZmqMultiThreadActor"));
+		return NextCommand;
+	} else {
+		UE_LOG(LogCielim, Display, TEXT("No command received: AZmqMultiThreadActor"));
+		return std::nullopt;
+	}
 }
 
-bool AZmqMultiThreadActor::IsThreadPaused()
+void AZmqMultiThreadActor::PutQueueData(std::string Data) const
+{
+	FCircularQueueData NextCommand;
+	NextCommand.Query = BSKError();
+	this->MultiThreadDataQueue->Responses.Enqueue(NextCommand);
+}
+
+void AZmqMultiThreadActor::PutImageQueueData(const TArray64<uint8>& PNGData) const
+{
+	auto Query = RequestImage();
+	Query.payload = PNGData;
+	FCircularQueueData NextCommand;
+	NextCommand.Query = Query;
+	UE_LOG(LogCielim, Display, TEXT("Enqueue image response: AZmqMultiThreadActor"));
+	this->MultiThreadDataQueue->Responses.Enqueue(NextCommand);
+}
+
+bool AZmqMultiThreadActor::IsThreadPaused() const
 {
 	if(this->ConnectorThread)
 	{

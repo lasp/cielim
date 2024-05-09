@@ -1,9 +1,8 @@
 #include "ZmqConnection/Connector.h"
-
 #include "ZmqConnection/ZmqMultiThreadActor.h"
+#include "CielimLoggingMacros.h"
 #include "GenericPlatform/GenericPlatform.h"
 #include "google/protobuf/util/internal/testdata/oneofs.pb.h"
-
 #include <string>
 
 Connector::Connector(const FTimespan& ThreadTickRate, 
@@ -13,13 +12,12 @@ Connector::Connector(const FTimespan& ThreadTickRate,
 : Super(ThreadTickRate, ThreadDescription) 
 , Actor(Actor)
 {
-	// this->Context = std::make_shared<zmq::context_t>();
 	this->MultiThreadQueue = std::shared_ptr<CielimCircularQueue>(Queue);
-	this->context = zmq::context_t();
-	this->ReplySocket = zmq::socket_t(this->context, zmq::socket_type::rep);
+	this->Context = zmq::context_t();
+	this->ReplySocket = zmq::socket_t(this->Context, zmq::socket_type::rep);
 	this->ReplySocket.bind("tcp://127.0.0.1:5556");
 
-	FString UniqueThreadName = "ZMQ Connector ";
+	const FString UniqueThreadName = "ZMQ Connector ";
 	Thread = FRunnableThread::Create(this, 
 										*UniqueThreadName, 
 										128 * 1024,  //allocated memory
@@ -30,14 +28,13 @@ Connector::Connector(const FTimespan& ThreadTickRate,
 
 void Connector::Connect()
 {
-	// this->ReplySocket.bind("tpc://localhost:5556");
 }
 
 void Connector::CustomTick()
 { 
 	//Throttle Thread to avoid consuming un-needed resources
 	// Set during thread startup, can be modified any time!
-	UE_LOG(LogTemp, Warning, TEXT("Connector::CustomTick"));
+	UE_LOG(LogCielim, Display, TEXT("Connector::CustomTick"));
 	if(this->ThreadTickRate.GetTotalSeconds() > 0)
 	{
 		this->Wait(this->ThreadTickRate.GetTotalSeconds());
@@ -58,7 +55,6 @@ void Connector::CustomTick()
 	//1. Creates or destroys objects
 	//2. Modifies the game world in any way
 	//3. Tries to debug draw anything
-	//4. Simple raw data calculations are best!
 	this->Listen();
 }
 
@@ -78,65 +74,96 @@ void Connector::ThreadShutdown()
 	//Any third party C++ to do on shutdown
 }
 
-Command Connector::ParseCommand(std::string str)
+CommandType Connector::ParseCommand(const std::string& CommandString)
 {
-	static std::unordered_map<std::string, Command> const table = {{"PING", Command::PING},
-																	{"SIM_UPDATE", Command::SIM_UPDATE},
-																	{"REQUEST_IMAGE", Command::REQUEST_IMAGE}};
-	auto it = table.find(str);
-	if (it != table.end()) {
+	static std::unordered_map<std::string, CommandType> const table = {{"PING", CommandType::PING},
+																	{"SIM_UPDATE", CommandType::SIM_UPDATE},
+																	{"REQUEST_IMAGE", CommandType::REQUEST_IMAGE}};
+	
+	if (const auto it = table.find(CommandString); it != table.end()) {
 		return it->second;
 	} 
-	return Command::ERROR;
+	return CommandType::ERROR;
 }
 
-zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& Request) 
+zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage) 
 {
-	UE_LOG(LogTemp, Warning, TEXT("Connector::ParseMessage"));
-	zmq::message_t Response;
+	UE_LOG(LogCielim, Display, TEXT("Connector::ParseMessage"));
 	zmq::multipart_t Message;
 	
-	std::string TmpCommand = Request.popstr();
-	std::string Command = TmpCommand;
+	std::string TmpCommand = RequestMessage.popstr();
+	std::string TrimmedCommand = TmpCommand;
 	if (TmpCommand.find("REQUEST_IMAGE") != std::string::npos)
 	{
-		Command = "REQUEST_IMAGE";
+		TrimmedCommand = "REQUEST_IMAGE";
 	}
-	FString PrintCommandString(Command.c_str());
-	UE_LOG(LogTemp, Warning, TEXT("Basilisk command: %s"), *PrintCommandString);
-	switch (this->ParseCommand(Command))
+	FString PrintCommandString(TrimmedCommand.c_str());
+	UE_LOG(LogCielim, Display, TEXT("Basilisk command: %s"), *PrintCommandString);
+	switch (this->ParseCommand(TrimmedCommand))
 	{
-		case Command::PING:
+		case CommandType::PING:
 			{
 				Message.pushstr("PONG");
 				break;
 			}
-		case Command::SIM_UPDATE:
+		case CommandType::SIM_UPDATE:
 			{
 				vizProtobufferMessage::VizMessage tempMessage = vizProtobufferMessage::VizMessage();
 				// @TODO: fix this message parsing. It's a mad hack!
-				tempMessage.ParseFromArray(Request[2].data(), Request[2].size()*sizeof(char));
-				auto data = FCircularQueueData();
-				data.Message = tempMessage;
-				this->MultiThreadQueue->Responses.Enqueue(data);
+				tempMessage.ParseFromArray(RequestMessage[2].data(), RequestMessage[2].size()*sizeof(char));
+				auto Data = FCircularQueueData();
+				auto Command = SimUpdate();
+				Command.payload = tempMessage;
+				Data.Query = Command;
+				bool EnqueueResult = false;
+				UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue SIM_UPDATE..."));
+				while(!EnqueueResult)
+				{
+					EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(Data);
+				}
 				Message.pushstr("OK");
 				break;	
 			}
-		case Command::REQUEST_IMAGE:
+		case CommandType::REQUEST_IMAGE:
 			{
 				// TODO get name from basilisk side and make RequestScreenshot robust to spelling mistakes
-				auto ImageRequestStartTime = std::chrono::system_clock::now();
-				//Set cameraID to message once that information is being sent in the message
+				// Set cameraID to message once that information is being sent in the message
 				uint32_t CameraID = -1;
 				if (TmpCommand.length() > 13) {
-					std::string camIDstring = TmpCommand.substr(14);
-					CameraID = std::stoi(camIDstring);
+					CameraID = std::stoi(TmpCommand.substr(14));
+					UE_LOG(LogCielim, Display, TEXT("Camera ID: %d"), CameraID);
 				}
-				UE_LOG(LogTemp, Warning, TEXT("Camera ID: %d"), CameraID);
-				this->RequestImage(CameraID);
-				auto ImageTransmitStartTime = std::chrono::system_clock::now();
-				Message.pushstr("IMAGE_SUCCESS");
-				Message.pushstr("SECOND_MESSAGE");
+
+				// A request is received and is put in the queue to be handled
+				// by the main (game) thread
+				auto Request = FCircularQueueData();
+				Request.Query = RequestImage();
+				bool EnqueueResult = false;
+				UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue REQUEST_IMAGE..."));
+				while(!EnqueueResult)
+				{
+					// this->Wait(0.5);
+					EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(Request);
+				}
+
+				// Loop until we get the response from the main (game) thread
+				auto Response = FCircularQueueData();
+				bool DequeueResult = false;
+				UE_LOG(LogCielim, Display, TEXT("Waiting for reposnse to REQUEST_IMAGE..."));
+				while(!DequeueResult)
+				{
+					// I can call this directly so the thread blocks on the image return.
+					// This assumes that the next item placed in the queue is the image response.
+					// this->Wait(0.5);
+					DequeueResult = this->MultiThreadQueue->Responses.Dequeue(Response);
+				}
+				UE_LOG(LogCielim, Display, TEXT("Reposnse to REQUEST_IMAGE received..."));
+				
+				auto ResponseImage = std::get<RequestImage>(Response.Query);
+				Message.pushmem(ResponseImage.payload.GetData(), ResponseImage.payload.GetAllocatedSize());
+				
+				uint64_t Size = ResponseImage.payload.GetAllocatedSize();
+				Message.pushmem(&Size, sizeof(uint64_t));
 				break;
 			}
 		default:
@@ -149,29 +176,20 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& Request)
 
 void Connector::Listen()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Connector::Listen"));
+	UE_LOG(LogCielim, Display, TEXT("Connector::Listen"));
 	//Very Long While Loop
 	if(IsListenerConnected)
 	{
-		// CielimLog("Listening");
-		UE_LOG(LogTemp, Warning, TEXT("Listening"));
-
-		//! Always check Your Pointers!
+		UE_LOG(LogCielim, Display, TEXT("Listening"));
 		if(!this->MultiThreadQueue)
 		{
 			return;
 		}
-		   
-		//! Make sure to come all the way out of all function routines with this same check
-		//! so as to ensure thread exits as quickly as possible, allowing game thread to finish
-		//! See EndPlay for more information. 
+		
 		if(this->ThreadIsPaused())
 		{   
-			//Exit as quickly as possible!
 			return;
 		}
-		
-		FCircularQueueData threadData;	
 		
 		zmq::multipart_t Message = zmq::multipart_t(); 
 		if (!Message.recv(this->ReplySocket))
@@ -179,22 +197,11 @@ void Connector::Listen()
 			return;
 		}
 		auto Response = this->ParseMessage(Message);
-		while (this->IsListenerConnected)
-		{
-			if (Response.send(this->ReplySocket))
-			{
-				break;
-			}
-		}
+		Response.send(this->ReplySocket);
 	}
 }
 
-void Connector::RequestImage(uint32_t CameraId)
+void Connector::SetThreadSafeQueue(const std::shared_ptr<CielimCircularQueue>& Queue)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Request Image"));
-}
-
-void Connector::SetThreadSafeQueue(std::shared_ptr<CielimCircularQueue> Queue)
-{
-	this->MultiThreadQueue = std::shared_ptr<CielimCircularQueue>(Queue);
+	this->MultiThreadQueue = std::shared_ptr(Queue);
 }

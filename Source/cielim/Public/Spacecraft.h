@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Components/SceneCaptureComponent2D.h"
 #include "Spacecraft.generated.h"
 
 UCLASS()
@@ -21,7 +22,16 @@ protected:
 
 public:	
     // Called every frame
-    virtual void Tick(float DeltaTime) override;
+    virtual void Tick(const float DeltaTime) override;
+
+    UPROPERTY(EditAnywhere)
+    USceneComponent* Root;
+    
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spacecraft Components")
+    UStaticMeshComponent* Body;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spacecraft Components")
+    USceneCaptureComponent2D* SceneCaptureComponent2D;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     FString Name;
