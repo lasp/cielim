@@ -10,6 +10,9 @@ create an issue.
 - [Install Unreal](https://www.unrealengine.com/en-US/download) (currently 5.2.0)
 - Clone this repository
 - `brew install automake`
+- `brew install cmake`
+- In the file `cielim/cielim.uproject` edit the first of the pre-build steps in `PreBuildSteps`
+  and add the path to your cmake binary e.g. "export PATH=/opt/homebrew/bin:$PATH".
 - Open the cielim.uproject file
     - This will launch Unreal and if the project isn't built (which it won't be if you are starting fresh) it will 
 	try to build the project.
