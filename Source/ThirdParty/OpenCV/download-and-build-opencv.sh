@@ -27,7 +27,26 @@ else
   cd opencv-${opencv_version}
   mkdir -p build
   cd build
-  cmake ../ -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib-${opencv_version}/modules -D CMAKE_INSTALL_PREFIX=../../
+  cmake ../ \
+    -D CMAKE_INSTALL_PREFIX=../../ \
+    -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib-${opencv_version}/modules \
+    -D BUILD_EXAMPLES=OFF \
+    -D BUILD_PERF_TESTS=OFF \
+    -D BUILD_TESTS=OFF \
+    -D BUILD_opencv_apps=OFF \
+    -D BUILD_opencv_calib3d=OFF \
+    -D BUILD_opencv_dnn=OFF \
+    -D BUILD_opencv_face=OFF \
+    -D BUILD_opencv_gapi=OFF \
+    -D BUILD_opencv_ml=OFF \
+    -D BUILD_opencv_photo=OFF \
+    -D BUILD_opencv_python2=OFF \
+    -D BUILD_opencv_python3=OFF \
+    -D BUILD_opencv_STEREO=OFF \
+    -D BUILD_opencv_stitching=OFF \
+    -D BUILD_opencv_tracking=OFF \
+    -D WITH_OPENEXR=OFF \
+    -D BUILD_ZLIB=OFF
   cmake --build . --parallel 8
   cmake --install . 
 endif
