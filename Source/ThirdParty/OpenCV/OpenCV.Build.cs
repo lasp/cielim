@@ -18,6 +18,8 @@ public class OpenCV : ModuleRules
         Type = ModuleRules.ModuleType.External;
         PrecompileForTargets = PrecompileTargetsType.Any;
         PublicPreBuildLibraries.Add(Path.Combine(ModuleDirectory, "lib/libopencv_core.dylib"));
+        PublicPreBuildLibraries.Add(Path.Combine(ModuleDirectory, "lib/libopencv_imgcodecs.dylib"));
+        PublicPreBuildLibraries.Add(Path.Combine(ModuleDirectory, "lib/libopencv_imgproc.dylib"));
         PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "include/opencv4"));
 	}
 }
