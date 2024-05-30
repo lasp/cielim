@@ -4,7 +4,6 @@
 #include "Math/Vector.h"
 #include "Engine/World.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
-#include <string>
 
 #include "RenderingFunctionsLibrary.generated.h"
 

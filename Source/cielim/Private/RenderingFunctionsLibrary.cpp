@@ -7,8 +7,6 @@
 #include <OpenCV/PostOpenCVHeaders.h>
 
 #include <filesystem>
-#include "CielimLoggingMacros.h"
-
 
 URenderingFunctionsLibrary::URenderingFunctionsLibrary(const FObjectInitializer& ObjectInitializer)
 {
@@ -18,20 +16,17 @@ URenderingFunctionsLibrary::URenderingFunctionsLibrary(const FObjectInitializer&
 FString URenderingFunctionsLibrary::ApplyPSF_Gaussian(FString Filepath, int32 KernelHeight, int32 KernelWidth, double SigmaX, double SigmaY)
 {
 	//NOTE: both dimensions of KernelSize must be odd
-	//Read Image
 
 	FString Filepath_Absolute = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*Filepath);
 	
 	std::string Filepath_Absolute_String = TCHAR_TO_UTF8(*Filepath_Absolute);
 	cv::Mat Image = cv::imread(Filepath_Absolute_String);
-
-	//Init ResultImage
+	
 	cv::Mat ResultImage;
 
 	//Get kernel size information into a nice format
 	cv::Size KernelSize = cv::Size(KernelHeight, KernelWidth);
-
-	//Apply blur
+	
 	cv::GaussianBlur(Image, ResultImage, KernelSize, SigmaX, SigmaY);
 
 	//Save image
