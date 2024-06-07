@@ -27,6 +27,8 @@ class  CIELIM_API URenderingFunctionsLibrary :
 
 	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
 	static void ApplyReadNoise();
+
+	int Clamp(float k, int UpperBound, int LowerBound);
 };
 
 

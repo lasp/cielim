@@ -34,23 +34,27 @@ FString URenderingFunctionsLibrary::ApplyCosmicRays(FString Filepath, int nCosmi
 		cv::Point StartPoint {XStartCoord, YStartCoord};
 
 		//calculate angle (Uniform)
-		float Angle = FMath::FRandRange(0, 2 * PI);
+		float Angle = FMath::FRandRange(0, 359.9);
 
 		//calculate length (Exponential)
 		float Uniform0 = FMath::FRandRange(0.0, 1.0);
-		float Length = -1 * (1 / AvgLength) * FMath::Loge(Uniform0);
+		float Length = -1 * AvgLength * FMath::Loge(Uniform0);
 
 		//calculate ending point
 		int XStopCoord = XStartCoord + static_cast<int>(Length * FMath::Cos(Angle));
 		int YStopCoord = YStartCoord + static_cast<int>(Length * FMath::Sin(Angle));
 
+		XStopCoord = Clamp(XStopCoord, Image.cols, 0);
+		YStopCoord = Clamp(YStopCoord, Image.rows, 0);
+
 		cv::Point StopPoint {XStopCoord, YStopCoord};
 
 		//calculate width (Uniform)
 		float Uniform1 = FMath::FRandRange(0.0, 1.0);
-		//float Width = -1 * (1 / AvgWidth) * FMath::Loge(Uniform1) + 1;
-		float Width = 1;
-		cv::line(Image, StartPoint, StopPoint, cv::Vec3b{255,255,255}, Width, cv::LINE_4);
+		int Width = static_cast<int>(-1 * AvgWidth * FMath::Loge(Uniform1));
+
+		//Draw the line!
+		cv::line(Image, StartPoint, StopPoint, cv::Vec3b{255,255,255}, 1, cv::LINE_4);
 	}
 	
 	//Save image
@@ -67,4 +71,21 @@ FString URenderingFunctionsLibrary::ApplyCosmicRays(FString Filepath, int nCosmi
 void URenderingFunctionsLibrary::ApplyReadNoise()
 {
 	
+}
+
+
+int URenderingFunctionsLibrary::Clamp(float k, int UpperBound, int LowerBound)
+{
+	if(k > UpperBound)
+	{
+		return UpperBound;
+	}
+	else if(k < LowerBound)
+	{
+		return LowerBound;
+	}
+	else
+	{
+		return static_cast<int>(FMath::Floor(k));
+	}
 }
