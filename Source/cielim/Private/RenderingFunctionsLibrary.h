@@ -23,19 +23,10 @@ class  CIELIM_API URenderingFunctionsLibrary :
 	static void ApplyPSF_Gaussian();
 
 	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
-	static void WriteImage();
-
-	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
-	static void ApplyCosmicRays();
+	FString ApplyCosmicRays(FString Filepath, int nCosmicRays, float AvgLength, float AvgWidth);
 
 	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
 	static void ApplyReadNoise();
-
-	static void ReadImage(){};
-
-	
-
-	
 };
 
 
