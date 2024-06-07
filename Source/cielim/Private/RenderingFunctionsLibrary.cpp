@@ -25,9 +25,6 @@ FString URenderingFunctionsLibrary::ApplyCosmicRays(FString Filepath, int nCosmi
 	std::string Filepath_Absolute_String = TCHAR_TO_UTF8(*Filepath_Absolute);
 	cv::Mat Image = cv::imread(Filepath_Absolute_String);
 
-	//Init Resulting image
-	cv::Mat ResultImage = cv::Mat(Image.rows, Image.cols, Image.type());
-
 	for(int i=0; i < nCosmicRays; i++)
 	{
 		//calculate starting point (Uniform)
@@ -44,16 +41,16 @@ FString URenderingFunctionsLibrary::ApplyCosmicRays(FString Filepath, int nCosmi
 		float Length = -1 * (1 / AvgLength) * FMath::Loge(Uniform0);
 
 		//calculate ending point
-		int XStopCoord = XStartCoord + (Length * FMath::Cos(Angle));
-		int YStopCoord = YStartCoord + (Length * FMath::Sin(Angle));
+		int XStopCoord = XStartCoord + static_cast<int>(Length * FMath::Cos(Angle));
+		int YStopCoord = YStartCoord + static_cast<int>(Length * FMath::Sin(Angle));
 
 		cv::Point StopPoint {XStopCoord, YStopCoord};
 
 		//calculate width (Uniform)
 		float Uniform1 = FMath::FRandRange(0.0, 1.0);
-		float Width = -1 * (1 / AvgWidth) * FMath::Loge(Uniform1) + 1;
-		
-		cv::line(Image, StartPoint, StopPoint, 255, cv::LINE_4);
+		//float Width = -1 * (1 / AvgWidth) * FMath::Loge(Uniform1) + 1;
+		float Width = 1;
+		cv::line(Image, StartPoint, StopPoint, cv::Vec3b{255,255,255}, Width, cv::LINE_4);
 	}
 	
 	//Save image
@@ -62,7 +59,7 @@ FString URenderingFunctionsLibrary::ApplyCosmicRays(FString Filepath, int nCosmi
 	ResultFilepath.Append("CosmicRays.jpg");
 	
 	std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
-	cv::imwrite(ResultFilepath_String, ResultImage);
+	cv::imwrite(ResultFilepath_String, Image);
 	
 	return ResultFilepath;
 }
