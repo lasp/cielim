@@ -20,6 +20,9 @@ void URenderingFunctionsLibrary::ApplyPSF_Gaussian()
 
 FString URenderingFunctionsLibrary::ApplyCosmicRays(FString Filepath, int nCosmicRays, float AvgLength, float AvgWidth)
 {
+	//TODO: Add varying width to lines
+	//TODO: Make it so that lines w/ start and end points don't get clipped to image sides
+	
 	//Read Image
 	FString Filepath_Absolute = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*Filepath);
 	std::string Filepath_Absolute_String = TCHAR_TO_UTF8(*Filepath_Absolute);
