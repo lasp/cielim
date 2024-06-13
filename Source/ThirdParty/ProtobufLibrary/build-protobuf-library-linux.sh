@@ -1,26 +1,25 @@
-#!/bin/tcsh -f
-echo ${cwd}
-echo "Relative path ${1}"
+#!/bin/bash
+echo $PWD
+echo "Relative path $1"
 
-set git_tag = "v3.17.1"
-set protobuf_lib_path = "lib/libprotobuf.a"
-echo "protobuf_lib_path: ${protobuf_lib_path}"
-set protobuf_lib_full_path = ${1}${protobuf_lib_path}
-echo "protobuf_lib_full_path: ${protobuf_lib_full_path}"
-set protobuf_git_repo = "https://github.com/protocolbuffers/protobuf.git"
-if ( -f $protobuf_lib_full_path ) then
-    echo "Library ${protobuf_lib_full_path} exists. It will not be rebuilt."
-    
-endif
+git_tag="v3.17.1"
+protobuf_lib_path="lib/libprotobuf.a"
+echo "protobuf_lib_path: $protobuf_lib_path"
+protobuf_lib_full_path="$1$protobuf_lib_path"
+echo "protobuf_lib_full_path: $protobuf_lib_full_path"
+protobuf_git_repo="https://github.com/protocolbuffers/protobuf.git"
+if [ -f "$protobuf_lib_full_path" ]; then
+    echo "Library $protobuf_lib_full_path exists. It will not be rebuilt."
+    exit
+fi
 
-echo "Library ${protobuf_lib_path} not found."
+echo "Library $protobuf_lib_path not found."
 
-
-echo "Cloning protobufs ${git_tag} from ${protobuf_git_repo}."
+echo "Cloning protobufs $git_tag from $protobuf_git_repo."
 # Change dir from current working to build destination path
-cd ${1}
+cd "$1" || exit
 git clone -b $git_tag $protobuf_git_repo
-cd protobuf
+cd protobuf || exit
 git submodule update --init --recursive
 
 # Apply patch for v3.17.1 which was fixed at the below URL
@@ -33,22 +32,19 @@ git apply ../src_google_protobuf_port_def_inc_3_17_1.patch
 
 # AutoMake Build 
 echo "Building protobuf."
-#./autogen.sh
-#./configure 
-#make -j8 --DCMAKE_POSITION_INDEPENDENT_CODE=ON
+./autogen.sh
+./configure
+make -j8
 make check
 
-# remove
-echo "Moving google sources."
 cd ..
 rm -rf include
 mkdir -p include/google
-cp -r protobuf/src/google/. include/google/.
-#
-#echo "Moving libprotobuf.a to lib"
-#rm -rf lib
-#mkdir -p lib
-#cp protobuf/src/.libs/libprotobuf.a lib
+cp -r protobuf/src/google include/google
+
+rm -rf lib
+mkdir -p lib
+cp protobuf/src/.libs/libprotobuf.a lib
 
 # Later versions of protobuf move from automake to CMake and the below
 # works for the later protobuf versions. If we upgrade then we can use

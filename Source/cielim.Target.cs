@@ -36,6 +36,9 @@ public class cielimTarget : TargetRules
         if (targetRules.Platform == UnrealTargetPlatform.Mac)
         {
             PreBuildStep += "tcsh ";
+        } else if (targetRules.Platform == UnrealTargetPlatform.Linux)
+        {
+	        PreBuildStep += "tcsh ";
         }
 
         PreBuildStep += "$(ProjectDir)\\" + BuildStep + " \"$(ProjectDir)\\" + RelativePathToProtobufModule + "\"";
@@ -52,7 +55,7 @@ public class cielimTarget : TargetRules
 
     static public string ProtobufBuildStep(ReadOnlyTargetRules targetRules)
     {
-        if (targetRules.Platform == UnrealTargetPlatform.Mac)
+        if (targetRules.Platform == UnrealTargetPlatform.Mac || targetRules.Platform == UnrealTargetPlatform.Linux)
         {
             return RelativePathToProtobufModule + "build-protobuf-library.sh";
         }

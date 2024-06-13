@@ -16,7 +16,7 @@ public class ProtobufLibrary : ModuleRules
         string protobufLibraryIncludeDir = Path.Combine(ModuleDirectory, "include/");
         string libraryFile = ProtobufLibPath(Target);
 
-        if (Target.Platform != UnrealTargetPlatform.Mac)
+        if (Target.Platform != UnrealTargetPlatform.Mac && Target.Platform != UnrealTargetPlatform.Linux)
         { 
             string Err = string.Format("Protobuf runtime not available for platform {0}", Target.Platform.ToString());
             throw new BuildException(Err);
@@ -34,7 +34,7 @@ public class ProtobufLibrary : ModuleRules
     {
         string libraryName = "";
         
-        if (targetRules.Platform == UnrealTargetPlatform.Mac)
+        if (targetRules.Platform == UnrealTargetPlatform.Mac || targetRules.Platform == UnrealTargetPlatform.Linux)
         {
             libraryName = "/libprotobuf.a";
         }
