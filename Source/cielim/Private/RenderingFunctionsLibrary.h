@@ -5,10 +5,6 @@
 #include "Engine/World.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 
-#include <OpenCV/PreOpenCVHeaders.h>
-#include "OpenCV/opencv-4.5.5/modules/imgcodecs/include/opencv2/imgcodecs.hpp"
-#include <OpenCV/PostOpenCVHeaders.h>
-
 #include "RenderingFunctionsLibrary.generated.h"
 
 UCLASS()
@@ -20,11 +16,11 @@ class  CIELIM_API URenderingFunctionsLibrary :
 	URenderingFunctionsLibrary(const FObjectInitializer& ObjectInitializer);
 	
 	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
-	static void ApplyPSF_Gaussian();
-
+	static FString ApplyPSF_Gaussian(FString Filepath, int32 KernelHeight, int32 KernelWidth, double SigmaX, double SigmaY);
+	
 	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
 	static void ApplyCosmicRays();
 
 	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
-	FString ApplyReadNoise(FString Filepath, float ReadNoiseSigma, float SystemGain);
+	static void ApplyReadNoise();
 };
