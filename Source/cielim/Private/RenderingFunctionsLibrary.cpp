@@ -97,4 +97,45 @@ FString URenderingFunctionsLibrary::ApplyReadNoise(FString Filepath, float ReadN
 	
 	return ResultFilepath;
 }
+
+FString URenderingFunctionsLibrary::ApplySignalGain(FString Filepath, float ImageGain, float DesiredGain)
+{
+	//Read Image
+	FString Filepath_Absolute = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*Filepath);
+	std::string Filepath_Absolute_String = TCHAR_TO_UTF8(*Filepath_Absolute);
+	cv::Mat Image = cv::imread(Filepath_Absolute_String);
+	Image = Image * (1 / ImageGain);
+
+	//Init Resulting image
+	cv::Mat ResultImage = cv::Mat(Image.rows, Image.cols, Image.type());
+
+	ResultImage = Image * DesiredGain;
+
+	//Clamp values to [0,255]
+	//Separate color channels
+	std::array<cv::Mat, 3> DifferentColorChannels;
+	cv::split(ResultImage, DifferentColorChannels);
+
+	//Init LowerBound and UpperBound matrices
+	cv::Mat LowerBoundMatrix = cv::Mat::zeros(Image.rows, Image.cols, DifferentColorChannels[0].type());
+	cv::Mat UpperBoundMatrix = cv::Mat::ones(Image.rows, Image.cols, DifferentColorChannels[0].type()) * 255;
+
+	//Clamp
+	for(int ColorChannel = 0; ColorChannel < 3; ColorChannel++)
+	{
+		cv::min(cv::max(DifferentColorChannels[ColorChannel], LowerBoundMatrix), UpperBoundMatrix, DifferentColorChannels[ColorChannel]);
+	}
+
+	//Merge back into a color image
+	cv::merge(DifferentColorChannels, ResultImage);
+
+	//Save image
+	FString ResultFilepath = FPaths::ProjectDir();
+	ResultFilepath.Append("Result_Images/");
+	ResultFilepath.Append("SignalGain.jpg");
+	
+	std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
+	cv::imwrite(ResultFilepath_String, ResultImage);
+	
+	return ResultFilepath;
 }
