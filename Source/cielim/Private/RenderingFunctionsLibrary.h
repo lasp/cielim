@@ -26,4 +26,14 @@ class  CIELIM_API URenderingFunctionsLibrary :
 
 	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
 	static FString ApplySignalGain(FString Filepath, float ImageGain, float DesiredGain);
+
+	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
+	static FString ApplyDarkCurrentNoise(
+		FString Filepath,
+		double MaxSigma,
+		double MinSigma,
+		FVector SunPosition,
+		FVector SpacecraftPosition,
+		FVector SpacecraftDirection
+		);
 };
