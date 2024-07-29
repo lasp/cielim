@@ -36,4 +36,7 @@ class  CIELIM_API URenderingFunctionsLibrary :
 		FVector SpacecraftPosition,
 		FVector SpacecraftDirection
 		);
+
+	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
+	static FString ApplyQE(FString Filepath, float QERed, float QEGreen, float QEBlue);
 };
