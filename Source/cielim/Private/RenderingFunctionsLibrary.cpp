@@ -143,7 +143,18 @@ FString URenderingFunctionsLibrary::ApplySignalGain(FString Filepath, float Imag
 
 FString URenderingFunctionsLibrary::ApplyDarkCurrentNoise(FString Filepath, double MaxSigma, double MinSigma, FVector SunPosition, FVector SpacecraftPosition, FVector SpacecraftDirection)
 {
+	//Protect against 0 MaxSigma
+	if(MaxSigma == 0)
+	{
+		return Filepath;
+	}
 
+	//Protect against MaxSigma < Min Sigma
+	if(MaxSigma < MinSigma)
+	{
+		return Filepath;
+	}
+	
 	//Read Image
 	FString Filepath_Absolute = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*Filepath);
 	std::string Filepath_Absolute_String = TCHAR_TO_UTF8(*Filepath_Absolute);
@@ -164,7 +175,7 @@ FString URenderingFunctionsLibrary::ApplyDarkCurrentNoise(FString Filepath, doub
 	//Print Sigma
 	UE_LOG(LogCielim, Warning, TEXT("Sigma: %s"), *FString::SanitizeFloat(Sigma))
 	
-	//Return original image
+	//If sigma == 0, return original image, no noise added
 	if( Sigma < 0 )
 	{
 		//No noise added
