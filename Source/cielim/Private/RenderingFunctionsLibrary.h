@@ -22,5 +22,5 @@ class  CIELIM_API URenderingFunctionsLibrary :
 	static void ApplyCosmicRays();
 
 	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
-	static void ApplyReadNoise();
+	static FString ApplyReadNoise(FString Filepath, float ReadNoiseSigma, float SystemGain);
 };
