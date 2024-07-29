@@ -1,5 +1,4 @@
 #include "RenderingFunctionsLibrary.h"
-
 #include <OpenCV/PreOpenCVHeaders.h>
 #include <opencv2/core.hpp>
 #include "opencv2/imgproc.hpp"
@@ -141,7 +140,14 @@ FString URenderingFunctionsLibrary::ApplySignalGain(FString Filepath, float Imag
 	
 }
 
-FString URenderingFunctionsLibrary::ApplyDarkCurrentNoise(FString Filepath, double MaxSigma, double MinSigma, FVector SunPosition, FVector SpacecraftPosition, FVector SpacecraftDirection)
+FString URenderingFunctionsLibrary::ApplyDarkCurrentNoise(
+	FString Filepath,
+	double MaxSigma,
+	double MinSigma,
+	FVector SunPosition,
+	FVector SpacecraftPosition,
+	FVector SpacecraftDirection
+	)
 {
 	//Protect against 0 MaxSigma
 	if(MaxSigma == 0)
@@ -211,7 +217,11 @@ FString URenderingFunctionsLibrary::ApplyDarkCurrentNoise(FString Filepath, doub
 	//Clamp
 	for(int ColorChannel =0; ColorChannel < 3; ColorChannel++)
 	{
-		cv::min(cv::max(DifferentColorChannels[ColorChannel], LowerBoundMatrix), UpperBoundMatrix, DifferentColorChannels[ColorChannel]);
+		cv::min(
+			cv::max(DifferentColorChannels[ColorChannel],LowerBoundMatrix),
+			UpperBoundMatrix,
+			DifferentColorChannels[ColorChannel]
+			);
 	}
 
 	//Merge back into a color image
