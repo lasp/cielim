@@ -237,3 +237,48 @@ FString URenderingFunctionsLibrary::ApplyDarkCurrentNoise(
 	
 	return ResultFilepath;
 }
+
+FString URenderingFunctionsLibrary::ApplyQE(FString Filepath, float QERed, float QEGreen, float QEBlue)
+{
+	FVector3d QE;
+
+	QE[0] = QERed;
+	QE[1] = QEGreen;
+	QE[2] = QEBlue;
+	
+	//Read Image
+	FString Filepath_Absolute = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*Filepath);
+	std::string Filepath_Absolute_String = TCHAR_TO_UTF8(*Filepath_Absolute);
+	cv::Mat Image = cv::imread(Filepath_Absolute_String);
+	
+	//Init Result Image
+	cv::Mat ResultImage = cv::Mat::zeros(Image.rows, Image.cols, Image.type());
+
+	//Loop Through Every Pixel, Apply QE
+	for(int row=0; row < Image.rows; row++)
+	{
+		for(int col=0; col < Image.cols; col++)
+		{
+			
+			cv::Vec3b NewPixel;
+			
+			for (int ColorChannel = 0; ColorChannel < 3; ColorChannel++)
+			{
+				NewPixel[ColorChannel] = static_cast<uchar>(Image.at<cv::Vec3b>(row, col)[ColorChannel] * QE[ColorChannel]);
+			}
+			
+			ResultImage.at<cv::Vec3b>(row, col) = NewPixel;
+			
+		}
+	}
+	
+	//Save image
+	FString ResultFilepath = FPaths::ProjectDir();
+	ResultFilepath.Append("Result_Images/");
+	ResultFilepath.Append("QE.jpg");
+	
+	std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
+	cv::imwrite(ResultFilepath_String, ResultImage);
+	
+	return ResultFilepath;
+}
