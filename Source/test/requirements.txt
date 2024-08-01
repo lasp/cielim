@@ -1,0 +1,6 @@
+delimited-protobuf
+os
+protobuf==3.19.1
+sys
+typing
+zmq
