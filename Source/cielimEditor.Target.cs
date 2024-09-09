@@ -13,12 +13,13 @@ public class cielimEditorTarget : TargetRules
 		// Project settings
 		DefaultBuildSettings = BuildSettingsVersion.V5;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_4;
+		
         WindowsPlatform.bStripUnreferencedSymbols = false;
         CppStandard = CppStandardVersion.Cpp17;
         
         bUseFastPDBLinking = false;
         bPublicSymbolsByDefault = true;  // Forced to true on Windows anyways
 		
-        ExtraModuleNames.AddRange(new string[] {"cielim", "OpenCV", "ProtobufLibrary", "ZMQ"});
+        ExtraModuleNames.Add("cielim");
 	}
 }
