@@ -11,8 +11,8 @@ public class cielimTarget : TargetRules
 		Type = TargetType.Game;
 
         // Project settings
-		DefaultBuildSettings = BuildSettingsVersion.V2;
-		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_2;
+		DefaultBuildSettings = BuildSettingsVersion.V5;
+		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_4;
         WindowsPlatform.bStripUnreferencedSymbols = false;
         CppStandard = CppStandardVersion.Cpp17;
         
