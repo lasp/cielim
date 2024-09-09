@@ -15,6 +15,9 @@ if ( -f $protobuf_lib_full_path ) then
 else
     echo "Library ${protobuf_lib_path} not found. Beginning build process..."
 
+    # Make sure we're in the ProtobufLibrary folder
+    cd ${1}
+
     # Update submodules (necessary)
     cd protobuf
     git submodule update --init --recursive

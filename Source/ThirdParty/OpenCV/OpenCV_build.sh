@@ -15,6 +15,9 @@ if ( -f $opencv_lib_full_path ) then
 else
   echo "OpenCV will be built. Library ${opencv_lib_full_path} not found."
   
+  # Make sure we're in the OpenCV folder
+  cd ${1}
+
   # CMake Build
   echo "Building OpenCV..."
   mkdir -p build

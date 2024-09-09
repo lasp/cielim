@@ -14,6 +14,9 @@ if ( -f $zmq_lib_full_path ) then
 else
     echo "ZMQ will be built. Library ${zmq_lib_full_path} not found."
 
+    # Make sure we're in the ZMQ folder
+    cd ${1}
+
     cd libzmq
     git submodule update --init --recursive
 
