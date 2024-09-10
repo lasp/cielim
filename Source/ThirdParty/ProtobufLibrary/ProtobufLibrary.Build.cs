@@ -3,10 +3,6 @@ using System.IO;
 
 public class ProtobufLibrary : ModuleRules
 {
-    public const string RelativePathToProtobufModule = "Source/ThirdParty/ProtobufLibrary/";
-    public const string RelativePathToProtobufIncludes = RelativePathToProtobufModule + "include/";
-    public const string RelativePathToProtobufLibraries = RelativePathToProtobufModule + "lib/";
-
 	public ProtobufLibrary(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
@@ -24,7 +20,7 @@ public class ProtobufLibrary : ModuleRules
         PrecompileForTargets = PrecompileTargetsType.Any;
 
         // PublicDefinitions.Add("CXXFLAGS=-Wno-undef-prefix");
-        PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "lib/"));
-        PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "include/"));
+        PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "lib"));
+        PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "include"));
 	}
 }
