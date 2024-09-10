@@ -11,6 +11,7 @@ create an issue.
 - Clone this repository
 - `brew install automake`
 - `brew install cmake`
+- `brew install libtool`
 - In the file `cielim/cielim.uproject` edit the first of the pre-build steps in `PreBuildSteps`
   and add the path to your cmake binary e.g. "export PATH=/opt/homebrew/bin:$PATH".
 - Open the cielim.uproject file
