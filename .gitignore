@@ -1,3 +1,19 @@
+# Custom ignore paths
+/Saved
+/Releases
+/Content
+/DerivedDataCache
+/.github
+/.git
+/.vscode
+/Intermediate
+
+# Third party build paths
+/Source/ThirdParty/OpenCV/build
+/Source/ThirdParty/ProtobufLibrary/build
+/Source/ThirdParty/ZMQ/libzmq_build
+/Source/ThirdParty/ZMQ/cppzmq_build
+
 # Visual Studio 2015 user specific files
 .vs/
 
