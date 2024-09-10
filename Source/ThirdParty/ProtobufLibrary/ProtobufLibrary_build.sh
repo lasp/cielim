@@ -37,6 +37,6 @@ else
     cp -r protobuf/src/google/ include/google
 
     mkdir -p lib/Release
-    cp protobuf/build/libprotobuf.a lib
+    cp build/libprotobuf.a lib
 
 endif

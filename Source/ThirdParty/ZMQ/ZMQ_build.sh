@@ -26,7 +26,7 @@ else
     mkdir libzmq_build
     cd libzmq_build
     env
-    cmake ..
+    cmake ../libzmq
     make -j4
 
     cd ..
@@ -40,7 +40,7 @@ else
     cd ..
     mkdir cppzmq_build
     cd build
-    cmake .. -DZeroMQ_STATIC_LIBRARY=$zmq_lib_full_path -DCMAKE_INCLUDE_PATH=$zmq_include_path -DCPPZMQ_BUILD_TESTS=OFF
+    cmake ../cppzmq -DZeroMQ_STATIC_LIBRARY=$zmq_lib_full_path -DCMAKE_INCLUDE_PATH=$zmq_include_path -DCPPZMQ_BUILD_TESTS=OFF
     make -j4
     
 endif
