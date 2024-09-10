@@ -35,6 +35,7 @@ else
     cd ..
     mkdir -p include/google
     cp -r protobuf/src/google/ include/google
+    cp -r protobuf/third_party/abseil-cpp/absl include/absl
 
     mkdir -p lib/Release
     cp build/libprotobuf.a lib
