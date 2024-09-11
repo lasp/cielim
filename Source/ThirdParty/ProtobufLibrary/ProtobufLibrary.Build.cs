@@ -20,7 +20,7 @@ public class ProtobufLibrary : ModuleRules
         PrecompileForTargets = PrecompileTargetsType.Any;
 
         // PublicDefinitions.Add("CXXFLAGS=-Wno-undef-prefix");
-        PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "lib"));
+        PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "lib/libprotobuf.a"));
         PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "include"));
 	}
 }
