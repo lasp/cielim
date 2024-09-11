@@ -24,5 +24,8 @@ public class OpenCV : ModuleRules
 
         // Add include path for OpenCV headers
         PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "opencv/include/opencv4/opencv2"));
+        PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "opencv/modules/core/include"));
+        PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "opencv/modules/imgproc/include"));
+        PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "build"));
 	}
 }

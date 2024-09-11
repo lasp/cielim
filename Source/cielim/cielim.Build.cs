@@ -1,4 +1,5 @@
 using UnrealBuildTool;
+using System.IO;
 
 public class cielim : ModuleRules
 {
@@ -11,5 +12,7 @@ public class cielim : ModuleRules
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore"});
 
 		PrivateDependencyModuleNames.AddRange(new string[] { "OpenCV", "ProtobufLibrary", "ZMQ"});
+
+		PublicIncludePaths.Add("$(ProjectDir)/Source/ThirdParty");
 	}
 }
