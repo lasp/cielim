@@ -2,7 +2,7 @@
 echo "Current working directory -> ${cwd}"
 echo "Relative path -> ${1}"
 
-set protobuf_lib_path = "protobuf/src/.libs/libprotobuf.a"
+set protobuf_lib_path = "lib/libprotobuf.a"
 echo "protobuf_lib_path: ${protobuf_lib_path}"
 
 set protobuf_lib_full_path = ${1}${protobuf_lib_path}
