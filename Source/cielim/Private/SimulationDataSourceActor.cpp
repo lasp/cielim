@@ -81,7 +81,7 @@ void ASimulationDataSourceActor::BeginPlay()
 	
 	if(FString CommAddress; FParse::Value(FCommandLine::Get(), TEXT("directComm"), CommAddress))
 	{
-	    UE_LOG(LogCielim, Display, TEXT("Parsed command line parameter (directComm) : %s"), *CommAddress);
+	    // UE_LOG(LogCielim, Display, TEXT("Parsed command line parameter (directComm) : %s"), *CommAddress);
 		this->DataSource = DataSourceType::Network;
 		FVector Location(0.0f, 0.0f, 0.0f);
 		FRotator Rotation(0.0f, 0.0f, 0.0f);
@@ -91,13 +91,13 @@ void ASimulationDataSourceActor::BeginPlay()
 		this->NetworkSimulationDataSource->ConnectionAddress = std::string(TCHAR_TO_UTF8(*CommAddress));
 	} else if(FString SimulationDataFile;
 		FParse::Value(FCommandLine::Get(), TEXT("simulationDataFile"), SimulationDataFile)) {
-	    UE_LOG(LogCielim, Display, TEXT("Parsed command line parameter (simulationDataFile) : %s"), *SimulationDataFile);
+	    // UE_LOG(LogCielim, Display, TEXT("Parsed command line parameter (simulationDataFile) : %s"), *SimulationDataFile);
 		this->DataSource = DataSourceType::File;
 	    this->SimulationDataSource = std::make_unique<ProtobufFileReader>(std::string(TCHAR_TO_UTF8(*SimulationDataFile)));
 	    this->Vizmessage = this->SimulationDataSource->GetNextSimulationData();
 	} else {
-		UE_LOG(LogCielim, Warning, TEXT("Did not receive start up mode from command line parameter"));
-		UE_LOG(LogCielim, Display, TEXT("Defaulted to (simulationDataFile) : %s"), "protofile_proxOps.bin");
+		// UE_LOG(LogCielim, Warning, TEXT("Did not receive start up mode from command line parameter"));
+		// UE_LOG(LogCielim, Display, TEXT("Defaulted to (simulationDataFile) : %s"), "protofile_proxOps.bin");
 		this->DataSource = DataSourceType::File;
 		this->SimulationDataSource = std::make_unique<ProtobufFileReader>("protofile_proxOps.bin");
 		this->Vizmessage = this->SimulationDataSource->GetNextSimulationData();
@@ -107,14 +107,14 @@ void ASimulationDataSourceActor::BeginPlay()
 	int minor;
 	int patch;
 	zmq::version(&major, &minor, &patch);
-	UE_LOG(LogCielim, Display, TEXT("ZeroMQ version: v%d.%d.%d"), major, minor, patch);
+	// UE_LOG(LogCielim, Display, TEXT("ZeroMQ version: v%d.%d.%d"), major, minor, patch);
 }
 
 void ASimulationDataSourceActor::FileReaderTick(float DeltaTime)
 {
 	this->Vizmessage = this->SimulationDataSource->GetNextSimulationData();
 	if (!this->IsSceneEstablished) {
-		UE_LOG(LogCielim, Display, TEXT("Initialize scene..."));
+		// UE_LOG(LogCielim, Display, TEXT("Initialize scene..."));
 		this->IsSceneEstablished = true;
 		this->SpawnCelestialBodies();
 		this->SpawnSpacecraft();
@@ -125,7 +125,7 @@ void ASimulationDataSourceActor::FileReaderTick(float DeltaTime)
 		}
 		if (!BpCelestialBody || !BpSpacecraft)
 		{
-			UE_LOG(LogCielim, Warning, TEXT("Defualt BluePrint Classes have not been set in BP_ProtobufActor"));
+			// UE_LOG(LogCielim, Warning, TEXT("Defualt BluePrint Classes have not been set in BP_ProtobufActor"));
 		}
 	}
 }
@@ -141,7 +141,7 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 	
 	if (!this->IsSceneEstablished) {
 		if (std::holds_alternative<SimUpdate>(QueueData.value().Query)) {
-			UE_LOG(LogCielim, Display, TEXT("Initialize scene..."));
+			// UE_LOG(LogCielim, Display, TEXT("Initialize scene..."));
 			this->Vizmessage = std::get<SimUpdate>(QueueData.value().Query).payload;
 			this->IsSceneEstablished = true;
 			this->SpawnCelestialBodies();
@@ -153,11 +153,11 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 			}
 			if (!BpCelestialBody || !BpSpacecraft)
 			{
-				UE_LOG(LogCielim, Warning, TEXT("Defualt BluePrint Classes have not been set in BP_ProtobufActor"));
+				// UE_LOG(LogCielim, Warning, TEXT("Defualt BluePrint Classes have not been set in BP_ProtobufActor"));
 				return;
 			}
 		} else {
-			UE_LOG(LogCielim, Warning, TEXT("Scene not initialized: ASimulationDataSourceActor"));
+			// UE_LOG(LogCielim, Warning, TEXT("Scene not initialized: ASimulationDataSourceActor"));
 			return;
 		}
 	} 
@@ -166,12 +166,12 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 	// a bit like a RPC or http server
 	if (std::holds_alternative<SimUpdate>(QueueData.value().Query)) {
 		this->Vizmessage = std::get<SimUpdate>(QueueData.value().Query).payload;
-		UE_LOG(LogCielim, Display, TEXT("Reading sim update data: ASimulationDataSourceActor"));
+		// UE_LOG(LogCielim, Display, TEXT("Reading sim update data: ASimulationDataSourceActor"));
 	} else if (std::holds_alternative<RequestImage>(QueueData.value().Query)) {
 		this->NetworkSimulationDataSource->PutImageQueueData(this->CaptureManager->GetPNG());
-		UE_LOG(LogCielim, Display, TEXT("Put back PNG image: ASimulationDataSourceActor"));
+		// UE_LOG(LogCielim, Display, TEXT("Put back PNG image: ASimulationDataSourceActor"));
 	} else {
-		UE_LOG(LogCielim, Display, TEXT("GetNextSimulationData received unrecognized Type"));
+		// UE_LOG(LogCielim, Display, TEXT("GetNextSimulationData received unrecognized Type"));
 	}
 }
 
@@ -318,7 +318,7 @@ void ASimulationDataSourceActor::SpawnCaptureManager()
 {
 	this->CaptureManager = GetWorld()->SpawnActor<ACaptureManager>();
 	this->CaptureManager->SetSceneCaptureComponent(this->Spacecraft->SceneCaptureComponent2D);
-	UE_LOG(LogCielim, Display, TEXT("Set Capture Texture Target"));
+	// UE_LOG(LogCielim, Display, TEXT("Set Capture Texture Target"));
 }
 
 /**
@@ -366,5 +366,5 @@ void ASimulationDataSourceActor::UpdateSpacecraft() const
 void ASimulationDataSourceActor::DebugVizmessage() const
 {
 	const std::string DebugStr = this->Vizmessage.DebugString();
-	UE_LOG(LogCielim, Display, TEXT("%hs"), DebugStr.c_str());
+	// UE_LOG(LogCielim, Display, TEXT("%hs"), DebugStr.c_str());
 }
