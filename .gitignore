@@ -6,6 +6,7 @@
 *.lo
 *.o
 *.obj
+*.pyc
 
 # Precompiled Headers
 *.gch
@@ -66,4 +67,6 @@ DerivedDataCache/*
 
 *.DS_Store
 Source/ThirdParty/ProtobufLibrary/include
+Source/ThirdParty/ProtobufLibrary/lib
+Source/ThirdParty/OpenCV
 *.code-workspace
