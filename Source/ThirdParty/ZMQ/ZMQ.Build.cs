@@ -20,7 +20,7 @@ public class ZMQ : ModuleRules
         PrecompileForTargets = PrecompileTargetsType.Any;
 
         // Link to libzmq libraries
-        PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "libzmq_build/lib/libzmq.a"));
+        PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "libzmq/build/lib/libzmq.a"));
 
         // Add ZMQ headers to include path
         PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "cppzmq"));
