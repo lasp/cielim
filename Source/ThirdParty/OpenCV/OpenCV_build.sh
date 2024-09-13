@@ -3,7 +3,7 @@ echo "Current working directory -> ${cwd}"
 echo "Relative path -> ${1}"
 
 # Path from build directory to libopencv_world library file
-set opencv_lib_path = "build/lib/libopencv_world.dylib"
+set opencv_lib_path = "opencv/build/lib/libopencv_world.dylib"
 echo "opencv_lib_path: ${opencv_lib_path}"
 
 set opencv_lib_full_path = ${1}${opencv_lib_path}
@@ -20,17 +20,18 @@ else
 
   # CMake Build
   echo "Building OpenCV..."
-  mkdir -p build
+  cd opencv
+  mkdir build
   cd build
-  cmake ../opencv \
+  cmake .. \
     -D BUILD_PERF_TESTS:BOOL=OFF \
     -D BUILD_TESTS:BOOL=OFF \
     -D BUILD_DOCS:BOOL=OFF  \
     -D WITH_CUDA:BOOL=OFF \
     -D BUILD_EXAMPLES:BOOL=OFF \
     -D INSTALL_CREATE_DISTRIB=ON \
-    -D OPENCV_EXTRA_MODULES_PATH=../opencv_contrib/modules \
-    -D CMAKE_INSTALL_PREFIX=../opencv
+    -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules \
+    -D CMAKE_INSTALL_PREFIX=..
   cmake --build . --parallel 8
   cmake --install .
 endif
