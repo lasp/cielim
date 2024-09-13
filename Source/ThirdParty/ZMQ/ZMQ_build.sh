@@ -3,7 +3,6 @@ echo "Current working directory -> ${cwd}"
 echo "Relative path ->  ${1}"
 
 set zmq_lib_path = "libzmq_build/lib/libzmq.a"
-set zmq_include_path = "libzmq/include"
 echo "zmq_lib_path: ${zmq_lib_path}"
 
 set zmq_lib_full_path = ${1}${zmq_lib_path}
@@ -39,8 +38,8 @@ else
     echo "Building cppzmq..."
     cd ..
     mkdir cppzmq_build
-    cd build
-    cmake ../cppzmq -DZeroMQ_STATIC_LIBRARY=$zmq_lib_full_path -DCMAKE_INCLUDE_PATH=$zmq_include_path -DCPPZMQ_BUILD_TESTS=OFF
+    cd cppzmq_build
+    cmake ../cppzmq -DZeroMQ_STATIC_LIBRARY=$zmq_lib_full_path -DCMAKE_INCLUDE_PATH=../libzmq/include -DCPPZMQ_BUILD_TESTS=OFF
     make -j4
     
 endif
