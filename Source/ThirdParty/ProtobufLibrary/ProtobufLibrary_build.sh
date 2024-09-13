@@ -38,8 +38,8 @@ else
     ./configure
     make -j8
 
-    # Run checks (Not necessary)
-    # make check
+    # Run checks
+    make check
 
     cd ..
 
