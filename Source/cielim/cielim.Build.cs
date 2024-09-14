@@ -13,6 +13,7 @@ public class cielim : ModuleRules
 
 		PrivateDependencyModuleNames.AddRange(new string[] { "OpenCV", "ProtobufLibrary", "ZMQ"});
 
+		// This is necessary for Pre/PostOpenCVHeaders
 		PublicIncludePaths.Add("$(ProjectDir)/Source/ThirdParty");
 	}
 }
