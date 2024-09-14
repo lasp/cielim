@@ -42,7 +42,7 @@ picks up your default terminal environment variables)
    If you encounter this error, it means that you have modified one of the Target.cs or Build.cs files and they now contain an error. Resolve the issues in these files and this
    error will go away.
 - `Missing third party include files`. If you get a compilation error saying one or many third party includes are missing, this is most likely due to one or multiple of the
-  third party libraries not being built. Make sure you have all of the dependeinces installed. Alternatively, try deleting the Intermediate folder in /cielim and opening the
+  third party libraries not being built. Make sure you have all of the dependencies installed. Alternatively, try deleting the Intermediate folder in /cielim and opening the
   Build.cs files.
 - `Third party library directories could not be found`. If this happens, it means you didn't pull the git submodules when cloning the cielim repository. Try pulling the git submodules
   or cloning their repositories into their respectives folders under the ThirdParty folder directly.
