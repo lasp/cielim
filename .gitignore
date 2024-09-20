@@ -12,6 +12,8 @@
 /Source/ThirdParty/ProtobufLibrary/include
 /Source/ThirdParty/ProtobufLibrary/lib
 
+.vsconfig
+
 # Visual Studio 2015 user specific files
 .vs/
 
@@ -80,7 +82,4 @@ Plugins/*/Intermediate/*
 DerivedDataCache/*
 
 *.DS_Store
-Source/ThirdParty/ProtobufLibrary/include
-Source/ThirdParty/ProtobufLibrary/lib
-Source/ThirdParty/OpenCV
 *.code-workspace
