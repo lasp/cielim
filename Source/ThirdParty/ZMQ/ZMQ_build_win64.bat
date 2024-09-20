@@ -29,7 +29,7 @@ if exist "%zmq_lib_full_path%" (
     mkdir build
     cd build
     env
-    cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+    cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release
     cmake --build . --parallel 8 --config Release
 
     cd "..\.."
@@ -42,6 +42,6 @@ if exist "%zmq_lib_full_path%" (
     echo Building cppzmq...
     mkdir build
     cd build
-    cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release
+    cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release
     cmake --build . --parallel 8 --config Release
 )

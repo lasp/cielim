@@ -38,7 +38,9 @@ if exist "%protobuf_lib_full_path%" (
     @REM Build w/ Cmake
     mkdir compile
     cd compile
-    cmake ../cmake -G "MinGW Makefiles" -DCMAKE_CXX_STANDARD=14 -DCMAKE_BUILD_TYPE=Release
+    cmake ../cmake -G "Visual Studio 17 2022" -A x64 ^
+        -DCMAKE_BUILD_TYPE=Release ^
+        -DCMAKE_CXX_STANDARD=14 ^
     cmake --build . --parallel 8 --config Release
 
     cd "..\.."

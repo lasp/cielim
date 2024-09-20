@@ -26,7 +26,7 @@ if exist "%opencv_lib_full_path%" (
     cd opencv
     mkdir build
     cd build
-    cmake .. -G "MinGW Makefiles" ^
+    cmake .. -G "Visual Studio 17 2022" -A x64 ^
         -DCMAKE_BUILD_TYPE=Release ^
         -DBUILD_PERF_TESTS:BOOL=OFF ^
         -DBUILD_TESTS:BOOL=OFF ^
@@ -34,6 +34,8 @@ if exist "%opencv_lib_full_path%" (
         -DWITH_CUDA:BOOL=OFF ^
         -DBUILD_EXAMPLES:BOOL=OFF ^
         -DINSTALL_CREATE_DISTRIB=ON ^
+        -DCMAKE_INSTALL_PREFIX=.. ^
         -DOPENCV_EXTRA_MODULES_PATH=..\..\opencv_contrib\modules
     cmake --build . --parallel 8 --config Release
+    cmake --install .
 )
