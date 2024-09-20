@@ -33,5 +33,7 @@ else
     -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules \
     -D CMAKE_INSTALL_PREFIX=..
   cmake --build . --parallel 8
+
+  # You need to install here or else headers won't all be in the same place
   cmake --install .
 endif

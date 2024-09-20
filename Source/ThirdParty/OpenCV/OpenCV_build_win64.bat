@@ -37,5 +37,7 @@ if exist "%opencv_lib_full_path%" (
         -DCMAKE_INSTALL_PREFIX=.. ^
         -DOPENCV_EXTRA_MODULES_PATH=..\..\opencv_contrib\modules
     cmake --build . --parallel 8 --config Release
+
+    @REM You need to install here or else headers won't all be in the same place
     cmake --install .
 )
