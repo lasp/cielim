@@ -11,8 +11,6 @@ void AZmqMultiThreadActor::BeginPlay()
 {
 	Super::BeginPlay();
 	UE_LOG(LogCielim, Display, TEXT("AZmqMultiThreadActor::BeginPlay"));
-
-	this->ConnectorThreadInit();
 }
 
 void AZmqMultiThreadActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -21,7 +19,16 @@ void AZmqMultiThreadActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	//! Freezing game thread exit process in meantime
 	this->ConnectorThreadShutdown();
 	
+	this->ZmqContext.shutdown();
+	this->ZmqContext.close();
 	Super::EndPlay(EndPlayReason);
+}
+
+void AZmqMultiThreadActor::Connect(const std::string& Address)
+{
+	this->ZmqContext = zmq::context_t();
+	this->ConnectionAddress = Address;
+	this->ConnectorThreadInit();
 }
 
 void AZmqMultiThreadActor::ConnectorThreadInit()

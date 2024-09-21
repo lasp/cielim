@@ -17,8 +17,6 @@ Connector::Connector(const FTimespan& ThreadTickRate,
 	this->Context = &Context;
 	this->Address = Address;
 	this->MultiThreadQueue = std::shared_ptr<CielimCircularQueue>(Queue);
-	this->ReplySocket = zmq::socket_t(this->Context, zmq::socket_type::rep);
-	this->ReplySocket.bind("tcp://127.0.0.1:5556");
 
 	this->IsListenerConnected = true;
 	Thread = FRunnableThread::Create(this,
@@ -30,6 +28,16 @@ Connector::Connector(const FTimespan& ThreadTickRate,
 
 void Connector::Connect()
 {
+	this->ReplySocket = zmq::socket_t(*this->Context, zmq::socket_type::rep);
+	this->ReplySocket.set(zmq::sockopt::linger, 0); // If ctx.close is called don't try to receive queued messages
+	this->ReplySocket.bind(this->Address);
+	this->ActivePoller.add(this->ReplySocket, zmq::event_flags::pollin, [&](zmq::event_flags Event)	
+	{
+		zmq::multipart_t Message = zmq::multipart_t(); 
+		Message.recv(this->ReplySocket);
+		auto Response = this->ParseMessage(Message);
+		Response.send(this->ReplySocket);
+	});
 }
 
 void Connector::CustomTick()
@@ -42,38 +50,34 @@ void Connector::CustomTick()
 		this->Wait(this->ThreadTickRate.GetTotalSeconds());
 	}
 	
-	//Link to UE World  
-	if(!this->Actor) 
+	if(this->ThreadIsPaused())
 	{
+		UE_LOG(LogCielim, Display, TEXT("Connector::ThreadIsPaused"));
 		return;
 	}
-	  
-	//This is the connection from a wrapper of OS Threading
-	// To UE Game Code.
-	// I use an actor for ease of creating a Blueprint 
-	// that can create timers and has a tick function that starts enabled
-	
-	//The thread tick should NOT call any UE code that 
-	//1. Creates or destroys objects
-	//2. Modifies the game world in any way
-	//3. Tries to debug draw anything
-	this->Listen();
+
+	if (!this->HasStopped) {
+		auto n = this->ActivePoller.wait(std::chrono::milliseconds(1));
+	}
 }
 
 bool Connector::ThreadInit(){ return true;}
 
 bool Connector::Init()
 {
-	//Any third party C++ to do on init
-	// this->ReplySocket = zmq::socket_t(this->context, zmq::socket_type::rep);
-	// this->ReplySocket.bind("tcp://localhost:5556");
-	this->IsListenerConnected = true;
+	this->Connect();
 	return true;
 }
 	
 void Connector::ThreadShutdown()
 {
-	//Any third party C++ to do on shutdown
+	this->ActivePoller.remove(this->ReplySocket);
+	this->ReplySocket.unbind(this->Address);
+	try {
+		this->ReplySocket.close();	
+	} catch (zmq::error_t e) {
+		// I'm dismissing away all thrown errors here.
+	}
 }
 
 CommandType Connector::ParseCommand(const std::string& CommandString)

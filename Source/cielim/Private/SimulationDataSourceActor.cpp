@@ -85,10 +85,8 @@ void ASimulationDataSourceActor::BeginPlay()
 		this->DataSource = DataSourceType::Network;
 		FVector Location(0.0f, 0.0f, 0.0f);
 		FRotator Rotation(0.0f, 0.0f, 0.0f);
-		FActorSpawnParameters SpawnInfo;
-		this->NetworkSimulationDataSource = std::unique_ptr<AZmqMultiThreadActor>(
-		GetWorld()->SpawnActor<AZmqMultiThreadActor>(Location, Rotation, SpawnInfo));
-		this->NetworkSimulationDataSource->ConnectionAddress = std::string(TCHAR_TO_UTF8(*CommAddress));
+		this->NetworkSimulationDataSource = GetWorld()->SpawnActor<AZmqMultiThreadActor>(Location, Rotation);
+		this->NetworkSimulationDataSource->Connect(std::string(TCHAR_TO_UTF8(*CommAddress)));
 	} else if(FString SimulationDataFile;
 		FParse::Value(FCommandLine::Get(), TEXT("simulationDataFile"), SimulationDataFile)) {
 	    UE_LOG(LogCielim, Display, TEXT("Parsed command line parameter (simulationDataFile) : %s"), *SimulationDataFile);
@@ -108,6 +106,13 @@ void ASimulationDataSourceActor::BeginPlay()
 	int patch;
 	zmq::version(&major, &minor, &patch);
 	UE_LOG(LogCielim, Display, TEXT("ZeroMQ version: v%d.%d.%d"), major, minor, patch);
+}
+
+void ASimulationDataSourceActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{   
+	this->SimulationDataSource.reset();
+	google::protobuf::ShutdownProtobufLibrary();
+	Super::EndPlay(EndPlayReason);
 }
 
 void ASimulationDataSourceActor::FileReaderTick(float DeltaTime)

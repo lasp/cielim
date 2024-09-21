@@ -60,7 +60,7 @@ private:
 	void NetworkTick(float DeltaTime);
 	void FileReaderTick(float DeltaTime);
 
-    std::unique_ptr<AZmqMultiThreadActor> NetworkSimulationDataSource;
+	AZmqMultiThreadActor* NetworkSimulationDataSource;
 	std::unique_ptr<ProtobufFileReader> SimulationDataSource;
     vizProtobufferMessage::VizMessage Vizmessage;
     TArray<ACelestialBody*> CelestialBodyArray;
