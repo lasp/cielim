@@ -22,6 +22,8 @@ public class ProtobufLibrary : ModuleRules
         }
         else if (Target.Platform == UnrealTargetPlatform.Win64)
         {
+            PublicDefinitions.Add("PROTOBUF_USE_DLLS"); // This is needed for protobuf to compile to dlls
+            
             PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "lib/libprotobuf.lib"));
         }
         else

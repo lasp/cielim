@@ -41,6 +41,7 @@ if exist "%protobuf_lib_full_path%" (
     cmake ../cmake -G "Visual Studio 17 2022" -A x64 ^
         -DCMAKE_BUILD_TYPE=Release ^
         -DCMAKE_CXX_STANDARD=14 ^
+        -Dprotobuf_BUILD_SHARED_LIBS=ON
     cmake --build . --parallel 8 --config Release
 
     cd "..\.."
