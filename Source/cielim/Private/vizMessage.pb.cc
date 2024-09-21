@@ -5,6 +5,15 @@
 
 #include <algorithm>
 
+/* It is necessary to silence these errors as MSVC will not build the project
+   and these warnings are generated in the protobuf headers themselves. */
+
+#if PLATFORM_WINDOWS
+#pragma warning(push)
+#pragma warning(disable : 4800) // Disable warning C4800
+#pragma warning(disable : 4125)
+#endif
+
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/extension_set.h>
 #include <google/protobuf/wire_format_lite.h>
@@ -12098,3 +12107,7 @@ PROTOBUF_NAMESPACE_CLOSE
 
 // @@protoc_insertion_point(global_scope)
 #include <google/protobuf/port_undef.inc>
+
+#if PLATFORM_WINDOWS
+#pragma warning(pop)
+#endif

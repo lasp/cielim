@@ -1,9 +1,25 @@
 #include "ZmqConnection/Connector.h"
+
+#include <string>
+
 #include "ZmqConnection/ZmqMultiThreadActor.h"
 #include "CielimLoggingMacros.h"
 #include "GenericPlatform/GenericPlatform.h"
+
+/* It is necessary to silence these errors as MSVC will not build the project
+   and these warnings are generated in the protobuf headers themselves. */
+
+#if PLATFORM_WINDOWS
+#pragma warning(push)
+#pragma warning(disable : 4800) // Disable warnings C4800 and C4125
+#pragma warning(disable : 4125)
+#endif
+
 #include "google/protobuf/util/internal/testdata/oneofs.pb.h"
-#include <string>
+
+#if PLATFORM_WINDOWS
+#pragma warning(pop)
+#endif
 
 Connector::Connector(const FTimespan& ThreadTickRate, 
                      const TCHAR* ThreadDescription, 
