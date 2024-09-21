@@ -18,7 +18,6 @@ Connector::Connector(const FTimespan& ThreadTickRate,
 	this->Address = Address;
 	this->MultiThreadQueue = std::shared_ptr<CielimCircularQueue>(Queue);
 
-	this->IsListenerConnected = true;
 	Thread = FRunnableThread::Create(this,
 		ThreadDescription, 
 		128 * 1024,  //allocated memory
@@ -178,33 +177,6 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage)
 	}
 
 	return Message;
-}
-
-void Connector::Listen()
-{
-	UE_LOG(LogCielim, Display, TEXT("Connector::Listen"));
-	//Very Long While Loop
-	if(IsListenerConnected)
-	{
-		UE_LOG(LogCielim, Display, TEXT("Listening"));
-		if(!this->MultiThreadQueue)
-		{
-			return;
-		}
-		
-		if(this->ThreadIsPaused())
-		{   
-			return;
-		}
-		
-		zmq::multipart_t Message = zmq::multipart_t(); 
-		if (!Message.recv(this->ReplySocket))
-		{
-			return;
-		}
-		auto Response = this->ParseMessage(Message);
-		Response.send(this->ReplySocket);
-	}
 }
 
 void Connector::SetThreadSafeQueue(const std::shared_ptr<CielimCircularQueue>& Queue)

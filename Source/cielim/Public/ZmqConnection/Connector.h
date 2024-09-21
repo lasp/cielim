@@ -46,5 +46,4 @@ private:
 	zmq::active_poller_t ActivePoller;
 	std::string Address{"tcp://127.0.0.1:5556"};
 	std::shared_ptr<CielimCircularQueue> MultiThreadQueue = nullptr;
-	bool IsListenerConnected = false;
 };
