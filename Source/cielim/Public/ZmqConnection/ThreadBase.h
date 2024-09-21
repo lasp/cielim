@@ -3,7 +3,7 @@
 #include "HAL/Runnable.h"
 #include "HAL/RunnableThread.h"
 #include "HAL/ThreadSafeBool.h"
-
+#include "CielimLoggingMacros.h"
 #include "Misc/SingleThreadRunnable.h"
 
 class FThreadBase : public FRunnable, FSingleThreadRunnable
@@ -42,7 +42,7 @@ public:
 	// Avoid using unnecessary OS resources!
 	void Wait(float Seconds)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("FThreadBase::Wait"));
+		UE_LOG(LogCielim, Warning, TEXT("FThreadBase::Wait"));
 		FPlatformProcess::Sleep(Seconds);
 	}
 	
