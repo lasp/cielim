@@ -43,7 +43,6 @@ void Connector::CustomTick()
 { 
 	//Throttle Thread to avoid consuming un-needed resources
 	// Set during thread startup, can be modified any time!
-	UE_LOG(LogCielim, Display, TEXT("Connector::CustomTick"));
 	if(this->ThreadTickRate.GetTotalSeconds() > 0)
 	{
 		this->Wait(this->ThreadTickRate.GetTotalSeconds());
