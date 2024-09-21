@@ -83,15 +83,10 @@ public:
 				{
 					IsVerifiedSuspended.AtomicSet(true);
 				}
-				 
-				//~~~~~~~~~~~~~~~~~~~~~~~~~~
 				// No custom Ticks Will Occur!
-				
 				//! Ready to resume on a moments notice though!
 				Wait(ThreadTickRate.GetTotalSeconds());
-				
 				continue;
-				//~~~~~~~~~~~~~~~~~~~~~~~~~~
 			}
 			CustomTick();
 		}
@@ -146,4 +141,3 @@ protected:
 	/** Holds the amount of time to wait */
 	FTimespan ThreadTickRate;
 };
-  

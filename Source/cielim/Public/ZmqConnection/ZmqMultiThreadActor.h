@@ -15,7 +15,7 @@ class CIELIM_API AZmqMultiThreadActor : public AActor
 public:
 	AZmqMultiThreadActor()=default;
 	~AZmqMultiThreadActor()=default;
-	
+
 	void Connect(const std::string& Address);
 	std::optional<FCircularQueueData> GetQueueData() const;
 	void PutQueueData(std::string Data) const;
