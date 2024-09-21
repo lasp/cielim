@@ -8,22 +8,24 @@
 Connector::Connector(const FTimespan& ThreadTickRate, 
                      const TCHAR* ThreadDescription, 
                      AZmqMultiThreadActor* Actor,
-                     std::shared_ptr<CielimCircularQueue> Queue) 
-: Super(ThreadTickRate, ThreadDescription) 
-, Actor(Actor)
+                     zmq::context_t& Context,
+                     const std::string& Address,
+                     std::shared_ptr<CielimCircularQueue> Queue
+                     ) 
+	: Super(ThreadTickRate, ThreadDescription)
 {
+	this->Context = &Context;
+	this->Address = Address;
 	this->MultiThreadQueue = std::shared_ptr<CielimCircularQueue>(Queue);
-	this->Context = zmq::context_t();
 	this->ReplySocket = zmq::socket_t(this->Context, zmq::socket_type::rep);
 	this->ReplySocket.bind("tcp://127.0.0.1:5556");
 
-	const FString UniqueThreadName = "ZMQ Connector ";
-	Thread = FRunnableThread::Create(this, 
-										*UniqueThreadName, 
-										128 * 1024,  //allocated memory
-										TPri_AboveNormal, 
-										FPlatformAffinity::GetPoolThreadMask());
 	this->IsListenerConnected = true;
+	Thread = FRunnableThread::Create(this,
+		ThreadDescription, 
+		128 * 1024,  //allocated memory
+		TPri_AboveNormal, 
+		FPlatformAffinity::GetPoolThreadMask());
 }
 
 void Connector::Connect()

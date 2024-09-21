@@ -16,6 +16,8 @@ public:
 	Connector(const FTimespan& ThreadTickRate,
 			  const TCHAR* ThreadDescription,
 			  AZmqMultiThreadActor* Actor,
+			  zmq::context_t& Context,
+			  const std::string& Address,
 			  std::shared_ptr<CielimCircularQueue> Queue);
 	~Connector() = default;
 
@@ -33,7 +35,6 @@ protected:
 	//! Owning actor stops this thread on EndPlay, its own destructor starting process
 	//! Owning actor freezes game thread until this thread acknowledges it has been stopped
 	AZmqMultiThreadActor* Actor = nullptr;
-	zmq::context_t Context;
     zmq::socket_t ReplySocket;
 
 private:
@@ -42,6 +43,8 @@ private:
 	zmq::multipart_t ParseMessage(zmq::multipart_t& Request); 
 	CommandType ParseCommand(const std::string& CommandString);
 
+    zmq::context_t* Context;
+	std::string Address{"tcp://127.0.0.1:5556"};
 	std::shared_ptr<CielimCircularQueue> MultiThreadQueue = nullptr;
 	bool IsListenerConnected = false;
 };

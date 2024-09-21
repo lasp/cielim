@@ -16,6 +16,7 @@ public:
 	AZmqMultiThreadActor()=default;
 	~AZmqMultiThreadActor()=default;
 	
+	void Connect(const std::string& Address);
 	std::optional<FCircularQueueData> GetQueueData() const;
 	void PutQueueData(std::string Data) const;
 	void PutImageQueueData(const TArray64<uint8>& PNGData) const;
@@ -50,4 +51,6 @@ public:
 	
 	// Ensure the thread is shut down
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	zmq::context_t ZmqContext;
+	std::string ConnectionAddress;
 };
