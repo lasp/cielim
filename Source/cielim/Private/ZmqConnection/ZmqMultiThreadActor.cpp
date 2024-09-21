@@ -38,7 +38,7 @@ void AZmqMultiThreadActor::ConnectorThreadInit()
 	this->MultiThreadDataQueue = std::make_shared<CielimCircularQueue>();
 	
 	// Thread tick rate to prevent thread from spinning if a fast update is not needed
-	FTimespan ThreadWaitTime = FTimespan::FromSeconds(0.01);
+	FTimespan ThreadWaitTime = FTimespan::FromSeconds(0.0);
 	
 	FString UniqueThreadName = "ZMQ Connector ";
 	UniqueThreadName += FString::FromInt(++ThreadNameCounter);
