@@ -34,6 +34,7 @@ if exist "%opencv_lib_full_path%" (
         -DWITH_CUDA:BOOL=OFF ^
         -DBUILD_EXAMPLES:BOOL=OFF ^
         -DINSTALL_CREATE_DISTRIB=ON ^
+        -DWITH_IPP=OFF ^
         -DCMAKE_INSTALL_PREFIX=.. ^
         -DOPENCV_EXTRA_MODULES_PATH=..\..\opencv_contrib\modules
     cmake --build . --parallel 8 --config Release
