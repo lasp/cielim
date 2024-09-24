@@ -24,8 +24,8 @@ public:
 private:
 	vizProtobufferMessage::VizMessage VizMessage;
 	std::fstream Input;
-	google::protobuf::io::ZeroCopyInputStream* RawInput;
-	google::protobuf::io::CodedInputStream* CodedInput;
+	std::unique_ptr<google::protobuf::io::ZeroCopyInputStream> RawInput;
+	std::unique_ptr<google::protobuf::io::CodedInputStream> CodedInput;
 	bool Eof;
 };
 

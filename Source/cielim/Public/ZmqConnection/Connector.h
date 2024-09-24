@@ -16,6 +16,8 @@ public:
 	Connector(const FTimespan& ThreadTickRate,
 			  const TCHAR* ThreadDescription,
 			  AZmqMultiThreadActor* Actor,
+			  zmq::context_t& Context,
+			  const std::string& Address,
 			  std::shared_ptr<CielimCircularQueue> Queue);
 	~Connector() = default;
 
@@ -25,23 +27,23 @@ public:
 	bool Init() override;
 	void ThreadShutdown();
 	void SetThreadSafeQueue(const std::shared_ptr<CielimCircularQueue>& Queue);
-	void Connect();
 	
 protected:
 	//! Because non protected ptr, (not UPROPERTY())
 	//! >>> The owning actor of this thread must outlive the thread itself <<<
 	//! Owning actor stops this thread on EndPlay, its own destructor starting process
 	//! Owning actor freezes game thread until this thread acknowledges it has been stopped
-	AZmqMultiThreadActor* Actor = nullptr;
-	zmq::context_t Context;
-    zmq::socket_t ReplySocket;
+	// AZmqMultiThreadActor* Actor = nullptr;
 
 private:
-	void Listen();
-	// void ThreadTick();
+	void Connect();
+	void ParseHandler(zmq::event_flags Event);
 	zmq::multipart_t ParseMessage(zmq::multipart_t& Request); 
 	CommandType ParseCommand(const std::string& CommandString);
 
+	zmq::socket_t ReplySocket;
+    zmq::context_t* Context;
+	zmq::active_poller_t ActivePoller;
+	std::string Address{"tcp://127.0.0.1:5556"};
 	std::shared_ptr<CielimCircularQueue> MultiThreadQueue = nullptr;
-	bool IsListenerConnected = false;
 };

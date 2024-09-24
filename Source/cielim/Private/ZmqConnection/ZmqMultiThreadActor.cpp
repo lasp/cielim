@@ -11,8 +11,6 @@ void AZmqMultiThreadActor::BeginPlay()
 {
 	Super::BeginPlay();
 	UE_LOG(LogCielim, Display, TEXT("AZmqMultiThreadActor::BeginPlay"));
-
-	this->ConnectorThreadInit();
 }
 
 void AZmqMultiThreadActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -21,7 +19,16 @@ void AZmqMultiThreadActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	//! Freezing game thread exit process in meantime
 	this->ConnectorThreadShutdown();
 	
+	this->ZmqContext.shutdown();
+	this->ZmqContext.close();
 	Super::EndPlay(EndPlayReason);
+}
+
+void AZmqMultiThreadActor::Connect(const std::string& Address)
+{
+	this->ZmqContext = zmq::context_t();
+	this->ConnectionAddress = Address;
+	this->ConnectorThreadInit();
 }
 
 void AZmqMultiThreadActor::ConnectorThreadInit()
@@ -31,7 +38,7 @@ void AZmqMultiThreadActor::ConnectorThreadInit()
 	this->MultiThreadDataQueue = std::make_shared<CielimCircularQueue>();
 	
 	// Thread tick rate to prevent thread from spinning if a fast update is not needed
-	FTimespan ThreadWaitTime = FTimespan::FromSeconds(0.01);
+	FTimespan ThreadWaitTime = FTimespan::FromSeconds(0.0);
 	
 	FString UniqueThreadName = "ZMQ Connector ";
 	UniqueThreadName += FString::FromInt(++ThreadNameCounter);
@@ -39,38 +46,35 @@ void AZmqMultiThreadActor::ConnectorThreadInit()
 	this->ConnectorThread = std::make_unique<Connector>(ThreadWaitTime,
 														*UniqueThreadName,
 														this,
+														this->ZmqContext,
+														this->ConnectionAddress,
 														this->MultiThreadDataQueue);
-	
-	if(this->ConnectorThread) 
-	{ 
-		this->ConnectorThread->ThreadInit();
-		this->ConnectorThread->Init();
-		this->ConnectorThread->SetThreadSafeQueue(this->MultiThreadDataQueue);
-		CielimLog("Thread Initialized");
-		
-		UE_LOG(LogCielim, Display, TEXT("Thread Initialized"));
-	}
-	 
+
 	UE_LOG(LogCielim, Display, TEXT("AZmqMultiThreadActor::ThreadInit end"));
-	
-	this->StartThreadTimerUpdate();
+	// this->StartThreadTimerUpdate();
 }
 
 void AZmqMultiThreadActor::ConnectorThreadShutdown()
 {
-	UE_LOG(LogCielim, Display, TEXT("AZmqMultiThreadActor::ThreadShutdown"));
+	UE_LOG(LogCielim, Display, TEXT("AZmqMultiThreadActor::ConnectorThreadShutdown"));
 	if(this->ConnectorThread) 
 	{
-		this->ConnectorThread->ThreadShutdown();
 		this->ConnectorThread->Stop();
-		
+		// Empty the queue because we're not going to process anymore data
+		// This also unblocks the ActivePoller::wait call in teh Connector thread
+		// which will (likely) be blocked on enqueueing data into the thread safe
+		// data queue
+		this->MultiThreadDataQueue->Requests.Empty();
+		this->MultiThreadDataQueue->Responses.Empty();
 		/* Wait here until connectorThread is verified as having stopped. This will delay PIE EndPlay or closing of
 		 * the game while the thread have a chance to finish */
 		while(!this->ConnectorThread->ThreadHasStopped())
 		{
 			FPlatformProcess::Sleep(0.1);
+			UE_LOG(LogCielim, Display, TEXT("sleeping in AZmqMultiThreadActor::ConnectorThreadShutdown"));
 		}
 		
+		this->ConnectorThread->ThreadShutdown();
 		this->ConnectorThread.release();
 	} 
 	

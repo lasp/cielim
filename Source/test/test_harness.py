@@ -14,11 +14,14 @@ import vizMessage_pb2
 class Connector:
     def __init__(self):
         self.address = ''
+        self.context = None
+        self.request_socket = None
+
+    def connect(self, address: str = "tcp://localhost:5556"):
         self.context = zmq.Context()
         self.request_socket = self.context.socket(zmq.REQ)
         self.request_socket.set(zmq.SocketOption.CONNECT_TIMEOUT, 10)
 
-    def connect(self, address: str = "tcp://localhost:5556"):
         self.address = address
         self.request_socket.connect(address)
         self._send_ping()
@@ -57,14 +60,21 @@ class MessageFileHandler:
         self.file_name = file_name
         self.file_handle = open(file_name, "rb")
 
-    def get_simulation_frame_at_time(self, sim_time: float):
+    def _read_simulation_frame_at_time(self, sim_time: float):
         proceed = True
         while proceed:
             message = delimited_protobuf.read(self.file_handle, vizMessage_pb2.VizMessage)
             if message.currentTime.simTimeElapsed >= sim_time:
                 proceed = False
-                print(message.currentTime.simTimeElapsed)
                 return message
+
+    def get_simulation_frame_at_time(self, sim_time: float):
+        message = self._read_simulation_frame_at_time(sim_time)
+        self.file_handle.seek(0)
+        return message
+
+    def jump_to_simulation_frame_at_time(self, sim_time: float):
+        return self._read_simulation_frame_at_time(sim_time)
 
     def get_next_simulation_frame(self):
         return delimited_protobuf.read(self.file_handle, vizMessage_pb2.VizMessage)

@@ -22,8 +22,8 @@ ProtobufFileReader::ProtobufFileReader(const std::string Filename) : SimulationD
     }
 
     this->Eof = false;
-    this->RawInput = new google::protobuf::io::IstreamInputStream(&this->Input);
-    this->CodedInput = new google::protobuf::io::CodedInputStream(RawInput);
+    this->RawInput = std::make_unique<google::protobuf::io::IstreamInputStream>(&this->Input);
+    this->CodedInput = std::make_unique<google::protobuf::io::CodedInputStream>(this->RawInput.get());
 }
 
 ProtobufFileReader::~ProtobufFileReader()
@@ -31,9 +31,6 @@ ProtobufFileReader::~ProtobufFileReader()
     // Optional:  Delete all global objects allocated by libprotobuf.
     google::protobuf::ShutdownProtobufLibrary();
     UE_LOG(LogCielim, Warning, TEXT("Protobuf Shutdown Success"));
-
-    delete this->RawInput;
-    delete this->CodedInput;
 }
 
 /**
@@ -43,7 +40,7 @@ ProtobufFileReader::~ProtobufFileReader()
 vizProtobufferMessage::VizMessage& ProtobufFileReader::GetNextSimulationData()
 {
     vizProtobufferMessage::VizMessage TempMessage;
-    google::protobuf::util::ParseDelimitedFromCodedStream(&TempMessage, CodedInput, &Eof);
+    google::protobuf::util::ParseDelimitedFromCodedStream(&TempMessage, this->CodedInput.get(), &this->Eof);
     if (TempMessage.ByteSizeLong() != 0) {
         this->VizMessage.Clear();
         this->VizMessage = TempMessage;
