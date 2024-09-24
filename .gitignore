@@ -1,3 +1,17 @@
+# Custom ignore paths
+/Saved
+/Releases
+/Content
+/DerivedDataCache
+/.github
+/.git
+/.vscode
+/Intermediate
+
+# Third party build paths
+/Source/ThirdParty/ProtobufLibrary/include
+/Source/ThirdParty/ProtobufLibrary/lib
+
 # Visual Studio 2015 user specific files
 .vs/
 

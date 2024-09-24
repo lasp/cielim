@@ -8,18 +8,24 @@ public class OpenCV : ModuleRules
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	    bAddDefaultIncludePaths = false;
         
-        if (Target.Platform == UnrealTargetPlatform.Win64)
+        if (Target.Platform != UnrealTargetPlatform.Mac)
         { 
             string Err = string.Format("OpenCV library not available for platform {0}", Target.Platform.ToString());
             throw new BuildException(Err);
         }
         
         PublicDefinitions.Add("_ALLOW_MSC_VER_MISMATCH");
+
         Type = ModuleRules.ModuleType.External;
         PrecompileForTargets = PrecompileTargetsType.Any;
-        PublicPreBuildLibraries.Add(Path.Combine(ModuleDirectory, "lib/libopencv_core.dylib"));
-        PublicPreBuildLibraries.Add(Path.Combine(ModuleDirectory, "lib/libopencv_imgcodecs.dylib"));
-        PublicPreBuildLibraries.Add(Path.Combine(ModuleDirectory, "lib/libopencv_imgproc.dylib"));
-        PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "include/opencv4"));
+
+        // Link program to OpenCV Library files (these should all be included in libopencv_world)
+        PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "opencv/build/lib/libopencv_world.dylib"));
+
+        // Add include path for OpenCV headers
+        PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "opencv/include/opencv4/opencv2"));
+        PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "opencv/modules/core/include"));
+        PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "opencv/modules/imgproc/include"));
+        PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "opencv/build"));
 	}
 }

@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "5.2",
+	"EngineAssociation": "5.4",
 	"Category": "",
 	"Description": "",
 	"Modules": [
@@ -36,9 +36,9 @@
 	{
 		"Mac": [
 			"export PATH=/opt/homebrew/bin:$PATH",
-			"tcsh $(ProjectDir)/Source/ThirdParty/ProtobufLibrary/build-protobuf-library.sh \"$(ProjectDir)/Source/ThirdParty/ProtobufLibrary/\" ",
-			"tcsh $(ProjectDir)/Source/ThirdParty/ZMQ/download-zmq-and-cppzmq.sh \"$(ProjectDir)/Source/ThirdParty/ZMQ/\" ",
-			"tcsh $(ProjectDir)/Source/ThirdParty/OpenCV/download-and-build-opencv.sh \"$(ProjectDir)/Source/ThirdParty/OpenCV/\" "
+			"tcsh $(ProjectDir)/Source/ThirdParty/OpenCV/OpenCV_build.sh \"$(ProjectDir)/Source/ThirdParty/OpenCV/\" ",
+			"tcsh $(ProjectDir)/Source/ThirdParty/ProtobufLibrary/ProtobufLibrary_build.sh \"$(ProjectDir)/Source/ThirdParty/ProtobufLibrary/\" ",
+			"tcsh $(ProjectDir)/Source/ThirdParty/ZMQ/ZMQ_build.sh \"$(ProjectDir)/Source/ThirdParty/ZMQ/\" "
 		]
 	}
 }

@@ -97,7 +97,7 @@ void ASimulationDataSourceActor::BeginPlay()
 	    this->Vizmessage = this->SimulationDataSource->GetNextSimulationData();
 	} else {
 		UE_LOG(LogCielim, Warning, TEXT("Did not receive start up mode from command line parameter"));
-		UE_LOG(LogCielim, Display, TEXT("Defaulted to (simulationDataFile) : %s"), "protofile_proxOps.bin");
+		UE_LOG(LogCielim, Display, TEXT("Defaulted to (simulationDataFile) : %hs"), "protofile_proxOps.bin");
 		this->DataSource = DataSourceType::File;
 		this->SimulationDataSource = std::make_unique<ProtobufFileReader>("protofile_proxOps.bin");
 		this->Vizmessage = this->SimulationDataSource->GetNextSimulationData();

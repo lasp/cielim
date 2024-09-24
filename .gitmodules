@@ -1,0 +1,15 @@
+[submodule "Source/ThirdParty/OpenCV/opencv"]
+	path = Source/ThirdParty/OpenCV/opencv
+	url = git@github.com:opencv/opencv.git
+[submodule "Source/ThirdParty/OpenCV/opencv_contrib"]
+	path = Source/ThirdParty/OpenCV/opencv_contrib
+	url = git@github.com:opencv/opencv_contrib.git
+[submodule "Source/ThirdParty/ProtobufLibrary/protobuf"]
+	path = Source/ThirdParty/ProtobufLibrary/protobuf
+	url = git@github.com:protocolbuffers/protobuf.git
+[submodule "Source/ThirdParty/ZMQ/libzmq"]
+	path = Source/ThirdParty/ZMQ/libzmq
+	url = git@github.com:zeromq/libzmq.git
+[submodule "Source/ThirdParty/ZMQ/cppzmq"]
+	path = Source/ThirdParty/ZMQ/cppzmq
+	url = git@github.com:zeromq/cppzmq.git
