@@ -25,6 +25,9 @@ public class OpenCV : ModuleRules
         {
             PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "opencv/build/lib/Release/opencv_world4100.lib"));
 
+            RuntimeDependencies.Add(Path.Combine(ModuleDirectory, "opencv/build/bin/Release/opencv_world4100.dll"));
+            RuntimeDependencies.Add(Path.Combine(ModuleDirectory, "opencv/build/bin/Release/opencv_videoio_ffmpeg4100_64.dll"));
+
             PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "opencv/include/opencv2"));
         }
         else

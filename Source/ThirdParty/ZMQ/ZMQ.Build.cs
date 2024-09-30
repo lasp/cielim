@@ -22,6 +22,8 @@ public class ZMQ : ModuleRules
         }
         else if (Target.Platform == UnrealTargetPlatform.Win64)
         {
+            RuntimeDependencies.Add(Path.Combine(ModuleDirectory, "libzmq/build/bin/Release/libzmq-v143-mt-4_3_6.dll"));
+            
             // .lib is windows specific library file
             PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "libzmq/build/lib/Release/libzmq-v143-mt-4_3_6.lib"));
         }
