@@ -7,6 +7,8 @@ public class cielim : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
+                bEnableExceptions = true;
+
 		// Add module dependencies
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore"});
