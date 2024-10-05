@@ -3,4 +3,6 @@
 // like a procedural level generator, or perhaps for your game mode.
 #pragma once
 
+#include "Logging/LogMacros.h"
+
 DECLARE_LOG_CATEGORY_EXTERN(LogCielim, Log, All);
