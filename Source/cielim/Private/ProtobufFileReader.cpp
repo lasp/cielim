@@ -14,14 +14,13 @@ ProtobufFileReader::ProtobufFileReader(const std::string Filename) : SimulationD
     // Read the existing VizMessage file
     const FString ContentDir = FPaths::ProjectDir(); 
     const std::string Filepath = std::string(TCHAR_TO_UTF8(*ContentDir)) + "/Content/FlybyData/bin/" + Filename;
-    this->Input.open(Filepath, std::ios::in | std::ios::binary);
+    this->Input.open(Filepath, std::ios::binary);
 
     if (!this->Input) 
     {
         UE_LOG(LogCielim, Warning, TEXT("Failed to open %hs"), Filepath.c_str());
     }
 
-    this->Eof = false;
     this->RawInput = std::make_unique<google::protobuf::io::IstreamInputStream>(&this->Input);
     this->CodedInput = std::make_unique<google::protobuf::io::CodedInputStream>(this->RawInput.get());
 }
