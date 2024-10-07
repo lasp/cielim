@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "vizMessage.pb.h"
+#include "cielimMessage.pb.h"
 #include <string>
 
 class SimulationDataSource
@@ -9,5 +9,5 @@ class SimulationDataSource
 public:
 	SimulationDataSource(std::string Source) {};
 	virtual ~SimulationDataSource() = default;
-	virtual vizProtobufferMessage::VizMessage& GetNextSimulationData() = 0;
+	virtual cielimMessage::CielimMessage& GetNextSimulationData() = 0;
 };

@@ -128,7 +128,7 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage)
 			}
 		case CommandType::SIM_UPDATE:
 			{
-				vizProtobufferMessage::VizMessage tempMessage = vizProtobufferMessage::VizMessage();
+				cielimMessage::CielimMessage tempMessage = cielimMessage::CielimMessage();
 				// @TODO: fix this message parsing. It's a mad hack!
 				tempMessage.ParseFromArray(RequestMessage[2].data(), RequestMessage[2].size()*sizeof(char));
 				auto Data = FCircularQueueData();

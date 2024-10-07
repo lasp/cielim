@@ -7,7 +7,7 @@
 #include <memory>
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "vizMessage.pb.h"
+#include "cielimMessage.pb.h"
 #include "CelestialBody.h"
 #include "Spacecraft.h"
 #include "CaptureManager.h"
@@ -55,7 +55,7 @@ public:
     TSubclassOf<ASpacecraft> BpSpacecraft;
 
     UFUNCTION(BlueprintCallable)
-    void DebugVizmessage() const;
+    void DebugCielimMessage() const;
 
 private:
 	void NetworkTick(float DeltaTime);
@@ -63,7 +63,7 @@ private:
 
 	AZmqMultiThreadActor* NetworkSimulationDataSource;
 	std::unique_ptr<ProtobufFileReader> SimulationDataSource;
-    vizProtobufferMessage::VizMessage Vizmessage;
+    cielimMessage::CielimMessage CielimMessage;
     TArray<ACelestialBody*> CelestialBodyArray;
     ASpacecraft* Spacecraft=nullptr;
     ACaptureManager* CaptureManager=nullptr;
