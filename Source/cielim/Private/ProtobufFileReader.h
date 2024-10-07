@@ -7,6 +7,7 @@
 #include "cielimMessage.pb.h"
 #include <google/protobuf/io/coded_stream.h>
 #include <fstream>
+#include <optional>
 
 /**
  * 
@@ -17,13 +18,12 @@ public:
 	ProtobufFileReader(std::string Filename);
 	~ProtobufFileReader();
 
-	cielimMessage::CielimMessage& GetNextSimulationData() override;
+	std::optional<cielimMessage::CielimMessage> GetNextSimulationData() override;
 
 	bool get_eof() const { return Eof; }
 
 private:
 	std::fstream Input;
-	cielimMessage::CielimMessage CielimMessage;
 	std::unique_ptr<google::protobuf::io::ZeroCopyInputStream> RawInput;
 	std::unique_ptr<google::protobuf::io::CodedInputStream> CodedInput;
 	bool Eof;
