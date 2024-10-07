@@ -23,9 +23,9 @@ public:
 	bool get_eof() const { return Eof; }
 
 private:
-	std::fstream Input;
+	std::ifstream Input;
 	std::unique_ptr<google::protobuf::io::ZeroCopyInputStream> RawInput;
 	std::unique_ptr<google::protobuf::io::CodedInputStream> CodedInput;
-	bool Eof;
+	bool Eof{};
 };
 
