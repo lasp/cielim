@@ -37,13 +37,13 @@ ProtobufFileReader::~ProtobufFileReader()
  * Parses data from input stream and returns vizmessage object
  *   
  */
-vizProtobufferMessage::VizMessage& ProtobufFileReader::GetNextSimulationData()
+cielimMessage::CielimMessage& ProtobufFileReader::GetNextSimulationData()
 {
-    vizProtobufferMessage::VizMessage TempMessage;
+    cielimMessage::CielimMessage TempMessage;
     google::protobuf::util::ParseDelimitedFromCodedStream(&TempMessage, this->CodedInput.get(), &this->Eof);
     if (TempMessage.ByteSizeLong() != 0) {
-        this->VizMessage.Clear();
-        this->VizMessage = TempMessage;
+        this->CielimMessage.Clear();
+        this->CielimMessage = TempMessage;
     }
-    return this->VizMessage;
+    return this->CielimMessage;
 }
