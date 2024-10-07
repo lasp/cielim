@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "cielimMessage.pb.h"
+#include <optional>
 #include <string>
 
 class SimulationDataSource
@@ -9,5 +10,5 @@ class SimulationDataSource
 public:
 	SimulationDataSource(std::string Source) {};
 	virtual ~SimulationDataSource() = default;
-	virtual cielimMessage::CielimMessage& GetNextSimulationData() = 0;
+	virtual std::optional<cielimMessage::CielimMessage> GetNextSimulationData() = 0;
 };

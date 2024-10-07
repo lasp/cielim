@@ -120,6 +120,12 @@ void ASimulationDataSourceActor::EndPlay(const EEndPlayReason::Type EndPlayReaso
 void ASimulationDataSourceActor::FileReaderTick(float DeltaTime)
 {
 	if (!this->IsSceneEstablished) {
+	auto messageResult = this->SimulationDataSource->GetNextSimulationData();
+	if (messageResult.has_value())
+	{
+		this->CielimMessage = messageResult.value();
+	}	
+
 		UE_LOG(LogCielim, Display, TEXT("Initialize scene..."));
 		this->IsSceneEstablished = true;
 		this->SpawnCelestialBodies();
