@@ -1,7 +1,10 @@
 #pragma once
 
+#include <variant>
+
 #include "Commands.h"
 #include "UCircularQueueData.generated.h"
+
 
 USTRUCT(BlueprintType) //BlueprintType if want access in BP
 struct FCircularQueueData

@@ -2,7 +2,6 @@
 A photorealistic image generation tool for the space environment 
 
 ## Building The Project
-*Currently only Macos is supported.*
 
 This project is in pretty early stages and the build system/process is probably flaky. If you find an issue please 
 create an issue.
@@ -14,19 +13,28 @@ tools installed on your computer and added to your PATH environment variable:
 - Automake (only for MacOS and Linux)
 - Autoconf (only for MacOS and Linux)
 - Libtool (only for MacOS and Linux)
+- Make (only for MacOS and Linux)
+- Visual Studio Community 2022 and MSVC Build Tools (Windows Only)
 - CMake version 3.0 or higher
-- Make
-- g++ / gcc
+
+**Note:** If you have both Visual Studio and Msys2/MinGW on your Windows machine, you may have issues building OpenCV as it may try to use MinGW to build
+files generated for Visual Studio. In this case, rename or delete your Msys64 folder while building and then restore when it's finished.
+
+**Additionally:** If you're working on Windows, you will need to copy and paste the .dll files corresponding to the linked .lib files in your `cielim\Binaries\Win64` directory. These include:
+  - libprotobuf.dll
+  - libzmq-(version).dll
+  - opencv_world(version).dll
+  - opencv_videoio_ffmpeg(version).dll
 
 ### Build Process
 
 Next, you will need to open (double click) the cielim.uproject file  
 - This will launch Unreal and if the project isn't built (which it won't be if you are starting fresh) it will try to build the project.
-- If the build fails, you can get further debug information by manually invoking the build from the terminal (replacing any user specific paths)
-using the following:
-- `<Path to your UE installation>/UE_5.4/Engine/Binaries/ThirdParty/DotNet/6.0.302/mac-arm64/dotnet 
-"<Path to your UE installation>/UE_5.4/Engine/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll" Development
-Mac -Project=<Path to cielim folder>/cielim/cielim.uproject -TargetType=Editor -Progress -NoEngineChanges -NoHotReloadFromIDE`
+- If the build fails or you would like more information, you can get further debug by manually invoking the build from the terminal 
+  (replacing any user specific paths) using the following:
+  - `<Path to your UE installation>/UE_5.4/Engine/Binaries/ThirdParty/DotNet/6.0.302/mac-arm64/dotnet 
+  "<Path to your UE installation>/UE_5.4/Engine/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll" Development <Mac or Linux or Win64> 
+  -Project=<Path to cielim folder>/cielim/cielim.uproject -TargetType=Editor -Progress -NoEngineChanges -NoHotReloadFromIDE`
 - Generate project files
 	- From the editor Tools > Refresh/Generate Visual Studio Code Project
 	- A project can be generated for either XCode, CLion, or VSCode

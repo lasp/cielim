@@ -7,12 +7,6 @@ public class ZMQ : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;	
 	    bAddDefaultIncludePaths = false;
-        
-        if (Target.Platform == UnrealTargetPlatform.Win64)
-        { 
-            string Err = string.Format("ZMQ library not available for platform {0}", Target.Platform.ToString());
-            throw new BuildException(Err);
-        }
 
         PublicDefinitions.Add("_ALLOW_MSC_VER_MISMATCH");
         PublicDefinitions.Add("ZMQ_BUILD_DRAFT_API=1");
@@ -20,7 +14,22 @@ public class ZMQ : ModuleRules
         PrecompileForTargets = PrecompileTargetsType.Any;
 
         // Link to libzmq libraries
-        PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "libzmq/build/lib/libzmq.a"));
+
+        if (Target.Platform == UnrealTargetPlatform.Mac || Target.Platform == UnrealTargetPlatform.Linux)
+        {
+            // .a is unix specific library file
+            PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "libzmq/build/lib/libzmq.a"));
+        }
+        else if (Target.Platform == UnrealTargetPlatform.Win64)
+        {
+            // .lib is windows specific library file
+            PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "libzmq/build/lib/Release/libzmq-v143-mt-4_3_6.lib"));
+        }
+        else
+        { 
+            string Err = string.Format("ZMQ library not available for platform {0}", Target.Platform.ToString());
+            throw new BuildException(Err);
+        }
 
         // Add ZMQ headers to include path
         PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "cppzmq"));

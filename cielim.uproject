@@ -28,7 +28,6 @@
 	],
 	"TargetPlatforms": [
 		"Linux",
-		"LinuxArm64",
 		"Mac",
 		"Windows"
 	],
@@ -39,6 +38,11 @@
 			"tcsh $(ProjectDir)/Source/ThirdParty/OpenCV/OpenCV_build.sh \"$(ProjectDir)/Source/ThirdParty/OpenCV/\" ",
 			"tcsh $(ProjectDir)/Source/ThirdParty/ProtobufLibrary/ProtobufLibrary_build.sh \"$(ProjectDir)/Source/ThirdParty/ProtobufLibrary/\" ",
 			"tcsh $(ProjectDir)/Source/ThirdParty/ZMQ/ZMQ_build.sh \"$(ProjectDir)/Source/ThirdParty/ZMQ/\" "
+		],
+		"Win64": [
+			"call $(ProjectDir)\\Source\\ThirdParty\\OpenCV\\OpenCV_build_win64.bat \"$(ProjectDir)\\Source\\ThirdParty\\OpenCV\\\" ",
+			"call $(ProjectDir)\\Source\\ThirdParty\\ProtobufLibrary\\ProtobufLibrary_build_win64.bat \"$(ProjectDir)\\Source\\ThirdParty\\ProtobufLibrary\\\" ",
+			"call $(ProjectDir)\\Source\\ThirdParty\\ZMQ\\ZMQ_build_win64.bat \"$(ProjectDir)\\Source\\ThirdParty\\ZMQ\\\" "
 		]
 	}
 }
