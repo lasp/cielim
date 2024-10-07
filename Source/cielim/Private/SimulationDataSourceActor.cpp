@@ -312,7 +312,8 @@ void ASimulationDataSourceActor::SpawnSpacecraft()
 	if (this->CielimMessage.has_camera())
 	{
 		const cielimMessage::CameraModel &Camera = CielimMessage.camera();
-		TempSpacecraft->SetFOV(FMath::RadiansToDegrees(Camera.fieldofview(0)));
+		TempSpacecraft->SetFOV(FMath::RadiansToDegrees(Camera.fieldofview(0)),
+			FMath::RadiansToDegrees(Camera.fieldofview(1)));
 		TempSpacecraft->SetResolution(Camera.resolution(0), Camera.resolution(1));
 		// Set camera location and orientation
 		const FVector3d CameraPosition = GetCameraPosition(Camera);
