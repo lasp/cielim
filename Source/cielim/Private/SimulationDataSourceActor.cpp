@@ -85,9 +85,7 @@ void ASimulationDataSourceActor::BeginPlay()
 	{
 	    UE_LOG(LogCielim, Display, TEXT("Parsed command line parameter (directComm) : %s"), *CommAddress);
 		this->DataSource = DataSourceType::Network;
-		FVector Location(0.0f, 0.0f, 0.0f);
-		FRotator Rotation(0.0f, 0.0f, 0.0f);
-		this->NetworkSimulationDataSource = GetWorld()->SpawnActor<AZmqMultiThreadActor>(Location, Rotation);
+		this->NetworkSimulationDataSource = GetWorld()->SpawnActor<AZmqMultiThreadActor>(FVector::Zero(),FRotator::ZeroRotator);
 		this->NetworkSimulationDataSource->Connect(std::string(TCHAR_TO_UTF8(*CommAddress)));
 	} else if(FString SimulationDataFile;
 		FParse::Value(FCommandLine::Get(), TEXT("simulationDataFile"), SimulationDataFile)) {
