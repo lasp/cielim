@@ -119,12 +119,14 @@ void ASimulationDataSourceActor::EndPlay(const EEndPlayReason::Type EndPlayReaso
 
 void ASimulationDataSourceActor::FileReaderTick(float DeltaTime)
 {
-	if (!this->IsSceneEstablished) {
 	auto messageResult = this->SimulationDataSource->GetNextSimulationData();
 	if (messageResult.has_value())
 	{
 		this->CielimMessage = messageResult.value();
-	}	
+		this->ShouldUpdateScene = true;
+	}
+
+	if (!this->IsSceneEstablished && this->ShouldUpdateScene) {
 
 		UE_LOG(LogCielim, Display, TEXT("Initialize scene..."));
 		this->IsSceneEstablished = true;
@@ -178,6 +180,7 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 	// a bit like a RPC or http server
 	if (std::holds_alternative<SimUpdate>(QueueData.value().Query)) {
 		this->CielimMessage = std::get<SimUpdate>(QueueData.value().Query).payload;
+		this->ShouldUpdateScene = true;
 		UE_LOG(LogCielim, Display, TEXT("Reading sim update data: ASimulationDataSourceActor"));
 	} else if (std::holds_alternative<RequestImage>(QueueData.value().Query)) {
 		this->NetworkSimulationDataSource->PutImageQueueData(this->CaptureManager->GetPNG());
@@ -191,17 +194,21 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 void ASimulationDataSourceActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	this->ShouldUpdateScene = false;
 	if (this->DataSource == DataSourceType::Network) {
 		this->NetworkTick(DeltaTime);
 	} else if (this->DataSource == DataSourceType::File) {
 		this->FileReaderTick(DeltaTime);
 	}
 
+	if (this->ShouldUpdateScene)
+	{
 		if (this->CielimMessage.has_spacecraft() && this->IsSpacecraftSpawned) {
 			this->UpdateSpacecraft();
 		} if (!this->CielimMessage.celestialbodies().empty() && this->IsCelestialBodiesSpawned) {
 			this->UpdateCelestialBodies();
-		}	
+		}
+	}
 }
 
 /**

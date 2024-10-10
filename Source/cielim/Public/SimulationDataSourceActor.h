@@ -71,6 +71,7 @@ private:
     bool IsCelestialBodiesSpawned=false;
     bool IsSpacecraftSpawned=false;
     bool IsSceneEstablished=false;
+	bool ShouldUpdateScene=false;
 	DataSourceType DataSource=DataSourceType::File;
 };
 
