@@ -4,6 +4,7 @@
 #include "opencv2/imgproc.hpp"
 #include <OpenCV/opencv-4.5.5/modules/imgcodecs/include/opencv2/imgcodecs.hpp>
 #include <OpenCV/PostOpenCVHeaders.h>
+#include "CielimLoggingMacros.h"
 
 #include <filesystem>
 
