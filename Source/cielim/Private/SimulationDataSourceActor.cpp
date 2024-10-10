@@ -251,14 +251,14 @@ FRotator GetCelestialBodyRotation(const cielimMessage::CelestialBody &CelestialB
 
 static bool IsAsteroid(const std::string& BodyName)
 {
-	return BodyName == "Justitia"
-	|| BodyName == "Chimera"
-	|| BodyName == "Westerwald"
-	|| BodyName == "2010253"
-	|| BodyName == "88055"
-	|| BodyName == "59980"
-	|| BodyName == "Rockox"
-	|| BodyName == "Itokawa";
+	return BodyName == "2000269" //Justitia
+	|| BodyName == "2000623" //Chimera
+	|| BodyName == "2010253" //Westerwald
+	|| BodyName == "2088055" //A4
+	|| BodyName == "2059980" //A6
+	|| BodyName == "2023871" //A5
+	|| BodyName == "2013294" //Rockox
+	|| BodyName == "asteroid_b612";
 }
 
 /**
