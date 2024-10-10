@@ -18,6 +18,8 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	void SetupRenderTarget(UTextureRenderTarget2D* RenderTarget);
+
+	UFUNCTION(BlueprintCallable)
 	void SetSceneCaptureComponent(USceneCaptureComponent2D* CaptureComponent);
 
 	UFUNCTION(BlueprintCallable)
