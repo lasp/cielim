@@ -63,12 +63,10 @@ FRotator GetCameraRotation(const cielimMessage::CameraModel &Camera)
 	const FVector3d SigmaCB = FVector3d(Camera.bodyframetocameramrp(0),
 										Camera.bodyframetocameramrp(1),
 										Camera.bodyframetocameramrp(2));
-	const FQuat Q = MRPtoQuaternion(SigmaCB);
-	const FQuat QTemp = MRPtoQuaternion(FVector3d(-1. / 3, -1. / 3, 1. / 3));
-	// Temporary correction for Basilisk output CrCu (r unreal u basilisk)
-	const FQuat QCorrection = FQuat(0.5, -0.5, 0.5, 0.5);
-	const FVector3d SigmaCorrection = QuaterniontoMRP(Q * QCorrection * QTemp);
-	return GetRotatorFromMrp(SigmaCorrection);
+	const FQuat Quat_CB = MRPtoQuaternion(SigmaCB);
+	const FQuat Quat_B_B0 = FQuat(0.5, -0.5, 0.5, 0.5);
+	const FQuat Quat_CB0 = Quat_CB * Quat_B_B0;
+	return FRotator(RightQuat2LeftQuat(Quat_CB0));
 }
 
 
