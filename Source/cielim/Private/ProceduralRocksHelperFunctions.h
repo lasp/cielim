@@ -1,4 +1,3 @@
-class ProceduralRocksHelperFunctions
 #include "CoreMinimal.h"
 #include "Math/Vector.h"
 #include "Engine/World.h"
@@ -10,15 +9,12 @@ UCLASS()
 class  CIELIM_API UProceduralRocksHelperFunctions :
 	public UBlueprintFunctionLibrary
 {
-public:
 	GENERATED_BODY()
+public:
 	
 	UProceduralRocksHelperFunctions(const FObjectInitializer& ObjectInitializer);
 	
 	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
-	static UStaticMesh GetStaticMeshCopy(UStaticMesh Mesh);
-
-	UFUNCTION(BlueprintCallable, Category="Procedural Rocks Helper Functions")
-	static UStaticMesh* GetStaticMeshCopy(UStaticMesh* DesiredMesh);
+	static UStaticMesh* GetStaticMeshCopy(UStaticMesh* const Mesh);
 };
 
