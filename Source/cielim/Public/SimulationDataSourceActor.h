@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
-
+#include "Engine/DirectionalLight.h"
 #include "Math/Vector.h"
 
 #include <memory>
@@ -56,6 +56,8 @@ public:
 
     UFUNCTION(BlueprintCallable)
     void DebugCielimMessage() const;
+	
+	void PointSunLight();
 
 private:
 	void NetworkTick(float DeltaTime);
@@ -65,6 +67,8 @@ private:
 	std::unique_ptr<ProtobufFileReader> SimulationDataSource;
     cielimMessage::CielimMessage CielimMessage;
     TArray<ACelestialBody*> CelestialBodyArray;
+	ACelestialBody* SunCelestialBody;
+	ADirectionalLight* SunLight;
     ASpacecraft* Spacecraft=nullptr;
     ACaptureManager* CaptureManager=nullptr;
     bool bHasCameras=false;
