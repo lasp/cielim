@@ -10,7 +10,8 @@
 #include "Engine/World.h"
 #include "Math/UnrealMathUtility.h"
 #include <zmq.hpp>
-
+#include "Components/LightComponent.h"
+#include "Engine/DirectionalLight.h"
 
 #define m2cm 100.0
 /**
@@ -274,10 +275,11 @@ void ASimulationDataSourceActor::SpawnCelestialBodies()
 		FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
 		// Create CelestialBody Actor instance
 		ACelestialBody *TempCelestialBody;
-		if (CelestialBody.bodyname() == "sun") {
+		if (CelestialBody.bodyname() == "sun_planet_data") {
 			TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>(BpSun,
 			                                                           PositionCelestialBody,
 			                                                           CelestialBodyRotation);
+			this->SunCelestialBody = TempCelestialBody;
 		} else if (IsAsteroid(CelestialBody.bodyname())) {
 			TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>(BpAsteroid,
 			                                                           PositionCelestialBody,
@@ -326,6 +328,19 @@ void ASimulationDataSourceActor::SpawnSpacecraft()
 	}
 	this->Spacecraft = TempSpacecraft;
 	this->IsSpacecraftSpawned = true;
+
+	this->PointSunLight();
+}
+
+void ASimulationDataSourceActor::PointSunLight()
+{
+	this->SunLight = GetWorld()->SpawnActor<ADirectionalLight>(FVector3d::ZeroVector,
+		FRotator::ZeroRotator);
+	this->SunLight->GetLightComponent()->SetMobility(EComponentMobility::Movable);
+	auto Vector = -this->SunCelestialBody->GetActorLocation();
+	Vector.Normalize();
+	auto thing = FRotationMatrix::MakeFromX(Vector);
+	this->SunLight->GetLightComponent()->SetRelativeRotation(thing.Rotator());
 }
 
 void ASimulationDataSourceActor::SpawnCaptureManager()
