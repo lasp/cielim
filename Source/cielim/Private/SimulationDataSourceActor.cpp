@@ -11,6 +11,7 @@
 #include <zmq.hpp>
 
 
+#define m2cm 100.0
 /**
  * @brief GetRotatorFromMrp(Sigma) Converts an MRP into an Unreal Rotation Container (FRotator) 
  * 
@@ -33,7 +34,7 @@ FVector3d GetSpacecraftPosition(const vizProtobufferMessage::VizMessage_Spacecra
 {
 	const FVector3d PositionSpacecraft = FVector3d(Craft.position(0),
 	                                               Craft.position(1),
-	                                               Craft.position(2));
+	                                               Craft.position(2))*m2cm;
 	return Right2LeftVector(PositionSpacecraft);
 }
 
@@ -44,9 +45,9 @@ FVector3d GetSpacecraftPosition(const vizProtobufferMessage::VizMessage_Spacecra
  */
 FVector3d GetCameraPosition(const vizProtobufferMessage::VizMessage_CameraConfig &Camera)
 {
-	const FVector3d SigmaCamera = FVector3d(Camera.camerapos_b(0),
-	                                        Camera.camerapos_b(1),
-	                                        Camera.camerapos_b(2));
+	const FVector3d SigmaCamera = FVector3d(Camera.camerapositioninbody(0),
+	                                        Camera.camerapositioninbody(1),
+	                                        Camera.camerapositioninbody(2))*m2cm;
 	return Right2LeftVector(SigmaCamera);
 }
 
@@ -206,7 +207,7 @@ FVector3d GetCelestialBodyPosition(const vizProtobufferMessage::VizMessage_Celes
 {
 	const FVector3d PositionCelestialBody = FVector3d(CelestialBody.position(0),
 	                                                  CelestialBody.position(1),
-	                                                  CelestialBody.position(2));
+	                                                  CelestialBody.position(2))*m2cm;
 	return Right2LeftVector(PositionCelestialBody);
 }
 
