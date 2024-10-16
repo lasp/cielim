@@ -1,7 +1,6 @@
 # Custom ignore paths
 /Saved
 /Releases
-/Content
 /DerivedDataCache
 /.github
 /.git
