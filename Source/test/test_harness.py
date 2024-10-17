@@ -8,7 +8,7 @@ import typing
 import base64
 import zmq
 sys.path.append(os.path.join(os.path.dirname(__file__), "vizProtobuffer"))
-import vizMessage_pb2
+import cielimMessage_pb2
 
 
 class Connector:
@@ -32,7 +32,7 @@ class Connector:
         result = self.request_socket.recv_string()
         print(result)
 
-    def send_frame(self, sim_frame: vizMessage_pb2.VizMessage):
+    def send_frame(self, sim_frame: cielimMessage_pb2.CielimMessage):
         result = self.request_socket.send_multipart([b'SIM_UPDATE', b'', b'', sim_frame.SerializePartialToString()])
         print(result)
         response_message_parts = self.request_socket.recv()
@@ -63,7 +63,7 @@ class MessageFileHandler:
     def _read_simulation_frame_at_time(self, sim_time: float):
         proceed = True
         while proceed:
-            message = delimited_protobuf.read(self.file_handle, vizMessage_pb2.VizMessage)
+            message = delimited_protobuf.read(self.file_handle, cielimMessage_pb2.CielimMessage)
             if message.currentTime.simTimeElapsed >= sim_time:
                 proceed = False
                 return message
@@ -77,4 +77,4 @@ class MessageFileHandler:
         return self._read_simulation_frame_at_time(sim_time)
 
     def get_next_simulation_frame(self):
-        return delimited_protobuf.read(self.file_handle, vizMessage_pb2.VizMessage)
+        return delimited_protobuf.read(self.file_handle, cielimMessage_pb2.CielimMessage)

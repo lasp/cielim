@@ -37,7 +37,7 @@ public:
     FString Name;
 
     UFUNCTION(BlueprintImplementableEvent)
-    void SetFOV(const double Fov);
+    void SetFOV(double X, double Y);
 
     UFUNCTION(BlueprintImplementableEvent)
     void SetResolution(const int ResolutionWidth, const int ResolutionHeight);

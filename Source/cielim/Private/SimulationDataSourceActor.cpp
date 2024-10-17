@@ -8,9 +8,12 @@
 #include "ZmqConnection/Commands.h"
 #include "ZmqConnection/ZmqMultiThreadActor.h"
 #include "Engine/World.h"
+#include "Math/UnrealMathUtility.h"
 #include <zmq.hpp>
+#include "Components/LightComponent.h"
+#include "Engine/DirectionalLight.h"
 
-
+#define m2cm 100.0
 /**
  * @brief GetRotatorFromMrp(Sigma) Converts an MRP into an Unreal Rotation Container (FRotator) 
  * 
@@ -29,11 +32,11 @@ FRotator GetRotatorFromMrp(const FVector3d &Sigma)
  * @param Spacecraft A Spacecraft Object
  * @return FVector3d Spacecraft's position
  */
-FVector3d GetSpacecraftPosition(const vizProtobufferMessage::VizMessage_Spacecraft &Craft)
+FVector3d GetSpacecraftPosition(const cielimMessage::Spacecraft &Craft)
 {
 	const FVector3d PositionSpacecraft = FVector3d(Craft.position(0),
 	                                               Craft.position(1),
-	                                               Craft.position(2));
+	                                               Craft.position(2))*m2cm;
 	return Right2LeftVector(PositionSpacecraft);
 }
 
@@ -42,11 +45,11 @@ FVector3d GetSpacecraftPosition(const vizProtobufferMessage::VizMessage_Spacecra
  * @param Camera A Camera Object
  * @return FVector3d Camera's position
  */
-FVector3d GetCameraPosition(const vizProtobufferMessage::VizMessage_CameraConfig &Camera)
+FVector3d GetCameraPosition(const cielimMessage::CameraModel &Camera)
 {
-	const FVector3d SigmaCamera = FVector3d(Camera.camerapos_b(0),
-	                                        Camera.camerapos_b(1),
-	                                        Camera.camerapos_b(2));
+	const FVector3d SigmaCamera = FVector3d(Camera.camerapositioninbody(0),
+	                                        Camera.camerapositioninbody(1),
+	                                        Camera.camerapositioninbody(2))*m2cm;
 	return Right2LeftVector(SigmaCamera);
 }
 
@@ -55,16 +58,16 @@ FVector3d GetCameraPosition(const vizProtobufferMessage::VizMessage_CameraConfig
  * @param Camera A Camera Object
  * @return FRotator Camera's Rotation
  */
-FRotator GetCameraRotation(const vizProtobufferMessage::VizMessage_CameraConfig &Camera)
+FRotator GetCameraRotation(const cielimMessage::CameraModel &Camera)
 {
 	// Map basilisk right-handed camera orientation to unreal left-handed camera orientation
-	const FVector3d SigmaCB = FVector3d(Camera.cameradir_b(0), Camera.cameradir_b(1), Camera.cameradir_b(2));
-	const FQuat Q = MRPtoQuaternion(SigmaCB);
-	const FQuat QTemp = MRPtoQuaternion(FVector3d(-1. / 3, -1. / 3, 1. / 3));
-	// Temporary correction for Basilisk output CrCu (r unreal u basilisk)
-	const FQuat QCorrection = FQuat(0.5, -0.5, 0.5, 0.5);
-	const FVector3d SigmaCorrection = QuaterniontoMRP(Q * QCorrection * QTemp);
-	return GetRotatorFromMrp(SigmaCorrection);
+	const FVector3d SigmaCB = FVector3d(Camera.bodyframetocameramrp(0),
+										Camera.bodyframetocameramrp(1),
+										Camera.bodyframetocameramrp(2));
+	const FQuat Quat_CB = MRPtoQuaternion(SigmaCB);
+	const FQuat Quat_B_B0 = FQuat(0.5, -0.5, 0.5, 0.5);
+	const FQuat Quat_CB0 = Quat_CB * Quat_B_B0;
+	return FRotator(RightQuat2LeftQuat(Quat_CB0));
 }
 
 
@@ -83,22 +86,18 @@ void ASimulationDataSourceActor::BeginPlay()
 	{
 	    UE_LOG(LogCielim, Display, TEXT("Parsed command line parameter (directComm) : %s"), *CommAddress);
 		this->DataSource = DataSourceType::Network;
-		FVector Location(0.0f, 0.0f, 0.0f);
-		FRotator Rotation(0.0f, 0.0f, 0.0f);
-		this->NetworkSimulationDataSource = GetWorld()->SpawnActor<AZmqMultiThreadActor>(Location, Rotation);
+		this->NetworkSimulationDataSource = GetWorld()->SpawnActor<AZmqMultiThreadActor>(FVector::Zero(),FRotator::ZeroRotator);
 		this->NetworkSimulationDataSource->Connect(std::string(TCHAR_TO_UTF8(*CommAddress)));
 	} else if(FString SimulationDataFile;
 		FParse::Value(FCommandLine::Get(), TEXT("simulationDataFile"), SimulationDataFile)) {
 	    UE_LOG(LogCielim, Display, TEXT("Parsed command line parameter (simulationDataFile) : %s"), *SimulationDataFile);
 		this->DataSource = DataSourceType::File;
 	    this->SimulationDataSource = std::make_unique<ProtobufFileReader>(std::string(TCHAR_TO_UTF8(*SimulationDataFile)));
-	    this->Vizmessage = this->SimulationDataSource->GetNextSimulationData();
 	} else {
 		UE_LOG(LogCielim, Warning, TEXT("Did not receive start up mode from command line parameter"));
 		UE_LOG(LogCielim, Display, TEXT("Defaulted to (simulationDataFile) : %hs"), "protofile_proxOps.bin");
 		this->DataSource = DataSourceType::File;
 		this->SimulationDataSource = std::make_unique<ProtobufFileReader>("protofile_proxOps.bin");
-		this->Vizmessage = this->SimulationDataSource->GetNextSimulationData();
 	}
 	
 	int major;
@@ -117,13 +116,20 @@ void ASimulationDataSourceActor::EndPlay(const EEndPlayReason::Type EndPlayReaso
 
 void ASimulationDataSourceActor::FileReaderTick(float DeltaTime)
 {
-	this->Vizmessage = this->SimulationDataSource->GetNextSimulationData();
-	if (!this->IsSceneEstablished) {
+	auto messageResult = this->SimulationDataSource->GetNextSimulationData();
+	if (messageResult.has_value())
+	{
+		this->CielimMessage = messageResult.value();
+		this->ShouldUpdateScene = true;
+	}
+
+	if (!this->IsSceneEstablished && this->ShouldUpdateScene) {
+
 		UE_LOG(LogCielim, Display, TEXT("Initialize scene..."));
 		this->IsSceneEstablished = true;
 		this->SpawnCelestialBodies();
 		this->SpawnSpacecraft();
-		if (this->Vizmessage.cameras().size() > 0)
+		if (this->CielimMessage.has_camera())
 		{
 			this->bHasCameras = true;
 			this->SpawnCaptureManager();
@@ -147,11 +153,11 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 	if (!this->IsSceneEstablished) {
 		if (std::holds_alternative<SimUpdate>(QueueData.value().Query)) {
 			UE_LOG(LogCielim, Display, TEXT("Initialize scene..."));
-			this->Vizmessage = std::get<SimUpdate>(QueueData.value().Query).payload;
+			this->CielimMessage = std::get<SimUpdate>(QueueData.value().Query).payload;
 			this->IsSceneEstablished = true;
 			this->SpawnCelestialBodies();
 			this->SpawnSpacecraft();
-			if (this->Vizmessage.cameras().size() > 0)
+			if (this->CielimMessage.has_camera())
 			{
 				this->bHasCameras = true;
 				this->SpawnCaptureManager();
@@ -170,7 +176,8 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 	// This code should be turned into some kind of handler function registration
 	// a bit like a RPC or http server
 	if (std::holds_alternative<SimUpdate>(QueueData.value().Query)) {
-		this->Vizmessage = std::get<SimUpdate>(QueueData.value().Query).payload;
+		this->CielimMessage = std::get<SimUpdate>(QueueData.value().Query).payload;
+		this->ShouldUpdateScene = true;
 		UE_LOG(LogCielim, Display, TEXT("Reading sim update data: ASimulationDataSourceActor"));
 	} else if (std::holds_alternative<RequestImage>(QueueData.value().Query)) {
 		this->NetworkSimulationDataSource->PutImageQueueData(this->CaptureManager->GetPNG());
@@ -184,16 +191,20 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 void ASimulationDataSourceActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	this->ShouldUpdateScene = false;
 	if (this->DataSource == DataSourceType::Network) {
 		this->NetworkTick(DeltaTime);
 	} else if (this->DataSource == DataSourceType::File) {
 		this->FileReaderTick(DeltaTime);
 	}
 
-	if (!this->Vizmessage.spacecraft().empty() && this->IsSpacecraftSpawned) {
-		this->UpdateSpacecraft();
-	} if (!this->Vizmessage.celestialbodies().empty() && this->IsCelestialBodiesSpawned) {
-		this->UpdateCelestialBodies();
+	if (this->ShouldUpdateScene)
+	{
+		if (this->CielimMessage.has_spacecraft() && this->IsSpacecraftSpawned) {
+			this->UpdateSpacecraft();
+		} if (!this->CielimMessage.celestialbodies().empty() && this->IsCelestialBodiesSpawned) {
+			this->UpdateCelestialBodies();
+		}
 	}
 }
 
@@ -202,11 +213,11 @@ void ASimulationDataSourceActor::Tick(float DeltaTime)
  * @param CelestialBody A CelestialBody Object
  * @return FVector3d CelestialBody's position
  */
-FVector3d GetCelestialBodyPosition(const vizProtobufferMessage::VizMessage_CelestialBody &CelestialBody)
+FVector3d GetCelestialBodyPosition(const cielimMessage::CelestialBody &CelestialBody)
 {
 	const FVector3d PositionCelestialBody = FVector3d(CelestialBody.position(0),
 	                                                  CelestialBody.position(1),
-	                                                  CelestialBody.position(2));
+	                                                  CelestialBody.position(2))*m2cm;
 	return Right2LeftVector(PositionCelestialBody);
 }
 
@@ -216,20 +227,20 @@ FVector3d GetCelestialBodyPosition(const vizProtobufferMessage::VizMessage_Celes
  * @param CelestialBody A CelestialBody object
  * @return FRotator celestial body's rotation 
  */
-FRotator GetCelestialBodyRotation(const vizProtobufferMessage::VizMessage_CelestialBody &CelestialBody)
+FRotator GetCelestialBodyRotation(const cielimMessage::CelestialBody &CelestialBody)
 {
 	// Create CelestialBody Rotation Quat
-	const FVector Rotation1 = FVector4d(CelestialBody.rotation(0),
-	                                    CelestialBody.rotation(1),
-	                                    CelestialBody.rotation(2),
+	const FVector Rotation1 = FVector4d(CelestialBody.attitude(0),
+	                                    CelestialBody.attitude(1),
+	                                    CelestialBody.attitude(2),
 	                                    0);
-	const FVector Rotation2 = FVector4d(CelestialBody.rotation(3),
-	                                    CelestialBody.rotation(4),
-	                                    CelestialBody.rotation(5),
+	const FVector Rotation2 = FVector4d(CelestialBody.attitude(3),
+	                                    CelestialBody.attitude(4),
+	                                    CelestialBody.attitude(5),
 	                                    0);
-	const FVector Rotation3 = FVector4d(CelestialBody.rotation(6),
-	                                    CelestialBody.rotation(7),
-	                                    CelestialBody.rotation(8),
+	const FVector Rotation3 = FVector4d(CelestialBody.attitude(6),
+	                                    CelestialBody.attitude(7),
+	                                    CelestialBody.attitude(8),
 	                                    0);
 	const FVector Rotation4 = FVector4d(0, 0, 0, 1);
 	const FMatrix Mat = FMatrix(Rotation1, Rotation2, Rotation3, Rotation4);
@@ -241,14 +252,14 @@ FRotator GetCelestialBodyRotation(const vizProtobufferMessage::VizMessage_Celest
 
 static bool IsAsteroid(const std::string& BodyName)
 {
-	return BodyName == "Justitia"
-	|| BodyName == "Chimera"
-	|| BodyName == "Westerwald"
-	|| BodyName == "2010253"
-	|| BodyName == "88055"
-	|| BodyName == "59980"
-	|| BodyName == "Rockox"
-	|| BodyName == "Itokawa";
+	return BodyName == "2000269" //Justitia
+	|| BodyName == "2000623" //Chimera
+	|| BodyName == "2010253" //Westerwald
+	|| BodyName == "2088055" //A4
+	|| BodyName == "2059980" //A6
+	|| BodyName == "2023871" //A5
+	|| BodyName == "2013294" //Rockox
+	|| BodyName == "asteroid_b612";
 }
 
 /**
@@ -257,17 +268,18 @@ static bool IsAsteroid(const std::string& BodyName)
  */
 void ASimulationDataSourceActor::SpawnCelestialBodies()
 {
-	for (const auto &CelestialBody : Vizmessage.celestialbodies()) {
+	for (const auto &CelestialBody : CielimMessage.celestialbodies()) {
 		// Set Location 
 		FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
 		// Set Rotation
 		FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
 		// Create CelestialBody Actor instance
 		ACelestialBody *TempCelestialBody;
-		if (CelestialBody.bodyname() == "sun") {
+		if (CelestialBody.bodyname() == "sun_planet_data") {
 			TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>(BpSun,
 			                                                           PositionCelestialBody,
 			                                                           CelestialBodyRotation);
+			this->SunCelestialBody = TempCelestialBody;
 		} else if (IsAsteroid(CelestialBody.bodyname())) {
 			TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>(BpAsteroid,
 			                                                           PositionCelestialBody,
@@ -279,7 +291,7 @@ void ASimulationDataSourceActor::SpawnCelestialBodies()
 		}
 		FString CbName = FString(CelestialBody.bodyname().c_str());
 		TempCelestialBody->Name = CbName;
-		TempCelestialBody->SetRadiusEvent(CelestialBody.radiuseq());
+		TempCelestialBody->SetRadiusEvent(CelestialBody.models().meanradius());
 		CelestialBodyArray.Add(TempCelestialBody);
 		this->IsCelestialBodiesSpawned = true;
 	}
@@ -291,32 +303,44 @@ void ASimulationDataSourceActor::SpawnCelestialBodies()
  */
 void ASimulationDataSourceActor::SpawnSpacecraft()
 {
-	const vizProtobufferMessage::VizMessage_Spacecraft &VizSpacecraft = Vizmessage.spacecraft(0);
+	const cielimMessage::Spacecraft &SpacecraftMessage = this->CielimMessage.spacecraft();
 	// Set Location 
-	const FVector3d PositionSpacecraft = GetSpacecraftPosition(VizSpacecraft);
+	const FVector3d PositionSpacecraft = GetSpacecraftPosition(SpacecraftMessage);
 	// Set Rotation
-	const FRotator SpacecraftRotation = GetRotatorFromMrp(
-		FVector3d(VizSpacecraft.rotation(0),
-			VizSpacecraft.rotation(1),
-			VizSpacecraft.rotation(2)));
-	FString ScName = FString(VizSpacecraft.spacecraftname().c_str());
+	const FRotator SpacecraftRotation = GetRotatorFromMrp(FVector3d(SpacecraftMessage.attitude(0),
+																		SpacecraftMessage.attitude(1),
+																		SpacecraftMessage.attitude(2)));
 	// Create Spacecraft Actor instance
-	ASpacecraft *TempSc = GetWorld()->SpawnActor<ASpacecraft>(BpSpacecraft, PositionSpacecraft, SpacecraftRotation);
-	TempSc->Name = ScName;
+	ASpacecraft *TempSpacecraft = GetWorld()->SpawnActor<ASpacecraft>(BpSpacecraft, PositionSpacecraft, SpacecraftRotation);
+	TempSpacecraft->Name = FString(SpacecraftMessage.spacecraftname().c_str());
 	// Set camera
-	if (this->Vizmessage.cameras().size() > 0)
+	if (this->CielimMessage.has_camera())
 	{
-		const vizProtobufferMessage::VizMessage_CameraConfig &Camera = Vizmessage.cameras(0);
-		TempSc->SetFOV(Camera.fieldofview()); // Set camera settings
-		TempSc->SetResolution(Camera.resolution(0), Camera.resolution(1));
+		const cielimMessage::CameraModel &Camera = CielimMessage.camera();
+		TempSpacecraft->SetFOV(FMath::RadiansToDegrees(Camera.fieldofview(0)),
+			FMath::RadiansToDegrees(Camera.fieldofview(1)));
+		TempSpacecraft->SetResolution(Camera.resolution(0), Camera.resolution(1));
 		// Set camera location and orientation
 		const FVector3d CameraPosition = GetCameraPosition(Camera);
-		TempSc->SetCameraPosition(CameraPosition);
+		TempSpacecraft->SetCameraPosition(CameraPosition);
 		const FRotator CameraRotation = GetCameraRotation(Camera);
-		TempSc->UpdateCameraOrientation(CameraRotation);
+		TempSpacecraft->UpdateCameraOrientation(CameraRotation);
 	}
-	this->Spacecraft = TempSc;
+	this->Spacecraft = TempSpacecraft;
 	this->IsSpacecraftSpawned = true;
+
+	this->PointSunLight();
+}
+
+void ASimulationDataSourceActor::PointSunLight()
+{
+	this->SunLight = GetWorld()->SpawnActor<ADirectionalLight>(FVector3d::ZeroVector,
+		FRotator::ZeroRotator);
+	this->SunLight->GetLightComponent()->SetMobility(EComponentMobility::Movable);
+	auto Vector = -this->SunCelestialBody->GetActorLocation();
+	Vector.Normalize();
+	auto thing = FRotationMatrix::MakeFromX(Vector);
+	this->SunLight->GetLightComponent()->SetRelativeRotation(thing.Rotator());
 }
 
 void ASimulationDataSourceActor::SpawnCaptureManager()
@@ -333,7 +357,7 @@ void ASimulationDataSourceActor::SpawnCaptureManager()
 void ASimulationDataSourceActor::UpdateCelestialBodies() const
 {
 	int Index = 0;
-	for (const auto &CelestialBody : Vizmessage.celestialbodies())
+	for (const auto &CelestialBody : CielimMessage.celestialbodies())
 	{
 		FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
 		FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
@@ -348,17 +372,16 @@ void ASimulationDataSourceActor::UpdateCelestialBodies() const
  */
 void ASimulationDataSourceActor::UpdateSpacecraft() const
 {
-	const vizProtobufferMessage::VizMessage_Spacecraft &VizSpacecraft = Vizmessage.spacecraft(0);
-	const FVector3d PositionSpacecraft = GetSpacecraftPosition(VizSpacecraft);
-	const FRotator SpacecraftRotation = GetRotatorFromMrp(
-		FVector3d(VizSpacecraft.rotation(0),
-			VizSpacecraft.rotation(1),
-			VizSpacecraft.rotation(2)));
+	const cielimMessage::Spacecraft &SpacecraftMessage = CielimMessage.spacecraft();
+	const FVector3d PositionSpacecraft = GetSpacecraftPosition(SpacecraftMessage);
+	const FRotator SpacecraftRotation = GetRotatorFromMrp(FVector3d(SpacecraftMessage.attitude(0),
+															SpacecraftMessage.attitude(1),
+															SpacecraftMessage.attitude(2)));
 	this->Spacecraft->Update(PositionSpacecraft, SpacecraftRotation);
 	// Update camera
-	if (this->Vizmessage.cameras().size() > 0)
+	if (this->CielimMessage.has_camera())
 	{
-		const vizProtobufferMessage::VizMessage_CameraConfig &Camera = Vizmessage.cameras(0);
+		const cielimMessage::CameraModel &Camera = CielimMessage.camera();
 		const FRotator CameraRotation = GetCameraRotation(Camera);
 		this->Spacecraft->UpdateCameraOrientation(CameraRotation);
 	}
@@ -368,8 +391,8 @@ void ASimulationDataSourceActor::UpdateSpacecraft() const
  * @brief DebugVizMessage() Prints VizMessage to the console
  * 
  */
-void ASimulationDataSourceActor::DebugVizmessage() const
+void ASimulationDataSourceActor::DebugCielimMessage() const
 {
-	const std::string DebugStr = this->Vizmessage.DebugString();
+	const std::string DebugStr = this->CielimMessage.DebugString();
 	UE_LOG(LogCielim, Display, TEXT("%hs"), DebugStr.c_str());
 }

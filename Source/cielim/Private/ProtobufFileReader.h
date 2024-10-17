@@ -4,9 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "SimulationDataSource.h"
-#include "vizMessage.pb.h"
+#include "cielimMessage.pb.h"
 #include <google/protobuf/io/coded_stream.h>
 #include <fstream>
+#include <optional>
 
 /**
  * 
@@ -17,15 +18,14 @@ public:
 	ProtobufFileReader(std::string Filename);
 	~ProtobufFileReader();
 
-	vizProtobufferMessage::VizMessage& GetNextSimulationData() override;
+	std::optional<cielimMessage::CielimMessage> GetNextSimulationData() override;
 
 	bool get_eof() const { return Eof; }
 
 private:
-	vizProtobufferMessage::VizMessage VizMessage;
-	std::fstream Input;
+	std::ifstream Input;
 	std::unique_ptr<google::protobuf::io::ZeroCopyInputStream> RawInput;
 	std::unique_ptr<google::protobuf::io::CodedInputStream> CodedInput;
-	bool Eof;
+	bool Eof{};
 };
 
