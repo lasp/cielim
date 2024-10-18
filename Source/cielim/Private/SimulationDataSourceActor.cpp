@@ -2,6 +2,7 @@
 
 #include "SimulationDataSourceActor.h"
 
+#include "AstronomicalConstants.h"
 #include "CielimLoggingMacros.h"
 #include "KinematicsUtilities.h"
 #include "ProtobufFileReader.h"
@@ -336,6 +337,8 @@ void ASimulationDataSourceActor::PointSunLight()
 {
 	this->SunLight = GetWorld()->SpawnActor<ADirectionalLight>(FVector3d::ZeroVector,
 		FRotator::ZeroRotator);
+	double LuxAt1AU = 1000;
+	this->SunLight->GetLightComponent()->SetIntensity(LuxAt1AU*(AU*AU)/(FMath::Square(this->SunCelestialBody->GetActorLocation().Length()/100000)));
 	this->SunLight->GetLightComponent()->SetMobility(EComponentMobility::Movable);
 	auto Vector = -this->SunCelestialBody->GetActorLocation();
 	Vector.Normalize();
