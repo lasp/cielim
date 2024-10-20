@@ -14,6 +14,9 @@ ProtobufFileReader::ProtobufFileReader(const std::string Filename) : SimulationD
     // Read the existing VizMessage file
     const FString ContentDir = FPaths::ProjectDir();
     const std::string Filepath = std::string(TCHAR_TO_UTF8(*ContentDir)) + "/Content/FlybyData/bin/" + Filename;
+
+    UE_LOG(LogCielim, Log, TEXT("Filepath: %hs"), Filepath.c_str());
+
     this->Input.open(Filepath, std::ios::binary);
 
     if (!this->Input)
@@ -36,13 +39,34 @@ ProtobufFileReader::~ProtobufFileReader()
  * Parses data from input stream and returns vizmessage object
  *
  */
-std::optional<cielimMessage::CielimMessage> ProtobufFileReader::GetNextSimulationData()
-{
-    cielimMessage::CielimMessage TempMessage;
-    auto res = google::protobuf::util::ParseDelimitedFromCodedStream(&TempMessage,
-        this->CodedInput.get(),
-        &this->Eof);
-    if (TempMessage.ByteSizeLong() != 0) {
-        return TempMessage;
-    }    return std::nullopt;
+std::optional<cielimMessage::CielimMessage> ProtobufFileReader::GetNextSimulationData()  
+{  
+    cielimMessage::CielimMessage TempMessage;  
+    bool success = google::protobuf::util::ParseDelimitedFromCodedStream(&TempMessage, this->CodedInput.get(), &this->Eof);
+
+    if (!success)
+    {
+        UE_LOG(LogCielim, Error, TEXT("Failed to parse coded protobuf stream."));
+        return std::nullopt;
+    }
+
+    if (!TempMessage.IsInitialized()) 
+    {
+        UE_LOG(LogCielim, Warning, TEXT("TempMessage is not initialized."));
+        return std::nullopt;
+    }
+
+    if (TempMessage.ByteSizeLong() == 0)
+    {
+        UE_LOG(LogCielim, Warning, TEXT("TempMessage is empty."));
+        return std::nullopt;
+    }
+
+    if (!TempMessage.has_spacecraft())
+    {
+        UE_LOG(LogCielim, Warning, TEXT("TempMessage is missing spacecraft field."));
+        return std::nullopt;
+    }
+
+    return TempMessage;
 }
