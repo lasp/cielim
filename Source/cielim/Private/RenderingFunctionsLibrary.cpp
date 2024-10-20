@@ -13,14 +13,18 @@ URenderingFunctionsLibrary::URenderingFunctionsLibrary(const FObjectInitializer&
 	
 }
 
-FString URenderingFunctionsLibrary::ApplyPSF_Gaussian(FString Filepath, int32 KernelHeight, int32 KernelWidth, double SigmaX, double SigmaY)
+void URenderingFunctionsLibrary::ApplyPSF_Gaussian(TArray<uint8>& ImageData, int32 KernelHeight, int32 KernelWidth, double SigmaX, double SigmaY)
 {
 	//NOTE: both dimensions of KernelSize must be odd
-
-	FString Filepath_Absolute = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*Filepath);
 	
-	std::string Filepath_Absolute_String = TCHAR_TO_UTF8(*Filepath_Absolute);
-	cv::Mat Image = cv::imread(Filepath_Absolute_String);
+	//Read Image
+	cv::Mat Image = cv::imdecode(cv::Mat(1, ImageData.Num(), CV_8UC1, ImageData.GetData()), cv::IMREAD_UNCHANGED);
+
+	if (Image.empty())
+	{
+		UE_LOG(LogCielim, Error, TEXT("ImageData is Empty!"))
+		return;
+	}
 	
 	cv::Mat ResultImage;
 
@@ -36,8 +40,14 @@ FString URenderingFunctionsLibrary::ApplyPSF_Gaussian(FString Filepath, int32 Ke
 	
 	std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
 	cv::imwrite(ResultFilepath_String, ResultImage);
-	
-	return ResultFilepath;
+
+	// Encode corrupted image as png
+    std::vector<uint8> EncodedData;
+	cv::imencode(".png", ResultImage, EncodedData);
+
+	// Override ImageData
+	ImageData.SetNumUninitialized(EncodedData.size());
+	FMemory::Memcpy(ImageData.GetData(), EncodedData.data(), EncodedData.size());
 }
 
 void URenderingFunctionsLibrary::ApplyCosmicRays()
@@ -46,18 +56,22 @@ void URenderingFunctionsLibrary::ApplyCosmicRays()
 	throw std::logic_error("Function not yet implemented");
 }
 
-FString URenderingFunctionsLibrary::ApplyReadNoise(FString Filepath, float ReadNoiseSigma, float SystemGain)
+void URenderingFunctionsLibrary::ApplyReadNoise(TArray<uint8>& ImageData, float ReadNoiseSigma, float SystemGain)
 {
 	//Protect Against 0 Sigma
 	if(ReadNoiseSigma == 0)
 	{
-		return Filepath;
+		return;
 	}
 	
 	//Read Image
-	FString Filepath_Absolute = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*Filepath);
-	std::string Filepath_Absolute_String = TCHAR_TO_UTF8(*Filepath_Absolute);
-	cv::Mat Image = cv::imread(Filepath_Absolute_String);
+	cv::Mat Image = cv::imdecode(cv::Mat(1, ImageData.Num(), CV_8UC1, ImageData.GetData()), cv::IMREAD_UNCHANGED);
+
+	if (Image.empty())
+	{
+		UE_LOG(LogCielim, Error, TEXT("ImageData is Empty!"))
+		return;
+	}
 	
 	//Init and create noise matrix
 	cv::Mat GaussianNoise = cv::Mat(Image.rows, Image.cols, Image.type());
@@ -94,16 +108,27 @@ FString URenderingFunctionsLibrary::ApplyReadNoise(FString Filepath, float ReadN
 	
 	std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
 	cv::imwrite(ResultFilepath_String, ResultImage);
-	
-	return ResultFilepath;
+
+	// Encode corrupted image as png
+    std::vector<uint8_t> EncodedData;
+	cv::imencode(".png", ResultImage, EncodedData);
+
+	// Override ImageData
+	ImageData.SetNumUninitialized(EncodedData.size());
+	FMemory::Memcpy(ImageData.GetData(), EncodedData.data(), EncodedData.size());
 }
 
-FString URenderingFunctionsLibrary::ApplySignalGain(FString Filepath, float ImageGain, float DesiredGain)
+void URenderingFunctionsLibrary::ApplySignalGain(TArray<uint8>& ImageData, float ImageGain, float DesiredGain)
 {
 	//Read Image
-	FString Filepath_Absolute = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*Filepath);
-	std::string Filepath_Absolute_String = TCHAR_TO_UTF8(*Filepath_Absolute);
-	cv::Mat Image = cv::imread(Filepath_Absolute_String);
+	cv::Mat Image = cv::imdecode(cv::Mat(1, ImageData.Num(), CV_8UC1, ImageData.GetData()), cv::IMREAD_UNCHANGED);
+
+	if (Image.empty())
+	{
+		UE_LOG(LogCielim, Error, TEXT("ImageData is Empty!"))
+		return;
+	}
+
 	Image = Image * (1 / ImageGain);
 
 	//Init Resulting image
@@ -136,36 +161,38 @@ FString URenderingFunctionsLibrary::ApplySignalGain(FString Filepath, float Imag
 	
 	std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
 	cv::imwrite(ResultFilepath_String, ResultImage);
-	
-	return ResultFilepath;
-	
+
+	// Encode corrupted image as png
+    std::vector<uint8_t> EncodedData;
+	cv::imencode(".png", ResultImage, EncodedData);
+
+	// Override ImageData
+	ImageData.SetNumUninitialized(EncodedData.size());
+	FMemory::Memcpy(ImageData.GetData(), EncodedData.data(), EncodedData.size());
 }
 
-FString URenderingFunctionsLibrary::ApplyDarkCurrentNoise(
-	FString Filepath,
-	double MaxSigma,
-	double MinSigma,
-	FVector SunPosition,
-	FVector SpacecraftPosition,
-	FVector SpacecraftDirection
-	)
+void URenderingFunctionsLibrary::ApplyDarkCurrentNoise(TArray<uint8>& ImageData, double MaxSigma, double MinSigma, FVector SunPosition, FVector SpacecraftPosition, FVector SpacecraftDirection)
 {
 	//Protect against 0 MaxSigma
 	if(MaxSigma == 0)
 	{
-		return Filepath;
+		return;
 	}
 
 	//Protect against MaxSigma < Min Sigma
 	if(MaxSigma < MinSigma)
 	{
-		return Filepath;
+		return;
 	}
 	
 	//Read Image
-	FString Filepath_Absolute = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*Filepath);
-	std::string Filepath_Absolute_String = TCHAR_TO_UTF8(*Filepath_Absolute);
-	cv::Mat Image = cv::imread(Filepath_Absolute_String);
+	cv::Mat Image = cv::imdecode(cv::Mat(1, ImageData.Num(), CV_8UC1, ImageData.GetData()), cv::IMREAD_UNCHANGED);
+
+	if (Image.empty())
+	{
+		UE_LOG(LogCielim, Error, TEXT("ImageData is Empty!"))
+		return;
+	}
 
 	//Init Resulting image
 	cv::Mat ResultImage = cv::Mat(Image.rows, Image.cols, Image.type());
@@ -196,7 +223,7 @@ FString URenderingFunctionsLibrary::ApplyDarkCurrentNoise(
 		std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
 		cv::imwrite(ResultFilepath_String, ResultImage);
 	
-		return ResultFilepath;
+		return;
 	}
 	
 	//Init and create noise matrix
@@ -218,11 +245,7 @@ FString URenderingFunctionsLibrary::ApplyDarkCurrentNoise(
 	//Clamp
 	for(int ColorChannel =0; ColorChannel < 3; ColorChannel++)
 	{
-		cv::min(
-			cv::max(DifferentColorChannels[ColorChannel],LowerBoundMatrix),
-			UpperBoundMatrix,
-			DifferentColorChannels[ColorChannel]
-			);
+		cv::min(cv::max(DifferentColorChannels[ColorChannel],LowerBoundMatrix), UpperBoundMatrix, DifferentColorChannels[ColorChannel]);
 	}
 
 	//Merge back into a color image
@@ -235,11 +258,17 @@ FString URenderingFunctionsLibrary::ApplyDarkCurrentNoise(
 	
 	std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
 	cv::imwrite(ResultFilepath_String, ResultImage);
-	
-	return ResultFilepath;
+
+	// Encode corrupted image as png
+    std::vector<uint8_t> EncodedData;
+	cv::imencode(".png", ResultImage, EncodedData);
+
+	// Override ImageData
+	ImageData.SetNumUninitialized(EncodedData.size());
+	FMemory::Memcpy(ImageData.GetData(), EncodedData.data(), EncodedData.size());
 }
 
-FString URenderingFunctionsLibrary::ApplyQE(FString Filepath, float QERed, float QEGreen, float QEBlue)
+void URenderingFunctionsLibrary::ApplyQE(TArray<uint8>& ImageData, float QERed, float QEGreen, float QEBlue)
 {
 	FVector3d QE;
 
@@ -248,9 +277,13 @@ FString URenderingFunctionsLibrary::ApplyQE(FString Filepath, float QERed, float
 	QE[2] = QEBlue;
 	
 	//Read Image
-	FString Filepath_Absolute = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*Filepath);
-	std::string Filepath_Absolute_String = TCHAR_TO_UTF8(*Filepath_Absolute);
-	cv::Mat Image = cv::imread(Filepath_Absolute_String);
+	cv::Mat Image = cv::imdecode(cv::Mat(1, ImageData.Num(), CV_8UC1, ImageData.GetData()), cv::IMREAD_UNCHANGED);
+
+	if (Image.empty())
+	{
+		UE_LOG(LogCielim, Error, TEXT("ImageData is Empty!"))
+		return;
+	}
 	
 	//Init Result Image
 	cv::Mat ResultImage = cv::Mat::zeros(Image.rows, Image.cols, Image.type());
@@ -280,6 +313,12 @@ FString URenderingFunctionsLibrary::ApplyQE(FString Filepath, float QERed, float
 	
 	std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
 	cv::imwrite(ResultFilepath_String, ResultImage);
-	
-	return ResultFilepath;
+
+	// Encode corrupted image as png
+    std::vector<uint8_t> EncodedData;
+	cv::imencode(".png", ResultImage, EncodedData);
+
+	// Override ImageData
+	ImageData.SetNumUninitialized(EncodedData.size());
+	FMemory::Memcpy(ImageData.GetData(), EncodedData.data(), EncodedData.size());
 }
