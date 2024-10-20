@@ -85,7 +85,7 @@ void URenderingFunctionsLibrary::ApplyReadNoise(TArray<uint8>& ImageData, float 
 
 	//Clamp values to [0,255]
 	//Separate color channels
-	std::array<cv::Mat, 3> DifferentColorChannels;
+	std::array<cv::Mat, 4> DifferentColorChannels;
 	cv::split(ResultImage, DifferentColorChannels);
 
 	//Init LowerBound and UpperBound matrices
@@ -110,7 +110,7 @@ void URenderingFunctionsLibrary::ApplyReadNoise(TArray<uint8>& ImageData, float 
 	cv::imwrite(ResultFilepath_String, ResultImage);
 
 	// Encode corrupted image as png
-    std::vector<uint8_t> EncodedData;
+    std::vector<uint8> EncodedData;
 	cv::imencode(".png", ResultImage, EncodedData);
 
 	// Override ImageData
@@ -138,7 +138,7 @@ void URenderingFunctionsLibrary::ApplySignalGain(TArray<uint8>& ImageData, float
 
 	//Clamp values to [0,255]
 	//Separate color channels
-	std::array<cv::Mat, 3> DifferentColorChannels;
+	std::array<cv::Mat, 4> DifferentColorChannels;
 	cv::split(ResultImage, DifferentColorChannels);
 
 	//Init LowerBound and UpperBound matrices
@@ -163,7 +163,7 @@ void URenderingFunctionsLibrary::ApplySignalGain(TArray<uint8>& ImageData, float
 	cv::imwrite(ResultFilepath_String, ResultImage);
 
 	// Encode corrupted image as png
-    std::vector<uint8_t> EncodedData;
+    std::vector<uint8> EncodedData;
 	cv::imencode(".png", ResultImage, EncodedData);
 
 	// Override ImageData
@@ -260,7 +260,7 @@ void URenderingFunctionsLibrary::ApplyDarkCurrentNoise(TArray<uint8>& ImageData,
 	cv::imwrite(ResultFilepath_String, ResultImage);
 
 	// Encode corrupted image as png
-    std::vector<uint8_t> EncodedData;
+    std::vector<uint8> EncodedData;
 	cv::imencode(".png", ResultImage, EncodedData);
 
 	// Override ImageData
@@ -315,7 +315,7 @@ void URenderingFunctionsLibrary::ApplyQE(TArray<uint8>& ImageData, float QERed, 
 	cv::imwrite(ResultFilepath_String, ResultImage);
 
 	// Encode corrupted image as png
-    std::vector<uint8_t> EncodedData;
+    std::vector<uint8> EncodedData;
 	cv::imencode(".png", ResultImage, EncodedData);
 
 	// Override ImageData

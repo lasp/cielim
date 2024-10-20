@@ -52,9 +52,9 @@ TArray64<uint8> ACaptureManager::GetPNG() const
 
 	// Apply corruptions to image data
 	URenderingFunctionsLibrary::ApplyPSF_Gaussian(PNGImageDataSerialized, 31, 31, 15.0f, 15.0f);
-	//URenderingFunctionsLibrary::ApplyReadNoise(PNGImageDataSerialized, 15.0f, 1.0f);
-	//URenderingFunctionsLibrary::ApplySignalGain(PNGImageDataSerialized, 2.0f, 2.0f);
-	//URenderingFunctionsLibrary::ApplyQE(PNGImageDataSerialized, 5.0f, 5.0f, 5.0f);
+	URenderingFunctionsLibrary::ApplyReadNoise(PNGImageDataSerialized, 30.0f, 4.0f);
+	URenderingFunctionsLibrary::ApplySignalGain(PNGImageDataSerialized, 3.0f, 3.0f);
+	URenderingFunctionsLibrary::ApplyQE(PNGImageDataSerialized, 5.0f, 5.0f, 5.0f);
 
 	// Copy data back over to PNGImageData
 	PNGImageData.SetNumUninitialized(PNGImageDataSerialized.Num());
