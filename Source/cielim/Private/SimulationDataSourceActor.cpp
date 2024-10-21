@@ -4,6 +4,7 @@
 
 #include "AstronomicalConstants.h"
 #include "CielimLoggingMacros.h"
+#include "CelestialBodyMeshModel.h"
 #include "KinematicsUtilities.h"
 #include "ProtobufFileReader.h"
 #include "ZmqConnection/Commands.h"
@@ -276,24 +277,35 @@ void ASimulationDataSourceActor::SpawnCelestialBodies()
 		FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
 		// Create CelestialBody Actor instance
 		ACelestialBody *TempCelestialBody;
+		const FTransform SpawnLocAndRotation = FTransform(FRotator(CelestialBodyRotation),
+				PositionCelestialBody);
+		
 		if (CelestialBody.bodyname() == "sun_planet_data") {
-			TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>(BpSun,
-			                                                           PositionCelestialBody,
-			                                                           CelestialBodyRotation);
+			TempCelestialBody = GetWorld()->SpawnActorDeferred<ACelestialBody>(BpSun, SpawnLocAndRotation);
+			// TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>(BpSun,
+			//                                                            PositionCelestialBody,
+			//                                                            CelestialBodyRotation);
+			
 			this->SunCelestialBody = TempCelestialBody;
 		} else if (IsAsteroid(CelestialBody.bodyname())) {
-			TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>(BpAsteroid,
-			                                                           PositionCelestialBody,
-			                                                           CelestialBodyRotation);
+			TempCelestialBody = GetWorld()->SpawnActorDeferred<ACelestialBody>(BpAsteroid, SpawnLocAndRotation);
+			
+			std::cout << CelestialBody.bodyname() << std::endl;
 		} else {
-			TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>(BpCelestialBody,
-			                                                           PositionCelestialBody,
-			                                                           CelestialBodyRotation);
+			TempCelestialBody = GetWorld()->SpawnActorDeferred<ACelestialBody>(BpCelestialBody, SpawnLocAndRotation);
+			// TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>(BpCelestialBody,
+			//                                                            PositionCelestialBody,
+			//                                                            CelestialBodyRotation);
 		}
-		FString CbName = FString(CelestialBody.bodyname().c_str());
-		TempCelestialBody->Name = CbName;
-		TempCelestialBody->SetRadiusEvent(CelestialBody.models().meanradius());
+		if (CelestialBody.has_models())
+		{
+			TempCelestialBody->SetMeshModel(CelestialBodyMeshModel::FromProtobuf(CelestialBody.models()));
+		}
+		
+		TempCelestialBody->Name = FString(CelestialBody.bodyname().c_str());
 		CelestialBodyArray.Add(TempCelestialBody);
+		TempCelestialBody->FinishSpawning(SpawnLocAndRotation);
+		TempCelestialBody->SetRadiusEvent(CelestialBody.models().meanradius());
 		this->IsCelestialBodiesSpawned = true;
 	}
 }

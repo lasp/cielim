@@ -1,5 +1,7 @@
 #pragma once
 
+#include "CelestialBodyMeshModel.h"
+
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "CelestialBody.generated.h"
@@ -12,17 +14,13 @@ class CIELIM_API ACelestialBody : public AActor
 public:	
     // Sets default values for this actor's properties
     ACelestialBody();
+	
+	void SetMeshModel(CelestialBodyMeshModel Model);
 
-protected:
-    // Called when the game starts or when spawned
-    virtual void BeginPlay() override;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    class UStaticMeshComponent * SphereMesh;
-
-public:	
-
-    // Dont know if there is a better way to do this
+	UFUNCTION(BlueprintCallable, Category = "CelestialBody")
+	FString GetMeshModelName();
+	
+    // Don't know if there is a better way to do this
     UFUNCTION(BlueprintImplementableEvent)
     void SetRadiusEvent(const double& Radius);
 
@@ -31,7 +29,17 @@ public:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     FString Name;
-
+	
     void Update(const FVector3d& NewPosition, const FRotator& NewRotation);
+
+protected:
+    // Called when the game starts or when spawned
+    virtual void BeginPlay() override;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    class UStaticMeshComponent * SphereMesh;
+
+private:
+	CelestialBodyMeshModel MeshModel;
 };
 
