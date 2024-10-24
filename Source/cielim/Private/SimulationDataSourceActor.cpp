@@ -16,6 +16,7 @@
 #include "Engine/DirectionalLight.h"
 
 #define m2cm 100.0
+#define km2m 1000.0
 /**
  * @brief GetRotatorFromMrp(Sigma) Converts an MRP into an Unreal Rotation Container (FRotator) 
  * 
@@ -38,7 +39,7 @@ FVector3d GetSpacecraftPosition(const cielimMessage::Spacecraft &Craft)
 {
 	const FVector3d PositionSpacecraft = FVector3d(Craft.position(0),
 	                                               Craft.position(1),
-	                                               Craft.position(2))*m2cm;
+	                                               Craft.position(2));
 	return Right2LeftVector(PositionSpacecraft);
 }
 
@@ -51,7 +52,7 @@ FVector3d GetCameraPosition(const cielimMessage::CameraModel &Camera)
 {
 	const FVector3d SigmaCamera = FVector3d(Camera.camerapositioninbody(0),
 	                                        Camera.camerapositioninbody(1),
-	                                        Camera.camerapositioninbody(2))*m2cm;
+	                                        Camera.camerapositioninbody(2));
 	return Right2LeftVector(SigmaCamera);
 }
 
@@ -219,7 +220,7 @@ FVector3d GetCelestialBodyPosition(const cielimMessage::CelestialBody &Celestial
 {
 	const FVector3d PositionCelestialBody = FVector3d(CelestialBody.position(0),
 	                                                  CelestialBody.position(1),
-	                                                  CelestialBody.position(2))*m2cm;
+	                                                  CelestialBody.position(2));
 	return Right2LeftVector(PositionCelestialBody);
 }
 
@@ -305,7 +306,7 @@ void ASimulationDataSourceActor::SpawnCelestialBodies()
 		TempCelestialBody->Name = FString(CelestialBody.bodyname().c_str());
 		CelestialBodyArray.Add(TempCelestialBody);
 		TempCelestialBody->FinishSpawning(SpawnLocAndRotation);
-		TempCelestialBody->SetRadiusEvent(CelestialBody.models().meanradius());
+		TempCelestialBody->SetRadiusEvent(CelestialBody.models().meanradius()/1000); // meshes are in 10m scale, bring to uu/cm
 		this->IsCelestialBodiesSpawned = true;
 	}
 }
@@ -349,8 +350,8 @@ void ASimulationDataSourceActor::PointSunLight()
 {
 	this->SunLight = GetWorld()->SpawnActor<ADirectionalLight>(FVector3d::ZeroVector,
 		FRotator::ZeroRotator);
-	double LuxAt1AU = 1000;
-	this->SunLight->GetLightComponent()->SetIntensity(LuxAt1AU*(AU*AU)/(FMath::Square(this->SunCelestialBody->GetActorLocation().Length()/100000)));
+	double LuxAt1AU = 1280;
+	this->SunLight->GetLightComponent()->SetIntensity(LuxAt1AU*(AU*km2m*AU*km2m)/(FMath::Square(this->SunCelestialBody->GetActorLocation().Length())));
 	this->SunLight->GetLightComponent()->SetMobility(EComponentMobility::Movable);
 	auto Vector = -this->SunCelestialBody->GetActorLocation();
 	Vector.Normalize();
