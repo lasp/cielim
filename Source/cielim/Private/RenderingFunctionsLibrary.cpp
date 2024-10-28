@@ -6,11 +6,48 @@
 #include <OpenCV/opencv/modules/imgcodecs/include/opencv2/imgcodecs.hpp>
 #include <OpenCV/PostOpenCVHeaders.h>
 
-#include <filesystem>
-
 URenderingFunctionsLibrary::URenderingFunctionsLibrary(const FObjectInitializer& ObjectInitializer)
 {
 	
+}
+
+void URenderingFunctionsLibrary::CenterOfBrightness(TArray<uint8>& ImageData)
+{
+	//Read Image
+	cv::Mat Image = cv::imdecode(cv::Mat(1, ImageData.Num(), CV_8UC1, ImageData.GetData()), cv::IMREAD_UNCHANGED);
+
+	if (Image.empty())
+	{
+		UE_LOG(LogCielim, Error, TEXT("ImageData is Empty!"))
+		return;
+	}
+
+	cv::Mat blured;
+	cv::Mat ImageGray;
+
+    std::vector<cv::Vec2i> locations;
+
+    /*! - Grayscale, blur, and threshold iamge*/
+    cv::cvtColor(Image, ImageGray, cv::COLOR_BGR2GRAY);
+    cv::blur(ImageGray, blured, cv::Size(3,3) );
+    cv::threshold(blured, Image, 0, 255, cv::THRESH_BINARY);
+
+	// Find the center of brightness
+    cv::Moments m = cv::moments(ImageGray, true);
+
+	if (m.m00 == 0)
+	{
+		UE_LOG(LogCielim, Warning, TEXT("There is no center of brightness."));
+		return;
+	}
+
+	int cx = static_cast<int>(m.m10 / m.m00);
+	int cy = static_cast<int>(m.m01 / m.m00);
+
+	float cx_percent = (static_cast<float>(cx) / ImageGray.cols) * 100.0f;
+	float cy_percent = (static_cast<float>(cy) / ImageGray.rows) * 100.0f;
+
+	UE_LOG(LogCielim, Log, TEXT("Center of brightness: (%d, %d) or (%f %%, %f %%)"), cx, cy, cx_percent, cy_percent);
 }
 
 void URenderingFunctionsLibrary::ApplyPSF_Gaussian(TArray<uint8>& ImageData, int32 KernelHeight, int32 KernelWidth, double SigmaX, double SigmaY)

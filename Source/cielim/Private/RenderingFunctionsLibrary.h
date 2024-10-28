@@ -18,6 +18,9 @@ class  CIELIM_API URenderingFunctionsLibrary :
 public:
 	
 	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
+	static void CenterOfBrightness(TArray<uint8>& ImageData);
+
+	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
 	static void ApplyPSF_Gaussian(TArray<uint8>& ImageData, int32 KernelHeight, int32 KernelWidth, double SigmaX, double SigmaY);
 	
 	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
