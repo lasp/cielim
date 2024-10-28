@@ -24,14 +24,21 @@ else
   mkdir build
   cd build
   cmake .. \
+    -D BUILD_DOCS:BOOL=OFF  \
+    -D BUILD_EXAMPLES:BOOL=OFF \
+    -D BUILD_opencv_python:BOOL=OFF \
     -D BUILD_PERF_TESTS:BOOL=OFF \
     -D BUILD_TESTS:BOOL=OFF \
-    -D BUILD_DOCS:BOOL=OFF  \
-    -D WITH_CUDA:BOOL=OFF \
-    -D BUILD_EXAMPLES:BOOL=OFF \
+    -D CMAKE_BUILD_TYPE=Release \
+    -D CMAKE_INSTALL_PREFIX=.. \
     -D INSTALL_CREATE_DISTRIB=ON \
     -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules \
-    -D CMAKE_INSTALL_PREFIX=..
+    -D WITH_CUDA:BOOL=OFF \
+    -D WITH_FFMPEG=OFF \
+    -D WITH_GSTREAMER:BOOL=OFF \
+    -D WITH_OPENEXR:BOOL=OFF \
+    -D WITH_TESSERACT:BOOL=OFF \
+    -D WITH_VTK:BOOL=OFF
   cmake --build . --parallel 8
 
   # You need to install here or else headers won't all be in the same place
