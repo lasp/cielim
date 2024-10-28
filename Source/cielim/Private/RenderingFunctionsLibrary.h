@@ -15,6 +15,14 @@ class  CIELIM_API URenderingFunctionsLibrary :
 	
 	URenderingFunctionsLibrary(const FObjectInitializer& ObjectInitializer);
 
+private:
+	static int Clamp(float k, int UpperBound, int LowerBound)
+	{
+		if(k > UpperBound) return UpperBound;
+		else if(k < LowerBound)return  LowerBound;
+		else return static_cast<int>(FMath::Floor(k));
+	}
+
 public:
 	
 	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
@@ -24,7 +32,7 @@ public:
 	static void ApplyPSF_Gaussian(TArray<uint8>& ImageData, int32 KernelHeight, int32 KernelWidth, double SigmaX, double SigmaY);
 	
 	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
-	static void ApplyCosmicRays();
+	static void ApplyCosmicRays(TArray<uint8>& ImageData, int nCosmicRays, float AvgLength, float AvgWidth);
 
 	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
 	static void ApplyReadNoise(TArray<uint8>& ImageData, float ReadNoiseSigma, float SystemGain);
