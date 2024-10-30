@@ -88,7 +88,7 @@ std::optional<FCircularQueueData> AZmqMultiThreadActor::GetQueueData() const
 		return std::nullopt;
 	}
 	
-	if (FCircularQueueData NextCommand; this->MultiThreadDataQueue->Requests.Dequeue(NextCommand)) {
+	if (FCircularQueueData NextCommand{}; this->MultiThreadDataQueue->Requests.Dequeue(NextCommand)) {
 		UE_LOG(LogCielim, Display, TEXT("Dequeue command: AZmqMultiThreadActor"));
 		return NextCommand;
 	} else {
@@ -99,7 +99,7 @@ std::optional<FCircularQueueData> AZmqMultiThreadActor::GetQueueData() const
 
 void AZmqMultiThreadActor::PutQueueData(std::string Data) const
 {
-	FCircularQueueData NextCommand;
+	FCircularQueueData NextCommand{};
 	NextCommand.Query = BSKError();
 	this->MultiThreadDataQueue->Responses.Enqueue(NextCommand);
 }
@@ -108,7 +108,7 @@ void AZmqMultiThreadActor::PutImageQueueData(const TArray64<uint8>& PNGData) con
 {
 	auto Query = RequestImage();
 	Query.payload = PNGData;
-	FCircularQueueData NextCommand;
+	FCircularQueueData NextCommand{};
 	NextCommand.Query = Query;
 	UE_LOG(LogCielim, Display, TEXT("Enqueue image response: AZmqMultiThreadActor"));
 	this->MultiThreadDataQueue->Responses.Enqueue(NextCommand);
