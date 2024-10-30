@@ -94,18 +94,6 @@ void Connector::ThreadShutdown()
 	}
 }
 
-CommandType Connector::ParseCommand(const std::string& CommandString)
-{
-	static std::unordered_map<std::string, CommandType> const table = {{"PING", CommandType::PING},
-																	{"SIM_UPDATE", CommandType::SIM_UPDATE},
-																	{"REQUEST_IMAGE", CommandType::REQUEST_IMAGE}};
-
-	if (const auto it = table.find(CommandString); it != table.end()) {
-		return it->second;
-	}
-	return CommandType::ERROR;
-}
-
 zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage)
 {
 	UE_LOG(LogCielim, Display, TEXT("Connector::ParseMessage"));
@@ -113,7 +101,7 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage)
 
 	std::string Command = RequestMessage.popstr();
 	UE_LOG(LogCielim, Display, TEXT("Basilisk command: %hs"), Command.c_str());
-	switch (this->ParseCommand(Command))
+	switch (ParseCommand(Command))
 	{
 		case CommandType::PING:
 			{

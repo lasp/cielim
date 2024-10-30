@@ -39,7 +39,6 @@ private:
 	void Connect();
 	void ParseHandler(zmq::event_flags Event);
 	zmq::multipart_t ParseMessage(zmq::multipart_t& Request); 
-	CommandType ParseCommand(const std::string& CommandString);
 
 	zmq::socket_t ReplySocket;
     zmq::context_t* Context;

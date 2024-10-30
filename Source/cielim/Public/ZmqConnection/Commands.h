@@ -41,3 +41,17 @@ class BSKError : Command
 public:
 	CommandType type=CommandType::ERROR;
 };
+
+static CommandType ParseCommand(const std::string& CommandString)
+{
+	static std::unordered_map<std::string, CommandType> const table = {
+		{"PING", CommandType::PING},
+		{"SIM_UPDATE", CommandType::SIM_UPDATE},
+		{"REQUEST_IMAGE", CommandType::REQUEST_IMAGE}
+	};
+	
+	if (const auto it = table.find(CommandString); it != table.end()) {
+		return it->second;
+	} 
+	return CommandType::ERROR;
+}
