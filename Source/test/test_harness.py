@@ -40,8 +40,7 @@ class Connector:
         print(response_message_parts)
 
     def request_image_for_camera_id(self, camera_id: int):
-        camera_image_request = "REQUEST_IMAGE_" + str(camera_id)
-        self.request_socket.send_string(camera_image_request)
+        self.request_socket.send_multipart([b'REQUEST_IMAGE', str.encode(str(camera_id))])
         [image_bytes_size_msg, image_data_msg] = self.request_socket.recv_multipart()
         buf = np.asarray(bytearray(image_data_msg), dtype="uint8")
         image = cv2.imdecode(buf, cv2.IMREAD_COLOR)

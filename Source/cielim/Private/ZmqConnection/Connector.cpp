@@ -111,15 +111,9 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage)
 	UE_LOG(LogCielim, Display, TEXT("Connector::ParseMessage"));
 	zmq::multipart_t Message;
 
-	std::string TmpCommand = RequestMessage.popstr();
-	std::string TrimmedCommand = TmpCommand;
-	if (TmpCommand.find("REQUEST_IMAGE") != std::string::npos)
-	{
-		TrimmedCommand = "REQUEST_IMAGE";
-	}
-	FString PrintCommandString(TrimmedCommand.c_str());
-	UE_LOG(LogCielim, Display, TEXT("Basilisk command: %s"), *PrintCommandString);
-	switch (this->ParseCommand(TrimmedCommand))
+	std::string Command = RequestMessage.popstr();
+	UE_LOG(LogCielim, Display, TEXT("Basilisk command: %hs"), Command.c_str());
+	switch (this->ParseCommand(Command))
 	{
 		case CommandType::PING:
 			{
@@ -146,14 +140,10 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage)
 			}
 		case CommandType::REQUEST_IMAGE:
 			{
-				// TODO get name from basilisk side and make RequestScreenshot robust to spelling mistakes
-				// Set cameraID to message once that information is being sent in the message
 				uint32_t CameraID = -1;
-				if (TmpCommand.length() > 13) {
-					CameraID = std::stoi(TmpCommand.substr(14));
-					UE_LOG(LogCielim, Display, TEXT("Camera ID: %d"), CameraID);
-				}
-
+				CameraID = std::stoi(RequestMessage.popstr());
+				UE_LOG(LogCielim, Display, TEXT("Camera ID: %d"), CameraID);
+			
 				// A request is received and is put in the queue to be handled
 				// by the main (game) thread
 				auto Request = FCircularQueueData();
