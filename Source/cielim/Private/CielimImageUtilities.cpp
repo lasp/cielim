@@ -29,7 +29,7 @@ namespace CielimImageUtilities
 		
 		return Coordinates;
 	}
-
+	
 	TArray64<uint8> FImageToPNG(const FImage& Image)
 	{
 	    TArray64<uint8> PNGImageData;
