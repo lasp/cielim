@@ -30,7 +30,7 @@ FString ACelestialBody::GetMeshModelName()
 }
 /**
  * @brief Update(NewPosition, NewRotation) Updates celestial body's position and rotation
- * 
+ *
  * @param NewPosition The new position
  * @param NewRotation The new rotation
  */
@@ -39,4 +39,3 @@ void ACelestialBody::Update(const FVector3d& NewPosition, const FRotator& NewRot
     SetActorLocation(NewPosition);
     SetActorRotation(NewRotation);
 }
-

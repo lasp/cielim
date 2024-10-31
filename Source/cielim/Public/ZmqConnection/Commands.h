@@ -24,7 +24,7 @@ public:
 
 class SimUpdate : Command
 {
-public:	
+public:
 	CommandType type=CommandType::SIM_UPDATE;
 	cielimMessage::CielimMessage payload{};
 };

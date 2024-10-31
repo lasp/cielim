@@ -45,7 +45,7 @@
 #define REQ_SUN 695000.0
 
 // Mercury
-#define REQ_MERCURY 2439.7 // km 
+#define REQ_MERCURY 2439.7 // km
 #define J2_MERCURY 60.0e-6
 #define SMA_MERCURY 0.38709893*AU
 #define I_MERCURY 7.00487*D2R

@@ -10,7 +10,7 @@
 #include <optional>
 
 /**
- * 
+ *
  */
 class CIELIM_API ProtobufFileReader : public SimulationDataSource
 {
@@ -28,4 +28,3 @@ private:
 	std::unique_ptr<google::protobuf::io::CodedInputStream> CodedInput;
 	bool Eof{};
 };
-

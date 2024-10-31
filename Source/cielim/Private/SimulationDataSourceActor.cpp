@@ -18,8 +18,8 @@
 #define m2cm 100.0
 #define km2m 1000.0
 /**
- * @brief GetRotatorFromMrp(Sigma) Converts an MRP into an Unreal Rotation Container (FRotator) 
- * 
+ * @brief GetRotatorFromMrp(Sigma) Converts an MRP into an Unreal Rotation Container (FRotator)
+ *
  * @param Sigma The MRP vector
  * @return FRotator Unreal Rotation Container
  */
@@ -84,7 +84,7 @@ ASimulationDataSourceActor::ASimulationDataSourceActor()
 void ASimulationDataSourceActor::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
 	if(FString CommAddress; FParse::Value(FCommandLine::Get(), TEXT("directComm"), CommAddress))
 	{
 	    UE_LOG(LogCielim, Display, TEXT("Parsed command line parameter (directComm) : %s"), *CommAddress);
@@ -102,7 +102,7 @@ void ASimulationDataSourceActor::BeginPlay()
 		this->DataSource = DataSourceType::File;
 		this->SimulationDataSource = std::make_unique<ProtobufFileReader>("protofile_proxOps.bin");
 	}
-	
+
 	int major;
 	int minor;
 	int patch;
@@ -111,7 +111,7 @@ void ASimulationDataSourceActor::BeginPlay()
 }
 
 void ASimulationDataSourceActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{   
+{
 	this->SimulationDataSource.reset();
 	google::protobuf::ShutdownProtobufLibrary();
 	Super::EndPlay(EndPlayReason);
@@ -152,7 +152,7 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 	{
 		return;
 	}
-	
+
 	if (!this->IsSceneEstablished) {
 		if (std::holds_alternative<SimUpdate>(QueueData.value().Query)) {
 			UE_LOG(LogCielim, Display, TEXT("Initialize scene..."));
@@ -174,7 +174,7 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 			UE_LOG(LogCielim, Warning, TEXT("Scene not initialized: ASimulationDataSourceActor"));
 			return;
 		}
-	} 
+	}
 
 	// This code should be turned into some kind of handler function registration
 	// a bit like a RPC or http server
@@ -226,9 +226,9 @@ FVector3d GetCelestialBodyPosition(const cielimMessage::CelestialBody &Celestial
 
 /**
  * @brief GetCelestialBodyRotation(CelestialBody) Gets the rotation of a CelestialBody object
- * 
+ *
  * @param CelestialBody A CelestialBody object
- * @return FRotator celestial body's rotation 
+ * @return FRotator celestial body's rotation
  */
 FRotator GetCelestialBodyRotation(const cielimMessage::CelestialBody &CelestialBody)
 {
@@ -248,7 +248,7 @@ FRotator GetCelestialBodyRotation(const cielimMessage::CelestialBody &CelestialB
 	const FVector Rotation4 = FVector4d(0, 0, 0, 1);
 	const FMatrix Mat = FMatrix(Rotation1, Rotation2, Rotation3, Rotation4);
 	const FQuat Q = FQuat(Mat);
-	// Get FRotator 
+	// Get FRotator
 	const FQuat QLeftHand = RightQuat2LeftQuat(Q);
 	return FRotator(QLeftHand);
 }
@@ -267,12 +267,12 @@ static bool IsAsteroid(const std::string& BodyName)
 
 /**
  * @brief SpawnCelestialBodies() Spawns all celestial bodies from the VizMessage into the level
- * 
+ *
  */
 void ASimulationDataSourceActor::SpawnCelestialBodies()
 {
 	for (const auto &CelestialBody : CielimMessage.celestialbodies()) {
-		// Set Location 
+		// Set Location
 		FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
 		// Set Rotation
 		FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
@@ -280,13 +280,13 @@ void ASimulationDataSourceActor::SpawnCelestialBodies()
 		ACelestialBody *TempCelestialBody;
 		const FTransform SpawnLocAndRotation = FTransform(FRotator(CelestialBodyRotation),
 				PositionCelestialBody);
-		
+
 		if (CelestialBody.bodyname() == "sun_planet_data") {
 			TempCelestialBody = GetWorld()->SpawnActorDeferred<ACelestialBody>(BpSun, SpawnLocAndRotation);
 			this->SunCelestialBody = TempCelestialBody;
 		} else if (IsAsteroid(CelestialBody.bodyname())) {
 			TempCelestialBody = GetWorld()->SpawnActorDeferred<ACelestialBody>(BpAsteroid, SpawnLocAndRotation);
-			
+
 			std::cout << CelestialBody.bodyname() << std::endl;
 		} else {
 			TempCelestialBody = GetWorld()->SpawnActorDeferred<ACelestialBody>(BpCelestialBody, SpawnLocAndRotation);
@@ -295,7 +295,7 @@ void ASimulationDataSourceActor::SpawnCelestialBodies()
 		{
 			TempCelestialBody->SetMeshModel(CelestialBodyMeshModel::FromProtobuf(CelestialBody.models()));
 		}
-		
+
 		TempCelestialBody->Name = FString(CelestialBody.bodyname().c_str());
 		CelestialBodyArray.Add(TempCelestialBody);
 		TempCelestialBody->FinishSpawning(SpawnLocAndRotation);
@@ -306,12 +306,12 @@ void ASimulationDataSourceActor::SpawnCelestialBodies()
 
 /**
  * @brief SpawnSpacecraft() Spawns all spacecraft from the VizMessage into the level
- * 
+ *
  */
 void ASimulationDataSourceActor::SpawnSpacecraft()
 {
 	const cielimMessage::Spacecraft &SpacecraftMessage = this->CielimMessage.spacecraft();
-	// Set Location 
+	// Set Location
 	const FVector3d PositionSpacecraft = GetSpacecraftPosition(SpacecraftMessage);
 	// Set Rotation
 	const FRotator SpacecraftRotation = GetRotatorFromMrp(FVector3d(SpacecraftMessage.attitude(0),
@@ -361,7 +361,7 @@ void ASimulationDataSourceActor::SpawnCaptureManager()
 
 /**
  * @brief UpdateCelestialBodies() Updates all celestial body positions and rotations
- * 
+ *
  */
 void ASimulationDataSourceActor::UpdateCelestialBodies() const
 {
@@ -376,8 +376,8 @@ void ASimulationDataSourceActor::UpdateCelestialBodies() const
 }
 
 /**
- * @brief UpdateSpacecraft() Updates Spacecraft and camera positions and rotations 
- * 
+ * @brief UpdateSpacecraft() Updates Spacecraft and camera positions and rotations
+ *
  */
 void ASimulationDataSourceActor::UpdateSpacecraft() const
 {
@@ -398,7 +398,7 @@ void ASimulationDataSourceActor::UpdateSpacecraft() const
 
 /**
  * @brief DebugVizMessage() Prints VizMessage to the console
- * 
+ *
  */
 void ASimulationDataSourceActor::DebugCielimMessage() const
 {

@@ -7,13 +7,14 @@ import time
 import typing
 import base64
 import zmq
+
 sys.path.append(os.path.join(os.path.dirname(__file__), "vizProtobuffer"))
 import cielimMessage_pb2
 
 
 class Connector:
     def __init__(self):
-        self.address = ''
+        self.address = ""
         self.context = None
         self.request_socket = None
 
@@ -33,7 +34,7 @@ class Connector:
         print(result)
 
     def send_frame(self, sim_frame: cielimMessage_pb2.CielimMessage):
-        result = self.request_socket.send_multipart([b'SIM_UPDATE', b'', b'', sim_frame.SerializePartialToString()])
+        result = self.request_socket.send_multipart([b"SIM_UPDATE", b"", b"", sim_frame.SerializePartialToString()])
         print(result)
         response_message_parts = self.request_socket.recv()
         print(response_message_parts)

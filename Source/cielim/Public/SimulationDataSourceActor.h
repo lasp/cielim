@@ -21,8 +21,8 @@ UCLASS(Blueprintable)
 class CIELIM_API ASimulationDataSourceActor : public AActor
 {
     GENERATED_BODY()
-    
-public:	
+
+public:
     // Sets default values for this actor's properties
     ASimulationDataSourceActor();
 
@@ -31,7 +31,7 @@ protected:
     virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-public:	
+public:
     // Called every frame
     virtual void Tick(float DeltaTime) override;
 
@@ -56,7 +56,7 @@ public:
 
     UFUNCTION(BlueprintCallable)
     void DebugCielimMessage() const;
-	
+
 	void PointSunLight();
 
 private:
@@ -78,4 +78,3 @@ private:
 	bool ShouldUpdateScene=false;
 	DataSourceType DataSource=DataSourceType::File;
 };
-

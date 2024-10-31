@@ -10,16 +10,16 @@ UCLASS()
 class CIELIM_API ACelestialBody : public AActor
 {
     GENERATED_BODY()
-    
-public:	
+
+public:
     // Sets default values for this actor's properties
     ACelestialBody();
-	
+
 	void SetMeshModel(CelestialBodyMeshModel Model);
 
 	UFUNCTION(BlueprintCallable, Category = "CelestialBody")
 	FString GetMeshModelName();
-	
+
     // Don't know if there is a better way to do this
     UFUNCTION(BlueprintImplementableEvent)
     void SetRadiusEvent(const double& Radius);
@@ -42,4 +42,3 @@ protected:
 private:
 	CelestialBodyMeshModel MeshModel;
 };
-
