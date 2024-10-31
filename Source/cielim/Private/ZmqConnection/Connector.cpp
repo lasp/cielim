@@ -137,22 +137,20 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage)
 				auto Request = FCircularQueueData{};
 				Request.Query = RequestImage();
 				bool EnqueueResult = false;
-				UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue REQUEST_IMAGE..."));
+				UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue REQUEST_IMAGE"));
 				while(!EnqueueResult)
 				{
-					// this->Wait(0.5);
 					EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(Request);
 				}
 
 				// Loop until we get the response from the main (game) thread
 				auto Response = FCircularQueueData{};
 				bool DequeueResult = false;
-				UE_LOG(LogCielim, Display, TEXT("Waiting for reposnse to REQUEST_IMAGE..."));
+				UE_LOG(LogCielim, Display, TEXT("Waiting for reposnse to REQUEST_IMAGE"));
 				while(!DequeueResult)
 				{
 					// I can call this directly so the thread blocks on the image return.
 					// This assumes that the next item placed in the queue is the image response.
-					// this->Wait(0.5);
 					DequeueResult = this->MultiThreadQueue->Responses.Dequeue(Response);
 				}
 				UE_LOG(LogCielim, Display, TEXT("Reposnse to REQUEST_IMAGE received..."));
