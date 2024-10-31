@@ -104,10 +104,12 @@ void AZmqMultiThreadActor::PutQueueData(std::string Data) const
 	this->MultiThreadDataQueue->Responses.Enqueue(NextCommand);
 }
 
-void AZmqMultiThreadActor::PutImageQueueData(const TArray64<uint8>& PNGData) const
+void AZmqMultiThreadActor::PutImageQueueData(const std::vector<uint8>& PNGData,
+	const std::optional<FVector2d> CenterOfBrightness) const
 {
 	auto Query = RequestImage();
 	Query.payload = PNGData;
+	Query.CenterOfBrightness = CenterOfBrightness;
 	FCircularQueueData NextCommand{};
 	NextCommand.Query = Query;
 	UE_LOG(LogCielim, Display, TEXT("Enqueue image response: AZmqMultiThreadActor"));

@@ -1,5 +1,11 @@
 #pragma once
 
+#include <OpenCV/PreOpenCVHeaders.h>
+#include <opencv2/core.hpp>
+#include "opencv2/imgproc.hpp"
+#include <OpenCV/opencv/modules/imgcodecs/include/opencv2/imgcodecs.hpp>
+#include <OpenCV/PostOpenCVHeaders.h>
+
 #include "CoreMinimal.h"
 #include "Math/Vector.h"
 #include "Engine/World.h"
@@ -25,24 +31,15 @@ private:
 
 public:
 	
-	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
-	static void CenterOfBrightness(TArray<uint8>& ImageData);
-
-	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
-	static void ApplyPSF_Gaussian(TArray<uint8>& ImageData, int32 KernelHeight, int32 KernelWidth, double SigmaX, double SigmaY);
+	static void ApplyPSF_Gaussian(cv::Mat& Image, int32 KernelHeight, int32 KernelWidth, double SigmaX, double SigmaY);
 	
-	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
-	static void ApplyCosmicRays(TArray<uint8>& ImageData, int nCosmicRays, float AvgLength, float AvgWidth);
-
-	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
-	static void ApplyReadNoise(TArray<uint8>& ImageData, float ReadNoiseSigma, float SystemGain);
-
-	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
-	static void ApplySignalGain(TArray<uint8>& ImageData, float ImageGain, float DesiredGain);
-
-	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
-	static void ApplyDarkCurrentNoise(TArray<uint8>& ImageData, double MaxSigma, double MinSigma, FVector SunPosition, FVector SpacecraftPosition, FVector SpacecraftDirection);
-
-	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
-	static void ApplyQE(TArray<uint8>& ImageData, float QERed, float QEGreen, float QEBlue);
+	static void ApplyCosmicRays(cv::Mat& Image, int nCosmicRays, float AvgLength, float AvgWidth);
+	
+	static void ApplyReadNoise(cv::Mat& Image, float ReadNoiseSigma, float SystemGain);
+	
+	static void ApplySignalGain(cv::Mat& Image, float ImageGain, float DesiredGain);
+	
+	static void ApplyDarkCurrentNoise(cv::Mat& Image, double MaxSigma, double MinSigma, FVector SunPosition, FVector SpacecraftPosition, FVector SpacecraftDirection);
+	
+	static void ApplyQE(cv::Mat& Image, float QERed, float QEGreen, float QEBlue);
 };

@@ -38,7 +38,7 @@ protected:
 private:
 	void Connect();
 	void ParseHandler(zmq::event_flags Event);
-	zmq::multipart_t ParseMessage(zmq::multipart_t& Request); 
+	zmq::multipart_t ParseMessage(zmq::multipart_t& Request) const;
 
 	zmq::socket_t ReplySocket;
     zmq::context_t* Context;

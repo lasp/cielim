@@ -94,11 +94,10 @@ void Connector::ThreadShutdown()
 	}
 }
 
-zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage)
+zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage) const
 {
 	UE_LOG(LogCielim, Display, TEXT("Connector::ParseMessage"));
-	zmq::multipart_t Message;
-
+	zmq::multipart_t Message{};
 	std::string Command = RequestMessage.popstr();
 	UE_LOG(LogCielim, Display, TEXT("Basilisk command: %hs"), Command.c_str());
 	switch (ParseCommand(Command))
@@ -135,7 +134,9 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage)
 				// A request is received and is put in the queue to be handled
 				// by the main (game) thread
 				auto Request = FCircularQueueData{};
-				Request.Query = RequestImage();
+				auto RequestQuery = RequestImage{};
+				RequestQuery.ShouldReturnImage = std::stoi(RequestMessage.popstr());
+				Request.Query = RequestQuery;
 				bool EnqueueResult = false;
 				UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue REQUEST_IMAGE"));
 				while(!EnqueueResult)
@@ -153,13 +154,21 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage)
 					// This assumes that the next item placed in the queue is the image response.
 					DequeueResult = this->MultiThreadQueue->Responses.Dequeue(Response);
 				}
-				UE_LOG(LogCielim, Display, TEXT("Reposnse to REQUEST_IMAGE received..."));
+				UE_LOG(LogCielim, Display, TEXT("Reposnse to REQUEST_IMAGE received"));
 
 				auto ResponseImage = std::get<RequestImage>(Response.Query);
-				Message.pushmem(ResponseImage.payload.GetData(), ResponseImage.payload.GetAllocatedSize());
+				auto Bytes = sizeof(ResponseImage.payload[0]) * ResponseImage.payload.size();
+				Message.pushmem(ResponseImage.payload.data(), Bytes);
+				Message.pushtyp(Bytes);
+				if (ResponseImage.CenterOfBrightness.has_value())
+				{
+					Message.pushtyp<double>(ResponseImage.CenterOfBrightness.value().X);
+					Message.pushtyp<double>(ResponseImage.CenterOfBrightness.value().Y);	
+				} else {
+					Message.pushmem(nullptr, 0);
+					Message.pushmem(nullptr, 0);
+				}
 
-				uint64_t Size = ResponseImage.payload.GetAllocatedSize();
-				Message.pushmem(&Size, sizeof(uint64_t));
 				break;
 			}
 		default:

@@ -1,6 +1,11 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
+#include <OpenCV/PreOpenCVHeaders.h>
+#include <opencv2/core.hpp>
+#include "opencv2/imgproc.hpp"
+#include <OpenCV/opencv/modules/imgcodecs/include/opencv2/imgcodecs.hpp>
+#include <OpenCV/PostOpenCVHeaders.h>
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
@@ -22,8 +27,8 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void SaveImageToDisk(const FString& FilePath, const FString& Filename);
-
-	TArray64<uint8> GetPNG(double pointSpread, double readNoise, double systemGain, int nCosmicRays) const;
+	cv::Mat GetCorruptedImage(FImage Image, double pointSpread, double readNoise, double systemGain, int nCosmicRays) const;
+	FImage GetUncorruptedImage() const;
 	
 protected:
 	// Called when the game starts or when spawned
