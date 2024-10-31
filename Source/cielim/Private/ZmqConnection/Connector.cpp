@@ -21,13 +21,13 @@
 #pragma warning(pop)
 #endif
 
-Connector::Connector(const FTimespan& ThreadTickRate, 
-                     const TCHAR* ThreadDescription, 
+Connector::Connector(const FTimespan& ThreadTickRate,
+                     const TCHAR* ThreadDescription,
                      AZmqMultiThreadActor* Actor,
                      zmq::context_t& Context,
                      const std::string& Address,
                      std::shared_ptr<CielimCircularQueue> Queue
-                     ) 
+                     )
 	: Super(ThreadTickRate, ThreadDescription)
 {
 	this->Context = &Context;
@@ -35,9 +35,9 @@ Connector::Connector(const FTimespan& ThreadTickRate,
 	this->MultiThreadQueue = std::shared_ptr<CielimCircularQueue>(Queue);
 
 	Thread = FRunnableThread::Create(this,
-		ThreadDescription, 
+		ThreadDescription,
 		128 * 1024,  //allocated memory
-		TPri_AboveNormal, 
+		TPri_AboveNormal,
 		FPlatformAffinity::GetPoolThreadMask());
 }
 
@@ -46,9 +46,9 @@ void Connector::Connect()
 	this->ReplySocket = zmq::socket_t(*this->Context, zmq::socket_type::rep);
 	this->ReplySocket.set(zmq::sockopt::linger, 0); // If ctx.close is called don't try to receive queued messages
 	this->ReplySocket.bind(this->Address);
-	this->ActivePoller.add(this->ReplySocket, zmq::event_flags::pollin, [&](zmq::event_flags Event)	
+	this->ActivePoller.add(this->ReplySocket, zmq::event_flags::pollin, [&](zmq::event_flags Event)
 	{
-		zmq::multipart_t Message = zmq::multipart_t(); 
+		zmq::multipart_t Message = zmq::multipart_t();
 		Message.recv(this->ReplySocket);
 		auto Response = this->ParseMessage(Message);
 		Response.send(this->ReplySocket);
@@ -56,14 +56,14 @@ void Connector::Connect()
 }
 
 void Connector::CustomTick()
-{ 
+{
 	//Throttle Thread to avoid consuming un-needed resources
 	// Set during thread startup, can be modified any time!
 	if(this->ThreadTickRate.GetTotalSeconds() > 0)
 	{
 		this->Wait(this->ThreadTickRate.GetTotalSeconds());
 	}
-	
+
 	if(this->ThreadIsPaused())
 	{
 		UE_LOG(LogCielim, Display, TEXT("Connector::ThreadIsPaused"));
@@ -82,13 +82,13 @@ bool Connector::Init()
 	this->Connect();
 	return true;
 }
-	
+
 void Connector::ThreadShutdown()
 {
 	this->ActivePoller.remove(this->ReplySocket);
 	this->ReplySocket.unbind(this->Address);
 	try {
-		this->ReplySocket.close();	
+		this->ReplySocket.close();
 	} catch (zmq::error_t e) {
 		// I'm dismissing away all thrown errors here.
 	}
@@ -99,18 +99,18 @@ CommandType Connector::ParseCommand(const std::string& CommandString)
 	static std::unordered_map<std::string, CommandType> const table = {{"PING", CommandType::PING},
 																	{"SIM_UPDATE", CommandType::SIM_UPDATE},
 																	{"REQUEST_IMAGE", CommandType::REQUEST_IMAGE}};
-	
+
 	if (const auto it = table.find(CommandString); it != table.end()) {
 		return it->second;
-	} 
+	}
 	return CommandType::ERROR;
 }
 
-zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage) 
+zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage)
 {
 	UE_LOG(LogCielim, Display, TEXT("Connector::ParseMessage"));
 	zmq::multipart_t Message;
-	
+
 	std::string TmpCommand = RequestMessage.popstr();
 	std::string TrimmedCommand = TmpCommand;
 	if (TmpCommand.find("REQUEST_IMAGE") != std::string::npos)
@@ -128,7 +128,7 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage)
 			}
 		case CommandType::SIM_UPDATE:
 			{
-				vizProtobufferMessage::VizMessage tempMessage = vizProtobufferMessage::VizMessage();
+				cielimMessage::CielimMessage tempMessage = cielimMessage::CielimMessage();
 				// @TODO: fix this message parsing. It's a mad hack!
 				tempMessage.ParseFromArray(RequestMessage[2].data(), RequestMessage[2].size()*sizeof(char));
 				auto Data = FCircularQueueData();
@@ -142,7 +142,7 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage)
 					EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(Data);
 				}
 				Message.pushstr("OK");
-				break;	
+				break;
 			}
 		case CommandType::REQUEST_IMAGE:
 			{
@@ -178,10 +178,10 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage)
 					DequeueResult = this->MultiThreadQueue->Responses.Dequeue(Response);
 				}
 				UE_LOG(LogCielim, Display, TEXT("Reposnse to REQUEST_IMAGE received..."));
-				
+
 				auto ResponseImage = std::get<RequestImage>(Response.Query);
 				Message.pushmem(ResponseImage.payload.GetData(), ResponseImage.payload.GetAllocatedSize());
-				
+
 				uint64_t Size = ResponseImage.payload.GetAllocatedSize();
 				Message.pushmem(&Size, sizeof(uint64_t));
 				break;

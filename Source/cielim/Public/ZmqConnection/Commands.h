@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vizMessage.pb.h"
+#include "cielimMessage.pb.h"
 
 enum class CommandType
 {
@@ -24,9 +24,9 @@ public:
 
 class SimUpdate : Command
 {
-public:	
+public:
 	CommandType type=CommandType::SIM_UPDATE;
-	vizProtobufferMessage::VizMessage payload{};
+	cielimMessage::CielimMessage payload{};
 };
 
 class RequestImage : Command

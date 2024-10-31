@@ -11,8 +11,8 @@ UCLASS()
 class CIELIM_API ASpacecraft : public AActor
 {
     GENERATED_BODY()
-    
-public:	
+
+public:
     // Sets default values for this actor's properties
     ASpacecraft();
 
@@ -20,13 +20,13 @@ protected:
     // Called when the game starts or when spawned
     virtual void BeginPlay() override;
 
-public:	
+public:
     // Called every frame
     virtual void Tick(const float DeltaTime) override;
 
     UPROPERTY(EditAnywhere)
     USceneComponent* Root;
-    
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spacecraft Components")
     UStaticMeshComponent* Body;
 
@@ -37,7 +37,7 @@ public:
     FString Name;
 
     UFUNCTION(BlueprintImplementableEvent)
-    void SetFOV(const double Fov);
+    void SetFOV(double X, double Y);
 
     UFUNCTION(BlueprintImplementableEvent)
     void SetResolution(const int ResolutionWidth, const int ResolutionHeight);
@@ -51,4 +51,3 @@ public:
     void Update(const FVector3d& NewPosition, const FRotator& NewRotation);
 
 };
-

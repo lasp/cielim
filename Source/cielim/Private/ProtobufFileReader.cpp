@@ -12,16 +12,15 @@ ProtobufFileReader::ProtobufFileReader(const std::string Filename) : SimulationD
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
     // Read the existing VizMessage file
-    const FString ContentDir = FPaths::ProjectDir(); 
+    const FString ContentDir = FPaths::ProjectDir();
     const std::string Filepath = std::string(TCHAR_TO_UTF8(*ContentDir)) + "/Content/FlybyData/bin/" + Filename;
-    this->Input.open(Filepath, std::ios::in | std::ios::binary);
+    this->Input.open(Filepath, std::ios::binary);
 
-    if (!this->Input) 
+    if (!this->Input)
     {
         UE_LOG(LogCielim, Warning, TEXT("Failed to open %hs"), Filepath.c_str());
     }
 
-    this->Eof = false;
     this->RawInput = std::make_unique<google::protobuf::io::IstreamInputStream>(&this->Input);
     this->CodedInput = std::make_unique<google::protobuf::io::CodedInputStream>(this->RawInput.get());
 }
@@ -35,15 +34,15 @@ ProtobufFileReader::~ProtobufFileReader()
 
 /**
  * Parses data from input stream and returns vizmessage object
- *   
+ *
  */
-vizProtobufferMessage::VizMessage& ProtobufFileReader::GetNextSimulationData()
+std::optional<cielimMessage::CielimMessage> ProtobufFileReader::GetNextSimulationData()
 {
-    vizProtobufferMessage::VizMessage TempMessage;
-    google::protobuf::util::ParseDelimitedFromCodedStream(&TempMessage, this->CodedInput.get(), &this->Eof);
+    cielimMessage::CielimMessage TempMessage;
+    auto res = google::protobuf::util::ParseDelimitedFromCodedStream(&TempMessage,
+        this->CodedInput.get(),
+        &this->Eof);
     if (TempMessage.ByteSizeLong() != 0) {
-        this->VizMessage.Clear();
-        this->VizMessage = TempMessage;
-    }
-    return this->VizMessage;
+        return TempMessage;
+    }    return std::nullopt;
 }
