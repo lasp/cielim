@@ -19,6 +19,15 @@ void ACelestialBody::Tick(float DeltaTime)
     Super::Tick(DeltaTime);
 }
 
+void ACelestialBody::SetMeshModel(CelestialBodyMeshModel Model)
+{
+	this->MeshModel = Model;
+}
+
+FString ACelestialBody::GetMeshModelName()
+{
+	return this->MeshModel.ShapeModel;
+}
 /**
  * @brief Update(NewPosition, NewRotation) Updates celestial body's position and rotation
  * 
