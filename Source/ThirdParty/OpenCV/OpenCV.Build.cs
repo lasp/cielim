@@ -20,6 +20,8 @@ public class OpenCV : ModuleRules
             PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "opencv/build/lib/libopencv_world.dylib"));
 
             PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "opencv/include/opencv4/opencv2"));
+			RuntimeDependencies.Add("$(BinaryOutputDir)/libopencv_world.410.dylib", 
+		  		Path.Combine(ModuleDirectory, "opencv/build/lib/libopencv_world.dylib"));
         }
         else if (Target.Platform == UnrealTargetPlatform.Win64)
         {
