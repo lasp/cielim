@@ -15,11 +15,11 @@ UCLASS()
 class CIELIM_API ACaptureManager : public AActor
 {
 	GENERATED_BODY()
-	
-public:	
+
+public:
 	// Sets default values for this actor's properties
 	ACaptureManager()=default;
-	
+
 	virtual void Tick(float DeltaTime) override;
 
 	void SetupRenderTarget(UTextureRenderTarget2D* RenderTarget);
@@ -29,6 +29,7 @@ public:
 	void SaveImageToDisk(const FString& FilePath, const FString& Filename);
 	cv::Mat GetCorruptedImage(FImage Image, double pointSpread, double readNoise, double systemGain, int nCosmicRays) const;
 	FImage GetUncorruptedImage() const;
+	FVector2d GetCenterOfBrightness() const;
 	
 protected:
 	// Called when the game starts or when spawned

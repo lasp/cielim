@@ -26,10 +26,10 @@ namespace CielimImageUtilities
 	    if (const cv::Moments Moments = cv::moments(GrayImage, true); Moments.m00 != 0) {
 	        Coordinates.emplace(Moments.m10 / Moments.m00, Moments.m01 / Moments.m00);
 	    }
-		
+
 		return Coordinates;
 	}
-	
+
 	TArray64<uint8> FImageToPNG(const FImage& Image)
 	{
 	    TArray64<uint8> PNGImageData;

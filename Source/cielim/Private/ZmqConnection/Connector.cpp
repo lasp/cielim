@@ -130,7 +130,7 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage) const
 				uint32_t CameraID = -1;
 				CameraID = std::stoi(RequestMessage.popstr());
 				UE_LOG(LogCielim, Display, TEXT("Camera ID: %d"), CameraID);
-			
+
 				// A request is received and is put in the queue to be handled
 				// by the main (game) thread
 				auto Request = FCircularQueueData{};
