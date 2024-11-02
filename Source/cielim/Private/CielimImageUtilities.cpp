@@ -29,4 +29,11 @@ namespace CielimImageUtilities
 		
 		return Coordinates;
 	}
+
+	TArray64<uint8> FImageToPNG(const FImage& Image)
+	{
+	    TArray64<uint8> PNGImageData;
+		verify(FImageUtils::CompressImage(PNGImageData, TEXT("PNG"), Image));
+	    return PNGImageData;
+	}
 }
