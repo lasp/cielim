@@ -33,7 +33,9 @@ class RequestImage : Command
 {
 public:
 	CommandType type=CommandType::REQUEST_IMAGE;
+	bool ShouldReturnImage=false;
 	TArray<uint8> payload{};
+	std::optional<FVector2d> CenterOfBrightness{};
 };
 
 class BSKError : Command
