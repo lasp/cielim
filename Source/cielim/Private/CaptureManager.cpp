@@ -5,6 +5,8 @@
 #include "ImageUtils.h"
 #include "Kismet/KismetRenderingLibrary.h"
 
+#include "RenderingFunctionsLibrary.h"
+
 // Called when the game starts or when spawned
 void ACaptureManager::BeginPlay()
 {
@@ -35,7 +37,8 @@ void ACaptureManager::SaveImageToDisk(const FString& FilePath, const FString& Fi
 	                                            Filename);
 }
 
-TArray64<uint8> ACaptureManager::GetPNG() const {
+TArray64<uint8> ACaptureManager::GetPNG(double pointSpread, double readNoise, double systemGain, int nCosmicRays) const 
+{
 	this->SceneCaptureComponent->CaptureScene();
 	
 	FImage Image;
@@ -43,6 +46,21 @@ TArray64<uint8> ACaptureManager::GetPNG() const {
 
 	TArray64<uint8> PNGImageData;
 	verify(FImageUtils::CompressImage(PNGImageData, TEXT("PNG"), Image));
+
+	TArray<uint8> PNGImageDataSerialized;
+	PNGImageDataSerialized.Append(PNGImageData.GetData(), PNGImageData.Num());
+
+	// Apply corruptions to image data
+	URenderingFunctionsLibrary::CenterOfBrightness(PNGImageDataSerialized);
+	URenderingFunctionsLibrary::ApplyPSF_Gaussian(PNGImageDataSerialized, 9, 9, pointSpread, pointSpread);
+	URenderingFunctionsLibrary::ApplyCosmicRays(PNGImageDataSerialized, nCosmicRays, 50.0f, 50.0f);
+	URenderingFunctionsLibrary::ApplyReadNoise(PNGImageDataSerialized, readNoise, 1.0f);
+	URenderingFunctionsLibrary::ApplySignalGain(PNGImageDataSerialized, 1.0f, systemGain);
+	//URenderingFunctionsLibrary::ApplyQE(PNGImageDataSerialized, 5.0f, 5.0f, 5.0f);
+
+	// Copy data back over to PNGImageData
+	PNGImageData.SetNumUninitialized(PNGImageDataSerialized.Num());
+	FMemory::Memcpy(PNGImageData.GetData(), PNGImageDataSerialized.GetData(), PNGImageDataSerialized.Num());
 	
 	return PNGImageData;
 }

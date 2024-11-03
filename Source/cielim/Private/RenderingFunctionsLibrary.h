@@ -14,29 +14,35 @@ class  CIELIM_API URenderingFunctionsLibrary :
 	GENERATED_BODY()
 	
 	URenderingFunctionsLibrary(const FObjectInitializer& ObjectInitializer);
+
+private:
+	static int Clamp(float k, int UpperBound, int LowerBound)
+	{
+		if(k > UpperBound) return UpperBound;
+		else if(k < LowerBound)return  LowerBound;
+		else return static_cast<int>(FMath::Floor(k));
+	}
+
+public:
 	
 	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
-	static FString ApplyPSF_Gaussian(FString Filepath, int32 KernelHeight, int32 KernelWidth, double SigmaX, double SigmaY);
+	static void CenterOfBrightness(TArray<uint8>& ImageData);
+
+	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
+	static void ApplyPSF_Gaussian(TArray<uint8>& ImageData, int32 KernelHeight, int32 KernelWidth, double SigmaX, double SigmaY);
 	
 	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
-	static void ApplyCosmicRays();
+	static void ApplyCosmicRays(TArray<uint8>& ImageData, int nCosmicRays, float AvgLength, float AvgWidth);
 
 	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
-	static FString ApplyReadNoise(FString Filepath, float ReadNoiseSigma, float SystemGain);
+	static void ApplyReadNoise(TArray<uint8>& ImageData, float ReadNoiseSigma, float SystemGain);
 
 	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
-	static FString ApplySignalGain(FString Filepath, float ImageGain, float DesiredGain);
+	static void ApplySignalGain(TArray<uint8>& ImageData, float ImageGain, float DesiredGain);
 
 	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
-	static FString ApplyDarkCurrentNoise(
-		FString Filepath,
-		double MaxSigma,
-		double MinSigma,
-		FVector SunPosition,
-		FVector SpacecraftPosition,
-		FVector SpacecraftDirection
-		);
+	static void ApplyDarkCurrentNoise(TArray<uint8>& ImageData, double MaxSigma, double MinSigma, FVector SunPosition, FVector SpacecraftPosition, FVector SpacecraftDirection);
 
 	UFUNCTION(BlueprintCallable, Category="Rendering Functions")
-	static FString ApplyQE(FString Filepath, float QERed, float QEGreen, float QEBlue);
+	static void ApplyQE(TArray<uint8>& ImageData, float QERed, float QEGreen, float QEBlue);
 };

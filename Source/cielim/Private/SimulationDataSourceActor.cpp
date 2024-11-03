@@ -183,7 +183,13 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 		this->ShouldUpdateScene = true;
 		UE_LOG(LogCielim, Display, TEXT("Reading sim update data: ASimulationDataSourceActor"));
 	} else if (std::holds_alternative<RequestImage>(QueueData.value().Query)) {
-		this->NetworkSimulationDataSource->PutImageQueueData(this->CaptureManager->GetPNG());
+		double pointSpread = (double) this->CielimMessage.camera().pointspreadfunction();
+		double readNoise = this->CielimMessage.camera().readnoise();
+		double systemGain = this->CielimMessage.camera().systemgain();
+		// Using cosmic ray std deviation as number of rays at the moment
+		int cosmicRayStdDev = (int) this->CielimMessage.camera().renderparameters().cosmicraystddeviation();
+		
+		this->NetworkSimulationDataSource->PutImageQueueData(this->CaptureManager->GetPNG(pointSpread, readNoise, systemGain, cosmicRayStdDev));
 		UE_LOG(LogCielim, Display, TEXT("Put back PNG image: ASimulationDataSourceActor"));
 	} else {
 		UE_LOG(LogCielim, Display, TEXT("GetNextSimulationData received unrecognized Type"));
@@ -343,7 +349,8 @@ void ASimulationDataSourceActor::PointSunLight()
 {
 	this->SunLight = GetWorld()->SpawnActor<ADirectionalLight>(FVector3d::ZeroVector,
 		FRotator::ZeroRotator);
-	double LuxAt1AU = 1280;
+	double exposuretime = this->CielimMessage.camera().exposuretime();
+	double LuxAt1AU = exposuretime != 0 ? 1280 * exposuretime : 1280;
 	this->SunLight->GetLightComponent()->SetIntensity(LuxAt1AU*(AU*km2m*AU*km2m)/(FMath::Square(this->SunCelestialBody->GetActorLocation().Length())));
 	this->SunLight->GetLightComponent()->SetMobility(EComponentMobility::Movable);
 	auto Vector = -this->SunCelestialBody->GetActorLocation();

@@ -1,27 +1,30 @@
-import cv2
 from test_harness import *
 
 if __name__ == "__main__":
     connector = Connector()
-    connector.connect("tcp://127.0.0.1:5556")
+    connector.connect("tcp://localhost:5556")
 
-    file_name = "../../../cielim/Content/FlybyData/bin/protofile_proxOps.bin"
-    file_handler = MessageFileHandler(file_name)
-
-    connector.send_frame(file_handler.get_simulation_frame_at_time(3494500000000.0))
-    connector.send_frame(file_handler.get_simulation_frame_at_time(0.0))
-
-    connector.send_frame(file_handler.jump_to_simulation_frame_at_time(3494500000000.0))
-    connector.send_frame(file_handler.get_next_simulation_frame())
+    file_dir = "../../../cielim/Content/FlybyData/bin/"
+    file_name = input("What is the bin file to test (name only): ")
     
-    message = None
-    while message is not None:
-        message = file_handler.get_next_simulation_frame()
-        connector.send_frame(message)
+    file_handler = MessageFileHandler(file_dir + file_name)
 
-    image = connector.request_image_for_camera_id(1)
-    cv2.imwrite("received_image.png", image)
+    idx = 0
+    image = None
 
+    while True:
+        frame = file_handler.get_next_simulation_frame()
+
+        if (frame is None):
+            break
+
+        connector.send_frame(frame)
+        image = connector.request_image_for_camera_id(1)
+
+        cv2.imwrite("received_image_" + str(idx) + ".png", image)
+
+        idx = idx + 1
+    
     cv2.namedWindow("window_name", cv2.WINDOW_NORMAL)
     cv2.imshow("window_name", image)
     cv2.resizeWindow("window_name", 640, 480)

@@ -23,7 +23,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SaveImageToDisk(const FString& FilePath, const FString& Filename);
 
-	TArray64<uint8> GetPNG() const;
+	TArray64<uint8> GetPNG(double pointSpread, double readNoise, double systemGain, int nCosmicRays) const;
 	
 protected:
 	// Called when the game starts or when spawned
