@@ -53,6 +53,12 @@ void URenderingFunctionsLibrary::CenterOfBrightness(TArray<uint8>& ImageData)
 void URenderingFunctionsLibrary::ApplyPSF_Gaussian(TArray<uint8>& ImageData, int32 KernelHeight, int32 KernelWidth, double SigmaX, double SigmaY)
 {
 	//NOTE: both dimensions of KernelSize must be odd
+
+	// If no blur is applied, we can skip the rest of this
+	if (SigmaX == 0.0f || SigmaY == 0.0f)
+	{
+		return;
+	}
 	
 	//Read Image
 	cv::Mat Image = cv::imdecode(cv::Mat(1, ImageData.Num(), CV_8UC1, ImageData.GetData()), cv::IMREAD_UNCHANGED);
@@ -91,6 +97,12 @@ void URenderingFunctionsLibrary::ApplyCosmicRays(TArray<uint8>& ImageData, int n
 {
 	//TODO: Add varying width to lines
 	//TODO: Make it so that lines w/ start and end points don't get clipped to image sides
+
+	// Skip if no cosmic rays will be applied
+	if (nCosmicRays == 0)
+	{
+		return;
+	}
 	
 	//Read Image
 	cv::Mat Image = cv::imdecode(cv::Mat(1, ImageData.Num(), CV_8UC1, ImageData.GetData()), cv::IMREAD_UNCHANGED);
@@ -153,7 +165,7 @@ void URenderingFunctionsLibrary::ApplyCosmicRays(TArray<uint8>& ImageData, int n
 void URenderingFunctionsLibrary::ApplyReadNoise(TArray<uint8>& ImageData, float ReadNoiseSigma, float SystemGain)
 {
 	//Protect Against 0 Sigma
-	if(ReadNoiseSigma == 0)
+	if(ReadNoiseSigma == 0.0f)
 	{
 		return;
 	}
@@ -214,6 +226,11 @@ void URenderingFunctionsLibrary::ApplyReadNoise(TArray<uint8>& ImageData, float 
 
 void URenderingFunctionsLibrary::ApplySignalGain(TArray<uint8>& ImageData, float ImageGain, float DesiredGain)
 {
+	if (DesiredGain == 0.0f)
+	{
+		return;
+	}
+
 	//Read Image
 	cv::Mat Image = cv::imdecode(cv::Mat(1, ImageData.Num(), CV_8UC1, ImageData.GetData()), cv::IMREAD_UNCHANGED);
 
@@ -268,7 +285,7 @@ void URenderingFunctionsLibrary::ApplySignalGain(TArray<uint8>& ImageData, float
 void URenderingFunctionsLibrary::ApplyDarkCurrentNoise(TArray<uint8>& ImageData, double MaxSigma, double MinSigma, FVector SunPosition, FVector SpacecraftPosition, FVector SpacecraftDirection)
 {
 	//Protect against 0 MaxSigma
-	if(MaxSigma == 0)
+	if(MaxSigma == 0.0f)
 	{
 		return;
 	}

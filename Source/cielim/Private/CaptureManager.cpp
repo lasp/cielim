@@ -54,7 +54,7 @@ TArray64<uint8> ACaptureManager::GetPNG(double pointSpread, double readNoise, do
 	URenderingFunctionsLibrary::CenterOfBrightness(PNGImageDataSerialized);
 	URenderingFunctionsLibrary::ApplyPSF_Gaussian(PNGImageDataSerialized, 9, 9, pointSpread, pointSpread);
 	URenderingFunctionsLibrary::ApplyCosmicRays(PNGImageDataSerialized, nCosmicRays, 50.0f, 50.0f);
-	URenderingFunctionsLibrary::ApplyReadNoise(PNGImageDataSerialized, readNoise, systemGain);
+	URenderingFunctionsLibrary::ApplyReadNoise(PNGImageDataSerialized, readNoise, 1.0f);
 	URenderingFunctionsLibrary::ApplySignalGain(PNGImageDataSerialized, 1.0f, systemGain);
 	//URenderingFunctionsLibrary::ApplyQE(PNGImageDataSerialized, 5.0f, 5.0f, 5.0f);
 
