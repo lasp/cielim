@@ -37,7 +37,7 @@ void ACaptureManager::SaveImageToDisk(const FString& FilePath, const FString& Fi
 	                                            Filename);
 }
 
-TArray64<uint8> ACaptureManager::GetPNG() const 
+TArray64<uint8> ACaptureManager::GetPNG(double pointSpread, double readNoise, double systemGain, int nCosmicRays) const 
 {
 	this->SceneCaptureComponent->CaptureScene();
 	
@@ -52,10 +52,10 @@ TArray64<uint8> ACaptureManager::GetPNG() const
 
 	// Apply corruptions to image data
 	URenderingFunctionsLibrary::CenterOfBrightness(PNGImageDataSerialized);
-	URenderingFunctionsLibrary::ApplyPSF_Gaussian(PNGImageDataSerialized, 31, 31, 15.0f, 15.0f);
-	URenderingFunctionsLibrary::ApplyCosmicRays(PNGImageDataSerialized, 5, 50.0f, 50.0f);
-	URenderingFunctionsLibrary::ApplyReadNoise(PNGImageDataSerialized, 30.0f, 4.0f);
-	URenderingFunctionsLibrary::ApplySignalGain(PNGImageDataSerialized, 3.0f, 3.0f);
+	URenderingFunctionsLibrary::ApplyPSF_Gaussian(PNGImageDataSerialized, 9, 9, pointSpread, pointSpread);
+	URenderingFunctionsLibrary::ApplyCosmicRays(PNGImageDataSerialized, nCosmicRays, 50.0f, 50.0f);
+	URenderingFunctionsLibrary::ApplyReadNoise(PNGImageDataSerialized, readNoise, systemGain);
+	//URenderingFunctionsLibrary::ApplySignalGain(PNGImageDataSerialized, 3.0f, 3.0f);
 	//URenderingFunctionsLibrary::ApplyQE(PNGImageDataSerialized, 5.0f, 5.0f, 5.0f);
 
 	// Copy data back over to PNGImageData
