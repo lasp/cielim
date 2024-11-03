@@ -349,7 +349,8 @@ void ASimulationDataSourceActor::PointSunLight()
 {
 	this->SunLight = GetWorld()->SpawnActor<ADirectionalLight>(FVector3d::ZeroVector,
 		FRotator::ZeroRotator);
-	double LuxAt1AU = 1280 * this->CielimMessage.camera().exposuretime();
+	double exposuretime = this->CielimMessage.camera().exposuretime();
+	double LuxAt1AU = exposuretime != 0 ? 1280 * exposuretime : 1280;
 	this->SunLight->GetLightComponent()->SetIntensity(LuxAt1AU*(AU*km2m*AU*km2m)/(FMath::Square(this->SunCelestialBody->GetActorLocation().Length())));
 	this->SunLight->GetLightComponent()->SetMobility(EComponentMobility::Movable);
 	auto Vector = -this->SunCelestialBody->GetActorLocation();
