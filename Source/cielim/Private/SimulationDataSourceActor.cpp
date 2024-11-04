@@ -188,7 +188,7 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 		double readNoise = this->CielimMessage.camera().readnoise();
 		double systemGain = this->CielimMessage.camera().systemgain();
 		// Using cosmic ray std deviation as number of rays at the moment
-		int cosmicRayStdDev = (int) this->CielimMessage.camera().renderparameters().cosmicraystddeviation();
+		double cosmicRayStdDev = this->CielimMessage.camera().renderparameters().cosmicraystddeviation();
 		
 		auto Query = std::get<RequestImage>(QueueData.value().Query);
 		std::vector<uint8> PngEncodedData{};

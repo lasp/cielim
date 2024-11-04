@@ -47,7 +47,7 @@ FImage ACaptureManager::GetUncorruptedImage() const
 	return Image;
 }
 
-cv::Mat ACaptureManager::GetCorruptedImage(FImage Image, double pointSpread, double readNoise, double systemGain, int nCosmicRays) const
+cv::Mat ACaptureManager::GetCorruptedImage(FImage Image, double pointSpread, double readNoise, double systemGain, double cosmicRaysStdDev) const
 {
 	// TArray64<uint8> PNGImageData;
 	// verify(FImageUtils::CompressImage(PNGImageData, TEXT("PNG"), Image));
@@ -57,7 +57,7 @@ cv::Mat ACaptureManager::GetCorruptedImage(FImage Image, double pointSpread, dou
 	auto CvImage = CielimImageUtilities::FImageToOpenCVMat(Image);
 	// Apply corruptions to image data
 	URenderingFunctionsLibrary::ApplyPSF_Gaussian(CvImage, 9, 9, pointSpread, pointSpread);
-	URenderingFunctionsLibrary::ApplyCosmicRays(CvImage, nCosmicRays, 50.0f, 50.0f);
+	URenderingFunctionsLibrary::ApplyCosmicRays(CvImage, cosmicRaysStdDev, 50.0f, 50.0f);
 	URenderingFunctionsLibrary::ApplyReadNoise(CvImage, readNoise, 1.0f);
 	URenderingFunctionsLibrary::ApplySignalGain(CvImage, 1.0f, systemGain);
 	//URenderingFunctionsLibrary::ApplyQE(PNGImageDataSerialized, 5.0f, 5.0f, 5.0f);

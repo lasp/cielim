@@ -1,6 +1,15 @@
 #include "RenderingFunctionsLibrary.h"
 #include "CielimLoggingMacros.h"
 
+#include <OpenCV/PreOpenCVHeaders.h>
+#include "opencv2/imgproc.hpp"
+#include <OpenCV/opencv/modules/imgcodecs/include/opencv2/imgcodecs.hpp>
+#include <OpenCV/PostOpenCVHeaders.h>
+
+#include <random>
+
+static std::default_random_engine generator;
+
 URenderingFunctionsLibrary::URenderingFunctionsLibrary(const FObjectInitializer& ObjectInitializer)
 {
 	
@@ -29,22 +38,17 @@ void URenderingFunctionsLibrary::ApplyPSF_Gaussian(cv::Mat& Image, int32 KernelH
 	
 	cv::GaussianBlur(Image, ResultImage, KernelSize, SigmaX, SigmaY);
 
-	//Save image
-	// FString ResultFilepath = FPaths::ProjectDir();
-	// ResultFilepath.Append("Result_Images/");
-	// ResultFilepath.Append("PSF.jpg");
-	//
-	// std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
-	// cv::imwrite(ResultFilepath_String, ResultImage);
-
 	// Override Image
 	Image = ResultImage.clone();
 }
 
-void URenderingFunctionsLibrary::ApplyCosmicRays(cv::Mat& Image, int nCosmicRays, float AvgLength, float AvgWidth)
+void URenderingFunctionsLibrary::ApplyCosmicRays(cv::Mat& Image, double cosmicRaysStdDev, float AvgLength, float AvgWidth)
 {
 	//TODO: Add varying width to lines
 	//TODO: Make it so that lines w/ start and end points don't get clipped to image sides
+	
+	std::poisson_distribution<int> cosmicRayDistribution(cosmicRaysStdDev);
+	int nCosmicRays = cosmicRayDistribution(generator);
 
 	// Skip if no cosmic rays will be applied
 	if (nCosmicRays == 0)
@@ -89,22 +93,6 @@ void URenderingFunctionsLibrary::ApplyCosmicRays(cv::Mat& Image, int nCosmicRays
 		//Draw the line!
 		cv::line(Image, StartPoint, StopPoint, cv::Vec3b{255,255,255}, 1, cv::LINE_4);
 	}
-	
-	//Save image
-	// FString ResultFilepath = FPaths::ProjectDir();
-	// ResultFilepath.Append("Result_Images/");
-	// ResultFilepath.Append("CosmicRays.jpg");
-	//
-	// std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
-	// cv::imwrite(ResultFilepath_String, Image);
-
-	// Encode corrupted image as png
- //    std::vector<uint8> EncodedData;
-	// cv::imencode(".png", Image, EncodedData);
-
-	// Override ImageData
-	// ImageData.SetNumUninitialized(EncodedData.size());
-	// FMemory::Memcpy(ImageData.GetData(), EncodedData.data(), EncodedData.size());
 }
 
 void URenderingFunctionsLibrary::ApplyReadNoise(cv::Mat& Image, float ReadNoiseSigma, float SystemGain)
@@ -150,21 +138,6 @@ void URenderingFunctionsLibrary::ApplyReadNoise(cv::Mat& Image, float ReadNoiseS
 	cv::merge(DifferentColorChannels, ResultImage);
 
 	Image = ResultImage.clone();
-	//Save image
-	// FString ResultFilepath = FPaths::ProjectDir();
-	// ResultFilepath.Append("Result_Images/");
-	// ResultFilepath.Append("ReadNoise.jpg");
-	//
-	// std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
-	// cv::imwrite(ResultFilepath_String, ResultImage);
-
-	// Encode corrupted image as png
- //    std::vector<uint8> EncodedData;
-	// cv::imencode(".png", ResultImage, EncodedData);
- //
-	// // Override ImageData
-	// ImageData.SetNumUninitialized(EncodedData.size());
-	// FMemory::Memcpy(ImageData.GetData(), EncodedData.data(), EncodedData.size());
 }
 
 void URenderingFunctionsLibrary::ApplySignalGain(cv::Mat& Image, float ImageGain, float DesiredGain)
@@ -173,9 +146,6 @@ void URenderingFunctionsLibrary::ApplySignalGain(cv::Mat& Image, float ImageGain
 	{
 		return;
 	}
-
-	//Read Image
-	// cv::Mat Image = cv::imdecode(cv::Mat(1, ImageData.Num(), CV_8UC1, ImageData.GetData()), cv::IMREAD_UNCHANGED);
 
 	if (Image.empty())
 	{
@@ -208,21 +178,6 @@ void URenderingFunctionsLibrary::ApplySignalGain(cv::Mat& Image, float ImageGain
 	//Merge back into a color image
 	cv::merge(DifferentColorChannels, ResultImage);
 	Image = ResultImage.clone();
-	//Save image
-	// FString ResultFilepath = FPaths::ProjectDir();
-	// ResultFilepath.Append("Result_Images/");
-	// ResultFilepath.Append("SignalGain.jpg");
-	//
-	// std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
-	// cv::imwrite(ResultFilepath_String, ResultImage);
- //
-	// // Encode corrupted image as png
- //    std::vector<uint8> EncodedData;
-	// cv::imencode(".png", ResultImage, EncodedData);
- //
-	// // Override ImageData
-	// ImageData.SetNumUninitialized(EncodedData.size());
-	// FMemory::Memcpy(ImageData.GetData(), EncodedData.data(), EncodedData.size());
 }
 
 void URenderingFunctionsLibrary::ApplyDarkCurrentNoise(cv::Mat& Image, double MaxSigma, double MinSigma, FVector SunPosition, FVector SpacecraftPosition, FVector SpacecraftDirection)
@@ -238,9 +193,6 @@ void URenderingFunctionsLibrary::ApplyDarkCurrentNoise(cv::Mat& Image, double Ma
 	{
 		return;
 	}
-	
-	//Read Image
-	// cv::Mat Image = cv::imdecode(cv::Mat(1, ImageData.Num(), CV_8UC1, ImageData.GetData()), cv::IMREAD_UNCHANGED);
 
 	if (Image.empty())
 	{
@@ -305,21 +257,6 @@ void URenderingFunctionsLibrary::ApplyDarkCurrentNoise(cv::Mat& Image, double Ma
 	//Merge back into a color image
 	cv::merge(DifferentColorChannels, ResultImage);
 	Image = ResultImage.clone();
-	// //Save image
-	// FString ResultFilepath = FPaths::ProjectDir();
-	// ResultFilepath.Append("Result_Images/");
-	// ResultFilepath.Append("DarkCurrentNoise.jpg");
-	//
-	// std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
-	// cv::imwrite(ResultFilepath_String, ResultImage);
- //
-	// // Encode corrupted image as png
- //    std::vector<uint8> EncodedData;
-	// cv::imencode(".png", ResultImage, EncodedData);
- //
-	// // Override ImageData
-	// ImageData.SetNumUninitialized(EncodedData.size());
-	// FMemory::Memcpy(ImageData.GetData(), EncodedData.data(), EncodedData.size());
 }
 
 void URenderingFunctionsLibrary::ApplyQE(cv::Mat& Image, float QERed, float QEGreen, float QEBlue)
@@ -329,9 +266,6 @@ void URenderingFunctionsLibrary::ApplyQE(cv::Mat& Image, float QERed, float QEGr
 	QE[0] = QERed;
 	QE[1] = QEGreen;
 	QE[2] = QEBlue;
-	
-	//Read Image
-	// cv::Mat Image = cv::imdecode(cv::Mat(1, ImageData.Num(), CV_8UC1, ImageData.GetData()), cv::IMREAD_UNCHANGED);
 
 	if (Image.empty())
 	{
@@ -360,19 +294,4 @@ void URenderingFunctionsLibrary::ApplyQE(cv::Mat& Image, float QERed, float QEGr
 		}
 	}
 	Image = ResultImage.clone();
-	// //Save image
-	// FString ResultFilepath = FPaths::ProjectDir();
-	// ResultFilepath.Append("Result_Images/");
-	// ResultFilepath.Append("QE.jpg");
-	//
-	// std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
-	// cv::imwrite(ResultFilepath_String, ResultImage);
- //
-	// // Encode corrupted image as png
- //    std::vector<uint8> EncodedData;
-	// cv::imencode(".png", ResultImage, EncodedData);
- //
-	// // Override ImageData
-	// ImageData.SetNumUninitialized(EncodedData.size());
-	// FMemory::Memcpy(ImageData.GetData(), EncodedData.data(), EncodedData.size());
 }

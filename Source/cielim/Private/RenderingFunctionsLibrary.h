@@ -2,8 +2,6 @@
 
 #include <OpenCV/PreOpenCVHeaders.h>
 #include <opencv2/core.hpp>
-#include "opencv2/imgproc.hpp"
-#include <OpenCV/opencv/modules/imgcodecs/include/opencv2/imgcodecs.hpp>
 #include <OpenCV/PostOpenCVHeaders.h>
 
 #include "CoreMinimal.h"
@@ -33,7 +31,7 @@ public:
 	
 	static void ApplyPSF_Gaussian(cv::Mat& Image, int32 KernelHeight, int32 KernelWidth, double SigmaX, double SigmaY);
 	
-	static void ApplyCosmicRays(cv::Mat& Image, int nCosmicRays, float AvgLength, float AvgWidth);
+	static void ApplyCosmicRays(cv::Mat& Image, double cosmicRaysStdDev, float AvgLength, float AvgWidth);
 	
 	static void ApplyReadNoise(cv::Mat& Image, float ReadNoiseSigma, float SystemGain);
 	

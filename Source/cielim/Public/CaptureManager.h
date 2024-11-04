@@ -27,7 +27,7 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void SaveImageToDisk(const FString& FilePath, const FString& Filename);
-	cv::Mat GetCorruptedImage(FImage Image, double pointSpread, double readNoise, double systemGain, int nCosmicRays) const;
+	cv::Mat GetCorruptedImage(FImage Image, double pointSpread, double readNoise, double systemGain, double cosmicRaysStdDev) const;
 	FImage GetUncorruptedImage() const;
 	FVector2d GetCenterOfBrightness() const;
 	
