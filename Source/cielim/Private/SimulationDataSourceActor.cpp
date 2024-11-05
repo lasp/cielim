@@ -357,7 +357,7 @@ void ASimulationDataSourceActor::SpawnCelestialBodies()
 			this->SunCelestialBody = TempCelestialBody;
 		} else if (IsAsteroid(CelestialBody.bodyname())) {
 			TempCelestialBody = GetWorld()->SpawnActorDeferred<ACelestialBody>(BpAsteroid, SpawnLocAndRotation);
-
+			
 			std::cout << CelestialBody.bodyname() << std::endl;
 		} else {
 			TempCelestialBody = GetWorld()->SpawnActorDeferred<ACelestialBody>(BpCelestialBody, SpawnLocAndRotation);

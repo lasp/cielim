@@ -28,10 +28,10 @@ public:
     // Called every frame
     virtual void Tick(float DeltaTime) override;
 
+    void Update(const FVector3d& NewPosition, const FRotator& NewRotation);
+    
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     FString Name;
-
-    void Update(const FVector3d& NewPosition, const FRotator& NewRotation);
 
 protected:
     // Called when the game starts or when spawned

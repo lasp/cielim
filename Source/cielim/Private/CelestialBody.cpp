@@ -28,6 +28,7 @@ FString ACelestialBody::GetMeshModelName()
 {
 	return this->MeshModel.ShapeModel;
 }
+
 /**
  * @brief Update(NewPosition, NewRotation) Updates celestial body's position and rotation
  *
