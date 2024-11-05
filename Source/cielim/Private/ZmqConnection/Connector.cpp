@@ -94,32 +94,13 @@ void Connector::ThreadShutdown()
 	}
 }
 
-CommandType Connector::ParseCommand(const std::string& CommandString)
-{
-	static std::unordered_map<std::string, CommandType> const table = {{"PING", CommandType::PING},
-																	{"SIM_UPDATE", CommandType::SIM_UPDATE},
-																	{"REQUEST_IMAGE", CommandType::REQUEST_IMAGE}};
-
-	if (const auto it = table.find(CommandString); it != table.end()) {
-		return it->second;
-	}
-	return CommandType::ERROR;
-}
-
-zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage)
+zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage) const
 {
 	UE_LOG(LogCielim, Display, TEXT("Connector::ParseMessage"));
-	zmq::multipart_t Message;
-
-	std::string TmpCommand = RequestMessage.popstr();
-	std::string TrimmedCommand = TmpCommand;
-	if (TmpCommand.find("REQUEST_IMAGE") != std::string::npos)
-	{
-		TrimmedCommand = "REQUEST_IMAGE";
-	}
-	FString PrintCommandString(TrimmedCommand.c_str());
-	UE_LOG(LogCielim, Display, TEXT("Basilisk command: %s"), *PrintCommandString);
-	switch (this->ParseCommand(TrimmedCommand))
+	zmq::multipart_t Message{};
+	std::string Command = RequestMessage.popstr();
+	UE_LOG(LogCielim, Display, TEXT("Basilisk command: %hs"), Command.c_str());
+	switch (ParseCommand(Command))
 	{
 		case CommandType::PING:
 			{
@@ -131,7 +112,7 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage)
 				cielimMessage::CielimMessage tempMessage = cielimMessage::CielimMessage();
 				// @TODO: fix this message parsing. It's a mad hack!
 				tempMessage.ParseFromArray(RequestMessage[2].data(), RequestMessage[2].size()*sizeof(char));
-				auto Data = FCircularQueueData();
+				auto Data = FCircularQueueData{};
 				auto Command = SimUpdate();
 				Command.payload = tempMessage;
 				Data.Query = Command;
@@ -146,44 +127,48 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage)
 			}
 		case CommandType::REQUEST_IMAGE:
 			{
-				// TODO get name from basilisk side and make RequestScreenshot robust to spelling mistakes
-				// Set cameraID to message once that information is being sent in the message
 				uint32_t CameraID = -1;
-				if (TmpCommand.length() > 13) {
-					CameraID = std::stoi(TmpCommand.substr(14));
-					UE_LOG(LogCielim, Display, TEXT("Camera ID: %d"), CameraID);
-				}
+				CameraID = std::stoi(RequestMessage.popstr());
+				UE_LOG(LogCielim, Display, TEXT("Camera ID: %d"), CameraID);
 
 				// A request is received and is put in the queue to be handled
 				// by the main (game) thread
-				auto Request = FCircularQueueData();
-				Request.Query = RequestImage();
+				auto Request = FCircularQueueData{};
+				auto RequestQuery = RequestImage{};
+				RequestQuery.ShouldReturnImage = std::stoi(RequestMessage.popstr());
+				Request.Query = RequestQuery;
 				bool EnqueueResult = false;
-				UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue REQUEST_IMAGE..."));
+				UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue REQUEST_IMAGE"));
 				while(!EnqueueResult)
 				{
-					// this->Wait(0.5);
 					EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(Request);
 				}
 
 				// Loop until we get the response from the main (game) thread
-				auto Response = FCircularQueueData();
+				auto Response = FCircularQueueData{};
 				bool DequeueResult = false;
-				UE_LOG(LogCielim, Display, TEXT("Waiting for reposnse to REQUEST_IMAGE..."));
+				UE_LOG(LogCielim, Display, TEXT("Waiting for reposnse to REQUEST_IMAGE"));
 				while(!DequeueResult)
 				{
 					// I can call this directly so the thread blocks on the image return.
 					// This assumes that the next item placed in the queue is the image response.
-					// this->Wait(0.5);
 					DequeueResult = this->MultiThreadQueue->Responses.Dequeue(Response);
 				}
-				UE_LOG(LogCielim, Display, TEXT("Reposnse to REQUEST_IMAGE received..."));
+				UE_LOG(LogCielim, Display, TEXT("Reposnse to REQUEST_IMAGE received"));
 
 				auto ResponseImage = std::get<RequestImage>(Response.Query);
-				Message.pushmem(ResponseImage.payload.GetData(), ResponseImage.payload.GetAllocatedSize());
+				auto Bytes = sizeof(ResponseImage.payload[0]) * ResponseImage.payload.size();
+				Message.pushmem(ResponseImage.payload.data(), Bytes);
+				Message.pushtyp(Bytes);
+				if (ResponseImage.CenterOfBrightness.has_value())
+				{
+					Message.pushtyp<double>(ResponseImage.CenterOfBrightness.value().X);
+					Message.pushtyp<double>(ResponseImage.CenterOfBrightness.value().Y);	
+				} else {
+					Message.pushmem(nullptr, 0);
+					Message.pushmem(nullptr, 0);
+				}
 
-				uint64_t Size = ResponseImage.payload.GetAllocatedSize();
-				Message.pushmem(&Size, sizeof(uint64_t));
 				break;
 			}
 		default:

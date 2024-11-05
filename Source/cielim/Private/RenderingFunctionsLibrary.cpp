@@ -1,56 +1,12 @@
 #include "RenderingFunctionsLibrary.h"
 #include "CielimLoggingMacros.h"
-#include <OpenCV/PreOpenCVHeaders.h>
-#include <opencv2/core.hpp>
-#include "opencv2/imgproc.hpp"
-#include <OpenCV/opencv/modules/imgcodecs/include/opencv2/imgcodecs.hpp>
-#include <OpenCV/PostOpenCVHeaders.h>
 
 URenderingFunctionsLibrary::URenderingFunctionsLibrary(const FObjectInitializer& ObjectInitializer)
 {
 	
 }
 
-void URenderingFunctionsLibrary::CenterOfBrightness(TArray<uint8>& ImageData)
-{
-	//Read Image
-	cv::Mat Image = cv::imdecode(cv::Mat(1, ImageData.Num(), CV_8UC1, ImageData.GetData()), cv::IMREAD_UNCHANGED);
-
-	if (Image.empty())
-	{
-		UE_LOG(LogCielim, Error, TEXT("ImageData is Empty!"))
-		return;
-	}
-
-	cv::Mat blured;
-	cv::Mat ImageGray;
-
-    std::vector<cv::Vec2i> locations;
-
-    /*! - Grayscale, blur, and threshold iamge*/
-    cv::cvtColor(Image, ImageGray, cv::COLOR_BGR2GRAY);
-    cv::blur(ImageGray, blured, cv::Size(3,3) );
-    cv::threshold(blured, Image, 0, 255, cv::THRESH_BINARY);
-
-	// Find the center of brightness
-    cv::Moments m = cv::moments(ImageGray, true);
-
-	if (m.m00 == 0)
-	{
-		UE_LOG(LogCielim, Warning, TEXT("There is no center of brightness."));
-		return;
-	}
-
-	int cx = static_cast<int>(m.m10 / m.m00);
-	int cy = static_cast<int>(m.m01 / m.m00);
-
-	float cx_percent = (static_cast<float>(cx) / ImageGray.cols) * 100.0f;
-	float cy_percent = (static_cast<float>(cy) / ImageGray.rows) * 100.0f;
-
-	UE_LOG(LogCielim, Log, TEXT("Center of brightness: (%d, %d) or (%f %%, %f %%)"), cx, cy, cx_percent, cy_percent);
-}
-
-void URenderingFunctionsLibrary::ApplyPSF_Gaussian(TArray<uint8>& ImageData, int32 KernelHeight, int32 KernelWidth, double SigmaX, double SigmaY)
+void URenderingFunctionsLibrary::ApplyPSF_Gaussian(cv::Mat& Image, int32 KernelHeight, int32 KernelWidth, double SigmaX, double SigmaY)
 {
 	//NOTE: both dimensions of KernelSize must be odd
 
@@ -59,9 +15,6 @@ void URenderingFunctionsLibrary::ApplyPSF_Gaussian(TArray<uint8>& ImageData, int
 	{
 		return;
 	}
-	
-	//Read Image
-	cv::Mat Image = cv::imdecode(cv::Mat(1, ImageData.Num(), CV_8UC1, ImageData.GetData()), cv::IMREAD_UNCHANGED);
 
 	if (Image.empty())
 	{
@@ -77,23 +30,18 @@ void URenderingFunctionsLibrary::ApplyPSF_Gaussian(TArray<uint8>& ImageData, int
 	cv::GaussianBlur(Image, ResultImage, KernelSize, SigmaX, SigmaY);
 
 	//Save image
-	FString ResultFilepath = FPaths::ProjectDir();
-	ResultFilepath.Append("Result_Images/");
-	ResultFilepath.Append("PSF.jpg");
-	
-	std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
-	cv::imwrite(ResultFilepath_String, ResultImage);
+	// FString ResultFilepath = FPaths::ProjectDir();
+	// ResultFilepath.Append("Result_Images/");
+	// ResultFilepath.Append("PSF.jpg");
+	//
+	// std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
+	// cv::imwrite(ResultFilepath_String, ResultImage);
 
-	// Encode corrupted image as png
-    std::vector<uint8> EncodedData;
-	cv::imencode(".png", ResultImage, EncodedData);
-
-	// Override ImageData
-	ImageData.SetNumUninitialized(EncodedData.size());
-	FMemory::Memcpy(ImageData.GetData(), EncodedData.data(), EncodedData.size());
+	// Override Image
+	Image = ResultImage.clone();
 }
 
-void URenderingFunctionsLibrary::ApplyCosmicRays(TArray<uint8>& ImageData, int nCosmicRays, float AvgLength, float AvgWidth)
+void URenderingFunctionsLibrary::ApplyCosmicRays(cv::Mat& Image, int nCosmicRays, float AvgLength, float AvgWidth)
 {
 	//TODO: Add varying width to lines
 	//TODO: Make it so that lines w/ start and end points don't get clipped to image sides
@@ -103,9 +51,6 @@ void URenderingFunctionsLibrary::ApplyCosmicRays(TArray<uint8>& ImageData, int n
 	{
 		return;
 	}
-	
-	//Read Image
-	cv::Mat Image = cv::imdecode(cv::Mat(1, ImageData.Num(), CV_8UC1, ImageData.GetData()), cv::IMREAD_UNCHANGED);
 
 	if (Image.empty())
 	{
@@ -146,32 +91,29 @@ void URenderingFunctionsLibrary::ApplyCosmicRays(TArray<uint8>& ImageData, int n
 	}
 	
 	//Save image
-	FString ResultFilepath = FPaths::ProjectDir();
-	ResultFilepath.Append("Result_Images/");
-	ResultFilepath.Append("CosmicRays.jpg");
-	
-	std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
-	cv::imwrite(ResultFilepath_String, Image);
+	// FString ResultFilepath = FPaths::ProjectDir();
+	// ResultFilepath.Append("Result_Images/");
+	// ResultFilepath.Append("CosmicRays.jpg");
+	//
+	// std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
+	// cv::imwrite(ResultFilepath_String, Image);
 
 	// Encode corrupted image as png
-    std::vector<uint8> EncodedData;
-	cv::imencode(".png", Image, EncodedData);
+ //    std::vector<uint8> EncodedData;
+	// cv::imencode(".png", Image, EncodedData);
 
 	// Override ImageData
-	ImageData.SetNumUninitialized(EncodedData.size());
-	FMemory::Memcpy(ImageData.GetData(), EncodedData.data(), EncodedData.size());
+	// ImageData.SetNumUninitialized(EncodedData.size());
+	// FMemory::Memcpy(ImageData.GetData(), EncodedData.data(), EncodedData.size());
 }
 
-void URenderingFunctionsLibrary::ApplyReadNoise(TArray<uint8>& ImageData, float ReadNoiseSigma, float SystemGain)
+void URenderingFunctionsLibrary::ApplyReadNoise(cv::Mat& Image, float ReadNoiseSigma, float SystemGain)
 {
 	//Protect Against 0 Sigma
 	if(ReadNoiseSigma == 0.0f)
 	{
 		return;
 	}
-	
-	//Read Image
-	cv::Mat Image = cv::imdecode(cv::Mat(1, ImageData.Num(), CV_8UC1, ImageData.GetData()), cv::IMREAD_UNCHANGED);
 
 	if (Image.empty())
 	{
@@ -207,24 +149,25 @@ void URenderingFunctionsLibrary::ApplyReadNoise(TArray<uint8>& ImageData, float 
 	//Merge back into a color image
 	cv::merge(DifferentColorChannels, ResultImage);
 
+	Image = ResultImage.clone();
 	//Save image
-	FString ResultFilepath = FPaths::ProjectDir();
-	ResultFilepath.Append("Result_Images/");
-	ResultFilepath.Append("ReadNoise.jpg");
-	
-	std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
-	cv::imwrite(ResultFilepath_String, ResultImage);
+	// FString ResultFilepath = FPaths::ProjectDir();
+	// ResultFilepath.Append("Result_Images/");
+	// ResultFilepath.Append("ReadNoise.jpg");
+	//
+	// std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
+	// cv::imwrite(ResultFilepath_String, ResultImage);
 
 	// Encode corrupted image as png
-    std::vector<uint8> EncodedData;
-	cv::imencode(".png", ResultImage, EncodedData);
-
-	// Override ImageData
-	ImageData.SetNumUninitialized(EncodedData.size());
-	FMemory::Memcpy(ImageData.GetData(), EncodedData.data(), EncodedData.size());
+ //    std::vector<uint8> EncodedData;
+	// cv::imencode(".png", ResultImage, EncodedData);
+ //
+	// // Override ImageData
+	// ImageData.SetNumUninitialized(EncodedData.size());
+	// FMemory::Memcpy(ImageData.GetData(), EncodedData.data(), EncodedData.size());
 }
 
-void URenderingFunctionsLibrary::ApplySignalGain(TArray<uint8>& ImageData, float ImageGain, float DesiredGain)
+void URenderingFunctionsLibrary::ApplySignalGain(cv::Mat& Image, float ImageGain, float DesiredGain)
 {
 	if (DesiredGain == 0.0f)
 	{
@@ -232,7 +175,7 @@ void URenderingFunctionsLibrary::ApplySignalGain(TArray<uint8>& ImageData, float
 	}
 
 	//Read Image
-	cv::Mat Image = cv::imdecode(cv::Mat(1, ImageData.Num(), CV_8UC1, ImageData.GetData()), cv::IMREAD_UNCHANGED);
+	// cv::Mat Image = cv::imdecode(cv::Mat(1, ImageData.Num(), CV_8UC1, ImageData.GetData()), cv::IMREAD_UNCHANGED);
 
 	if (Image.empty())
 	{
@@ -264,25 +207,25 @@ void URenderingFunctionsLibrary::ApplySignalGain(TArray<uint8>& ImageData, float
 
 	//Merge back into a color image
 	cv::merge(DifferentColorChannels, ResultImage);
-
+	Image = ResultImage.clone();
 	//Save image
-	FString ResultFilepath = FPaths::ProjectDir();
-	ResultFilepath.Append("Result_Images/");
-	ResultFilepath.Append("SignalGain.jpg");
-	
-	std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
-	cv::imwrite(ResultFilepath_String, ResultImage);
-
-	// Encode corrupted image as png
-    std::vector<uint8> EncodedData;
-	cv::imencode(".png", ResultImage, EncodedData);
-
-	// Override ImageData
-	ImageData.SetNumUninitialized(EncodedData.size());
-	FMemory::Memcpy(ImageData.GetData(), EncodedData.data(), EncodedData.size());
+	// FString ResultFilepath = FPaths::ProjectDir();
+	// ResultFilepath.Append("Result_Images/");
+	// ResultFilepath.Append("SignalGain.jpg");
+	//
+	// std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
+	// cv::imwrite(ResultFilepath_String, ResultImage);
+ //
+	// // Encode corrupted image as png
+ //    std::vector<uint8> EncodedData;
+	// cv::imencode(".png", ResultImage, EncodedData);
+ //
+	// // Override ImageData
+	// ImageData.SetNumUninitialized(EncodedData.size());
+	// FMemory::Memcpy(ImageData.GetData(), EncodedData.data(), EncodedData.size());
 }
 
-void URenderingFunctionsLibrary::ApplyDarkCurrentNoise(TArray<uint8>& ImageData, double MaxSigma, double MinSigma, FVector SunPosition, FVector SpacecraftPosition, FVector SpacecraftDirection)
+void URenderingFunctionsLibrary::ApplyDarkCurrentNoise(cv::Mat& Image, double MaxSigma, double MinSigma, FVector SunPosition, FVector SpacecraftPosition, FVector SpacecraftDirection)
 {
 	//Protect against 0 MaxSigma
 	if(MaxSigma == 0.0f)
@@ -297,7 +240,7 @@ void URenderingFunctionsLibrary::ApplyDarkCurrentNoise(TArray<uint8>& ImageData,
 	}
 	
 	//Read Image
-	cv::Mat Image = cv::imdecode(cv::Mat(1, ImageData.Num(), CV_8UC1, ImageData.GetData()), cv::IMREAD_UNCHANGED);
+	// cv::Mat Image = cv::imdecode(cv::Mat(1, ImageData.Num(), CV_8UC1, ImageData.GetData()), cv::IMREAD_UNCHANGED);
 
 	if (Image.empty())
 	{
@@ -361,25 +304,25 @@ void URenderingFunctionsLibrary::ApplyDarkCurrentNoise(TArray<uint8>& ImageData,
 
 	//Merge back into a color image
 	cv::merge(DifferentColorChannels, ResultImage);
-
-	//Save image
-	FString ResultFilepath = FPaths::ProjectDir();
-	ResultFilepath.Append("Result_Images/");
-	ResultFilepath.Append("DarkCurrentNoise.jpg");
-	
-	std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
-	cv::imwrite(ResultFilepath_String, ResultImage);
-
-	// Encode corrupted image as png
-    std::vector<uint8> EncodedData;
-	cv::imencode(".png", ResultImage, EncodedData);
-
-	// Override ImageData
-	ImageData.SetNumUninitialized(EncodedData.size());
-	FMemory::Memcpy(ImageData.GetData(), EncodedData.data(), EncodedData.size());
+	Image = ResultImage.clone();
+	// //Save image
+	// FString ResultFilepath = FPaths::ProjectDir();
+	// ResultFilepath.Append("Result_Images/");
+	// ResultFilepath.Append("DarkCurrentNoise.jpg");
+	//
+	// std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
+	// cv::imwrite(ResultFilepath_String, ResultImage);
+ //
+	// // Encode corrupted image as png
+ //    std::vector<uint8> EncodedData;
+	// cv::imencode(".png", ResultImage, EncodedData);
+ //
+	// // Override ImageData
+	// ImageData.SetNumUninitialized(EncodedData.size());
+	// FMemory::Memcpy(ImageData.GetData(), EncodedData.data(), EncodedData.size());
 }
 
-void URenderingFunctionsLibrary::ApplyQE(TArray<uint8>& ImageData, float QERed, float QEGreen, float QEBlue)
+void URenderingFunctionsLibrary::ApplyQE(cv::Mat& Image, float QERed, float QEGreen, float QEBlue)
 {
 	FVector3d QE;
 
@@ -388,7 +331,7 @@ void URenderingFunctionsLibrary::ApplyQE(TArray<uint8>& ImageData, float QERed, 
 	QE[2] = QEBlue;
 	
 	//Read Image
-	cv::Mat Image = cv::imdecode(cv::Mat(1, ImageData.Num(), CV_8UC1, ImageData.GetData()), cv::IMREAD_UNCHANGED);
+	// cv::Mat Image = cv::imdecode(cv::Mat(1, ImageData.Num(), CV_8UC1, ImageData.GetData()), cv::IMREAD_UNCHANGED);
 
 	if (Image.empty())
 	{
@@ -416,20 +359,20 @@ void URenderingFunctionsLibrary::ApplyQE(TArray<uint8>& ImageData, float QERed, 
 			
 		}
 	}
-	
-	//Save image
-	FString ResultFilepath = FPaths::ProjectDir();
-	ResultFilepath.Append("Result_Images/");
-	ResultFilepath.Append("QE.jpg");
-	
-	std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
-	cv::imwrite(ResultFilepath_String, ResultImage);
-
-	// Encode corrupted image as png
-    std::vector<uint8> EncodedData;
-	cv::imencode(".png", ResultImage, EncodedData);
-
-	// Override ImageData
-	ImageData.SetNumUninitialized(EncodedData.size());
-	FMemory::Memcpy(ImageData.GetData(), EncodedData.data(), EncodedData.size());
+	Image = ResultImage.clone();
+	// //Save image
+	// FString ResultFilepath = FPaths::ProjectDir();
+	// ResultFilepath.Append("Result_Images/");
+	// ResultFilepath.Append("QE.jpg");
+	//
+	// std::string ResultFilepath_String = TCHAR_TO_UTF8(*ResultFilepath);
+	// cv::imwrite(ResultFilepath_String, ResultImage);
+ //
+	// // Encode corrupted image as png
+ //    std::vector<uint8> EncodedData;
+	// cv::imencode(".png", ResultImage, EncodedData);
+ //
+	// // Override ImageData
+	// ImageData.SetNumUninitialized(EncodedData.size());
+	// FMemory::Memcpy(ImageData.GetData(), EncodedData.data(), EncodedData.size());
 }

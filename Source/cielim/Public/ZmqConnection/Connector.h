@@ -22,12 +22,12 @@ public:
 	~Connector() = default;
 
 	virtual void CustomTick() override;
-	
+
 	bool ThreadInit();
 	bool Init() override;
 	void ThreadShutdown();
 	void SetThreadSafeQueue(const std::shared_ptr<CielimCircularQueue>& Queue);
-	
+
 protected:
 	//! Because non protected ptr, (not UPROPERTY())
 	//! >>> The owning actor of this thread must outlive the thread itself <<<
@@ -38,8 +38,7 @@ protected:
 private:
 	void Connect();
 	void ParseHandler(zmq::event_flags Event);
-	zmq::multipart_t ParseMessage(zmq::multipart_t& Request); 
-	CommandType ParseCommand(const std::string& CommandString);
+	zmq::multipart_t ParseMessage(zmq::multipart_t& Request) const;
 
 	zmq::socket_t ReplySocket;
     zmq::context_t* Context;

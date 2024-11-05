@@ -5,6 +5,7 @@
 #include "AstronomicalConstants.h"
 #include "CielimLoggingMacros.h"
 #include "CelestialBodyMeshModel.h"
+#include "CielimImageUtilities.h"
 #include "KinematicsUtilities.h"
 #include "ProtobufFileReader.h"
 #include "ZmqConnection/Commands.h"
@@ -189,7 +190,22 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 		// Using cosmic ray std deviation as number of rays at the moment
 		int cosmicRayStdDev = (int) this->CielimMessage.camera().renderparameters().cosmicraystddeviation();
 		
-		this->NetworkSimulationDataSource->PutImageQueueData(this->CaptureManager->GetPNG(pointSpread, readNoise, systemGain, cosmicRayStdDev));
+		auto Query = std::get<RequestImage>(QueueData.value().Query);
+		std::vector<uint8> PngEncodedData{};
+		if (Query.ShouldReturnImage)
+		{
+			auto Image = this->CaptureManager->GetUncorruptedImage();
+			auto ImageToBeCorrupted = FImage(Image);
+			cv::Mat TempImage = this->CaptureManager->GetCorruptedImage(ImageToBeCorrupted, pointSpread, readNoise, systemGain, cosmicRayStdDev);
+			cv::imencode(".png", TempImage, PngEncodedData);
+			this->NetworkSimulationDataSource->PutImageQueueData(PngEncodedData,
+			CielimImageUtilities::ComputeWeightedCenterOfBrightness(Image, 10));
+		} else {
+			auto Image = this->CaptureManager->GetUncorruptedImage();
+			this->NetworkSimulationDataSource->PutImageQueueData(PngEncodedData,
+			CielimImageUtilities::ComputeWeightedCenterOfBrightness(Image, 10));
+		}
+
 		UE_LOG(LogCielim, Display, TEXT("Put back PNG image: ASimulationDataSourceActor"));
 	} else {
 		UE_LOG(LogCielim, Display, TEXT("GetNextSimulationData received unrecognized Type"));

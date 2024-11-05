@@ -2,6 +2,7 @@ import delimited_protobuf
 import cv2
 import numpy as np
 import os
+import struct
 import sys
 import time
 import typing
@@ -39,13 +40,17 @@ class Connector:
         response_message_parts = self.request_socket.recv()
         print(response_message_parts)
 
-    def request_image_for_camera_id(self, camera_id: int):
-        camera_image_request = "REQUEST_IMAGE_" + str(camera_id)
-        self.request_socket.send_string(camera_image_request)
-        [image_bytes_size_msg, image_data_msg] = self.request_socket.recv_multipart()
-        buf = np.asarray(bytearray(image_data_msg), dtype="uint8")
-        image = cv2.imdecode(buf, cv2.IMREAD_COLOR)
-        return image
+    def request_image_for_camera_id(self, camera_id: int, should_return_image: bool = True):
+        self.request_socket.send_multipart(
+            [b"REQUEST_IMAGE", str.encode(str(camera_id)), str.encode(str(should_return_image))]
+        )
+        [cob_x, cob_y, image_data_size, image_data] = self.request_socket.recv_multipart()
+        image = None
+        if should_return_image:
+            buf = np.asarray(bytearray(image_data), dtype="uint8")
+            image = cv2.imdecode(buf, cv2.IMREAD_COLOR)
+        cob = np.array([struct.unpack("d", cob_x)[0], struct.unpack("d", cob_y)[0]])
+        return [image, cob]
 
     def disconnect(self):
         self.request_socket.disconnect(self.address)

@@ -8,7 +8,7 @@
 #include "ZmqMultiThreadActor.generated.h"
 
 UCLASS()
-class CIELIM_API AZmqMultiThreadActor : public AActor 
+class CIELIM_API AZmqMultiThreadActor : public AActor
 {
 	GENERATED_BODY()
 
@@ -19,14 +19,15 @@ public:
 	void Connect(const std::string& Address);
 	std::optional<FCircularQueueData> GetQueueData() const;
 	void PutQueueData(std::string Data) const;
-	void PutImageQueueData(const TArray64<uint8>& PNGData) const;
+	void PutImageQueueData(const std::vector<uint8>& PNGData, const std::optional<FVector2d> CenterOfBrightness) const;
+
 	/** Start a timer in BP to *safely* check for thread updates! */
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category=Cielim)
 	void StartThreadTimerUpdate();
-	
+
 	UFUNCTION(BlueprintPure, Category=Cielim)
 	bool IsThreadPaused() const;
-	
+
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category=Cielim)
 	void CielimLog(const FString& Str, FLinearColor Color=FLinearColor::Yellow, float Duration=2);
 
@@ -38,13 +39,13 @@ public:
 	//
 	static int32 ThreadNameCounter;
 	std::unique_ptr<Connector> ConnectorThread = nullptr;
-	
+
 	// Do not call BP callable functions or do anything that interacts with the game, from a thread
 	// that is not the game's main thread
 	void ConnectorThreadTick();
-	
+
 	virtual void BeginPlay() override;
-	
+
 	// Ensure the thread is shut down
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
