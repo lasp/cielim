@@ -1,5 +1,5 @@
 #include "CelestialBodyMeshModel.h"
-
+#include "KinematicsUtilities.h"
 
 CelestialBodyMeshModel CelestialBodyMeshModel::FromProtobuf(const cielimMessage::MeshModel& Model)
 {
@@ -30,5 +30,15 @@ CelestialBodyMeshModel CelestialBodyMeshModel::FromProtobuf(const cielimMessage:
 			Model.principalaxisdistortion()[1],
 			Model.principalaxisdistortion()[2]};
 	}
+
+	if (Model.inertialtobodymrp().size() == 3)
+	{
+		const FVector3d SigmaBN = FVector3d(Model.inertialtobodymrp()[0],
+											Model.inertialtobodymrp()[1],
+											Model.inertialtobodymrp()[2]);
+		const FQuat Quat_BN = MRPtoQuaternion(SigmaBN);
+		MeshModel.InertialToBody = FRotator(RightQuat2LeftQuat(Quat_BN));
+	}
+	
 	return MeshModel;
 }

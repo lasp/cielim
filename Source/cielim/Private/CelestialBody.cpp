@@ -36,6 +36,11 @@ FBPVector3D ACelestialBody::GetPrincipleAccessDistortions() const
 		this->MeshModel.PrincipalAxisDistortion.Z};
 }
 
+FRotator ACelestialBody::GetInertialToBodyRotator() const
+{
+	return this->MeshModel.InertialToBody;
+}
+
 /**
  * @brief Update(NewPosition, NewRotation) Updates celestial body's position and rotation
  *

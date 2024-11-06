@@ -34,6 +34,9 @@ public:
 	FString GetMeshModelName();
 
 	UFUNCTION(BlueprintCallable, Category = "CelestialBody")
+	FRotator GetInertialToBodyRotator() const;
+
+	UFUNCTION(BlueprintCallable, Category = "CelestialBody")
 	FBPVector3D GetPrincipleAccessDistortions() const;
 	
     // Don't know if there is a better way to do this
