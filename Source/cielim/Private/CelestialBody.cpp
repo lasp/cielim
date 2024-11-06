@@ -29,6 +29,13 @@ FString ACelestialBody::GetMeshModelName()
 	return this->MeshModel.ShapeModel;
 }
 
+FBPVector3D ACelestialBody::GetPrincipleAccessDistortions() const
+{
+	return FBPVector3D{this->MeshModel.PrincipalAxisDistortion.X,
+		this->MeshModel.PrincipalAxisDistortion.Y,
+		this->MeshModel.PrincipalAxisDistortion.Z};
+}
+
 /**
  * @brief Update(NewPosition, NewRotation) Updates celestial body's position and rotation
  *

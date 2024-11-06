@@ -7,6 +7,18 @@
 
 #include "CelestialBody.generated.h"
 
+USTRUCT(BlueprintType)
+struct FBPVector3D
+{
+	GENERATED_BODY()
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	double X;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	double Y;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	double Z;
+};
+
 UCLASS()
 class CIELIM_API ACelestialBody : public AActor
 {
@@ -21,6 +33,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "CelestialBody")
 	FString GetMeshModelName();
 
+	UFUNCTION(BlueprintCallable, Category = "CelestialBody")
+	FBPVector3D GetPrincipleAccessDistortions() const;
+	
     // Don't know if there is a better way to do this
     UFUNCTION(BlueprintImplementableEvent)
     void SetRadiusEvent(const double& Radius);

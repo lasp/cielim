@@ -24,9 +24,11 @@ CelestialBodyMeshModel CelestialBodyMeshModel::FromProtobuf(const cielimMessage:
 			Model.reflectanceparameters()[11]};
 	}
 	MeshModel.MeanRadius = Model.meanradius();
-	if (Model.principalaxisdistortion().size() == 2)
+	if (Model.principalaxisdistortion().size() == 3)
 	{
-		MeshModel.PrincipalAxisDistortion = {Model.principalaxisdistortion()[0], Model.principalaxisdistortion()[1]};
+		MeshModel.PrincipalAxisDistortion = {Model.principalaxisdistortion()[0],
+			Model.principalaxisdistortion()[1],
+			Model.principalaxisdistortion()[2]};
 	}
 	return MeshModel;
 }
