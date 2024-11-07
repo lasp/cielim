@@ -232,10 +232,10 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 			return;
 		}
 
-		double pointSpread = this->CielimMessage.GetMessage().camera().pointspreadfunction();
-		double readNoise = this->CielimMessage.GetMessage().camera().readnoise();
-		double systemGain = this->CielimMessage.GetMessage().camera().systemgain();
-		double cosmicRayStdDev = this->CielimMessage.GetMessage().camera().renderparameters().cosmicraystddeviation();
+		const double pointSpread = static_cast<double>(this->CielimMessage.GetMessage().camera().pointspreadfunction());
+		const double readNoise = this->CielimMessage.GetMessage().camera().readnoise();
+		const double systemGain = this->CielimMessage.GetMessage().camera().systemgain();
+		const double cosmicRayStdDev = this->CielimMessage.GetMessage().camera().renderparameters().cosmicraystddeviation();
 		
 		TArray64<uint8> PngEncodedData;
 
