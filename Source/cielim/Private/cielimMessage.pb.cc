@@ -53,31 +53,32 @@ struct EpochDateTimeDefaultTypeInternal {
   };
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT EpochDateTimeDefaultTypeInternal _EpochDateTime_default_instance_;
-constexpr CelestialModel::CelestialModel(
+constexpr MeshModel::MeshModel(
   ::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized)
   : reflectanceparameters_()
   , principalaxisdistortion_()
+  , inertialtobodymrp_()
   , shapemodel_(&::PROTOBUF_NAMESPACE_ID::internal::fixed_address_empty_string)
   , brdfmodel_(&::PROTOBUF_NAMESPACE_ID::internal::fixed_address_empty_string)
   , perlinnoisestddeviation_(0)
   , proceduralrocks_(0)
   , meanradius_(0){}
-struct CelestialModelDefaultTypeInternal {
-  constexpr CelestialModelDefaultTypeInternal()
+struct MeshModelDefaultTypeInternal {
+  constexpr MeshModelDefaultTypeInternal()
     : _instance(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized{}) {}
-  ~CelestialModelDefaultTypeInternal() {}
+  ~MeshModelDefaultTypeInternal() {}
   union {
-    CelestialModel _instance;
+    MeshModel _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT CelestialModelDefaultTypeInternal _CelestialModel_default_instance_;
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT MeshModelDefaultTypeInternal _MeshModel_default_instance_;
 constexpr CelestialBody::CelestialBody(
   ::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized)
   : position_()
   , velocity_()
   , attitude_()
   , bodyname_(&::PROTOBUF_NAMESPACE_ID::internal::fixed_address_empty_string)
-  , models_(nullptr)
+  , model_(nullptr)
   , centralbody_(false){}
 struct CelestialBodyDefaultTypeInternal {
   constexpr CelestialBodyDefaultTypeInternal()
@@ -107,7 +108,7 @@ constexpr RenderingModel::RenderingModel(
   ::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized)
   : rendering_(&::PROTOBUF_NAMESPACE_ID::internal::fixed_address_empty_string)
   , cosmicraystddeviation_(0)
-  , enablestraylight_(false)
+  , straylight_(0)
   , starfield_(false)
   , enablesmear_(false){}
 struct RenderingModelDefaultTypeInternal {
@@ -132,7 +133,7 @@ constexpr CameraModel::CameraModel(
   , renderrate_(uint64_t{0u})
   , focallength_(0)
   , exposuretime_(0)
-  , pointspreadfunction_(uint64_t{0u})
+  , pointspreadfunction_(0)
   , readnoise_(0)
   , systemgain_(0){}
 struct CameraModelDefaultTypeInternal {
@@ -667,22 +668,24 @@ std::string EpochDateTime::GetTypeName() const {
 
 // ===================================================================
 
-class CelestialModel::_Internal {
+class MeshModel::_Internal {
  public:
 };
 
-CelestialModel::CelestialModel(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+MeshModel::MeshModel(::PROTOBUF_NAMESPACE_ID::Arena* arena)
   : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena),
   reflectanceparameters_(arena),
-  principalaxisdistortion_(arena) {
+  principalaxisdistortion_(arena),
+  inertialtobodymrp_(arena) {
   SharedCtor();
   RegisterArenaDtor(arena);
-  // @@protoc_insertion_point(arena_constructor:cielimMessage.CelestialModel)
+  // @@protoc_insertion_point(arena_constructor:cielimMessage.MeshModel)
 }
-CelestialModel::CelestialModel(const CelestialModel& from)
+MeshModel::MeshModel(const MeshModel& from)
   : ::PROTOBUF_NAMESPACE_ID::MessageLite(),
       reflectanceparameters_(from.reflectanceparameters_),
-      principalaxisdistortion_(from.principalaxisdistortion_) {
+      principalaxisdistortion_(from.principalaxisdistortion_),
+      inertialtobodymrp_(from.inertialtobodymrp_) {
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
   shapemodel_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   if (!from._internal_shapemodel().empty()) {
@@ -697,10 +700,10 @@ CelestialModel::CelestialModel(const CelestialModel& from)
   ::memcpy(&perlinnoisestddeviation_, &from.perlinnoisestddeviation_,
     static_cast<size_t>(reinterpret_cast<char*>(&meanradius_) -
     reinterpret_cast<char*>(&perlinnoisestddeviation_)) + sizeof(meanradius_));
-  // @@protoc_insertion_point(copy_constructor:cielimMessage.CelestialModel)
+  // @@protoc_insertion_point(copy_constructor:cielimMessage.MeshModel)
 }
 
-void CelestialModel::SharedCtor() {
+void MeshModel::SharedCtor() {
 shapemodel_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 brdfmodel_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 ::memset(reinterpret_cast<char*>(this) + static_cast<size_t>(
@@ -709,36 +712,37 @@ brdfmodel_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAl
     reinterpret_cast<char*>(&perlinnoisestddeviation_)) + sizeof(meanradius_));
 }
 
-CelestialModel::~CelestialModel() {
-  // @@protoc_insertion_point(destructor:cielimMessage.CelestialModel)
+MeshModel::~MeshModel() {
+  // @@protoc_insertion_point(destructor:cielimMessage.MeshModel)
   SharedDtor();
   _internal_metadata_.Delete<std::string>();
 }
 
-void CelestialModel::SharedDtor() {
+void MeshModel::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
   shapemodel_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   brdfmodel_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 }
 
-void CelestialModel::ArenaDtor(void* object) {
-  CelestialModel* _this = reinterpret_cast< CelestialModel* >(object);
+void MeshModel::ArenaDtor(void* object) {
+  MeshModel* _this = reinterpret_cast< MeshModel* >(object);
   (void)_this;
 }
-void CelestialModel::RegisterArenaDtor(::PROTOBUF_NAMESPACE_ID::Arena*) {
+void MeshModel::RegisterArenaDtor(::PROTOBUF_NAMESPACE_ID::Arena*) {
 }
-void CelestialModel::SetCachedSize(int size) const {
+void MeshModel::SetCachedSize(int size) const {
   _cached_size_.Set(size);
 }
 
-void CelestialModel::Clear() {
-// @@protoc_insertion_point(message_clear_start:cielimMessage.CelestialModel)
+void MeshModel::Clear() {
+// @@protoc_insertion_point(message_clear_start:cielimMessage.MeshModel)
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
   reflectanceparameters_.Clear();
   principalaxisdistortion_.Clear();
+  inertialtobodymrp_.Clear();
   shapemodel_.ClearToEmpty();
   brdfmodel_.ClearToEmpty();
   ::memset(&perlinnoisestddeviation_, 0, static_cast<size_t>(
@@ -747,7 +751,7 @@ void CelestialModel::Clear() {
   _internal_metadata_.Clear<std::string>();
 }
 
-const char* CelestialModel::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
+const char* MeshModel::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
     ::PROTOBUF_NAMESPACE_ID::uint32 tag;
@@ -812,6 +816,16 @@ const char* CelestialModel::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE
           ptr += sizeof(double);
         } else goto handle_unusual;
         continue;
+      // repeated double inertialToBodyMrp = 8;
+      case 8:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 66)) {
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedDoubleParser(_internal_mutable_inertialtobodymrp(), ptr, ctx);
+          CHK_(ptr);
+        } else if (static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 65) {
+          _internal_add_inertialtobodymrp(::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr));
+          ptr += sizeof(double);
+        } else goto handle_unusual;
+        continue;
       default: {
       handle_unusual:
         if ((tag == 0) || ((tag & 7) == 4)) {
@@ -835,9 +849,9 @@ failure:
 #undef CHK_
 }
 
-::PROTOBUF_NAMESPACE_ID::uint8* CelestialModel::_InternalSerialize(
+::PROTOBUF_NAMESPACE_ID::uint8* MeshModel::_InternalSerialize(
     ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
-  // @@protoc_insertion_point(serialize_to_array_start:cielimMessage.CelestialModel)
+  // @@protoc_insertion_point(serialize_to_array_start:cielimMessage.MeshModel)
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
   (void) cached_has_bits;
 
@@ -846,7 +860,7 @@ failure:
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
       this->_internal_shapemodel().data(), static_cast<int>(this->_internal_shapemodel().length()),
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
-      "cielimMessage.CelestialModel.shapeModel");
+      "cielimMessage.MeshModel.shapeModel");
     target = stream->WriteStringMaybeAliased(
         1, this->_internal_shapemodel(), target);
   }
@@ -868,7 +882,7 @@ failure:
     ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::VerifyUtf8String(
       this->_internal_brdfmodel().data(), static_cast<int>(this->_internal_brdfmodel().length()),
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::SERIALIZE,
-      "cielimMessage.CelestialModel.brdfModel");
+      "cielimMessage.MeshModel.brdfModel");
     target = stream->WriteStringMaybeAliased(
         4, this->_internal_brdfmodel(), target);
   }
@@ -889,16 +903,21 @@ failure:
     target = stream->WriteFixedPacked(7, _internal_principalaxisdistortion(), target);
   }
 
+  // repeated double inertialToBodyMrp = 8;
+  if (this->_internal_inertialtobodymrp_size() > 0) {
+    target = stream->WriteFixedPacked(8, _internal_inertialtobodymrp(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
         static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:cielimMessage.CelestialModel)
+  // @@protoc_insertion_point(serialize_to_array_end:cielimMessage.MeshModel)
   return target;
 }
 
-size_t CelestialModel::ByteSizeLong() const {
-// @@protoc_insertion_point(message_byte_size_start:cielimMessage.CelestialModel)
+size_t MeshModel::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:cielimMessage.MeshModel)
   size_t total_size = 0;
 
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
@@ -920,6 +939,18 @@ size_t CelestialModel::ByteSizeLong() const {
   // repeated double principalAxisDistortion = 7;
   {
     unsigned int count = static_cast<unsigned int>(this->_internal_principalaxisdistortion_size());
+    size_t data_size = 8UL * count;
+    if (data_size > 0) {
+      total_size += 1 +
+        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int32Size(
+            static_cast<::PROTOBUF_NAMESPACE_ID::int32>(data_size));
+    }
+    total_size += data_size;
+  }
+
+  // repeated double inertialToBodyMrp = 8;
+  {
+    unsigned int count = static_cast<unsigned int>(this->_internal_inertialtobodymrp_size());
     size_t data_size = 8UL * count;
     if (data_size > 0) {
       total_size += 1 +
@@ -966,14 +997,14 @@ size_t CelestialModel::ByteSizeLong() const {
   return total_size;
 }
 
-void CelestialModel::CheckTypeAndMergeFrom(
+void MeshModel::CheckTypeAndMergeFrom(
     const ::PROTOBUF_NAMESPACE_ID::MessageLite& from) {
-  MergeFrom(*::PROTOBUF_NAMESPACE_ID::internal::DownCast<const CelestialModel*>(
+  MergeFrom(*::PROTOBUF_NAMESPACE_ID::internal::DownCast<const MeshModel*>(
       &from));
 }
 
-void CelestialModel::MergeFrom(const CelestialModel& from) {
-// @@protoc_insertion_point(class_specific_merge_from_start:cielimMessage.CelestialModel)
+void MeshModel::MergeFrom(const MeshModel& from) {
+// @@protoc_insertion_point(class_specific_merge_from_start:cielimMessage.MeshModel)
   GOOGLE_DCHECK_NE(&from, this);
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
   ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
@@ -981,6 +1012,7 @@ void CelestialModel::MergeFrom(const CelestialModel& from) {
 
   reflectanceparameters_.MergeFrom(from.reflectanceparameters_);
   principalaxisdistortion_.MergeFrom(from.principalaxisdistortion_);
+  inertialtobodymrp_.MergeFrom(from.inertialtobodymrp_);
   if (!from.shapemodel().empty()) {
     _internal_set_shapemodel(from._internal_shapemodel());
   }
@@ -998,22 +1030,23 @@ void CelestialModel::MergeFrom(const CelestialModel& from) {
   }
 }
 
-void CelestialModel::CopyFrom(const CelestialModel& from) {
-// @@protoc_insertion_point(class_specific_copy_from_start:cielimMessage.CelestialModel)
+void MeshModel::CopyFrom(const MeshModel& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:cielimMessage.MeshModel)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-bool CelestialModel::IsInitialized() const {
+bool MeshModel::IsInitialized() const {
   return true;
 }
 
-void CelestialModel::InternalSwap(CelestialModel* other) {
+void MeshModel::InternalSwap(MeshModel* other) {
   using std::swap;
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   reflectanceparameters_.InternalSwap(&other->reflectanceparameters_);
   principalaxisdistortion_.InternalSwap(&other->principalaxisdistortion_);
+  inertialtobodymrp_.InternalSwap(&other->inertialtobodymrp_);
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
       &::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(),
       &shapemodel_, GetArenaForAllocation(),
@@ -1025,15 +1058,15 @@ void CelestialModel::InternalSwap(CelestialModel* other) {
       &other->brdfmodel_, other->GetArenaForAllocation()
   );
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(CelestialModel, meanradius_)
-      + sizeof(CelestialModel::meanradius_)
-      - PROTOBUF_FIELD_OFFSET(CelestialModel, perlinnoisestddeviation_)>(
+      PROTOBUF_FIELD_OFFSET(MeshModel, meanradius_)
+      + sizeof(MeshModel::meanradius_)
+      - PROTOBUF_FIELD_OFFSET(MeshModel, perlinnoisestddeviation_)>(
           reinterpret_cast<char*>(&perlinnoisestddeviation_),
           reinterpret_cast<char*>(&other->perlinnoisestddeviation_));
 }
 
-std::string CelestialModel::GetTypeName() const {
-  return "cielimMessage.CelestialModel";
+std::string MeshModel::GetTypeName() const {
+  return "cielimMessage.MeshModel";
 }
 
 
@@ -1041,12 +1074,12 @@ std::string CelestialModel::GetTypeName() const {
 
 class CelestialBody::_Internal {
  public:
-  static const ::cielimMessage::CelestialModel& models(const CelestialBody* msg);
+  static const ::cielimMessage::MeshModel& model(const CelestialBody* msg);
 };
 
-const ::cielimMessage::CelestialModel&
-CelestialBody::_Internal::models(const CelestialBody* msg) {
-  return *msg->models_;
+const ::cielimMessage::MeshModel&
+CelestialBody::_Internal::model(const CelestialBody* msg) {
+  return *msg->model_;
 }
 CelestialBody::CelestialBody(::PROTOBUF_NAMESPACE_ID::Arena* arena)
   : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena),
@@ -1068,10 +1101,10 @@ CelestialBody::CelestialBody(const CelestialBody& from)
     bodyname_.Set(::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::EmptyDefault{}, from._internal_bodyname(),
       GetArenaForAllocation());
   }
-  if (from._internal_has_models()) {
-    models_ = new ::cielimMessage::CelestialModel(*from.models_);
+  if (from._internal_has_model()) {
+    model_ = new ::cielimMessage::MeshModel(*from.model_);
   } else {
-    models_ = nullptr;
+    model_ = nullptr;
   }
   centralbody_ = from.centralbody_;
   // @@protoc_insertion_point(copy_constructor:cielimMessage.CelestialBody)
@@ -1080,9 +1113,9 @@ CelestialBody::CelestialBody(const CelestialBody& from)
 void CelestialBody::SharedCtor() {
 bodyname_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 ::memset(reinterpret_cast<char*>(this) + static_cast<size_t>(
-    reinterpret_cast<char*>(&models_) - reinterpret_cast<char*>(this)),
+    reinterpret_cast<char*>(&model_) - reinterpret_cast<char*>(this)),
     0, static_cast<size_t>(reinterpret_cast<char*>(&centralbody_) -
-    reinterpret_cast<char*>(&models_)) + sizeof(centralbody_));
+    reinterpret_cast<char*>(&model_)) + sizeof(centralbody_));
 }
 
 CelestialBody::~CelestialBody() {
@@ -1094,7 +1127,7 @@ CelestialBody::~CelestialBody() {
 void CelestialBody::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
   bodyname_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
-  if (this != internal_default_instance()) delete models_;
+  if (this != internal_default_instance()) delete model_;
 }
 
 void CelestialBody::ArenaDtor(void* object) {
@@ -1117,10 +1150,10 @@ void CelestialBody::Clear() {
   velocity_.Clear();
   attitude_.Clear();
   bodyname_.ClearToEmpty();
-  if (GetArenaForAllocation() == nullptr && models_ != nullptr) {
-    delete models_;
+  if (GetArenaForAllocation() == nullptr && model_ != nullptr) {
+    delete model_;
   }
-  models_ = nullptr;
+  model_ = nullptr;
   centralbody_ = false;
   _internal_metadata_.Clear<std::string>();
 }
@@ -1177,10 +1210,10 @@ const char* CelestialBody::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
-      // .cielimMessage.CelestialModel models = 6;
+      // .cielimMessage.MeshModel model = 6;
       case 6:
         if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 50)) {
-          ptr = ctx->ParseMessage(_internal_mutable_models(), ptr);
+          ptr = ctx->ParseMessage(_internal_mutable_model(), ptr);
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
@@ -1244,12 +1277,12 @@ failure:
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteBoolToArray(5, this->_internal_centralbody(), target);
   }
 
-  // .cielimMessage.CelestialModel models = 6;
-  if (this->has_models()) {
+  // .cielimMessage.MeshModel model = 6;
+  if (this->has_model()) {
     target = stream->EnsureSpace(target);
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
       InternalWriteMessage(
-        6, _Internal::models(this), target, stream);
+        6, _Internal::model(this), target, stream);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -1311,11 +1344,11 @@ size_t CelestialBody::ByteSizeLong() const {
         this->_internal_bodyname());
   }
 
-  // .cielimMessage.CelestialModel models = 6;
-  if (this->has_models()) {
+  // .cielimMessage.MeshModel model = 6;
+  if (this->has_model()) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
-        *models_);
+        *model_);
   }
 
   // bool centralBody = 5;
@@ -1350,8 +1383,8 @@ void CelestialBody::MergeFrom(const CelestialBody& from) {
   if (!from.bodyname().empty()) {
     _internal_set_bodyname(from._internal_bodyname());
   }
-  if (from.has_models()) {
-    _internal_mutable_models()->::cielimMessage::CelestialModel::MergeFrom(from._internal_models());
+  if (from.has_model()) {
+    _internal_mutable_model()->::cielimMessage::MeshModel::MergeFrom(from._internal_model());
   }
   if (from.centralbody() != 0) {
     _internal_set_centralbody(from._internal_centralbody());
@@ -1383,9 +1416,9 @@ void CelestialBody::InternalSwap(CelestialBody* other) {
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
       PROTOBUF_FIELD_OFFSET(CelestialBody, centralbody_)
       + sizeof(CelestialBody::centralbody_)
-      - PROTOBUF_FIELD_OFFSET(CelestialBody, models_)>(
-          reinterpret_cast<char*>(&models_),
-          reinterpret_cast<char*>(&other->models_));
+      - PROTOBUF_FIELD_OFFSET(CelestialBody, model_)>(
+          reinterpret_cast<char*>(&model_),
+          reinterpret_cast<char*>(&other->model_));
 }
 
 std::string CelestialBody::GetTypeName() const {
@@ -1757,11 +1790,11 @@ const char* RenderingModel::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE
           ptr += sizeof(double);
         } else goto handle_unusual;
         continue;
-      // bool enableStrayLight = 2;
+      // double strayLight = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 16)) {
-          enablestraylight_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
-          CHK_(ptr);
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 17)) {
+          straylight_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
+          ptr += sizeof(double);
         } else goto handle_unusual;
         continue;
       // bool starField = 3;
@@ -1822,10 +1855,10 @@ failure:
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(1, this->_internal_cosmicraystddeviation(), target);
   }
 
-  // bool enableStrayLight = 2;
-  if (this->enablestraylight() != 0) {
+  // double strayLight = 2;
+  if (!(this->straylight() <= 0 && this->straylight() >= 0)) {
     target = stream->EnsureSpace(target);
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteBoolToArray(2, this->_internal_enablestraylight(), target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(2, this->_internal_straylight(), target);
   }
 
   // bool starField = 3;
@@ -1878,9 +1911,9 @@ size_t RenderingModel::ByteSizeLong() const {
     total_size += 1 + 8;
   }
 
-  // bool enableStrayLight = 2;
-  if (this->enablestraylight() != 0) {
-    total_size += 1 + 1;
+  // double strayLight = 2;
+  if (!(this->straylight() <= 0 && this->straylight() >= 0)) {
+    total_size += 1 + 8;
   }
 
   // bool starField = 3;
@@ -1920,8 +1953,8 @@ void RenderingModel::MergeFrom(const RenderingModel& from) {
   if (!(from.cosmicraystddeviation() <= 0 && from.cosmicraystddeviation() >= 0)) {
     _internal_set_cosmicraystddeviation(from._internal_cosmicraystddeviation());
   }
-  if (from.enablestraylight() != 0) {
-    _internal_set_enablestraylight(from._internal_enablestraylight());
+  if (!(from.straylight() <= 0 && from.straylight() >= 0)) {
+    _internal_set_straylight(from._internal_straylight());
   }
   if (from.starfield() != 0) {
     _internal_set_starfield(from._internal_starfield());
@@ -2141,11 +2174,11 @@ const char* CameraModel::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID
           ptr += sizeof(double);
         } else goto handle_unusual;
         continue;
-      // uint64 pointSpreadFunction = 10;
+      // double pointSpreadFunction = 10;
       case 10:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 80)) {
-          pointspreadfunction_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
-          CHK_(ptr);
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 81)) {
+          pointspreadfunction_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
+          ptr += sizeof(double);
         } else goto handle_unusual;
         continue;
       // double readNoise = 11;
@@ -2256,10 +2289,10 @@ failure:
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(9, this->_internal_exposuretime(), target);
   }
 
-  // uint64 pointSpreadFunction = 10;
-  if (this->pointspreadfunction() != 0) {
+  // double pointSpreadFunction = 10;
+  if (!(this->pointspreadfunction() <= 0 && this->pointspreadfunction() >= 0)) {
     target = stream->EnsureSpace(target);
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteUInt64ToArray(10, this->_internal_pointspreadfunction(), target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(10, this->_internal_pointspreadfunction(), target);
   }
 
   // double readNoise = 11;
@@ -2387,11 +2420,9 @@ size_t CameraModel::ByteSizeLong() const {
     total_size += 1 + 8;
   }
 
-  // uint64 pointSpreadFunction = 10;
-  if (this->pointspreadfunction() != 0) {
-    total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::UInt64Size(
-        this->_internal_pointspreadfunction());
+  // double pointSpreadFunction = 10;
+  if (!(this->pointspreadfunction() <= 0 && this->pointspreadfunction() >= 0)) {
+    total_size += 1 + 8;
   }
 
   // double readNoise = 11;
@@ -2447,7 +2478,7 @@ void CameraModel::MergeFrom(const CameraModel& from) {
   if (!(from.exposuretime() <= 0 && from.exposuretime() >= 0)) {
     _internal_set_exposuretime(from._internal_exposuretime());
   }
-  if (from.pointspreadfunction() != 0) {
+  if (!(from.pointspreadfunction() <= 0 && from.pointspreadfunction() >= 0)) {
     _internal_set_pointspreadfunction(from._internal_pointspreadfunction());
   }
   if (!(from.readnoise() <= 0 && from.readnoise() >= 0)) {
@@ -2850,8 +2881,8 @@ template<> PROTOBUF_NOINLINE ::cielimMessage::TimeStamp* Arena::CreateMaybeMessa
 template<> PROTOBUF_NOINLINE ::cielimMessage::EpochDateTime* Arena::CreateMaybeMessage< ::cielimMessage::EpochDateTime >(Arena* arena) {
   return Arena::CreateMessageInternal< ::cielimMessage::EpochDateTime >(arena);
 }
-template<> PROTOBUF_NOINLINE ::cielimMessage::CelestialModel* Arena::CreateMaybeMessage< ::cielimMessage::CelestialModel >(Arena* arena) {
-  return Arena::CreateMessageInternal< ::cielimMessage::CelestialModel >(arena);
+template<> PROTOBUF_NOINLINE ::cielimMessage::MeshModel* Arena::CreateMaybeMessage< ::cielimMessage::MeshModel >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::cielimMessage::MeshModel >(arena);
 }
 template<> PROTOBUF_NOINLINE ::cielimMessage::CelestialBody* Arena::CreateMaybeMessage< ::cielimMessage::CelestialBody >(Arena* arena) {
   return Arena::CreateMessageInternal< ::cielimMessage::CelestialBody >(arena);
@@ -2872,7 +2903,3 @@ PROTOBUF_NAMESPACE_CLOSE
 
 // @@protoc_insertion_point(global_scope)
 #include <google/protobuf/port_undef.inc>
-
-#if PLATFORM_WINDOWS
-#pragma warning(pop)
-#endif

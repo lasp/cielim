@@ -57,15 +57,15 @@ extern CameraModelDefaultTypeInternal _CameraModel_default_instance_;
 class CelestialBody;
 struct CelestialBodyDefaultTypeInternal;
 extern CelestialBodyDefaultTypeInternal _CelestialBody_default_instance_;
-class CelestialModel;
-struct CelestialModelDefaultTypeInternal;
-extern CelestialModelDefaultTypeInternal _CelestialModel_default_instance_;
 class CielimMessage;
 struct CielimMessageDefaultTypeInternal;
 extern CielimMessageDefaultTypeInternal _CielimMessage_default_instance_;
 class EpochDateTime;
 struct EpochDateTimeDefaultTypeInternal;
 extern EpochDateTimeDefaultTypeInternal _EpochDateTime_default_instance_;
+class MeshModel;
+struct MeshModelDefaultTypeInternal;
+extern MeshModelDefaultTypeInternal _MeshModel_default_instance_;
 class RenderingModel;
 struct RenderingModelDefaultTypeInternal;
 extern RenderingModelDefaultTypeInternal _RenderingModel_default_instance_;
@@ -79,9 +79,9 @@ extern TimeStampDefaultTypeInternal _TimeStamp_default_instance_;
 PROTOBUF_NAMESPACE_OPEN
 template<> ::cielimMessage::CameraModel* Arena::CreateMaybeMessage<::cielimMessage::CameraModel>(Arena*);
 template<> ::cielimMessage::CelestialBody* Arena::CreateMaybeMessage<::cielimMessage::CelestialBody>(Arena*);
-template<> ::cielimMessage::CelestialModel* Arena::CreateMaybeMessage<::cielimMessage::CelestialModel>(Arena*);
 template<> ::cielimMessage::CielimMessage* Arena::CreateMaybeMessage<::cielimMessage::CielimMessage>(Arena*);
 template<> ::cielimMessage::EpochDateTime* Arena::CreateMaybeMessage<::cielimMessage::EpochDateTime>(Arena*);
+template<> ::cielimMessage::MeshModel* Arena::CreateMaybeMessage<::cielimMessage::MeshModel>(Arena*);
 template<> ::cielimMessage::RenderingModel* Arena::CreateMaybeMessage<::cielimMessage::RenderingModel>(Arena*);
 template<> ::cielimMessage::Spacecraft* Arena::CreateMaybeMessage<::cielimMessage::Spacecraft>(Arena*);
 template<> ::cielimMessage::TimeStamp* Arena::CreateMaybeMessage<::cielimMessage::TimeStamp>(Arena*);
@@ -404,24 +404,24 @@ class EpochDateTime final :
 };
 // -------------------------------------------------------------------
 
-class CelestialModel final :
-    public ::PROTOBUF_NAMESPACE_ID::MessageLite /* @@protoc_insertion_point(class_definition:cielimMessage.CelestialModel) */ {
+class MeshModel final :
+    public ::PROTOBUF_NAMESPACE_ID::MessageLite /* @@protoc_insertion_point(class_definition:cielimMessage.MeshModel) */ {
  public:
-  inline CelestialModel() : CelestialModel(nullptr) {}
-  ~CelestialModel() override;
-  explicit constexpr CelestialModel(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+  inline MeshModel() : MeshModel(nullptr) {}
+  ~MeshModel() override;
+  explicit constexpr MeshModel(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
 
-  CelestialModel(const CelestialModel& from);
-  CelestialModel(CelestialModel&& from) noexcept
-    : CelestialModel() {
+  MeshModel(const MeshModel& from);
+  MeshModel(MeshModel&& from) noexcept
+    : MeshModel() {
     *this = ::std::move(from);
   }
 
-  inline CelestialModel& operator=(const CelestialModel& from) {
+  inline MeshModel& operator=(const MeshModel& from) {
     CopyFrom(from);
     return *this;
   }
-  inline CelestialModel& operator=(CelestialModel&& from) noexcept {
+  inline MeshModel& operator=(MeshModel&& from) noexcept {
     if (this == &from) return *this;
     if (GetOwningArena() == from.GetOwningArena()) {
       InternalSwap(&from);
@@ -431,20 +431,20 @@ class CelestialModel final :
     return *this;
   }
 
-  static const CelestialModel& default_instance() {
+  static const MeshModel& default_instance() {
     return *internal_default_instance();
   }
-  static inline const CelestialModel* internal_default_instance() {
-    return reinterpret_cast<const CelestialModel*>(
-               &_CelestialModel_default_instance_);
+  static inline const MeshModel* internal_default_instance() {
+    return reinterpret_cast<const MeshModel*>(
+               &_MeshModel_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
     2;
 
-  friend void swap(CelestialModel& a, CelestialModel& b) {
+  friend void swap(MeshModel& a, MeshModel& b) {
     a.Swap(&b);
   }
-  inline void Swap(CelestialModel* other) {
+  inline void Swap(MeshModel* other) {
     if (other == this) return;
     if (GetOwningArena() == other->GetOwningArena()) {
       InternalSwap(other);
@@ -452,7 +452,7 @@ class CelestialModel final :
       ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
     }
   }
-  void UnsafeArenaSwap(CelestialModel* other) {
+  void UnsafeArenaSwap(MeshModel* other) {
     if (other == this) return;
     GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
     InternalSwap(other);
@@ -460,17 +460,17 @@ class CelestialModel final :
 
   // implements Message ----------------------------------------------
 
-  inline CelestialModel* New() const final {
-    return new CelestialModel();
+  inline MeshModel* New() const final {
+    return new MeshModel();
   }
 
-  CelestialModel* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
-    return CreateMaybeMessage<CelestialModel>(arena);
+  MeshModel* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<MeshModel>(arena);
   }
   void CheckTypeAndMergeFrom(const ::PROTOBUF_NAMESPACE_ID::MessageLite& from)
     final;
-  void CopyFrom(const CelestialModel& from);
-  void MergeFrom(const CelestialModel& from);
+  void CopyFrom(const MeshModel& from);
+  void MergeFrom(const MeshModel& from);
   PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
   bool IsInitialized() const final;
 
@@ -485,13 +485,13 @@ class CelestialModel final :
   void SharedCtor();
   void SharedDtor();
   void SetCachedSize(int size) const;
-  void InternalSwap(CelestialModel* other);
+  void InternalSwap(MeshModel* other);
   friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
   static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
-    return "cielimMessage.CelestialModel";
+    return "cielimMessage.MeshModel";
   }
   protected:
-  explicit CelestialModel(::PROTOBUF_NAMESPACE_ID::Arena* arena);
+  explicit MeshModel(::PROTOBUF_NAMESPACE_ID::Arena* arena);
   private:
   static void ArenaDtor(void* object);
   inline void RegisterArenaDtor(::PROTOBUF_NAMESPACE_ID::Arena* arena);
@@ -506,6 +506,7 @@ class CelestialModel final :
   enum : int {
     kReflectanceParametersFieldNumber = 5,
     kPrincipalAxisDistortionFieldNumber = 7,
+    kInertialToBodyMrpFieldNumber = 8,
     kShapeModelFieldNumber = 1,
     kBrdfModelFieldNumber = 4,
     kPerlinNoiseStdDeviationFieldNumber = 2,
@@ -555,6 +556,28 @@ class CelestialModel final :
       principalaxisdistortion() const;
   ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
       mutable_principalaxisdistortion();
+
+  // repeated double inertialToBodyMrp = 8;
+  int inertialtobodymrp_size() const;
+  private:
+  int _internal_inertialtobodymrp_size() const;
+  public:
+  void clear_inertialtobodymrp();
+  private:
+  double _internal_inertialtobodymrp(int index) const;
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >&
+      _internal_inertialtobodymrp() const;
+  void _internal_add_inertialtobodymrp(double value);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
+      _internal_mutable_inertialtobodymrp();
+  public:
+  double inertialtobodymrp(int index) const;
+  void set_inertialtobodymrp(int index, double value);
+  void add_inertialtobodymrp(double value);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >&
+      inertialtobodymrp() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
+      mutable_inertialtobodymrp();
 
   // string shapeModel = 1;
   void clear_shapemodel();
@@ -611,7 +634,7 @@ class CelestialModel final :
   void _internal_set_meanradius(double value);
   public:
 
-  // @@protoc_insertion_point(class_scope:cielimMessage.CelestialModel)
+  // @@protoc_insertion_point(class_scope:cielimMessage.MeshModel)
  private:
   class _Internal;
 
@@ -620,6 +643,7 @@ class CelestialModel final :
   typedef void DestructorSkippable_;
   ::PROTOBUF_NAMESPACE_ID::RepeatedField< double > reflectanceparameters_;
   ::PROTOBUF_NAMESPACE_ID::RepeatedField< double > principalaxisdistortion_;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< double > inertialtobodymrp_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr shapemodel_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr brdfmodel_;
   double perlinnoisestddeviation_;
@@ -734,7 +758,7 @@ class CelestialBody final :
     kVelocityFieldNumber = 3,
     kAttitudeFieldNumber = 4,
     kBodyNameFieldNumber = 1,
-    kModelsFieldNumber = 6,
+    kModelFieldNumber = 6,
     kCentralBodyFieldNumber = 5,
   };
   // repeated double position = 2;
@@ -817,23 +841,23 @@ class CelestialBody final :
   std::string* _internal_mutable_bodyname();
   public:
 
-  // .cielimMessage.CelestialModel models = 6;
-  bool has_models() const;
+  // .cielimMessage.MeshModel model = 6;
+  bool has_model() const;
   private:
-  bool _internal_has_models() const;
+  bool _internal_has_model() const;
   public:
-  void clear_models();
-  const ::cielimMessage::CelestialModel& models() const;
-  PROTOBUF_FUTURE_MUST_USE_RESULT ::cielimMessage::CelestialModel* release_models();
-  ::cielimMessage::CelestialModel* mutable_models();
-  void set_allocated_models(::cielimMessage::CelestialModel* models);
+  void clear_model();
+  const ::cielimMessage::MeshModel& model() const;
+  PROTOBUF_FUTURE_MUST_USE_RESULT ::cielimMessage::MeshModel* release_model();
+  ::cielimMessage::MeshModel* mutable_model();
+  void set_allocated_model(::cielimMessage::MeshModel* model);
   private:
-  const ::cielimMessage::CelestialModel& _internal_models() const;
-  ::cielimMessage::CelestialModel* _internal_mutable_models();
+  const ::cielimMessage::MeshModel& _internal_model() const;
+  ::cielimMessage::MeshModel* _internal_mutable_model();
   public:
-  void unsafe_arena_set_allocated_models(
-      ::cielimMessage::CelestialModel* models);
-  ::cielimMessage::CelestialModel* unsafe_arena_release_models();
+  void unsafe_arena_set_allocated_model(
+      ::cielimMessage::MeshModel* model);
+  ::cielimMessage::MeshModel* unsafe_arena_release_model();
 
   // bool centralBody = 5;
   void clear_centralbody();
@@ -855,7 +879,7 @@ class CelestialBody final :
   ::PROTOBUF_NAMESPACE_ID::RepeatedField< double > velocity_;
   ::PROTOBUF_NAMESPACE_ID::RepeatedField< double > attitude_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr bodyname_;
-  ::cielimMessage::CelestialModel* models_;
+  ::cielimMessage::MeshModel* model_;
   bool centralbody_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_cielimMessage_2eproto;
@@ -1165,7 +1189,7 @@ class RenderingModel final :
   enum : int {
     kRenderingFieldNumber = 4,
     kCosmicRayStdDeviationFieldNumber = 1,
-    kEnableStrayLightFieldNumber = 2,
+    kStrayLightFieldNumber = 2,
     kStarFieldFieldNumber = 3,
     kEnableSmearFieldNumber = 5,
   };
@@ -1192,13 +1216,13 @@ class RenderingModel final :
   void _internal_set_cosmicraystddeviation(double value);
   public:
 
-  // bool enableStrayLight = 2;
-  void clear_enablestraylight();
-  bool enablestraylight() const;
-  void set_enablestraylight(bool value);
+  // double strayLight = 2;
+  void clear_straylight();
+  double straylight() const;
+  void set_straylight(double value);
   private:
-  bool _internal_enablestraylight() const;
-  void _internal_set_enablestraylight(bool value);
+  double _internal_straylight() const;
+  void _internal_set_straylight(double value);
   public:
 
   // bool starField = 3;
@@ -1228,7 +1252,7 @@ class RenderingModel final :
   typedef void DestructorSkippable_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr rendering_;
   double cosmicraystddeviation_;
-  bool enablestraylight_;
+  double straylight_;
   bool starfield_;
   bool enablesmear_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
@@ -1506,13 +1530,13 @@ class CameraModel final :
   void _internal_set_exposuretime(double value);
   public:
 
-  // uint64 pointSpreadFunction = 10;
+  // double pointSpreadFunction = 10;
   void clear_pointspreadfunction();
-  ::PROTOBUF_NAMESPACE_ID::uint64 pointspreadfunction() const;
-  void set_pointspreadfunction(::PROTOBUF_NAMESPACE_ID::uint64 value);
+  double pointspreadfunction() const;
+  void set_pointspreadfunction(double value);
   private:
-  ::PROTOBUF_NAMESPACE_ID::uint64 _internal_pointspreadfunction() const;
-  void _internal_set_pointspreadfunction(::PROTOBUF_NAMESPACE_ID::uint64 value);
+  double _internal_pointspreadfunction() const;
+  void _internal_set_pointspreadfunction(double value);
   public:
 
   // double readNoise = 11;
@@ -1551,7 +1575,7 @@ class CameraModel final :
   ::PROTOBUF_NAMESPACE_ID::uint64 renderrate_;
   double focallength_;
   double exposuretime_;
-  ::PROTOBUF_NAMESPACE_ID::uint64 pointspreadfunction_;
+  double pointspreadfunction_;
   double readnoise_;
   double systemgain_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
@@ -1947,43 +1971,43 @@ inline void EpochDateTime::set_seconds(double value) {
 
 // -------------------------------------------------------------------
 
-// CelestialModel
+// MeshModel
 
 // string shapeModel = 1;
-inline void CelestialModel::clear_shapemodel() {
+inline void MeshModel::clear_shapemodel() {
   shapemodel_.ClearToEmpty();
 }
-inline const std::string& CelestialModel::shapemodel() const {
-  // @@protoc_insertion_point(field_get:cielimMessage.CelestialModel.shapeModel)
+inline const std::string& MeshModel::shapemodel() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.MeshModel.shapeModel)
   return _internal_shapemodel();
 }
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
-void CelestialModel::set_shapemodel(ArgT0&& arg0, ArgT... args) {
+void MeshModel::set_shapemodel(ArgT0&& arg0, ArgT... args) {
 
  shapemodel_.Set(::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::EmptyDefault{}, static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
-  // @@protoc_insertion_point(field_set:cielimMessage.CelestialModel.shapeModel)
+  // @@protoc_insertion_point(field_set:cielimMessage.MeshModel.shapeModel)
 }
-inline std::string* CelestialModel::mutable_shapemodel() {
-  // @@protoc_insertion_point(field_mutable:cielimMessage.CelestialModel.shapeModel)
+inline std::string* MeshModel::mutable_shapemodel() {
+  // @@protoc_insertion_point(field_mutable:cielimMessage.MeshModel.shapeModel)
   return _internal_mutable_shapemodel();
 }
-inline const std::string& CelestialModel::_internal_shapemodel() const {
+inline const std::string& MeshModel::_internal_shapemodel() const {
   return shapemodel_.Get();
 }
-inline void CelestialModel::_internal_set_shapemodel(const std::string& value) {
+inline void MeshModel::_internal_set_shapemodel(const std::string& value) {
 
   shapemodel_.Set(::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::EmptyDefault{}, value, GetArenaForAllocation());
 }
-inline std::string* CelestialModel::_internal_mutable_shapemodel() {
+inline std::string* MeshModel::_internal_mutable_shapemodel() {
 
   return shapemodel_.Mutable(::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::EmptyDefault{}, GetArenaForAllocation());
 }
-inline std::string* CelestialModel::release_shapemodel() {
-  // @@protoc_insertion_point(field_release:cielimMessage.CelestialModel.shapeModel)
+inline std::string* MeshModel::release_shapemodel() {
+  // @@protoc_insertion_point(field_release:cielimMessage.MeshModel.shapeModel)
   return shapemodel_.Release(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArenaForAllocation());
 }
-inline void CelestialModel::set_allocated_shapemodel(std::string* shapemodel) {
+inline void MeshModel::set_allocated_shapemodel(std::string* shapemodel) {
   if (shapemodel != nullptr) {
 
   } else {
@@ -1991,84 +2015,84 @@ inline void CelestialModel::set_allocated_shapemodel(std::string* shapemodel) {
   }
   shapemodel_.SetAllocated(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), shapemodel,
       GetArenaForAllocation());
-  // @@protoc_insertion_point(field_set_allocated:cielimMessage.CelestialModel.shapeModel)
+  // @@protoc_insertion_point(field_set_allocated:cielimMessage.MeshModel.shapeModel)
 }
 
 // double perlinNoiseStdDeviation = 2;
-inline void CelestialModel::clear_perlinnoisestddeviation() {
+inline void MeshModel::clear_perlinnoisestddeviation() {
   perlinnoisestddeviation_ = 0;
 }
-inline double CelestialModel::_internal_perlinnoisestddeviation() const {
+inline double MeshModel::_internal_perlinnoisestddeviation() const {
   return perlinnoisestddeviation_;
 }
-inline double CelestialModel::perlinnoisestddeviation() const {
-  // @@protoc_insertion_point(field_get:cielimMessage.CelestialModel.perlinNoiseStdDeviation)
+inline double MeshModel::perlinnoisestddeviation() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.MeshModel.perlinNoiseStdDeviation)
   return _internal_perlinnoisestddeviation();
 }
-inline void CelestialModel::_internal_set_perlinnoisestddeviation(double value) {
+inline void MeshModel::_internal_set_perlinnoisestddeviation(double value) {
 
   perlinnoisestddeviation_ = value;
 }
-inline void CelestialModel::set_perlinnoisestddeviation(double value) {
+inline void MeshModel::set_perlinnoisestddeviation(double value) {
   _internal_set_perlinnoisestddeviation(value);
-  // @@protoc_insertion_point(field_set:cielimMessage.CelestialModel.perlinNoiseStdDeviation)
+  // @@protoc_insertion_point(field_set:cielimMessage.MeshModel.perlinNoiseStdDeviation)
 }
 
 // double proceduralRocks = 3;
-inline void CelestialModel::clear_proceduralrocks() {
+inline void MeshModel::clear_proceduralrocks() {
   proceduralrocks_ = 0;
 }
-inline double CelestialModel::_internal_proceduralrocks() const {
+inline double MeshModel::_internal_proceduralrocks() const {
   return proceduralrocks_;
 }
-inline double CelestialModel::proceduralrocks() const {
-  // @@protoc_insertion_point(field_get:cielimMessage.CelestialModel.proceduralRocks)
+inline double MeshModel::proceduralrocks() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.MeshModel.proceduralRocks)
   return _internal_proceduralrocks();
 }
-inline void CelestialModel::_internal_set_proceduralrocks(double value) {
+inline void MeshModel::_internal_set_proceduralrocks(double value) {
 
   proceduralrocks_ = value;
 }
-inline void CelestialModel::set_proceduralrocks(double value) {
+inline void MeshModel::set_proceduralrocks(double value) {
   _internal_set_proceduralrocks(value);
-  // @@protoc_insertion_point(field_set:cielimMessage.CelestialModel.proceduralRocks)
+  // @@protoc_insertion_point(field_set:cielimMessage.MeshModel.proceduralRocks)
 }
 
 // string brdfModel = 4;
-inline void CelestialModel::clear_brdfmodel() {
+inline void MeshModel::clear_brdfmodel() {
   brdfmodel_.ClearToEmpty();
 }
-inline const std::string& CelestialModel::brdfmodel() const {
-  // @@protoc_insertion_point(field_get:cielimMessage.CelestialModel.brdfModel)
+inline const std::string& MeshModel::brdfmodel() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.MeshModel.brdfModel)
   return _internal_brdfmodel();
 }
 template <typename ArgT0, typename... ArgT>
 inline PROTOBUF_ALWAYS_INLINE
-void CelestialModel::set_brdfmodel(ArgT0&& arg0, ArgT... args) {
+void MeshModel::set_brdfmodel(ArgT0&& arg0, ArgT... args) {
 
  brdfmodel_.Set(::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::EmptyDefault{}, static_cast<ArgT0 &&>(arg0), args..., GetArenaForAllocation());
-  // @@protoc_insertion_point(field_set:cielimMessage.CelestialModel.brdfModel)
+  // @@protoc_insertion_point(field_set:cielimMessage.MeshModel.brdfModel)
 }
-inline std::string* CelestialModel::mutable_brdfmodel() {
-  // @@protoc_insertion_point(field_mutable:cielimMessage.CelestialModel.brdfModel)
+inline std::string* MeshModel::mutable_brdfmodel() {
+  // @@protoc_insertion_point(field_mutable:cielimMessage.MeshModel.brdfModel)
   return _internal_mutable_brdfmodel();
 }
-inline const std::string& CelestialModel::_internal_brdfmodel() const {
+inline const std::string& MeshModel::_internal_brdfmodel() const {
   return brdfmodel_.Get();
 }
-inline void CelestialModel::_internal_set_brdfmodel(const std::string& value) {
+inline void MeshModel::_internal_set_brdfmodel(const std::string& value) {
 
   brdfmodel_.Set(::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::EmptyDefault{}, value, GetArenaForAllocation());
 }
-inline std::string* CelestialModel::_internal_mutable_brdfmodel() {
+inline std::string* MeshModel::_internal_mutable_brdfmodel() {
 
   return brdfmodel_.Mutable(::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::EmptyDefault{}, GetArenaForAllocation());
 }
-inline std::string* CelestialModel::release_brdfmodel() {
-  // @@protoc_insertion_point(field_release:cielimMessage.CelestialModel.brdfModel)
+inline std::string* MeshModel::release_brdfmodel() {
+  // @@protoc_insertion_point(field_release:cielimMessage.MeshModel.brdfModel)
   return brdfmodel_.Release(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), GetArenaForAllocation());
 }
-inline void CelestialModel::set_allocated_brdfmodel(std::string* brdfmodel) {
+inline void MeshModel::set_allocated_brdfmodel(std::string* brdfmodel) {
   if (brdfmodel != nullptr) {
 
   } else {
@@ -2076,121 +2100,168 @@ inline void CelestialModel::set_allocated_brdfmodel(std::string* brdfmodel) {
   }
   brdfmodel_.SetAllocated(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited(), brdfmodel,
       GetArenaForAllocation());
-  // @@protoc_insertion_point(field_set_allocated:cielimMessage.CelestialModel.brdfModel)
+  // @@protoc_insertion_point(field_set_allocated:cielimMessage.MeshModel.brdfModel)
 }
 
 // repeated double reflectanceParameters = 5;
-inline int CelestialModel::_internal_reflectanceparameters_size() const {
+inline int MeshModel::_internal_reflectanceparameters_size() const {
   return reflectanceparameters_.size();
 }
-inline int CelestialModel::reflectanceparameters_size() const {
+inline int MeshModel::reflectanceparameters_size() const {
   return _internal_reflectanceparameters_size();
 }
-inline void CelestialModel::clear_reflectanceparameters() {
+inline void MeshModel::clear_reflectanceparameters() {
   reflectanceparameters_.Clear();
 }
-inline double CelestialModel::_internal_reflectanceparameters(int index) const {
+inline double MeshModel::_internal_reflectanceparameters(int index) const {
   return reflectanceparameters_.Get(index);
 }
-inline double CelestialModel::reflectanceparameters(int index) const {
-  // @@protoc_insertion_point(field_get:cielimMessage.CelestialModel.reflectanceParameters)
+inline double MeshModel::reflectanceparameters(int index) const {
+  // @@protoc_insertion_point(field_get:cielimMessage.MeshModel.reflectanceParameters)
   return _internal_reflectanceparameters(index);
 }
-inline void CelestialModel::set_reflectanceparameters(int index, double value) {
+inline void MeshModel::set_reflectanceparameters(int index, double value) {
   reflectanceparameters_.Set(index, value);
-  // @@protoc_insertion_point(field_set:cielimMessage.CelestialModel.reflectanceParameters)
+  // @@protoc_insertion_point(field_set:cielimMessage.MeshModel.reflectanceParameters)
 }
-inline void CelestialModel::_internal_add_reflectanceparameters(double value) {
+inline void MeshModel::_internal_add_reflectanceparameters(double value) {
   reflectanceparameters_.Add(value);
 }
-inline void CelestialModel::add_reflectanceparameters(double value) {
+inline void MeshModel::add_reflectanceparameters(double value) {
   _internal_add_reflectanceparameters(value);
-  // @@protoc_insertion_point(field_add:cielimMessage.CelestialModel.reflectanceParameters)
+  // @@protoc_insertion_point(field_add:cielimMessage.MeshModel.reflectanceParameters)
 }
 inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >&
-CelestialModel::_internal_reflectanceparameters() const {
+MeshModel::_internal_reflectanceparameters() const {
   return reflectanceparameters_;
 }
 inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >&
-CelestialModel::reflectanceparameters() const {
-  // @@protoc_insertion_point(field_list:cielimMessage.CelestialModel.reflectanceParameters)
+MeshModel::reflectanceparameters() const {
+  // @@protoc_insertion_point(field_list:cielimMessage.MeshModel.reflectanceParameters)
   return _internal_reflectanceparameters();
 }
 inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
-CelestialModel::_internal_mutable_reflectanceparameters() {
+MeshModel::_internal_mutable_reflectanceparameters() {
   return &reflectanceparameters_;
 }
 inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
-CelestialModel::mutable_reflectanceparameters() {
-  // @@protoc_insertion_point(field_mutable_list:cielimMessage.CelestialModel.reflectanceParameters)
+MeshModel::mutable_reflectanceparameters() {
+  // @@protoc_insertion_point(field_mutable_list:cielimMessage.MeshModel.reflectanceParameters)
   return _internal_mutable_reflectanceparameters();
 }
 
 // double meanRadius = 6;
-inline void CelestialModel::clear_meanradius() {
+inline void MeshModel::clear_meanradius() {
   meanradius_ = 0;
 }
-inline double CelestialModel::_internal_meanradius() const {
+inline double MeshModel::_internal_meanradius() const {
   return meanradius_;
 }
-inline double CelestialModel::meanradius() const {
-  // @@protoc_insertion_point(field_get:cielimMessage.CelestialModel.meanRadius)
+inline double MeshModel::meanradius() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.MeshModel.meanRadius)
   return _internal_meanradius();
 }
-inline void CelestialModel::_internal_set_meanradius(double value) {
+inline void MeshModel::_internal_set_meanradius(double value) {
 
   meanradius_ = value;
 }
-inline void CelestialModel::set_meanradius(double value) {
+inline void MeshModel::set_meanradius(double value) {
   _internal_set_meanradius(value);
-  // @@protoc_insertion_point(field_set:cielimMessage.CelestialModel.meanRadius)
+  // @@protoc_insertion_point(field_set:cielimMessage.MeshModel.meanRadius)
 }
 
 // repeated double principalAxisDistortion = 7;
-inline int CelestialModel::_internal_principalaxisdistortion_size() const {
+inline int MeshModel::_internal_principalaxisdistortion_size() const {
   return principalaxisdistortion_.size();
 }
-inline int CelestialModel::principalaxisdistortion_size() const {
+inline int MeshModel::principalaxisdistortion_size() const {
   return _internal_principalaxisdistortion_size();
 }
-inline void CelestialModel::clear_principalaxisdistortion() {
+inline void MeshModel::clear_principalaxisdistortion() {
   principalaxisdistortion_.Clear();
 }
-inline double CelestialModel::_internal_principalaxisdistortion(int index) const {
+inline double MeshModel::_internal_principalaxisdistortion(int index) const {
   return principalaxisdistortion_.Get(index);
 }
-inline double CelestialModel::principalaxisdistortion(int index) const {
-  // @@protoc_insertion_point(field_get:cielimMessage.CelestialModel.principalAxisDistortion)
+inline double MeshModel::principalaxisdistortion(int index) const {
+  // @@protoc_insertion_point(field_get:cielimMessage.MeshModel.principalAxisDistortion)
   return _internal_principalaxisdistortion(index);
 }
-inline void CelestialModel::set_principalaxisdistortion(int index, double value) {
+inline void MeshModel::set_principalaxisdistortion(int index, double value) {
   principalaxisdistortion_.Set(index, value);
-  // @@protoc_insertion_point(field_set:cielimMessage.CelestialModel.principalAxisDistortion)
+  // @@protoc_insertion_point(field_set:cielimMessage.MeshModel.principalAxisDistortion)
 }
-inline void CelestialModel::_internal_add_principalaxisdistortion(double value) {
+inline void MeshModel::_internal_add_principalaxisdistortion(double value) {
   principalaxisdistortion_.Add(value);
 }
-inline void CelestialModel::add_principalaxisdistortion(double value) {
+inline void MeshModel::add_principalaxisdistortion(double value) {
   _internal_add_principalaxisdistortion(value);
-  // @@protoc_insertion_point(field_add:cielimMessage.CelestialModel.principalAxisDistortion)
+  // @@protoc_insertion_point(field_add:cielimMessage.MeshModel.principalAxisDistortion)
 }
 inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >&
-CelestialModel::_internal_principalaxisdistortion() const {
+MeshModel::_internal_principalaxisdistortion() const {
   return principalaxisdistortion_;
 }
 inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >&
-CelestialModel::principalaxisdistortion() const {
-  // @@protoc_insertion_point(field_list:cielimMessage.CelestialModel.principalAxisDistortion)
+MeshModel::principalaxisdistortion() const {
+  // @@protoc_insertion_point(field_list:cielimMessage.MeshModel.principalAxisDistortion)
   return _internal_principalaxisdistortion();
 }
 inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
-CelestialModel::_internal_mutable_principalaxisdistortion() {
+MeshModel::_internal_mutable_principalaxisdistortion() {
   return &principalaxisdistortion_;
 }
 inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
-CelestialModel::mutable_principalaxisdistortion() {
-  // @@protoc_insertion_point(field_mutable_list:cielimMessage.CelestialModel.principalAxisDistortion)
+MeshModel::mutable_principalaxisdistortion() {
+  // @@protoc_insertion_point(field_mutable_list:cielimMessage.MeshModel.principalAxisDistortion)
   return _internal_mutable_principalaxisdistortion();
+}
+
+// repeated double inertialToBodyMrp = 8;
+inline int MeshModel::_internal_inertialtobodymrp_size() const {
+  return inertialtobodymrp_.size();
+}
+inline int MeshModel::inertialtobodymrp_size() const {
+  return _internal_inertialtobodymrp_size();
+}
+inline void MeshModel::clear_inertialtobodymrp() {
+  inertialtobodymrp_.Clear();
+}
+inline double MeshModel::_internal_inertialtobodymrp(int index) const {
+  return inertialtobodymrp_.Get(index);
+}
+inline double MeshModel::inertialtobodymrp(int index) const {
+  // @@protoc_insertion_point(field_get:cielimMessage.MeshModel.inertialToBodyMrp)
+  return _internal_inertialtobodymrp(index);
+}
+inline void MeshModel::set_inertialtobodymrp(int index, double value) {
+  inertialtobodymrp_.Set(index, value);
+  // @@protoc_insertion_point(field_set:cielimMessage.MeshModel.inertialToBodyMrp)
+}
+inline void MeshModel::_internal_add_inertialtobodymrp(double value) {
+  inertialtobodymrp_.Add(value);
+}
+inline void MeshModel::add_inertialtobodymrp(double value) {
+  _internal_add_inertialtobodymrp(value);
+  // @@protoc_insertion_point(field_add:cielimMessage.MeshModel.inertialToBodyMrp)
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >&
+MeshModel::_internal_inertialtobodymrp() const {
+  return inertialtobodymrp_;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >&
+MeshModel::inertialtobodymrp() const {
+  // @@protoc_insertion_point(field_list:cielimMessage.MeshModel.inertialToBodyMrp)
+  return _internal_inertialtobodymrp();
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
+MeshModel::_internal_mutable_inertialtobodymrp() {
+  return &inertialtobodymrp_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
+MeshModel::mutable_inertialtobodymrp() {
+  // @@protoc_insertion_point(field_mutable_list:cielimMessage.MeshModel.inertialToBodyMrp)
+  return _internal_mutable_inertialtobodymrp();
 }
 
 // -------------------------------------------------------------------
@@ -2403,87 +2474,87 @@ inline void CelestialBody::set_centralbody(bool value) {
   // @@protoc_insertion_point(field_set:cielimMessage.CelestialBody.centralBody)
 }
 
-// .cielimMessage.CelestialModel models = 6;
-inline bool CelestialBody::_internal_has_models() const {
-  return this != internal_default_instance() && models_ != nullptr;
+// .cielimMessage.MeshModel model = 6;
+inline bool CelestialBody::_internal_has_model() const {
+  return this != internal_default_instance() && model_ != nullptr;
 }
-inline bool CelestialBody::has_models() const {
-  return _internal_has_models();
+inline bool CelestialBody::has_model() const {
+  return _internal_has_model();
 }
-inline void CelestialBody::clear_models() {
-  if (GetArenaForAllocation() == nullptr && models_ != nullptr) {
-    delete models_;
+inline void CelestialBody::clear_model() {
+  if (GetArenaForAllocation() == nullptr && model_ != nullptr) {
+    delete model_;
   }
-  models_ = nullptr;
+  model_ = nullptr;
 }
-inline const ::cielimMessage::CelestialModel& CelestialBody::_internal_models() const {
-  const ::cielimMessage::CelestialModel* p = models_;
-  return p != nullptr ? *p : reinterpret_cast<const ::cielimMessage::CelestialModel&>(
-      ::cielimMessage::_CelestialModel_default_instance_);
+inline const ::cielimMessage::MeshModel& CelestialBody::_internal_model() const {
+  const ::cielimMessage::MeshModel* p = model_;
+  return p != nullptr ? *p : reinterpret_cast<const ::cielimMessage::MeshModel&>(
+      ::cielimMessage::_MeshModel_default_instance_);
 }
-inline const ::cielimMessage::CelestialModel& CelestialBody::models() const {
-  // @@protoc_insertion_point(field_get:cielimMessage.CelestialBody.models)
-  return _internal_models();
+inline const ::cielimMessage::MeshModel& CelestialBody::model() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.CelestialBody.model)
+  return _internal_model();
 }
-inline void CelestialBody::unsafe_arena_set_allocated_models(
-    ::cielimMessage::CelestialModel* models) {
+inline void CelestialBody::unsafe_arena_set_allocated_model(
+    ::cielimMessage::MeshModel* model) {
   if (GetArenaForAllocation() == nullptr) {
-    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(models_);
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(model_);
   }
-  models_ = models;
-  if (models) {
+  model_ = model;
+  if (model) {
 
   } else {
 
   }
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:cielimMessage.CelestialBody.models)
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:cielimMessage.CelestialBody.model)
 }
-inline ::cielimMessage::CelestialModel* CelestialBody::release_models() {
+inline ::cielimMessage::MeshModel* CelestialBody::release_model() {
 
-  ::cielimMessage::CelestialModel* temp = models_;
-  models_ = nullptr;
+  ::cielimMessage::MeshModel* temp = model_;
+  model_ = nullptr;
   if (GetArenaForAllocation() != nullptr) {
     temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
   }
   return temp;
 }
-inline ::cielimMessage::CelestialModel* CelestialBody::unsafe_arena_release_models() {
-  // @@protoc_insertion_point(field_release:cielimMessage.CelestialBody.models)
+inline ::cielimMessage::MeshModel* CelestialBody::unsafe_arena_release_model() {
+  // @@protoc_insertion_point(field_release:cielimMessage.CelestialBody.model)
 
-  ::cielimMessage::CelestialModel* temp = models_;
-  models_ = nullptr;
+  ::cielimMessage::MeshModel* temp = model_;
+  model_ = nullptr;
   return temp;
 }
-inline ::cielimMessage::CelestialModel* CelestialBody::_internal_mutable_models() {
+inline ::cielimMessage::MeshModel* CelestialBody::_internal_mutable_model() {
 
-  if (models_ == nullptr) {
-    auto* p = CreateMaybeMessage<::cielimMessage::CelestialModel>(GetArenaForAllocation());
-    models_ = p;
+  if (model_ == nullptr) {
+    auto* p = CreateMaybeMessage<::cielimMessage::MeshModel>(GetArenaForAllocation());
+    model_ = p;
   }
-  return models_;
+  return model_;
 }
-inline ::cielimMessage::CelestialModel* CelestialBody::mutable_models() {
-  // @@protoc_insertion_point(field_mutable:cielimMessage.CelestialBody.models)
-  return _internal_mutable_models();
+inline ::cielimMessage::MeshModel* CelestialBody::mutable_model() {
+  // @@protoc_insertion_point(field_mutable:cielimMessage.CelestialBody.model)
+  return _internal_mutable_model();
 }
-inline void CelestialBody::set_allocated_models(::cielimMessage::CelestialModel* models) {
+inline void CelestialBody::set_allocated_model(::cielimMessage::MeshModel* model) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
   if (message_arena == nullptr) {
-    delete models_;
+    delete model_;
   }
-  if (models) {
+  if (model) {
     ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
-        ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper<::cielimMessage::CelestialModel>::GetOwningArena(models);
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper<::cielimMessage::MeshModel>::GetOwningArena(model);
     if (message_arena != submessage_arena) {
-      models = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
-          message_arena, models, submessage_arena);
+      model = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, model, submessage_arena);
     }
 
   } else {
 
   }
-  models_ = models;
-  // @@protoc_insertion_point(field_set_allocated:cielimMessage.CelestialBody.models)
+  model_ = model;
+  // @@protoc_insertion_point(field_set_allocated:cielimMessage.CelestialBody.model)
 }
 
 // -------------------------------------------------------------------
@@ -2700,24 +2771,24 @@ inline void RenderingModel::set_cosmicraystddeviation(double value) {
   // @@protoc_insertion_point(field_set:cielimMessage.RenderingModel.cosmicRayStdDeviation)
 }
 
-// bool enableStrayLight = 2;
-inline void RenderingModel::clear_enablestraylight() {
-  enablestraylight_ = false;
+// double strayLight = 2;
+inline void RenderingModel::clear_straylight() {
+  straylight_ = 0;
 }
-inline bool RenderingModel::_internal_enablestraylight() const {
-  return enablestraylight_;
+inline double RenderingModel::_internal_straylight() const {
+  return straylight_;
 }
-inline bool RenderingModel::enablestraylight() const {
-  // @@protoc_insertion_point(field_get:cielimMessage.RenderingModel.enableStrayLight)
-  return _internal_enablestraylight();
+inline double RenderingModel::straylight() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.RenderingModel.strayLight)
+  return _internal_straylight();
 }
-inline void RenderingModel::_internal_set_enablestraylight(bool value) {
+inline void RenderingModel::_internal_set_straylight(double value) {
 
-  enablestraylight_ = value;
+  straylight_ = value;
 }
-inline void RenderingModel::set_enablestraylight(bool value) {
-  _internal_set_enablestraylight(value);
-  // @@protoc_insertion_point(field_set:cielimMessage.RenderingModel.enableStrayLight)
+inline void RenderingModel::set_straylight(double value) {
+  _internal_set_straylight(value);
+  // @@protoc_insertion_point(field_set:cielimMessage.RenderingModel.strayLight)
 }
 
 // bool starField = 3;
@@ -3122,22 +3193,22 @@ inline void CameraModel::set_exposuretime(double value) {
   // @@protoc_insertion_point(field_set:cielimMessage.CameraModel.exposureTime)
 }
 
-// uint64 pointSpreadFunction = 10;
+// double pointSpreadFunction = 10;
 inline void CameraModel::clear_pointspreadfunction() {
-  pointspreadfunction_ = uint64_t{0u};
+  pointspreadfunction_ = 0;
 }
-inline ::PROTOBUF_NAMESPACE_ID::uint64 CameraModel::_internal_pointspreadfunction() const {
+inline double CameraModel::_internal_pointspreadfunction() const {
   return pointspreadfunction_;
 }
-inline ::PROTOBUF_NAMESPACE_ID::uint64 CameraModel::pointspreadfunction() const {
+inline double CameraModel::pointspreadfunction() const {
   // @@protoc_insertion_point(field_get:cielimMessage.CameraModel.pointSpreadFunction)
   return _internal_pointspreadfunction();
 }
-inline void CameraModel::_internal_set_pointspreadfunction(::PROTOBUF_NAMESPACE_ID::uint64 value) {
+inline void CameraModel::_internal_set_pointspreadfunction(double value) {
 
   pointspreadfunction_ = value;
 }
-inline void CameraModel::set_pointspreadfunction(::PROTOBUF_NAMESPACE_ID::uint64 value) {
+inline void CameraModel::set_pointspreadfunction(double value) {
   _internal_set_pointspreadfunction(value);
   // @@protoc_insertion_point(field_set:cielimMessage.CameraModel.pointSpreadFunction)
 }
