@@ -1,7 +1,8 @@
 #include "ZmqConnection/ZmqMultiThreadActor.h"
-#include "CielimLoggingMacros.h"
+
 #include <fstream>
-#include "../Public/ZmqConnection/Commands.h"
+
+#include "CielimLoggingMacros.h"
 
 
 //Static counter for thread creation process, for unique identification of the thread
@@ -99,20 +100,23 @@ std::optional<FCircularQueueData> AZmqMultiThreadActor::GetQueueData() const
 
 void AZmqMultiThreadActor::PutQueueData(std::string Data) const
 {
-	FCircularQueueData NextCommand{};
-	NextCommand.Query = BSKError();
+	FCircularQueueData NextCommand;
+
+	NextCommand.query = CommandType::ERROR;
 	this->MultiThreadDataQueue->Responses.Enqueue(NextCommand);
 }
 
-void AZmqMultiThreadActor::PutImageQueueData(const std::vector<uint8>& PNGData,
-	const std::optional<FVector2d> CenterOfBrightness) const
+void AZmqMultiThreadActor::PutImageQueueData(const std::vector<uint8>& PNGData, const std::optional<FVector2d> CenterOfBrightness) const
 {
-	auto Query = RequestImage();
-	Query.payload = PNGData;
-	Query.CenterOfBrightness = CenterOfBrightness;
-	FCircularQueueData NextCommand{};
-	NextCommand.Query = Query;
+	FCircularQueueData NextCommand;
+
+	NextCommand.query = CommandType::REQUEST_IMAGE;
+	NextCommand.payload.Emplace<FImagePayload>(FImagePayload());
+	NextCommand.payload.Get<FImagePayload>().image_data = PNGData;
+	NextCommand.payload.Get<FImagePayload>().centerOfBrightness = CenterOfBrightness;
+
 	UE_LOG(LogCielim, Display, TEXT("Enqueue image response: AZmqMultiThreadActor"));
+
 	this->MultiThreadDataQueue->Responses.Enqueue(NextCommand);
 }
 

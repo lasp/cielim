@@ -1,6 +1,5 @@
 #pragma once
 #include "ThreadBase.h"
-#include "Commands.h"
 #include "CoreMinimal.h"
 #include <zmq.hpp>
 #include <zmq_addon.hpp>

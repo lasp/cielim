@@ -8,7 +8,6 @@
 #include "CielimImageUtilities.h"
 #include "KinematicsUtilities.h"
 #include "ProtobufFileReader.h"
-#include "ZmqConnection/Commands.h"
 #include "ZmqConnection/ZmqMultiThreadActor.h"
 #include "Engine/World.h"
 #include "Math/UnrealMathUtility.h"
@@ -148,19 +147,27 @@ void ASimulationDataSourceActor::FileReaderTick(float DeltaTime)
 // This is a mad hack and needs to be changed
 void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 {
-	const auto QueueData = this->NetworkSimulationDataSource->GetQueueData();
+	const std::optional<FCircularQueueData> QueueData = this->NetworkSimulationDataSource->GetQueueData();
+	
 	if (!QueueData.has_value())
-	{
 		return;
-	}
 
-	if (!this->IsSceneEstablished) {
-		if (std::holds_alternative<SimUpdate>(QueueData.value().Query)) {
-			UE_LOG(LogCielim, Display, TEXT("Initialize scene..."));
-			this->CielimMessage = std::get<SimUpdate>(QueueData.value().Query).payload;
+	if (!this->IsSceneEstablished) 
+	{
+		if (QueueData.value().query == CommandType::SIM_UPDATE) 
+		{
 			this->IsSceneEstablished = true;
+
+			UE_LOG(LogCielim, Display, TEXT("Initialize scene..."));
+
+			if (auto *tempPayload = QueueData.GetValue().payload.TryGet<FUpdatePayload>())
+			{
+				this->CielimMessage = tempPayload->message;
+			}
+			
 			this->SpawnCelestialBodies();
 			this->SpawnSpacecraft();
+
 			if (this->CielimMessage.has_camera())
 			{
 				this->bHasCameras = true;
@@ -171,7 +178,9 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 				UE_LOG(LogCielim, Warning, TEXT("Defualt BluePrint Classes have not been set in BP_ProtobufActor"));
 				return;
 			}
-		} else {
+		} 
+		else 
+		{
 			UE_LOG(LogCielim, Warning, TEXT("Scene not initialized: ASimulationDataSourceActor"));
 			return;
 		}
@@ -179,20 +188,30 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 
 	// This code should be turned into some kind of handler function registration
 	// a bit like a RPC or http server
-	if (std::holds_alternative<SimUpdate>(QueueData.value().Query)) {
-		this->CielimMessage = std::get<SimUpdate>(QueueData.value().Query).payload;
-		this->ShouldUpdateScene = true;
+	if (QueueData.value().query == CommandType::SIM_UPDATE) 
+	{
 		UE_LOG(LogCielim, Display, TEXT("Reading sim update data: ASimulationDataSourceActor"));
-	} else if (std::holds_alternative<RequestImage>(QueueData.value().Query)) {
+
+		if (auto *tempPayload = QueueData.GetValue().payload.TryGet<FUpdatePayload>())
+		{
+			this->CielimMessage = tempPayload->message;
+		}
+
+		this->ShouldUpdateScene = true;
+	} 
+	else if (QueueData.value().query == CommandType::REQUEST_IMAGE) 
+	{
 		double pointSpread = this->CielimMessage.camera().pointspreadfunction();
 		double readNoise = this->CielimMessage.camera().readnoise();
 		double systemGain = this->CielimMessage.camera().systemgain();
 		// Using cosmic ray std deviation as number of rays at the moment
 		double cosmicRayStdDev = this->CielimMessage.camera().renderparameters().cosmicraystddeviation();
 		
-		auto Query = std::get<RequestImage>(QueueData.value().Query);
-		std::vector<uint8> PngEncodedData{};
-		if (Query.ShouldReturnImage)
+		std::vector<uint8> PngEncodedData;
+
+		auto *tempPayload = QueueData.value().payload.TryGet<FImagePayload>();
+
+		if (tempPayload != nullptr && tempPayload -> shouldReturnImage)
 		{
 			auto Image = this->CaptureManager->GetUncorruptedImage();
 			auto ImageToBeCorrupted = FImage(Image);
@@ -207,7 +226,9 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 		}
 
 		UE_LOG(LogCielim, Display, TEXT("Put back PNG image: ASimulationDataSourceActor"));
-	} else {
+	} 
+	else 
+	{
 		UE_LOG(LogCielim, Display, TEXT("GetNextSimulationData received unrecognized Type"));
 	}
 }

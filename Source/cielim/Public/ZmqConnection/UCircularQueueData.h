@@ -2,17 +2,43 @@
 
 #include <variant>
 
-#include "Commands.h"
-#include "UCircularQueueData.generated.h"
+#include "CoreMinimal.h"
+#include "cielimMessage.pb.h"
 
+// List of recognized commands
+enum class CommandType
+{
+	ERROR,
+	PING,
+	SIM_UPDATE,
+	REQUEST_IMAGE,
+};
 
-USTRUCT(BlueprintType) //BlueprintType if want access in BP
+// Payload definitions
+
+struct FUpdatePayload
+{
+    cielimMessage::CielimMessage message;
+};
+
+struct FImagePayload
+{
+    std::vector<uint8> image_data;
+    std::optional<FVector2d> centerOfBrightness;
+
+    bool shouldReturnImage;
+
+    FImagePayload(): shouldReturnImage(false) {}
+};
+
 struct FCircularQueueData
 {
-    GENERATED_USTRUCT_BODY()
-    
-    //This is not UPROPERTY() in the circular queue
-    // so do not store UE Actor or UE Object pointers in this struct!
-    // UPROPERTY(EditAnywhere, BlueprintReadWrite, Category=CielimCode)
-    std::variant<Ping, SimUpdate, RequestImage, BSKError> Query;
+    // Defines which command we're dealing with
+    CommandType query;
+    // Payload whose type depends on the query
+    TVariant<FUpdatePayload, FImagePayload> payload;
+
+    // Define default states (payload defaults to monostate)
+    FCircularQueueData() : query(CommandType::ERROR) {}
+
 };
