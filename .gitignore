@@ -11,7 +11,12 @@
 /Source/ThirdParty/ProtobufLibrary/include
 /Source/ThirdParty/ProtobufLibrary/lib
 
+/Content/FlybyData
+
 .vsconfig
+*.jpg
+*.png
+*.txt
 
 # Visual Studio 2015 user specific files
 .vs/
