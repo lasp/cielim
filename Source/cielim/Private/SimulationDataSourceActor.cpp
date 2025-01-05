@@ -5,7 +5,6 @@
 #include "AstronomicalConstants.h"
 #include "CielimLoggingMacros.h"
 #include "CelestialBodyMeshModel.h"
-#include "CielimImageUtilities.h"
 #include "KinematicsUtilities.h"
 #include "ProtobufFileReader.h"
 #include "ZmqConnection/ZmqMultiThreadActor.h"
@@ -204,7 +203,6 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 		double pointSpread = this->CielimMessage.camera().pointspreadfunction();
 		double readNoise = this->CielimMessage.camera().readnoise();
 		double systemGain = this->CielimMessage.camera().systemgain();
-		// Using cosmic ray std deviation as number of rays at the moment
 		double cosmicRayStdDev = this->CielimMessage.camera().renderparameters().cosmicraystddeviation();
 		
 		std::vector<uint8> PngEncodedData;
@@ -213,16 +211,14 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 
 		if (tempPayload != nullptr && tempPayload -> shouldReturnImage)
 		{
-			auto Image = this->CaptureManager->GetUncorruptedImage();
-			auto ImageToBeCorrupted = FImage(Image);
-			cv::Mat TempImage = this->CaptureManager->GetCorruptedImage(ImageToBeCorrupted, pointSpread, readNoise, systemGain, cosmicRayStdDev);
-			cv::imencode(".png", TempImage, PngEncodedData);
+			this->CaptureManager->GetCorruptedImage(PngEncodedData, pointSpread, readNoise, systemGain, cosmicRayStdDev);
 			this->NetworkSimulationDataSource->PutImageQueueData(PngEncodedData,
-			CielimImageUtilities::ComputeWeightedCenterOfBrightness(Image, 10));
-		} else {
-			auto Image = this->CaptureManager->GetUncorruptedImage();
+			this->CaptureManager->GetCenterOfBrightness(10));
+		} 
+		else 
+		{
 			this->NetworkSimulationDataSource->PutImageQueueData(PngEncodedData,
-			CielimImageUtilities::ComputeWeightedCenterOfBrightness(Image, 10));
+			this->CaptureManager->GetCenterOfBrightness(10));
 		}
 
 		UE_LOG(LogCielim, Display, TEXT("Put back PNG image: ASimulationDataSourceActor"));
