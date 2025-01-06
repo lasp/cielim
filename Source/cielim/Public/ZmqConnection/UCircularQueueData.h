@@ -1,6 +1,7 @@
 #pragma once
 
 #include <variant>
+#include <optional>
 
 #include "CoreMinimal.h"
 #include "cielimMessage.pb.h"

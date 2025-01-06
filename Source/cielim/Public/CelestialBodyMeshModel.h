@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+
 #include "CoreMinimal.h"
 #include "cielimMessage.pb.h"
 
