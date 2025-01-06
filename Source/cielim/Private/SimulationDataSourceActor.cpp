@@ -205,7 +205,7 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 		double systemGain = this->CielimMessage.camera().systemgain();
 		double cosmicRayStdDev = this->CielimMessage.camera().renderparameters().cosmicraystddeviation();
 		
-		std::vector<uint8> PngEncodedData;
+		TArray64<uint8> PngEncodedData;
 
 		auto *tempPayload = QueueData.value().payload.TryGet<FImagePayload>();
 

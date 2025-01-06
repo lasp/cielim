@@ -106,7 +106,7 @@ void AZmqMultiThreadActor::PutQueueData(std::string Data) const
 	this->MultiThreadDataQueue->Responses.Enqueue(NextCommand);
 }
 
-void AZmqMultiThreadActor::PutImageQueueData(const std::vector<uint8>& PNGData, const std::optional<FVector2d> CenterOfBrightness) const
+void AZmqMultiThreadActor::PutImageQueueData(const TArray64<uint8>& PNGData, const std::optional<FVector2d> CenterOfBrightness) const
 {
 	FCircularQueueData NextCommand;
 

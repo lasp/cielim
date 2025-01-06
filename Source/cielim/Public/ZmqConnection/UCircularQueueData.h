@@ -1,6 +1,5 @@
 #pragma once
 
-#include <variant>
 #include <optional>
 
 #include "CoreMinimal.h"
@@ -24,7 +23,7 @@ struct FUpdatePayload
 
 struct FImagePayload
 {
-    std::vector<uint8> image_data;
+    TArray64<uint8> image_data;
     std::optional<FVector2d> centerOfBrightness;
 
     bool shouldReturnImage;

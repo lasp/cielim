@@ -166,7 +166,7 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage) const
 
 		UE_LOG(LogCielim, Display, TEXT("Reposnse to REQUEST_IMAGE received"));
 
-		std::vector<uint8> ResponseImage;
+		TArray64<uint8> ResponseImage;
 
 		auto* tempPayload = Response.payload.TryGet<FImagePayload>();
 
@@ -175,9 +175,9 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage) const
 			ResponseImage = tempPayload->image_data;
 		}
 
-		auto Bytes = sizeof(ResponseImage[0]) * ResponseImage.size();
+		auto Bytes = sizeof(ResponseImage[0]) * ResponseImage.Num();
 
-		Message.pushmem(ResponseImage.data(), Bytes);
+		Message.pushmem(ResponseImage.GetData(), Bytes);
 		Message.pushtyp(Bytes);
 
 		if (tempPayload != nullptr && tempPayload -> centerOfBrightness.has_value())

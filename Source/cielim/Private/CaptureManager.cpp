@@ -54,7 +54,7 @@ cv::Mat ACaptureManager::FImageToOpenCVMat(const FImage& Image) const
 	return OpenCVMat;
 }
 
-void ACaptureManager::GetCorruptedImage(std::vector<uint8>& ImageData, double pointSpread, double readNoise, double systemGain, double cosmicRaysStdDev) const
+void ACaptureManager::GetCorruptedImage(TArray64<uint8>& ImageData, double pointSpread, double readNoise, double systemGain, double cosmicRaysStdDev) const
 {
 	FImage Image = GetUncorruptedImage();
 	cv::Mat CvImage = FImageToOpenCVMat(Image);
@@ -66,7 +66,11 @@ void ACaptureManager::GetCorruptedImage(std::vector<uint8>& ImageData, double po
 	URenderingFunctionsLibrary::ApplySignalGain(CvImage, 1.0f, systemGain);
 	//URenderingFunctionsLibrary::ApplyQE(PNGImageDataSerialized, 5.0f, 5.0f, 5.0f);
 
-	cv::imencode(".png", CvImage, ImageData);
+	FImage corruptImage(Image);
+	FMemory::Memcpy(corruptImage.RawData.GetData(), CvImage.data, corruptImage.RawData.Num());
+
+	// Take modified image data from Image and copy to ImageData as PNG
+	verify(FImageUtils::CompressImage(ImageData, TEXT("PNG"), corruptImage));
 }
 
 std::optional<FVector2d> ACaptureManager::GetCenterOfBrightness(double Threshold) const
