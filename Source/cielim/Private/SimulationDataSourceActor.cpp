@@ -151,9 +151,18 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 	if (!QueueData.has_value())
 		return;
 
-	if (!this->IsSceneEstablished) 
+	// This code should be turned into some kind of handler function registration
+	// a bit like a RPC or http server
+	if (QueueData.value().query == CommandType::SIM_UPDATE)
 	{
-		if (QueueData.value().query == CommandType::SIM_UPDATE) 
+		UE_LOG(LogCielim, Display, TEXT("Reading sim update data: ASimulationDataSourceActor"));
+
+		if (auto *tempPayload = QueueData.GetValue().payload.TryGet<FUpdatePayload>())
+		{
+			this->CielimMessage = tempPayload->message;
+		}
+		
+		if (!this->IsSceneEstablished)
 		{
 			this->IsSceneEstablished = true;
 
@@ -172,34 +181,26 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 				this->bHasCameras = true;
 				this->SpawnCaptureManager();
 			}
+
 			if (!BpCelestialBody || !BpSpacecraft)
 			{
 				UE_LOG(LogCielim, Warning, TEXT("Defualt BluePrint Classes have not been set in BP_ProtobufActor"));
 				return;
 			}
-		} 
+		}
 		else 
+		{
+			this->ShouldUpdateScene = true;
+		}
+	} 
+	else if (QueueData.value().query == CommandType::REQUEST_IMAGE) 
+	{
+		if (!this->IsSceneEstablished)
 		{
 			UE_LOG(LogCielim, Warning, TEXT("Scene not initialized: ASimulationDataSourceActor"));
 			return;
 		}
-	}
 
-	// This code should be turned into some kind of handler function registration
-	// a bit like a RPC or http server
-	if (QueueData.value().query == CommandType::SIM_UPDATE) 
-	{
-		UE_LOG(LogCielim, Display, TEXT("Reading sim update data: ASimulationDataSourceActor"));
-
-		if (auto *tempPayload = QueueData.GetValue().payload.TryGet<FUpdatePayload>())
-		{
-			this->CielimMessage = tempPayload->message;
-		}
-
-		this->ShouldUpdateScene = true;
-	} 
-	else if (QueueData.value().query == CommandType::REQUEST_IMAGE) 
-	{
 		double pointSpread = this->CielimMessage.camera().pointspreadfunction();
 		double readNoise = this->CielimMessage.camera().readnoise();
 		double systemGain = this->CielimMessage.camera().systemgain();
@@ -222,7 +223,7 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 		}
 
 		UE_LOG(LogCielim, Display, TEXT("Put back PNG image: ASimulationDataSourceActor"));
-	} 
+	}
 	else 
 	{
 		UE_LOG(LogCielim, Display, TEXT("GetNextSimulationData received unrecognized Type"));
