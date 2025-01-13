@@ -42,7 +42,7 @@ class Connector:
 
     def request_image_for_camera_id(self, camera_id: int, should_return_image: bool = True):
         self.request_socket.send_multipart(
-            [b"REQUEST_IMAGE", str.encode(str(camera_id)), str.encode(str(should_return_image))]
+            [b"REQUEST_IMAGE", str.encode(str(camera_id)), str.encode(str(int(should_return_image)))]
         )
         [cob_x, cob_y, image_data_size, image_data] = self.request_socket.recv_multipart()
         image = None

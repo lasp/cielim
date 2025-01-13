@@ -19,7 +19,7 @@ if __name__ == "__main__":
             break
 
         connector.send_frame(frame)
-        image = connector.request_image_for_camera_id(1)
+        [image, center_of_brightness] = connector.request_image_for_camera_id(1)
 
         cv2.imwrite("received_image_" + str(idx) + ".png", image)
 
