@@ -113,10 +113,10 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage) const
 		Data.payload.Emplace<FUpdatePayload>(FUpdatePayload());
 
 		Data.query = CommandType::SIM_UPDATE;
-		Data.payload.Get<FUpdatePayload>().message = cielimMessage::CielimMessage();
+		Data.payload.Get<FUpdatePayload>().message = FCielimMessage();
 
 		// @TODO: fix this message parsing. It's a mad hack!
-		Data.payload.Get<FUpdatePayload>().message.ParseFromArray(RequestMessage[2].data(), RequestMessage[2].size() * sizeof(char));
+		Data.payload.Get<FUpdatePayload>().message.GetMessageModifiable().ParseFromArray(RequestMessage[2].data(), RequestMessage[2].size() * sizeof(char));
 
 
 		UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue SIM_UPDATE..."));
@@ -180,10 +180,10 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage) const
 		Message.pushmem(ResponseImage.GetData(), Bytes);
 		Message.pushtyp(Bytes);
 
-		if (tempPayload != nullptr && tempPayload -> centerOfBrightness.has_value())
+		if (tempPayload != nullptr && tempPayload -> centerOfBrightness.IsSet())
 		{
-			Message.pushtyp<double>(tempPayload -> centerOfBrightness.value().X);
-			Message.pushtyp<double>(tempPayload -> centerOfBrightness.value().Y);	
+			Message.pushtyp<double>(tempPayload -> centerOfBrightness.GetValue().X);
+			Message.pushtyp<double>(tempPayload -> centerOfBrightness.GetValue().Y);	
 		}
 		else 
 		{

@@ -1,9 +1,7 @@
 #pragma once
 
-#include <optional>
-
 #include "CoreMinimal.h"
-#include "cielimMessage.pb.h"
+#include "FCielimMessage.h"
 
 // List of recognized commands
 enum class CommandType
@@ -18,13 +16,13 @@ enum class CommandType
 
 struct FUpdatePayload
 {
-    cielimMessage::CielimMessage message;
+    FCielimMessage message;
 };
 
 struct FImagePayload
 {
     TArray64<uint8> image_data;
-    std::optional<FVector2d> centerOfBrightness;
+    TOptional<FVector2d> centerOfBrightness;
 
     bool shouldReturnImage;
 

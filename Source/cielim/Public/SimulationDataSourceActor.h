@@ -7,7 +7,7 @@
 #include <memory>
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "cielimMessage.pb.h"
+#include "FCielimMessage.h"
 #include "CelestialBody.h"
 #include "Spacecraft.h"
 #include "CaptureManager.h"
@@ -65,7 +65,7 @@ private:
 
 	AZmqMultiThreadActor* NetworkSimulationDataSource;
 	std::unique_ptr<ProtobufFileReader> SimulationDataSource;
-    cielimMessage::CielimMessage CielimMessage;
+    FCielimMessage CielimMessage;
     TArray<ACelestialBody*> CelestialBodyArray;
 	ACelestialBody* SunCelestialBody;
 	ADirectionalLight* SunLight;

@@ -39,34 +39,36 @@ ProtobufFileReader::~ProtobufFileReader()
  * Parses data from input stream and returns vizmessage object
  *
  */
-std::optional<cielimMessage::CielimMessage> ProtobufFileReader::GetNextSimulationData()  
+TOptional<FCielimMessage> ProtobufFileReader::GetNextSimulationData()  
 {  
-    cielimMessage::CielimMessage TempMessage;  
-    bool success = google::protobuf::util::ParseDelimitedFromCodedStream(&TempMessage, this->CodedInput.get(), &this->Eof);
+    FCielimMessage TempMessage;  
+    bool success = google::protobuf::util::ParseDelimitedFromCodedStream(&TempMessage.GetMessageModifiable(), this->CodedInput.get(), &this->Eof);
+
+	TOptional<FCielimMessage> ReturnMessage;
 
     if (!success)
     {
         UE_LOG(LogCielim, Error, TEXT("Failed to parse coded protobuf stream."));
-        return std::nullopt;
     }
 
-    if (!TempMessage.IsInitialized()) 
+    else if (!TempMessage.GetMessage().IsInitialized()) 
     {
         UE_LOG(LogCielim, Warning, TEXT("TempMessage is not initialized."));
-        return std::nullopt;
     }
 
-    if (TempMessage.ByteSizeLong() == 0)
+    else if (TempMessage.GetMessage().ByteSizeLong() == 0)
     {
         UE_LOG(LogCielim, Warning, TEXT("TempMessage is empty."));
-        return std::nullopt;
     }
 
-    if (!TempMessage.has_spacecraft())
+    else if (!TempMessage.GetMessage().has_spacecraft())
     {
         UE_LOG(LogCielim, Warning, TEXT("TempMessage is missing spacecraft field."));
-        return std::nullopt;
+    }
+    else
+    {
+	    ReturnMessage = TempMessage;
     }
 
-    return TempMessage;
+    return ReturnMessage;
 }

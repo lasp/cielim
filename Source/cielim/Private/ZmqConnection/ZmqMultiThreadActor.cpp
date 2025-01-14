@@ -82,20 +82,25 @@ void AZmqMultiThreadActor::ConnectorThreadShutdown()
 	this->ConnectorThread = nullptr;
 }
 
-std::optional<FCircularQueueData> AZmqMultiThreadActor::GetQueueData() const
+TOptional<FCircularQueueData> AZmqMultiThreadActor::GetQueueData() const
 {
+	TOptional<FCircularQueueData> queueData;
+
 	if(!this->MultiThreadDataQueue || this->MultiThreadDataQueue->Requests.IsEmpty())
 	{
-		return std::nullopt;
+		// Do nothing for now
+	}
+	else if (FCircularQueueData NextCommand{}; this->MultiThreadDataQueue->Requests.Dequeue(NextCommand)) 
+	{
+		UE_LOG(LogCielim, Display, TEXT("Dequeue command: AZmqMultiThreadActor"));
+		queueData = NextCommand;
+	} 
+	else 
+	{
+		UE_LOG(LogCielim, Display, TEXT("No command received: AZmqMultiThreadActor"));
 	}
 
-	if (FCircularQueueData NextCommand{}; this->MultiThreadDataQueue->Requests.Dequeue(NextCommand)) {
-		UE_LOG(LogCielim, Display, TEXT("Dequeue command: AZmqMultiThreadActor"));
-		return NextCommand;
-	} else {
-		UE_LOG(LogCielim, Display, TEXT("No command received: AZmqMultiThreadActor"));
-		return std::nullopt;
-	}
+	return queueData;
 }
 
 void AZmqMultiThreadActor::PutQueueData(std::string Data) const
@@ -106,7 +111,7 @@ void AZmqMultiThreadActor::PutQueueData(std::string Data) const
 	this->MultiThreadDataQueue->Responses.Enqueue(NextCommand);
 }
 
-void AZmqMultiThreadActor::PutImageQueueData(const TArray64<uint8>& PNGData, const std::optional<FVector2d> CenterOfBrightness) const
+void AZmqMultiThreadActor::PutImageQueueData(const TArray64<uint8>& PNGData, const TOptional<FVector2d> CenterOfBrightness) const
 {
 	FCircularQueueData NextCommand;
 

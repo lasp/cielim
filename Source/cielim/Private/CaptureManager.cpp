@@ -73,10 +73,10 @@ void ACaptureManager::GetCorruptedImage(TArray64<uint8>& ImageData, double point
 	verify(FImageUtils::CompressImage(ImageData, TEXT("PNG"), corruptImage));
 }
 
-std::optional<FVector2d> ACaptureManager::GetCenterOfBrightness(double Threshold) const
+TOptional<FVector2d> ACaptureManager::GetCenterOfBrightness(double Threshold) const
 {
 	uint32_t WeightSum = 0;
-	std::optional<FVector2D> Coordinates = std::nullopt; // Default the case where the image has no brightness
+	TOptional<FVector2D> Coordinates; // Default the case where the image has no brightness
 
 	cv::Mat GrayImage;
 	const FImage Image = GetUncorruptedImage();
@@ -86,7 +86,7 @@ std::optional<FVector2d> ACaptureManager::GetCenterOfBrightness(double Threshold
 	// Compute the center of brightness
 	if (const cv::Moments Moments = cv::moments(GrayImage, true); Moments.m00 != 0) 
 	{
-		Coordinates.emplace(Moments.m10 / Moments.m00, Moments.m01 / Moments.m00);
+		Coordinates.Emplace(Moments.m10 / Moments.m00, Moments.m01 / Moments.m00);
 	}
 
 	return Coordinates;
