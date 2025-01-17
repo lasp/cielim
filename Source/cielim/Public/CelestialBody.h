@@ -31,7 +31,7 @@ public:
 	void SetMeshModel(CelestialBodyMeshModel Model);
 
 	UFUNCTION(BlueprintCallable, Category = "CelestialBody")
-	FString GetMeshModelName();
+	FString GetMeshModelName() const;
 
 	UFUNCTION(BlueprintCallable, Category = "CelestialBody")
 	FRotator GetInertialToBodyRotator() const;

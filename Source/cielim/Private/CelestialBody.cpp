@@ -24,7 +24,7 @@ void ACelestialBody::SetMeshModel(CelestialBodyMeshModel Model)
 	this->MeshModel = Model;
 }
 
-FString ACelestialBody::GetMeshModelName()
+FString ACelestialBody::GetMeshModelName() const
 {
 	return this->MeshModel.ShapeModel;
 }
