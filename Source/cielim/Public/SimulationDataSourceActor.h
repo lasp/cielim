@@ -54,9 +54,6 @@ public:
     TSubclassOf<ACelestialBody> BpSun;
 
     UPROPERTY(EditDefaultsOnly)
-    TSubclassOf<ACelestialBody> BpAsteroid;
-
-    UPROPERTY(EditDefaultsOnly)
     TSubclassOf<ASpacecraft> BpSpacecraft;
 
     UFUNCTION(BlueprintCallable)
