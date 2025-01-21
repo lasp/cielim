@@ -1,12 +1,13 @@
 #include "RenderingFunctionsLibrary.h"
-#include "CielimLoggingMacros.h"
-
-#include <OpenCV/PreOpenCVHeaders.h>
-#include "opencv2/imgproc.hpp"
-#include <OpenCV/opencv/modules/imgcodecs/include/opencv2/imgcodecs.hpp>
-#include <OpenCV/PostOpenCVHeaders.h>
 
 #include <random>
+
+#include "OpenCV/PreOpenCVHeaders.h"
+#include "opencv2/imgproc.hpp"
+#include "OpenCV/opencv/modules/imgcodecs/include/opencv2/imgcodecs.hpp"
+#include "OpenCV/PostOpenCVHeaders.h"
+
+#include "CielimLoggingMacros.h"
 
 static std::default_random_engine generator;
 

@@ -1,18 +1,21 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
-#include "Engine/DirectionalLight.h"
-#include "Math/Vector.h"
 
 #include <memory>
+
 #include "CoreMinimal.h"
+#include "Math/Vector.h"
 #include "GameFramework/Actor.h"
+#include "Engine/DirectionalLight.h"
+#include "ZmqConnection/ZmqMultiThreadActor.h"
+
 #include "FCielimMessage.h"
 #include "CelestialBody.h"
 #include "Spacecraft.h"
 #include "CaptureManager.h"
 #include "ProtobufFileReader.h"
-#include "ZmqConnection/ZmqMultiThreadActor.h"
+
 #include "SimulationDataSourceActor.generated.h"
 
 enum class DataSourceType {Network, File};

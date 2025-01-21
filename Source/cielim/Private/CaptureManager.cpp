@@ -1,8 +1,8 @@
 #include "CaptureManager.h"
 
-#include "Components/SceneCaptureComponent2D.h"
 #include "ImageUtils.h"
 #include "Kismet/KismetRenderingLibrary.h"
+#include "Components/SceneCaptureComponent2D.h"
 
 #include "RenderingFunctionsLibrary.h"
 

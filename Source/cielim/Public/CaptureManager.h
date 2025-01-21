@@ -2,14 +2,14 @@
 
 #include <optional>
 
-#include <OpenCV/PreOpenCVHeaders.h>
-#include <opencv2/core.hpp>
-#include "opencv2/imgproc.hpp"
-#include <OpenCV/opencv/modules/imgcodecs/include/opencv2/imgcodecs.hpp>
-#include <OpenCV/PostOpenCVHeaders.h>
-
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "OpenCV/PreOpenCVHeaders.h"
+#include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
+#include "OpenCV/opencv/modules/imgcodecs/include/opencv2/imgcodecs.hpp"
+#include "OpenCV/PostOpenCVHeaders.h"
+
 #include "CaptureManager.generated.h"
 
 UCLASS()

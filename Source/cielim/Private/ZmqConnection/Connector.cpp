@@ -2,9 +2,10 @@
 
 #include <string>
 
-#include "ZmqConnection/ZmqMultiThreadActor.h"
-#include "CielimLoggingMacros.h"
 #include "GenericPlatform/GenericPlatform.h"
+
+#include "CielimLoggingMacros.h"
+#include "ZmqConnection/ZmqMultiThreadActor.h"
 
 /* It is necessary to silence these errors as MSVC will not build the project
    and these warnings are generated in the protobuf headers themselves. */

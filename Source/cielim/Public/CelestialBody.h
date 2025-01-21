@@ -1,9 +1,10 @@
 #pragma once
 
-#include "CelestialBodyMeshModel.h"
-
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+
+#include "CelestialBodyMeshModel.h"
+
 #include "CelestialBody.generated.h"
 
 UCLASS()

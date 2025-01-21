@@ -4,7 +4,6 @@
 
 #include "CielimLoggingMacros.h"
 
-
 //Static counter for thread creation process, for unique identification of the thread
 int32 AZmqMultiThreadActor::ThreadNameCounter = 0;
 

@@ -2,12 +2,13 @@
 
 #pragma once
 
-#include "CoreMinimal.h"
-#include "SimulationDataSource.h"
-#include "FCielimMessage.h"
-#include <google/protobuf/io/coded_stream.h>
 #include <fstream>
-#include <optional>
+
+#include "CoreMinimal.h"
+#include "google/protobuf/io/coded_stream.h"
+
+#include "FCielimMessage.h"
+#include "SimulationDataSource.h"
 
 /**
  *

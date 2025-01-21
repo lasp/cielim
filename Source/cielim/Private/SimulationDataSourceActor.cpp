@@ -2,17 +2,18 @@
 
 #include "SimulationDataSourceActor.h"
 
+#include "Engine/World.h"
+#include "Engine/DirectionalLight.h"
+#include "Components/LightComponent.h"
+#include "Math/UnrealMathUtility.h"
+#include "zmq.hpp"
+#include "ZmqConnection/ZmqMultiThreadActor.h"
+
 #include "AstronomicalConstants.h"
 #include "CielimLoggingMacros.h"
 #include "CelestialBodyMeshModel.h"
 #include "KinematicsUtilities.h"
 #include "ProtobufFileReader.h"
-#include "ZmqConnection/ZmqMultiThreadActor.h"
-#include "Engine/World.h"
-#include "Math/UnrealMathUtility.h"
-#include <zmq.hpp>
-#include "Components/LightComponent.h"
-#include "Engine/DirectionalLight.h"
 
 #define m2cm 100.0
 #define km2m 1000.0

@@ -3,8 +3,8 @@
 #include <array>
 
 #include "CoreMinimal.h"
-#include "cielimMessage.pb.h"
 
+#include "cielimMessage.pb.h"
 
 class CelestialBodyMeshModel
 {
