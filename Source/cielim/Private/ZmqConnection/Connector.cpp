@@ -108,6 +108,21 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage) const
 	{
 		Message.pushstr("PONG");
 	}
+	else if (Command == "INIT_SCENE")
+	{
+		FCircularQueueData Data;
+		Data.query = CommandType::INIT_SCENE;
+
+		UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue INIT_SCENE..."));
+
+		bool EnqueueResult = false;
+		while (!EnqueueResult)
+		{
+			EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(Data);
+		}
+
+		Message.pushstr("OK");
+	}
 	else if (Command == "SIM_UPDATE")
 	{	
 		FCircularQueueData Data;
@@ -118,8 +133,7 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage) const
 
 		// @TODO: fix this message parsing. It's a mad hack!
 		Data.payload.Get<FUpdatePayload>().message.GetMessageModifiable().ParseFromArray(RequestMessage[2].data(), RequestMessage[2].size() * sizeof(char));
-
-
+		
 		UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue SIM_UPDATE..."));
 
 		bool EnqueueResult = false;

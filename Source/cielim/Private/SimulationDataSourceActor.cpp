@@ -154,7 +154,11 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 
 	// This code should be turned into some kind of handler function registration
 	// a bit like a RPC or http server
-	if (QueueData.GetValue().query == CommandType::SIM_UPDATE)
+	if (QueueData.GetValue().query == CommandType::INIT_SCENE)
+	{
+		// Load scene logic to be implemented
+	}
+	else if (QueueData.GetValue().query == CommandType::SIM_UPDATE)
 	{
 		UE_LOG(LogCielim, Display, TEXT("Reading sim update data: ASimulationDataSourceActor"));
 
