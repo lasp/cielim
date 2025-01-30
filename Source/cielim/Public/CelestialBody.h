@@ -56,7 +56,7 @@ protected:
     virtual void BeginPlay() override;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    class UStaticMeshComponent * SphereMesh;
+    class UStaticMeshComponent* BodyStaticMeshComponent;
 
 private:
 	CelestialBodyMeshModel MeshModel;
