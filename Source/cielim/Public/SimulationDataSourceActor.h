@@ -48,9 +48,6 @@ public:
     void UpdateSpacecraft() const;
 
     UPROPERTY(EditDefaultsOnly)
-    TSubclassOf<ACelestialBody> BpCelestialBody;
-
-    UPROPERTY(EditDefaultsOnly)
     TSubclassOf<ACelestialBody> BpSun;
 
     UPROPERTY(EditDefaultsOnly)
