@@ -138,10 +138,6 @@ void ASimulationDataSourceActor::FileReaderTick(float DeltaTime)
 			this->bHasCameras = true;
 			this->SpawnCaptureManager();
 		}
-		if (!BpCelestialBody || !BpSpacecraft)
-		{
-			UE_LOG(LogCielim, Warning, TEXT("Defualt BluePrint Classes have not been set in BP_ProtobufActor"));
-		}
 	}
 }
 
@@ -219,12 +215,6 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 			{
 				this->bHasCameras = true;
 				this->SpawnCaptureManager();
-			}
-
-			if (!BpCelestialBody || !BpSpacecraft)
-			{
-				UE_LOG(LogCielim, Warning, TEXT("Defualt BluePrint Classes have not been set in BP_ProtobufActor"));
-				return;
 			}
 		}
 		else 
