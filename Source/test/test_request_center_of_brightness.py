@@ -49,8 +49,8 @@ def test_request_image_and_center_of_brightness(scene_setup):
     np.testing.assert_allclose(
         center_of_brightness,
         true_center_of_brightness,
-        rtol=1e-1,
-        atol=0,
+        rtol=0,
+        atol=1e-1,
         err_msg="Center of brightness not close enough to expected",
     )
 
@@ -68,7 +68,7 @@ def test_request_only_center_of_brightness(scene_setup):
     np.testing.assert_allclose(
         center_of_brightness,
         true_center_of_brightness,
-        rtol=1e-1,
-        atol=0,
+        rtol=0,
+        atol=1e-1,
         err_msg="Center of brightness not close enough to expected",
     )
