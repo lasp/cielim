@@ -33,6 +33,9 @@ class Connector:
         print(result)
 
     def send_frame(self, sim_frame: cielimMessage_pb2.CielimMessage):
+        self.request_socket.send_string("INIT_SCENE")
+        init_result = self.request_socket.recv_string()
+        print(init_result)
         result = self.request_socket.send_multipart([b"SIM_UPDATE", b"", b"", sim_frame.SerializePartialToString()])
         print(result)
         response_message_parts = self.request_socket.recv()

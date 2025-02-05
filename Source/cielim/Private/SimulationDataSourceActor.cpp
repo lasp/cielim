@@ -156,7 +156,33 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 	// a bit like a RPC or http server
 	if (QueueData.GetValue().query == CommandType::INIT_SCENE)
 	{
-		// Load scene logic to be implemented
+		UE_LOG(LogCielim, Display, TEXT("Initiating new scene: ASimulationDataSourceActor"));
+
+		this->IsSceneEstablished = false;
+
+		// Clear existing objects
+
+		for (auto const CelestialBody : this->CelestialBodyArray)
+		{
+			if(CelestialBody != nullptr) CelestialBody->Destroy();
+		}
+		this->CelestialBodyArray.Reset();
+
+		if(this->SunCelestialBody != nullptr) this->SunCelestialBody->Destroy();
+		this->SunCelestialBody = nullptr;
+
+		if (this->SunLight != nullptr) this->SunLight->Destroy();
+		this->SunLight = nullptr;
+
+		if (this->Spacecraft != nullptr) this->Spacecraft->Destroy();
+		this->Spacecraft = nullptr;
+
+		if (this->CaptureManager != nullptr) this->CaptureManager->Destroy();
+		this->CaptureManager = nullptr;
+
+		this->IsCelestialBodiesSpawned = false;
+		this->IsSpacecraftSpawned = false;
+		this->IsSceneEstablished = false;
 	}
 	else if (QueueData.GetValue().query == CommandType::SIM_UPDATE)
 	{
