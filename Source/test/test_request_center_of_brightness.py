@@ -11,7 +11,7 @@ def scene_setup():
     protobuf_message = cielimMessage_pb2.CielimMessage()
 
     body = protobuf_message.celestialBodies.add()
-    body.bodyName = "asteroid"
+    body.bodyName = "2000269"
     [body.position.append(item) for item in [0, 0, 0]]
     [body.attitude.append(item) for item in [0, 0, 0]]
 
