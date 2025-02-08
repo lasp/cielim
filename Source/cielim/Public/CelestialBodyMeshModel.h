@@ -7,7 +7,7 @@
 class CelestialBodyMeshModel
 {
 public:
-	static CelestialBodyMeshModel FromProtobuf(const cielimMessage::CelestialModel& Model);
+	static CelestialBodyMeshModel FromProtobuf(const cielimMessage::MeshModel& Model);
 
 	FString ShapeModel;
     double PerlinNoiseStdDeviation;  //[-] Standard deviation of the perlin noise to apply (none by default)
