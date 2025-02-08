@@ -313,15 +313,15 @@ void ASimulationDataSourceActor::SpawnCelestialBodies()
 		} else {
 			TempCelestialBody = GetWorld()->SpawnActorDeferred<ACelestialBody>(BpCelestialBody, SpawnLocAndRotation);
 		}
-		if (CelestialBody.has_models())
+		if (CelestialBody.has_model())
 		{
-			TempCelestialBody->SetMeshModel(CelestialBodyMeshModel::FromProtobuf(CelestialBody.models()));
+			TempCelestialBody->SetMeshModel(CelestialBodyMeshModel::FromProtobuf(CelestialBody.model()));
 		}
 
 		TempCelestialBody->Name = FString(CelestialBody.bodyname().c_str());
 		CelestialBodyArray.Add(TempCelestialBody);
 		TempCelestialBody->FinishSpawning(SpawnLocAndRotation);
-		TempCelestialBody->SetRadiusEvent(CelestialBody.models().meanradius()/1000); // meshes are in 10m scale, bring to uu/cm
+		TempCelestialBody->SetRadiusEvent(CelestialBody.model().meanradius()/1000); // meshes are in 10m scale, bring to uu/cm
 		this->IsCelestialBodiesSpawned = true;
 	}
 }
