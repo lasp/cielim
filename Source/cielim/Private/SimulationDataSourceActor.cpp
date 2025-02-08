@@ -184,7 +184,7 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 		this->ShouldUpdateScene = true;
 		UE_LOG(LogCielim, Display, TEXT("Reading sim update data: ASimulationDataSourceActor"));
 	} else if (std::holds_alternative<RequestImage>(QueueData.value().Query)) {
-		double pointSpread = (double) this->CielimMessage.camera().pointspreadfunction();
+		double pointSpread = this->CielimMessage.camera().pointspreadfunction();
 		double readNoise = this->CielimMessage.camera().readnoise();
 		double systemGain = this->CielimMessage.camera().systemgain();
 		// Using cosmic ray std deviation as number of rays at the moment
