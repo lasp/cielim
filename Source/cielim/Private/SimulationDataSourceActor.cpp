@@ -184,7 +184,7 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 		this->ShouldUpdateScene = true;
 		UE_LOG(LogCielim, Display, TEXT("Reading sim update data: ASimulationDataSourceActor"));
 	} else if (std::holds_alternative<RequestImage>(QueueData.value().Query)) {
-		double pointSpread = (double) this->CielimMessage.camera().pointspreadfunction();
+		double pointSpread = this->CielimMessage.camera().pointspreadfunction();
 		double readNoise = this->CielimMessage.camera().readnoise();
 		double systemGain = this->CielimMessage.camera().systemgain();
 		// Using cosmic ray std deviation as number of rays at the moment
@@ -313,15 +313,15 @@ void ASimulationDataSourceActor::SpawnCelestialBodies()
 		} else {
 			TempCelestialBody = GetWorld()->SpawnActorDeferred<ACelestialBody>(BpCelestialBody, SpawnLocAndRotation);
 		}
-		if (CelestialBody.has_models())
+		if (CelestialBody.has_model())
 		{
-			TempCelestialBody->SetMeshModel(CelestialBodyMeshModel::FromProtobuf(CelestialBody.models()));
+			TempCelestialBody->SetMeshModel(CelestialBodyMeshModel::FromProtobuf(CelestialBody.model()));
 		}
 
 		TempCelestialBody->Name = FString(CelestialBody.bodyname().c_str());
 		CelestialBodyArray.Add(TempCelestialBody);
 		TempCelestialBody->FinishSpawning(SpawnLocAndRotation);
-		TempCelestialBody->SetRadiusEvent(CelestialBody.models().meanradius()/1000); // meshes are in 10m scale, bring to uu/cm
+		TempCelestialBody->SetRadiusEvent(CelestialBody.model().meanradius()/1000); // meshes are in 10m scale, bring to uu/cm
 		this->IsCelestialBodiesSpawned = true;
 	}
 }

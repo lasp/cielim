@@ -1,7 +1,7 @@
 #include "CelestialBodyMeshModel.h"
 
 
-CelestialBodyMeshModel CelestialBodyMeshModel::FromProtobuf(const cielimMessage::CelestialModel& Model)
+CelestialBodyMeshModel CelestialBodyMeshModel::FromProtobuf(const cielimMessage::MeshModel& Model)
 {
 	CelestialBodyMeshModel MeshModel = {};
 	MeshModel.ShapeModel = FString(Model.shapemodel().c_str());
