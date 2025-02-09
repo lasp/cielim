@@ -307,7 +307,7 @@ static bool IsAsteroid(const std::string& BodyName)
 }
 
 /**
- * @brief SpawnCelestialBodies() Spawns all celestial bodies from the VizMessage into the level
+ * @brief SpawnCelestialBodies() Spawns all celestial bodies from the CielimMessage into the level
  *
  */
 void ASimulationDataSourceActor::SpawnCelestialBodies()
@@ -346,7 +346,7 @@ void ASimulationDataSourceActor::SpawnCelestialBodies()
 }
 
 /**
- * @brief SpawnSpacecraft() Spawns all spacecraft from the VizMessage into the level
+ * @brief SpawnSpacecraft() Spawns all spacecraft from the CielimMessage into the level
  *
  */
 void ASimulationDataSourceActor::SpawnSpacecraft()
@@ -439,7 +439,7 @@ void ASimulationDataSourceActor::UpdateSpacecraft() const
 }
 
 /**
- * @brief DebugVizMessage() Prints VizMessage to the console
+ * @brief DebugCielimMessage() Prints CielimMessage to the console
  *
  */
 void ASimulationDataSourceActor::DebugCielimMessage() const

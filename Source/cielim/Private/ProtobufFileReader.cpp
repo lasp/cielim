@@ -14,7 +14,7 @@ ProtobufFileReader::ProtobufFileReader(const std::string Filename) : SimulationD
     // compatible with the version of the headers we compiled against.
     GOOGLE_PROTOBUF_VERIFY_VERSION;
 
-    // Read the existing VizMessage file
+    // Read the existing CielimMessage file
     const FString ContentDir = FPaths::ProjectDir();
     const std::string Filepath = std::string(TCHAR_TO_UTF8(*ContentDir)) + "/Content/FlybyData/bin/" + Filename;
 
@@ -39,7 +39,7 @@ ProtobufFileReader::~ProtobufFileReader()
 }
 
 /**
- * Parses data from input stream and returns vizmessage object
+ * Parses data from input stream and returns CielimMessage object
  *
  */
 TOptional<FCielimMessage> ProtobufFileReader::GetNextSimulationData()  
