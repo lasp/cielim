@@ -1,8 +1,8 @@
 #include "ZmqConnection/ZmqMultiThreadActor.h"
-#include "CielimLoggingMacros.h"
-#include <fstream>
-#include "../Public/ZmqConnection/Commands.h"
 
+#include <fstream>
+
+#include "CielimLoggingMacros.h"
 
 //Static counter for thread creation process, for unique identification of the thread
 int32 AZmqMultiThreadActor::ThreadNameCounter = 0;
@@ -81,38 +81,46 @@ void AZmqMultiThreadActor::ConnectorThreadShutdown()
 	this->ConnectorThread = nullptr;
 }
 
-std::optional<FCircularQueueData> AZmqMultiThreadActor::GetQueueData() const
+TOptional<FCircularQueueData> AZmqMultiThreadActor::GetQueueData() const
 {
+	TOptional<FCircularQueueData> queueData;
+
 	if(!this->MultiThreadDataQueue || this->MultiThreadDataQueue->Requests.IsEmpty())
 	{
-		return std::nullopt;
+		// Do nothing for now
+	}
+	else if (FCircularQueueData NextCommand{}; this->MultiThreadDataQueue->Requests.Dequeue(NextCommand)) 
+	{
+		UE_LOG(LogCielim, Display, TEXT("Dequeue command: AZmqMultiThreadActor"));
+		queueData = NextCommand;
+	} 
+	else 
+	{
+		UE_LOG(LogCielim, Display, TEXT("No command received: AZmqMultiThreadActor"));
 	}
 
-	if (FCircularQueueData NextCommand{}; this->MultiThreadDataQueue->Requests.Dequeue(NextCommand)) {
-		UE_LOG(LogCielim, Display, TEXT("Dequeue command: AZmqMultiThreadActor"));
-		return NextCommand;
-	} else {
-		UE_LOG(LogCielim, Display, TEXT("No command received: AZmqMultiThreadActor"));
-		return std::nullopt;
-	}
+	return queueData;
 }
 
 void AZmqMultiThreadActor::PutQueueData(std::string Data) const
 {
-	FCircularQueueData NextCommand{};
-	NextCommand.Query = BSKError();
+	FCircularQueueData NextCommand;
+
+	NextCommand.query = CommandType::ERROR;
 	this->MultiThreadDataQueue->Responses.Enqueue(NextCommand);
 }
 
-void AZmqMultiThreadActor::PutImageQueueData(const std::vector<uint8>& PNGData,
-	const std::optional<FVector2d> CenterOfBrightness) const
+void AZmqMultiThreadActor::PutImageQueueData(const TArray64<uint8>& PNGData, const TOptional<FVector2d> CenterOfBrightness) const
 {
-	auto Query = RequestImage();
-	Query.payload = PNGData;
-	Query.CenterOfBrightness = CenterOfBrightness;
-	FCircularQueueData NextCommand{};
-	NextCommand.Query = Query;
+	FCircularQueueData NextCommand;
+
+	NextCommand.query = CommandType::REQUEST_IMAGE;
+	NextCommand.payload.Emplace<FImagePayload>(FImagePayload());
+	NextCommand.payload.Get<FImagePayload>().image_data = PNGData;
+	NextCommand.payload.Get<FImagePayload>().centerOfBrightness = CenterOfBrightness;
+
 	UE_LOG(LogCielim, Display, TEXT("Enqueue image response: AZmqMultiThreadActor"));
+
 	this->MultiThreadDataQueue->Responses.Enqueue(NextCommand);
 }
 

@@ -6,6 +6,7 @@
 #include "GameFramework/Actor.h"
 #include "Components/PointLightComponent.h"
 #include "Components/SphereComponent.h"
+
 #include "PointLightActor.generated.h"
 
 UCLASS()

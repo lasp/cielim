@@ -2,12 +2,13 @@
 
 #pragma once
 
-#include "CoreMinimal.h"
-#include "SimulationDataSource.h"
-#include "cielimMessage.pb.h"
-#include <google/protobuf/io/coded_stream.h>
 #include <fstream>
-#include <optional>
+
+#include "CoreMinimal.h"
+#include "google/protobuf/io/coded_stream.h"
+
+#include "FCielimMessage.h"
+#include "SimulationDataSource.h"
 
 /**
  *
@@ -18,7 +19,7 @@ public:
 	ProtobufFileReader(std::string Filename);
 	~ProtobufFileReader();
 
-	std::optional<cielimMessage::CielimMessage> GetNextSimulationData() override;
+	TOptional<FCielimMessage> GetNextSimulationData() override;
 
 	bool get_eof() const { return Eof; }
 

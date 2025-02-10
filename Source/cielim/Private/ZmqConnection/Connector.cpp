@@ -2,9 +2,10 @@
 
 #include <string>
 
-#include "ZmqConnection/ZmqMultiThreadActor.h"
-#include "CielimLoggingMacros.h"
 #include "GenericPlatform/GenericPlatform.h"
+
+#include "CielimLoggingMacros.h"
+#include "ZmqConnection/ZmqMultiThreadActor.h"
 
 /* It is necessary to silence these errors as MSVC will not build the project
    and these warnings are generated in the protobuf headers themselves. */
@@ -97,83 +98,103 @@ void Connector::ThreadShutdown()
 zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage) const
 {
 	UE_LOG(LogCielim, Display, TEXT("Connector::ParseMessage"));
+
 	zmq::multipart_t Message{};
 	std::string Command = RequestMessage.popstr();
+
 	UE_LOG(LogCielim, Display, TEXT("Basilisk command: %hs"), Command.c_str());
-	switch (ParseCommand(Command))
+
+	if (Command == "PING")
 	{
-		case CommandType::PING:
-			{
-				Message.pushstr("PONG");
-				break;
-			}
-		case CommandType::SIM_UPDATE:
-			{
-				cielimMessage::CielimMessage tempMessage = cielimMessage::CielimMessage();
-				// @TODO: fix this message parsing. It's a mad hack!
-				tempMessage.ParseFromArray(RequestMessage[2].data(), RequestMessage[2].size()*sizeof(char));
-				auto Data = FCircularQueueData{};
-				auto Command = SimUpdate();
-				Command.payload = tempMessage;
-				Data.Query = Command;
-				bool EnqueueResult = false;
-				UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue SIM_UPDATE..."));
-				while(!EnqueueResult)
-				{
-					EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(Data);
-				}
-				Message.pushstr("OK");
-				break;
-			}
-		case CommandType::REQUEST_IMAGE:
-			{
-				uint32_t CameraID = -1;
-				CameraID = std::stoi(RequestMessage.popstr());
-				UE_LOG(LogCielim, Display, TEXT("Camera ID: %d"), CameraID);
+		Message.pushstr("PONG");
+	}
+	else if (Command == "SIM_UPDATE")
+	{	
+		FCircularQueueData Data;
+		Data.payload.Emplace<FUpdatePayload>(FUpdatePayload());
 
-				// A request is received and is put in the queue to be handled
-				// by the main (game) thread
-				auto Request = FCircularQueueData{};
-				auto RequestQuery = RequestImage{};
-				RequestQuery.ShouldReturnImage = std::stoi(RequestMessage.popstr());
-				Request.Query = RequestQuery;
-				bool EnqueueResult = false;
-				UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue REQUEST_IMAGE"));
-				while(!EnqueueResult)
-				{
-					EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(Request);
-				}
+		Data.query = CommandType::SIM_UPDATE;
+		Data.payload.Get<FUpdatePayload>().message = FCielimMessage();
 
-				// Loop until we get the response from the main (game) thread
-				auto Response = FCircularQueueData{};
-				bool DequeueResult = false;
-				UE_LOG(LogCielim, Display, TEXT("Waiting for reposnse to REQUEST_IMAGE"));
-				while(!DequeueResult)
-				{
-					// I can call this directly so the thread blocks on the image return.
-					// This assumes that the next item placed in the queue is the image response.
-					DequeueResult = this->MultiThreadQueue->Responses.Dequeue(Response);
-				}
-				UE_LOG(LogCielim, Display, TEXT("Reposnse to REQUEST_IMAGE received"));
+		// @TODO: fix this message parsing. It's a mad hack!
+		Data.payload.Get<FUpdatePayload>().message.GetMessageModifiable().ParseFromArray(RequestMessage[2].data(), RequestMessage[2].size() * sizeof(char));
 
-				auto ResponseImage = std::get<RequestImage>(Response.Query);
-				auto Bytes = sizeof(ResponseImage.payload[0]) * ResponseImage.payload.size();
-				Message.pushmem(ResponseImage.payload.data(), Bytes);
-				Message.pushtyp(Bytes);
-				if (ResponseImage.CenterOfBrightness.has_value())
-				{
-					Message.pushtyp<double>(ResponseImage.CenterOfBrightness.value().X);
-					Message.pushtyp<double>(ResponseImage.CenterOfBrightness.value().Y);	
-				} else {
-					Message.pushmem(nullptr, 0);
-					Message.pushmem(nullptr, 0);
-				}
 
-				break;
-			}
-		default:
-			Message.pushstr("ERROR");
-			break;
+		UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue SIM_UPDATE..."));
+
+		bool EnqueueResult = false;
+		while(!EnqueueResult)
+		{
+			EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(Data);
+		}
+
+		Message.pushstr("OK");
+	}
+	else if (Command == "REQUEST_IMAGE")
+	{
+		uint32_t CameraID = -1;
+		CameraID = std::stoi(RequestMessage.popstr());
+
+		UE_LOG(LogCielim, Display, TEXT("Camera ID: %d"), CameraID);
+
+		// A request is received and is put in the queue to be handled by the main (game) thread
+		FCircularQueueData Request;
+
+		Request.query = CommandType::REQUEST_IMAGE;
+		Request.payload.Emplace<FImagePayload>(FImagePayload());
+		Request.payload.Get<FImagePayload>().shouldReturnImage = (bool) std::stoi(RequestMessage.popstr());
+
+		UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue REQUEST_IMAGE"));
+
+		bool EnqueueResult = false;
+		while(!EnqueueResult)
+		{
+			EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(Request);
+		}
+
+		// Loop until we get the response from the main (game) thread
+		FCircularQueueData Response;
+
+		UE_LOG(LogCielim, Display, TEXT("Waiting for reposnse to REQUEST_IMAGE"));
+
+		bool DequeueResult = false;
+		while(!DequeueResult)
+		{
+			// I can call this directly so the thread blocks on the image return.
+			// This assumes that the next item placed in the queue is the image response.
+			DequeueResult = this->MultiThreadQueue->Responses.Dequeue(Response);
+		}
+
+		UE_LOG(LogCielim, Display, TEXT("Reposnse to REQUEST_IMAGE received"));
+
+		TArray64<uint8> ResponseImage;
+
+		auto* tempPayload = Response.payload.TryGet<FImagePayload>();
+
+		if (tempPayload != nullptr)
+		{
+			ResponseImage = tempPayload->image_data;
+		}
+
+		auto Bytes = sizeof(ResponseImage[0]) * ResponseImage.Num();
+
+		Message.pushmem(ResponseImage.GetData(), Bytes);
+		Message.pushtyp(Bytes);
+
+		if (tempPayload != nullptr && tempPayload -> centerOfBrightness.IsSet())
+		{
+			Message.pushtyp<double>(tempPayload -> centerOfBrightness.GetValue().X);
+			Message.pushtyp<double>(tempPayload -> centerOfBrightness.GetValue().Y);	
+		}
+		else 
+		{
+			Message.pushmem(nullptr, 0);
+			Message.pushmem(nullptr, 0);
+		}
+	}
+	else
+	{
+		Message.pushstr("ERROR");
 	}
 
 	return Message;

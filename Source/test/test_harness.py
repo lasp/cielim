@@ -9,9 +9,7 @@ import typing
 import base64
 import zmq
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "vizProtobuffer"))
 import cielimMessage_pb2
-
 
 class Connector:
     def __init__(self):

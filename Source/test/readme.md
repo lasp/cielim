@@ -2,7 +2,7 @@
 
 The Cielim test connector allows one to send frames and request images from a Cielim instance. One
 can create a scene by hand by populating a simulation data frame using the visMessage protobuf schema 
-(as defined in vizProtobuffer/vizMessage.proto).
+(as defined in cielimMessage.proto).
 
 - connect/disconnect to Cielim
 - send a spacecraft frame as a protobuf

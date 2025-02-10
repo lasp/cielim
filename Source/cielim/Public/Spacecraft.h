@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Components/SceneCaptureComponent2D.h"
+
 #include "Spacecraft.generated.h"
 
 UCLASS()

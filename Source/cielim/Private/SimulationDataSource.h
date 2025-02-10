@@ -1,14 +1,16 @@
 #pragma once
 
-#include "CoreMinimal.h"
-#include "cielimMessage.pb.h"
 #include <optional>
 #include <string>
+
+#include "CoreMinimal.h"
+
+#include "FCielimMessage.h"
 
 class SimulationDataSource
 {
 public:
 	SimulationDataSource(std::string Source) {};
 	virtual ~SimulationDataSource() = default;
-	virtual std::optional<cielimMessage::CielimMessage> GetNextSimulationData() = 0;
+	virtual TOptional<FCielimMessage> GetNextSimulationData() = 0;
 };

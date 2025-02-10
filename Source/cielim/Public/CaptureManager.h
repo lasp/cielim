@@ -1,14 +1,15 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
-#include <OpenCV/PreOpenCVHeaders.h>
-#include <opencv2/core.hpp>
-#include "opencv2/imgproc.hpp"
-#include <OpenCV/opencv/modules/imgcodecs/include/opencv2/imgcodecs.hpp>
-#include <OpenCV/PostOpenCVHeaders.h>
+
+#include <optional>
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "OpenCV/PreOpenCVHeaders.h"
+#include "opencv2/core.hpp"
+#include "opencv2/imgproc.hpp"
+#include "OpenCV/opencv/modules/imgcodecs/include/opencv2/imgcodecs.hpp"
+#include "OpenCV/PostOpenCVHeaders.h"
+
 #include "CaptureManager.generated.h"
 
 UCLASS()
@@ -27,9 +28,12 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void SaveImageToDisk(const FString& FilePath, const FString& Filename);
-	cv::Mat GetCorruptedImage(FImage Image, double pointSpread, double readNoise, double systemGain, double cosmicRaysStdDev) const;
+	void GetCorruptedImage(TArray64<uint8>& ImageData, double pointSpread, double readNoise, double systemGain, double cosmicRaysStdDev) const;
+	TOptional<FVector2d> GetCenterOfBrightness(double Threshold) const;
+
 	FImage GetUncorruptedImage() const;
-	FVector2d GetCenterOfBrightness() const;
+	cv::Mat FImageToOpenCVMat(const FImage& Image) const;
+
 	
 protected:
 	// Called when the game starts or when spawned

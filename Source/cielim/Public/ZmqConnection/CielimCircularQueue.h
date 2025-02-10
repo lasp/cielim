@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Containers/CircularQueue.h"
+
 #include "UCircularQueueData.h"
 
 class CielimCircularQueue

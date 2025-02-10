@@ -1,10 +1,12 @@
 #pragma once
 
-#include "CielimCircularQueue.h"
-#include "Connector.h"
-#include "SimulationDataSource.h"
-#include "GameFramework/Actor.h"
 #include "Engine/World.h"
+#include "GameFramework/Actor.h"
+
+#include "CielimCircularQueue.h"
+#include "SimulationDataSource.h"
+#include "Connector.h"
+
 #include "ZmqMultiThreadActor.generated.h"
 
 UCLASS()
@@ -17,9 +19,9 @@ public:
 	~AZmqMultiThreadActor()=default;
 
 	void Connect(const std::string& Address);
-	std::optional<FCircularQueueData> GetQueueData() const;
+	TOptional<FCircularQueueData> GetQueueData() const;
 	void PutQueueData(std::string Data) const;
-	void PutImageQueueData(const std::vector<uint8>& PNGData, const std::optional<FVector2d> CenterOfBrightness) const;
+	void PutImageQueueData(const TArray64<uint8>& PNGData, const TOptional<FVector2d> CenterOfBrightness) const;
 
 	/** Start a timer in BP to *safely* check for thread updates! */
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category=Cielim)

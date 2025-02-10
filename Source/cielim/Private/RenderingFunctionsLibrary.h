@@ -1,13 +1,11 @@
 #pragma once
 
-#include <OpenCV/PreOpenCVHeaders.h>
-#include <opencv2/core.hpp>
-#include <OpenCV/PostOpenCVHeaders.h>
-
 #include "CoreMinimal.h"
 #include "Math/Vector.h"
 #include "Engine/World.h"
-#include "Kismet/BlueprintFunctionLibrary.h"
+#include "OpenCV/PreOpenCVHeaders.h"
+#include "opencv2/core.hpp"
+#include "OpenCV/PostOpenCVHeaders.h"
 
 #include "RenderingFunctionsLibrary.generated.h"
 

@@ -2,19 +2,18 @@
 
 #include "SimulationDataSourceActor.h"
 
+#include "Engine/World.h"
+#include "Engine/DirectionalLight.h"
+#include "Components/LightComponent.h"
+#include "Math/UnrealMathUtility.h"
+#include "zmq.hpp"
+#include "ZmqConnection/ZmqMultiThreadActor.h"
+
 #include "AstronomicalConstants.h"
 #include "CielimLoggingMacros.h"
 #include "CelestialBodyMeshModel.h"
-#include "CielimImageUtilities.h"
 #include "KinematicsUtilities.h"
 #include "ProtobufFileReader.h"
-#include "ZmqConnection/Commands.h"
-#include "ZmqConnection/ZmqMultiThreadActor.h"
-#include "Engine/World.h"
-#include "Math/UnrealMathUtility.h"
-#include <zmq.hpp>
-#include "Components/LightComponent.h"
-#include "Engine/DirectionalLight.h"
 
 #define m2cm 100.0
 #define km2m 1000.0
@@ -121,19 +120,19 @@ void ASimulationDataSourceActor::EndPlay(const EEndPlayReason::Type EndPlayReaso
 void ASimulationDataSourceActor::FileReaderTick(float DeltaTime)
 {
 	auto messageResult = this->SimulationDataSource->GetNextSimulationData();
-	if (messageResult.has_value())
+	if (messageResult.IsSet())
 	{
-		this->CielimMessage = messageResult.value();
+		this->CielimMessage = messageResult.GetValue();
 		this->ShouldUpdateScene = true;
 	}
 
-	if (!this->IsSceneEstablished && this->ShouldUpdateScene) {
-
+	if (!this->IsSceneEstablished && this->ShouldUpdateScene) 
+	{
 		UE_LOG(LogCielim, Display, TEXT("Initialize scene..."));
 		this->IsSceneEstablished = true;
 		this->SpawnCelestialBodies();
 		this->SpawnSpacecraft();
-		if (this->CielimMessage.has_camera())
+		if (this->CielimMessage.GetMessage().has_camera())
 		{
 			this->bHasCameras = true;
 			this->SpawnCaptureManager();
@@ -148,66 +147,86 @@ void ASimulationDataSourceActor::FileReaderTick(float DeltaTime)
 // This is a mad hack and needs to be changed
 void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 {
-	const auto QueueData = this->NetworkSimulationDataSource->GetQueueData();
-	if (!QueueData.has_value())
-	{
+	const TOptional<FCircularQueueData> QueueData = this->NetworkSimulationDataSource->GetQueueData();
+	
+	if (!QueueData.IsSet())
 		return;
-	}
 
-	if (!this->IsSceneEstablished) {
-		if (std::holds_alternative<SimUpdate>(QueueData.value().Query)) {
-			UE_LOG(LogCielim, Display, TEXT("Initialize scene..."));
-			this->CielimMessage = std::get<SimUpdate>(QueueData.value().Query).payload;
+	// This code should be turned into some kind of handler function registration
+	// a bit like a RPC or http server
+	if (QueueData.GetValue().query == CommandType::SIM_UPDATE)
+	{
+		UE_LOG(LogCielim, Display, TEXT("Reading sim update data: ASimulationDataSourceActor"));
+
+		if (auto *tempPayload = QueueData.GetValue().payload.TryGet<FUpdatePayload>())
+		{
+			this->CielimMessage = tempPayload->message;
+		}
+		
+		if (!this->IsSceneEstablished)
+		{
 			this->IsSceneEstablished = true;
+
+			UE_LOG(LogCielim, Display, TEXT("Initialize scene..."));
+
+			if (auto *tempPayload = QueueData.GetValue().payload.TryGet<FUpdatePayload>())
+			{
+				this->CielimMessage = tempPayload->message;
+			}
+			
 			this->SpawnCelestialBodies();
 			this->SpawnSpacecraft();
-			if (this->CielimMessage.has_camera())
+
+			if (this->CielimMessage.GetMessage().has_camera())
 			{
 				this->bHasCameras = true;
 				this->SpawnCaptureManager();
 			}
+
 			if (!BpCelestialBody || !BpSpacecraft)
 			{
 				UE_LOG(LogCielim, Warning, TEXT("Defualt BluePrint Classes have not been set in BP_ProtobufActor"));
 				return;
 			}
-		} else {
+		}
+		else 
+		{
+			this->ShouldUpdateScene = true;
+		}
+	} 
+	else if (QueueData.GetValue().query == CommandType::REQUEST_IMAGE) 
+	{
+		if (!this->IsSceneEstablished)
+		{
 			UE_LOG(LogCielim, Warning, TEXT("Scene not initialized: ASimulationDataSourceActor"));
 			return;
 		}
-	}
 
-	// This code should be turned into some kind of handler function registration
-	// a bit like a RPC or http server
-	if (std::holds_alternative<SimUpdate>(QueueData.value().Query)) {
-		this->CielimMessage = std::get<SimUpdate>(QueueData.value().Query).payload;
-		this->ShouldUpdateScene = true;
-		UE_LOG(LogCielim, Display, TEXT("Reading sim update data: ASimulationDataSourceActor"));
-	} else if (std::holds_alternative<RequestImage>(QueueData.value().Query)) {
-		double pointSpread = this->CielimMessage.camera().pointspreadfunction();
-		double readNoise = this->CielimMessage.camera().readnoise();
-		double systemGain = this->CielimMessage.camera().systemgain();
-		// Using cosmic ray std deviation as number of rays at the moment
-		double cosmicRayStdDev = this->CielimMessage.camera().renderparameters().cosmicraystddeviation();
+		double pointSpread = this->CielimMessage.GetMessage().camera().pointspreadfunction();
+		double readNoise = this->CielimMessage.GetMessage().camera().readnoise();
+		double systemGain = this->CielimMessage.GetMessage().camera().systemgain();
+		double cosmicRayStdDev = this->CielimMessage.GetMessage().camera().renderparameters().cosmicraystddeviation();
 		
-		auto Query = std::get<RequestImage>(QueueData.value().Query);
-		std::vector<uint8> PngEncodedData{};
-		if (Query.ShouldReturnImage)
+		TArray64<uint8> PngEncodedData;
+
+		auto *tempPayload = QueueData.GetValue().payload.TryGet<FImagePayload>();
+
+		if (tempPayload != nullptr && tempPayload -> shouldReturnImage)
 		{
-			auto Image = this->CaptureManager->GetUncorruptedImage();
-			auto ImageToBeCorrupted = FImage(Image);
-			cv::Mat TempImage = this->CaptureManager->GetCorruptedImage(ImageToBeCorrupted, pointSpread, readNoise, systemGain, cosmicRayStdDev);
-			cv::imencode(".png", TempImage, PngEncodedData);
+			this->CaptureManager->GetCorruptedImage(PngEncodedData, pointSpread, readNoise, systemGain, cosmicRayStdDev);
 			this->NetworkSimulationDataSource->PutImageQueueData(PngEncodedData,
-			CielimImageUtilities::ComputeWeightedCenterOfBrightness(Image, 10));
-		} else {
-			auto Image = this->CaptureManager->GetUncorruptedImage();
+			this->CaptureManager->GetCenterOfBrightness(10));
+		} 
+		else 
+		{
 			this->NetworkSimulationDataSource->PutImageQueueData(PngEncodedData,
-			CielimImageUtilities::ComputeWeightedCenterOfBrightness(Image, 10));
+			this->CaptureManager->GetCenterOfBrightness(10));
 		}
 
 		UE_LOG(LogCielim, Display, TEXT("Put back PNG image: ASimulationDataSourceActor"));
-	} else {
+	}
+	else 
+	{
 		UE_LOG(LogCielim, Display, TEXT("GetNextSimulationData received unrecognized Type"));
 	}
 }
@@ -225,9 +244,9 @@ void ASimulationDataSourceActor::Tick(float DeltaTime)
 
 	if (this->ShouldUpdateScene)
 	{
-		if (this->CielimMessage.has_spacecraft() && this->IsSpacecraftSpawned) {
+		if (this->CielimMessage.GetMessage().has_spacecraft() && this->IsSpacecraftSpawned) {
 			this->UpdateSpacecraft();
-		} if (!this->CielimMessage.celestialbodies().empty() && this->IsCelestialBodiesSpawned) {
+		} if (!this->CielimMessage.GetMessage().celestialbodies().empty() && this->IsCelestialBodiesSpawned) {
 			this->UpdateCelestialBodies();
 		}
 	}
@@ -288,12 +307,12 @@ static bool IsAsteroid(const std::string& BodyName)
 }
 
 /**
- * @brief SpawnCelestialBodies() Spawns all celestial bodies from the VizMessage into the level
+ * @brief SpawnCelestialBodies() Spawns all celestial bodies from the CielimMessage into the level
  *
  */
 void ASimulationDataSourceActor::SpawnCelestialBodies()
 {
-	for (const auto &CelestialBody : CielimMessage.celestialbodies()) {
+	for (const auto &CelestialBody : CielimMessage.GetMessage().celestialbodies()) {
 		// Set Location
 		FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
 		// Set Rotation
@@ -327,12 +346,12 @@ void ASimulationDataSourceActor::SpawnCelestialBodies()
 }
 
 /**
- * @brief SpawnSpacecraft() Spawns all spacecraft from the VizMessage into the level
+ * @brief SpawnSpacecraft() Spawns all spacecraft from the CielimMessage into the level
  *
  */
 void ASimulationDataSourceActor::SpawnSpacecraft()
 {
-	const cielimMessage::Spacecraft &SpacecraftMessage = this->CielimMessage.spacecraft();
+	const cielimMessage::Spacecraft &SpacecraftMessage = this->CielimMessage.GetMessage().spacecraft();
 	// Set Location
 	const FVector3d PositionSpacecraft = GetSpacecraftPosition(SpacecraftMessage);
 	// Set Rotation
@@ -343,9 +362,9 @@ void ASimulationDataSourceActor::SpawnSpacecraft()
 	ASpacecraft *TempSpacecraft = GetWorld()->SpawnActor<ASpacecraft>(BpSpacecraft, PositionSpacecraft, SpacecraftRotation);
 	TempSpacecraft->Name = FString(SpacecraftMessage.spacecraftname().c_str());
 	// Set camera
-	if (this->CielimMessage.has_camera())
+	if (this->CielimMessage.GetMessage().has_camera())
 	{
-		const cielimMessage::CameraModel &Camera = CielimMessage.camera();
+		const cielimMessage::CameraModel &Camera = CielimMessage.GetMessage().camera();
 		TempSpacecraft->SetFOV(FMath::RadiansToDegrees(Camera.fieldofview(0)),
 			FMath::RadiansToDegrees(Camera.fieldofview(1)));
 		TempSpacecraft->SetResolution(Camera.resolution(0), Camera.resolution(1));
@@ -365,7 +384,7 @@ void ASimulationDataSourceActor::PointSunLight()
 {
 	this->SunLight = GetWorld()->SpawnActor<ADirectionalLight>(FVector3d::ZeroVector,
 		FRotator::ZeroRotator);
-	double exposuretime = this->CielimMessage.camera().exposuretime();
+	double exposuretime = this->CielimMessage.GetMessage().camera().exposuretime();
 	double LuxAt1AU = exposuretime != 0 ? 1280 * exposuretime : 1280;
 	this->SunLight->GetLightComponent()->SetIntensity(LuxAt1AU*(AU*km2m*AU*km2m)/(FMath::Square(this->SunCelestialBody->GetActorLocation().Length())));
 	this->SunLight->GetLightComponent()->SetMobility(EComponentMobility::Movable);
@@ -389,7 +408,7 @@ void ASimulationDataSourceActor::SpawnCaptureManager()
 void ASimulationDataSourceActor::UpdateCelestialBodies() const
 {
 	int Index = 0;
-	for (const auto &CelestialBody : CielimMessage.celestialbodies())
+	for (const auto &CelestialBody : CielimMessage.GetMessage().celestialbodies())
 	{
 		FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
 		FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
@@ -404,27 +423,27 @@ void ASimulationDataSourceActor::UpdateCelestialBodies() const
  */
 void ASimulationDataSourceActor::UpdateSpacecraft() const
 {
-	const cielimMessage::Spacecraft &SpacecraftMessage = CielimMessage.spacecraft();
+	const cielimMessage::Spacecraft &SpacecraftMessage = CielimMessage.GetMessage().spacecraft();
 	const FVector3d PositionSpacecraft = GetSpacecraftPosition(SpacecraftMessage);
 	const FRotator SpacecraftRotation = GetRotatorFromMrp(FVector3d(SpacecraftMessage.attitude(0),
 															SpacecraftMessage.attitude(1),
 															SpacecraftMessage.attitude(2)));
 	this->Spacecraft->Update(PositionSpacecraft, SpacecraftRotation);
 	// Update camera
-	if (this->CielimMessage.has_camera())
+	if (this->CielimMessage.GetMessage().has_camera())
 	{
-		const cielimMessage::CameraModel &Camera = CielimMessage.camera();
+		const cielimMessage::CameraModel &Camera = CielimMessage.GetMessage().camera();
 		const FRotator CameraRotation = GetCameraRotation(Camera);
 		this->Spacecraft->UpdateCameraOrientation(CameraRotation);
 	}
 }
 
 /**
- * @brief DebugVizMessage() Prints VizMessage to the console
+ * @brief DebugCielimMessage() Prints CielimMessage to the console
  *
  */
 void ASimulationDataSourceActor::DebugCielimMessage() const
 {
-	const std::string DebugStr = this->CielimMessage.DebugString();
+	const std::string DebugStr = this->CielimMessage.GetMessage().DebugString();
 	UE_LOG(LogCielim, Display, TEXT("%hs"), DebugStr.c_str());
 }
