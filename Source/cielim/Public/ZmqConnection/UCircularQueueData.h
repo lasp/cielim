@@ -8,6 +8,7 @@ enum class CommandType
 {
 	ERROR,
 	PING,
+	INIT_SCENE,
 	SIM_UPDATE,
 	REQUEST_IMAGE,
 };
