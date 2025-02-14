@@ -5,6 +5,19 @@ ACelestialBody::ACelestialBody()
 {
     // Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
     PrimaryActorTick.bCanEverTick = true;
+
+	// Create the Static Mesh Component
+    this->BodyStaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComponent"));
+    this->RootComponent = BodyStaticMeshComponent;
+ 
+    // Load the mesh asset
+    static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshAsset(TEXT("/Content/AsteroidMeshes/sphere_normalized"));
+ 
+    // Set the mesh on the component
+    if (MeshAsset.Succeeded())
+    {
+        BodyStaticMeshComponent->SetStaticMesh(MeshAsset.Object);
+    }
 }
 
 // Called when the game starts or when spawned
@@ -24,10 +37,23 @@ void ACelestialBody::SetMeshModel(CelestialBodyMeshModel Model)
 	this->MeshModel = Model;
 }
 
-FString ACelestialBody::GetMeshModelName()
+FString ACelestialBody::GetMeshModelName() const
 {
 	return this->MeshModel.ShapeModel;
 }
+
+FBPVector3D ACelestialBody::GetPrincipleAccessDistortions() const
+{
+	return FBPVector3D{this->MeshModel.PrincipalAxisDistortion.X,
+		this->MeshModel.PrincipalAxisDistortion.Y,
+		this->MeshModel.PrincipalAxisDistortion.Z};
+}
+
+FRotator ACelestialBody::GetInertialToBodyRotator() const
+{
+	return this->MeshModel.InertialToBody;
+}
+
 /**
  * @brief Update(NewPosition, NewRotation) Updates celestial body's position and rotation
  *

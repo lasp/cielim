@@ -131,15 +131,12 @@ void ASimulationDataSourceActor::FileReaderTick(float DeltaTime)
 		UE_LOG(LogCielim, Display, TEXT("Initialize scene..."));
 		this->IsSceneEstablished = true;
 		this->SpawnCelestialBodies();
+		this->SpawnAsteroidBodies();
 		this->SpawnSpacecraft();
 		if (this->CielimMessage.GetMessage().has_camera())
 		{
 			this->bHasCameras = true;
 			this->SpawnCaptureManager();
-		}
-		if (!BpCelestialBody || !BpSpacecraft)
-		{
-			UE_LOG(LogCielim, Warning, TEXT("Defualt BluePrint Classes have not been set in BP_ProtobufActor"));
 		}
 	}
 }
@@ -168,6 +165,12 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 		}
 		this->CelestialBodyArray.Reset();
 
+		for (auto const AsteroidBody : this->AsteroidBodyArray)
+		{
+			if(AsteroidBody != nullptr) AsteroidBody->Destroy();
+		}
+		this->AsteroidBodyArray.Reset();
+		
 		if(this->SunCelestialBody != nullptr) this->SunCelestialBody->Destroy();
 		this->SunCelestialBody = nullptr;
 
@@ -205,18 +208,13 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 			}
 			
 			this->SpawnCelestialBodies();
+			this->SpawnAsteroidBodies();
 			this->SpawnSpacecraft();
 
 			if (this->CielimMessage.GetMessage().has_camera())
 			{
 				this->bHasCameras = true;
 				this->SpawnCaptureManager();
-			}
-
-			if (!BpCelestialBody || !BpSpacecraft)
-			{
-				UE_LOG(LogCielim, Warning, TEXT("Defualt BluePrint Classes have not been set in BP_ProtobufActor"));
-				return;
 			}
 		}
 		else 
@@ -232,10 +230,10 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 			return;
 		}
 
-		double pointSpread = this->CielimMessage.GetMessage().camera().pointspreadfunction();
-		double readNoise = this->CielimMessage.GetMessage().camera().readnoise();
-		double systemGain = this->CielimMessage.GetMessage().camera().systemgain();
-		double cosmicRayStdDev = this->CielimMessage.GetMessage().camera().renderparameters().cosmicraystddeviation();
+		const double pointSpread = static_cast<double>(this->CielimMessage.GetMessage().camera().pointspreadfunction());
+		const double readNoise = this->CielimMessage.GetMessage().camera().readnoise();
+		const double systemGain = this->CielimMessage.GetMessage().camera().systemgain();
+		const double cosmicRayStdDev = this->CielimMessage.GetMessage().camera().renderparameters().cosmicraystddeviation();
 		
 		TArray64<uint8> PngEncodedData;
 
@@ -337,46 +335,56 @@ static bool IsAsteroid(const std::string& BodyName)
 }
 
 /**
- * @brief SpawnCelestialBodies() Spawns all celestial bodies from the CielimMessage into the level
+ * @brief SpawnCelestialBodies() Spawns all celestial bodies from the Cielim Protobuf Message into the level
  *
  */
 void ASimulationDataSourceActor::SpawnCelestialBodies()
 {
 	for (const auto &CelestialBody : CielimMessage.GetMessage().celestialbodies()) {
-		// Set Location
-		FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
-		// Set Rotation
-		FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
-		// Create CelestialBody Actor instance
-		ACelestialBody *TempCelestialBody;
-		const FTransform SpawnLocAndRotation = FTransform(FRotator(CelestialBodyRotation),
-				PositionCelestialBody);
-
-		if (CelestialBody.bodyname() == "sun_planet_data") {
-			TempCelestialBody = GetWorld()->SpawnActorDeferred<ACelestialBody>(BpSun, SpawnLocAndRotation);
-			this->SunCelestialBody = TempCelestialBody;
-		} else if (IsAsteroid(CelestialBody.bodyname())) {
-			TempCelestialBody = GetWorld()->SpawnActorDeferred<ACelestialBody>(BpAsteroid, SpawnLocAndRotation);
-
-			std::cout << CelestialBody.bodyname() << std::endl;
-		} else {
-			TempCelestialBody = GetWorld()->SpawnActorDeferred<ACelestialBody>(BpCelestialBody, SpawnLocAndRotation);
-		}
-		if (CelestialBody.has_model())
+		if (!IsAsteroid(CelestialBody.bodyname()))
 		{
-			TempCelestialBody->SetMeshModel(CelestialBodyMeshModel::FromProtobuf(CelestialBody.model()));
+			// Set Location
+			FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
+			// Set Rotation
+			FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
+			
+			const FTransform SpawnLocAndRotation = FTransform(CelestialBodyRotation, PositionCelestialBody);
+			ACelestialBody *TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>();
+			TempCelestialBody->SetActorTransform(SpawnLocAndRotation);
+			this->SunCelestialBody = TempCelestialBody;
+			TempCelestialBody->Name = FString(CelestialBody.bodyname().c_str());
+			CelestialBodyArray.Add(TempCelestialBody);
 		}
-
-		TempCelestialBody->Name = FString(CelestialBody.bodyname().c_str());
-		CelestialBodyArray.Add(TempCelestialBody);
-		TempCelestialBody->FinishSpawning(SpawnLocAndRotation);
-		TempCelestialBody->SetRadiusEvent(CelestialBody.model().meanradius()/1000); // meshes are in 10m scale, bring to uu/cm
-		this->IsCelestialBodiesSpawned = true;
 	}
+	this->IsCelestialBodiesSpawned = true;
+}
+
+void ASimulationDataSourceActor::SpawnAsteroidBodies()
+{
+	for (const auto &CelestialBody : CielimMessage.GetMessage().celestialbodies()) {
+		if (IsAsteroid(CelestialBody.bodyname())) {
+			FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
+			CelestialBodyMeshModel MeshModel{};	
+			if (CelestialBody.has_model())
+			{
+				MeshModel = CelestialBodyMeshModel::FromProtobuf(CelestialBody.model());
+			}
+
+			AAsteroidBody* AsteroidBody = GetWorld()->SpawnActor<AAsteroidBody>();
+			AsteroidBody->LoadMesh(MeshModel);
+			AsteroidBody->SetActorRotation(MeshModel.InertialToBody);
+			AsteroidBody->SetActorLocation(PositionCelestialBody);
+			AsteroidBody->Name = FString(CelestialBody.bodyname().c_str());
+			AsteroidBody->SetActorScale3D(AsteroidBody->GetPrincipleAccessDistortions()
+				* CelestialBody.model().meanradius()/1000); // meshes are in 10m scale, bring to uu/
+			this->AsteroidBodyArray.Add(AsteroidBody);
+		}
+	}
+	this->IsAsteroidBodiesSpawned = true;
 }
 
 /**
- * @brief SpawnSpacecraft() Spawns all spacecraft from the CielimMessage into the level
+ * @brief SpawnSpacecraft() Spawns all spacecraft from the Cielim Protobuf Message into the level
  *
  */
 void ASimulationDataSourceActor::SpawnSpacecraft()
@@ -440,10 +448,13 @@ void ASimulationDataSourceActor::UpdateCelestialBodies() const
 	int Index = 0;
 	for (const auto &CelestialBody : CielimMessage.GetMessage().celestialbodies())
 	{
-		FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
-		FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
-		CelestialBodyArray[Index]->Update(PositionCelestialBody, CelestialBodyRotation);
-		Index++;
+		if (!IsAsteroid(CelestialBody.bodyname()))
+		{
+			FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
+			FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
+			CelestialBodyArray[Index]->Update(PositionCelestialBody, CelestialBodyRotation);
+			Index++;	
+		}
 	}
 }
 
@@ -469,7 +480,7 @@ void ASimulationDataSourceActor::UpdateSpacecraft() const
 }
 
 /**
- * @brief DebugCielimMessage() Prints CielimMessage to the console
+ * @brief DebugCielimMessage() Prints Cielim Protobuf Message to the console
  *
  */
 void ASimulationDataSourceActor::DebugCielimMessage() const

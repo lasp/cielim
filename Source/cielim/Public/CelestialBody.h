@@ -7,6 +7,18 @@
 
 #include "CelestialBody.generated.h"
 
+USTRUCT(BlueprintType)
+struct FBPVector3D
+{
+	GENERATED_BODY()
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	double X;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	double Y;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	double Z;
+};
+
 UCLASS()
 class CIELIM_API ACelestialBody : public AActor
 {
@@ -19,8 +31,14 @@ public:
 	void SetMeshModel(CelestialBodyMeshModel Model);
 
 	UFUNCTION(BlueprintCallable, Category = "CelestialBody")
-	FString GetMeshModelName();
+	FString GetMeshModelName() const;
 
+	UFUNCTION(BlueprintCallable, Category = "CelestialBody")
+	FRotator GetInertialToBodyRotator() const;
+
+	UFUNCTION(BlueprintCallable, Category = "CelestialBody")
+	FBPVector3D GetPrincipleAccessDistortions() const;
+	
     // Don't know if there is a better way to do this
     UFUNCTION(BlueprintImplementableEvent)
     void SetRadiusEvent(const double& Radius);
@@ -28,17 +46,17 @@ public:
     // Called every frame
     virtual void Tick(float DeltaTime) override;
 
+    void Update(const FVector3d& NewPosition, const FRotator& NewRotation);
+    
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     FString Name;
-
-    void Update(const FVector3d& NewPosition, const FRotator& NewRotation);
 
 protected:
     // Called when the game starts or when spawned
     virtual void BeginPlay() override;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    class UStaticMeshComponent * SphereMesh;
+    class UStaticMeshComponent* BodyStaticMeshComponent;
 
 private:
 	CelestialBodyMeshModel MeshModel;

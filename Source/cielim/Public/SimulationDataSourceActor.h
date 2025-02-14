@@ -4,6 +4,7 @@
 
 #include <memory>
 
+#include "AsteroidBody.h"
 #include "CoreMinimal.h"
 #include "Math/Vector.h"
 #include "GameFramework/Actor.h"
@@ -39,6 +40,7 @@ public:
     virtual void Tick(float DeltaTime) override;
 
     void SpawnCelestialBodies();
+	void SpawnAsteroidBodies();
     void SpawnSpacecraft();
     void SpawnCaptureManager();
 
@@ -46,13 +48,7 @@ public:
     void UpdateSpacecraft() const;
 
     UPROPERTY(EditDefaultsOnly)
-    TSubclassOf<ACelestialBody> BpCelestialBody;
-
-    UPROPERTY(EditDefaultsOnly)
     TSubclassOf<ACelestialBody> BpSun;
-
-    UPROPERTY(EditDefaultsOnly)
-    TSubclassOf<ACelestialBody> BpAsteroid;
 
     UPROPERTY(EditDefaultsOnly)
     TSubclassOf<ASpacecraft> BpSpacecraft;
@@ -70,12 +66,14 @@ private:
 	std::unique_ptr<ProtobufFileReader> SimulationDataSource;
     FCielimMessage CielimMessage;
     TArray<ACelestialBody*> CelestialBodyArray;
+	TArray<AAsteroidBody*> AsteroidBodyArray;
 	ACelestialBody* SunCelestialBody;
 	ADirectionalLight* SunLight;
     ASpacecraft* Spacecraft=nullptr;
     ACaptureManager* CaptureManager=nullptr;
     bool bHasCameras=false;
     bool IsCelestialBodiesSpawned=false;
+	bool IsAsteroidBodiesSpawned=false;
     bool IsSpacecraftSpawned=false;
     bool IsSceneEstablished=false;
 	bool ShouldUpdateScene=false;
