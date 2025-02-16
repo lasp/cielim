@@ -1,15 +1,13 @@
-import delimited_protobuf
-import cv2
-import numpy as np
-import os
 import struct
-import sys
-import time
-import typing
-import base64
+
+import cv2
+import delimited_protobuf
+import numpy as np
 import zmq
 
 import cielimMessage_pb2
+import launcher
+
 
 class Connector:
     def __init__(self):
@@ -17,7 +15,13 @@ class Connector:
         self.context = None
         self.request_socket = None
 
-    def connect(self, address: str = "tcp://localhost:5556"):
+    def launch(self):
+        port = launcher.get_next_free_port()
+        self.cielim_process = launcher.run(port)
+        address = "tcp://127.0.0.1:" + str(port)
+        return address
+
+    def connect(self, address: str = "tcp://127.0.0.1:5556"):
         self.context = zmq.Context()
         self.request_socket = self.context.socket(zmq.REQ)
         self.request_socket.set(zmq.SocketOption.CONNECT_TIMEOUT, 10)
@@ -43,8 +47,7 @@ class Connector:
 
     def request_image_for_camera_id(self, camera_id: int, should_return_image: bool = True):
         self.request_socket.send_multipart(
-            [b"REQUEST_IMAGE", str.encode(str(camera_id)), str.encode(str(int(should_return_image)))]
-        )
+            [b"REQUEST_IMAGE", str.encode(str(camera_id)), str.encode(str(int(should_return_image)))])
         [cob_x, cob_y, image_data_size, image_data] = self.request_socket.recv_multipart()
         image = None
         if should_return_image:
@@ -54,6 +57,7 @@ class Connector:
         return [image, cob]
 
     def disconnect(self):
+        launcher.terminate(self.cielim_process)
         self.request_socket.disconnect(self.address)
         self.context.destroy()
 
