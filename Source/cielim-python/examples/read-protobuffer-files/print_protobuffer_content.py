@@ -1,10 +1,13 @@
-from test_harness import *
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(__file__) + "/../python-driver/")
+from driver import *
 
 if __name__ == "__main__":
-
     file_dir = "../../../cielim/Content/FlybyData/bin/"
     file_name = input("What is the bin file to test (name only): ")
-    
+
     file_handle = open(file_dir + file_name, "rb")
 
     message = delimited_protobuf.read(file_handle, cielimMessage_pb2.CielimMessage)

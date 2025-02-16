@@ -1,4 +1,9 @@
-from test_harness import *
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(__file__) + "/../python-driver/")
+from driver import *
+import cv2
 
 if __name__ == "__main__":
     connector = Connector()
@@ -6,7 +11,7 @@ if __name__ == "__main__":
 
     file_dir = "../../../cielim/Content/FlybyData/bin/"
     file_name = input("What is the bin file to test (name only): ")
-    
+
     file_handler = MessageFileHandler(file_dir + file_name)
 
     idx = 0
@@ -24,7 +29,7 @@ if __name__ == "__main__":
         cv2.imwrite("received_image_" + str(idx) + ".png", image)
 
         idx = idx + 1
-    
+
     cv2.namedWindow("window_name", cv2.WINDOW_NORMAL)
     cv2.imshow("window_name", image)
     cv2.resizeWindow("window_name", 640, 480)
