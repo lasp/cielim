@@ -40,6 +40,7 @@ def test_request_image_and_center_of_brightness(scene_setup):
     connector = Connector()
     connector.connect("tcp://127.0.0.1:5556")
 
+    connector.send_init_request()
     connector.send_frame(scene_setup)
     [image, center_of_brightness] = connector.request_image_for_camera_id(1, 1)
     height, width, channels = image.shape
@@ -59,6 +60,7 @@ def test_request_only_center_of_brightness(scene_setup):
     connector = Connector()
     connector.connect("tcp://127.0.0.1:5556")
 
+    connector.send_init_request()
     connector.send_frame(scene_setup)
     [image, center_of_brightness] = connector.request_image_for_camera_id(1, 0)
 

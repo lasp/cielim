@@ -12,12 +12,14 @@ if __name__ == "__main__":
     idx = 0
     image = None
 
+    connector.send_init_request()
+
     while True:
         frame = file_handler.get_next_simulation_frame()
 
         if (frame is None):
             break
-
+        
         connector.send_frame(frame)
         [image, center_of_brightness] = connector.request_image_for_camera_id(1)
 
