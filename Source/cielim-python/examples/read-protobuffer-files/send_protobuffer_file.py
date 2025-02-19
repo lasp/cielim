@@ -1,7 +1,7 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(__file__) + "/../python-driver/")
+sys.path.insert(0, os.path.dirname(__file__) + "/../../python-driver/")
 from driver import *
 import cv2
 
@@ -9,7 +9,7 @@ if __name__ == "__main__":
     connector = Connector()
     connector.connect("tcp://localhost:5556")
 
-    file_dir = "../../../cielim/Content/FlybyData/bin/"
+    file_dir = os.path.dirname(__file__) + "/../../../../../cielim/Content/FlybyData/bin/"
     file_name = input("What is the bin file to test (name only): ")
 
     file_handler = MessageFileHandler(file_dir + file_name)
