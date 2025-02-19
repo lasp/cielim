@@ -7,9 +7,9 @@ import cv2
 
 if __name__ == "__main__":
     connector = Connector()
-    connector.connect("tcp://localhost:5556")
+    connector.connect(connector.launch())
 
-    file_dir = os.path.dirname(__file__) + "/../../../../../cielim/Content/FlybyData/bin/"
+    file_dir = os.path.dirname(__file__) + "/../../../../Content/FlybyData/bin/"
     file_name = input("What is the bin file to test (name only): ")
 
     file_handler = MessageFileHandler(file_dir + file_name)
