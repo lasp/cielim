@@ -16,12 +16,10 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 
-import math
-
 import numpy as np
 
 
-def form_dcm(primary_heading, secondary_heading):
+def form_dcm(primary_heading : np.ndarray, secondary_heading : np.ndarray) -> np.ndarray:
     """
     Form DCM of the target frame in the base frame (inertial most commonly):
         - use the primary heading as the x direction
@@ -45,7 +43,7 @@ def form_dcm(primary_heading, secondary_heading):
     return base_to_target
 
 
-def camera_correction_rotation():
+def camera_correction_rotation() -> np.ndarray:
     """
     Correct the frame axes to represent the camera pointing direction:
         - boresight along +z
@@ -56,7 +54,7 @@ def camera_correction_rotation():
     return np.array([[0, 0, 1], [-1, 0, 0], [0, -1, 0]])
 
 
-def body_to_inertial_for_pointing(primary_heading, secondary_heading, camera_to_body_dcm):
+def body_to_inertial_for_pointing(primary_heading : np.ndarray, secondary_heading : np.ndarray, camera_to_body_dcm : np.ndarray) -> np.ndarray:
     """
     Create the BN dcm in order to point to the primary and secondary headings
     """
@@ -69,445 +67,402 @@ def body_to_inertial_for_pointing(primary_heading, secondary_heading, camera_to_
     return np.dot(BC, np.dot(CP, TN))
 
 
-def dcm_to_quaternion(C):
+def dcm_to_quaternion(dcm : np.ndarray) -> np.ndarray:
     """
     dcm_to_quaternion
-        Q = dcm_to_quaternion(C) translates the 3x3 direction cosine matrix
-        C into the corresponding 4x1 euler parameter vector Q,
-        where the first component of Q is the non-dimensional
+        quaternion = dcm_to_quaternion(dcm) translates the 3x3 direction cosine matrix
+        dcm into the corresponding 4x1 euler parameter vector quaternion,
+        where the first component of quaternion is the non-dimensional
         Euler parameter Beta_0 >= 0. Transformation is done
         using the Stanley method.
     """
-    tr = np.trace(C)
-    b2 = np.array([(1 + tr) / 4, (1 + 2 * C[0, 0] - tr) / 4, (1 + 2 * C[1, 1] - tr) / 4, (1 + 2 * C[2, 2] - tr) / 4])
-    case = np.argmax(b2)
-    b = b2
+    tr = np.trace(dcm)
+    quaternion2 = np.array([(1 + tr) / 4, (1 + 2 * dcm[0, 0] - tr) / 4, (1 + 2 * dcm[1, 1] - tr) / 4, (1 + 2 * dcm[2, 2] - tr) / 4])
+    case = np.argmax(quaternion2)
+    quaternion = quaternion2
     if case == 0:
-        b[0] = np.sqrt(b2[0])
-        b[1] = (C[1, 2] - C[2, 1]) / 4 / b[0]
-        b[2] = (C[2, 0] - C[0, 2]) / 4 / b[0]
-        b[3] = (C[0, 1] - C[1, 0]) / 4 / b[0]
+        quaternion[0] = np.sqrt(quaternion2[0])
+        quaternion[1] = (dcm[1, 2] - dcm[2, 1]) / 4 / quaternion[0]
+        quaternion[2] = (dcm[2, 0] - dcm[0, 2]) / 4 / quaternion[0]
+        quaternion[3] = (dcm[0, 1] - dcm[1, 0]) / 4 / quaternion[0]
     elif case == 1:
-        b[1] = np.sqrt(b2[1])
-        b[0] = (C[1, 2] - C[2, 1]) / 4 / b[1]
-        if b[0] < 0:
-            b[1] = -b[1]
-            b[0] = -b[0]
-        b[2] = (C[0, 1] + C[1, 0]) / 4 / b[1]
-        b[3] = (C[2, 0] + C[0, 2]) / 4 / b[1]
+        quaternion[1] = np.sqrt(quaternion2[1])
+        quaternion[0] = (dcm[1, 2] - dcm[2, 1]) / 4 / quaternion[1]
+        if quaternion[0] < 0:
+            quaternion[1] = -quaternion[1]
+            quaternion[0] = -quaternion[0]
+        quaternion[2] = (dcm[0, 1] + dcm[1, 0]) / 4 / quaternion[1]
+        quaternion[3] = (dcm[2, 0] + dcm[0, 2]) / 4 / quaternion[1]
     elif case == 2:
-        b[2] = np.sqrt(b2[2])
-        b[0] = (C[2, 0] - C[0, 2]) / 4 / b[2]
-        if b[0] < 0:
-            b[2] = -b[2]
-            b[0] = -b[0]
-        b[1] = (C[0, 1] + C[1, 0]) / 4 / b[2]
-        b[3] = (C[1, 2] + C[2, 1]) / 4 / b[2]
+        quaternion[2] = np.sqrt(quaternion2[2])
+        quaternion[0] = (dcm[2, 0] - dcm[0, 2]) / 4 / quaternion[2]
+        if quaternion[0] < 0:
+            quaternion[2] = -quaternion[2]
+            quaternion[0] = -quaternion[0]
+        quaternion[1] = (dcm[0, 1] + dcm[1, 0]) / 4 / quaternion[2]
+        quaternion[3] = (dcm[1, 2] + dcm[2, 1]) / 4 / quaternion[2]
     elif case == 3:
-        b[3] = np.sqrt(b2[3])
-        b[0] = (C[0, 1] - C[1, 0]) / 4 / b[3]
-        if b[0] < 0:
-            b[3] = -b[3]
-            b[0] = -b[0]
-        b[1] = (C[2, 0] + C[0, 2]) / 4 / b[3]
-        b[2] = (C[1, 2] + C[2, 1]) / 4 / b[3]
-    return b
+        quaternion[3] = np.sqrt(quaternion2[3])
+        quaternion[0] = (dcm[0, 1] - dcm[1, 0]) / 4 / quaternion[3]
+        if quaternion[0] < 0:
+            quaternion[3] = -quaternion[3]
+            quaternion[0] = -quaternion[0]
+        quaternion[1] = (dcm[2, 0] + dcm[0, 2]) / 4 / quaternion[3]
+        quaternion[2] = (dcm[1, 2] + dcm[2, 1]) / 4 / quaternion[3]
+    return quaternion
 
 
-def dcm_to_euler321(C):
+def dcm_to_euler321(dcm : np.ndarray) -> np.ndarray:
     """
     dcm_to_euler321
 
-    	Q = dcm_to_euler321(C) translates the 3x3 direction cosine matrix
-    	C into the corresponding (3-2-1) euler angle set.
+    	euler321 = dcm_to_euler321(dcm) translates the 3x3 direction cosine matrix
+    	dcm into the corresponding (3-2-1) euler angle set.
     """
 
-    q0 = math.atan2(C[0, 1], C[0, 0])
-    q1 = math.asin(-C[0, 2])
-    q2 = math.atan2(C[1, 2], C[2, 2])
-    q = np.array([q0, q1, q2])
-    return q
+    euler0 = np.arctan2(dcm[0, 1], dcm[0, 0])
+    euler1 = np.arcsin(-dcm[0, 2])
+    euler2 = np.arctan2(dcm[1, 2], dcm[2, 2])
+    euler = np.array([euler0, euler1, euler2])
+    return euler
 
 
-def dcm_to_mrp(C):
+def dcm_to_mrp(dcm : np.ndarray) -> np.ndarray:
     """
     dcm_to_mrp
 
-    	Q = dcm_to_mrp(C) translates the 3x3 direction cosine matrix
-    	C into the corresponding 3x1 mrp vector Q where the
-    	mrp vector is chosen such that :math:`|Q| <= 1`.
+    	mrp = dcm_to_mrp(dcm) translates the 3x3 direction cosine matrix
+    	dcm into the corresponding 3x1 mrp vector mrp where the
+    	mrp vector is chosen such that :math:`|mrp| <= 1`.
     """
 
-    b = dcm_to_quaternion(C)
-    q = np.array([b[1] / (1 + b[0]), b[2] / (1 + b[0]), b[3] / (1 + b[0])])
-    return q
+    quaternion = dcm_to_quaternion(dcm)
+    mrp = np.array([quaternion[1] / (1 + quaternion[0]), quaternion[2] / (1 + quaternion[0]), quaternion[3] / (1 + quaternion[0])])
+    return mrp
 
 
-def dcm_to_principalRotation(C):
+def dcm_to_principalRotation(dcm : np.ndarray) -> np.ndarray:
     """
     dcm_to_principalRotation
 
-    	Q = dcm_to_principalRotation(C) translates the 3x3 direction cosine matrix
-    	C into the corresponding 3x1 principal rotation vector Q,
-    	where the first component of Q is the principal rotation angle
+    	prv = dcm_to_principalRotation(dcm) translates the 3x3 direction cosine matrix
+    	dcm into the corresponding 3x1 principal rotation vector prv,
+    	where the first component of prv is the principal rotation angle
     	phi (0<= phi <= Pi)
     """
 
-    cp = (np.trace(C) - 1) / 2
+    cp = (np.trace(dcm) - 1) / 2
     p = np.arccos(cp)
     sp = p / 2. / np.sin(p)
-    q = np.array([(C[1, 2] - C[2, 1]) * sp, (C[2, 0] - C[0, 2]) * sp, (C[0, 1] - C[1, 0]) * sp])
-    return q
+    prv = np.array([(dcm[1, 2] - dcm[2, 1]) * sp, (dcm[2, 0] - dcm[0, 2]) * sp, (dcm[0, 1] - dcm[1, 0]) * sp])
+    return prv
 
 
-def mrp_to_dcm(q):
+def mrp_to_dcm(mrp : np.ndarray) -> np.ndarray:
     """
     mrp_to_dcm
 
-    	C = mrp_to_dcm(Q) returns the direction cosine
-    	matrix in terms of the 3x1 mrp vector Q.
+    	dcm = mrp_to_dcm(mrp) returns the direction cosine
+    	matrix in terms of the 3x1 mrp vector mrp.
+    """
+    S = 1 - np.linalg.norm(mrp) ** 2
+    d = (1 + np.linalg.norm(mrp) ** 2) * (1 + np.linalg.norm(mrp) ** 2)
+    dcm = np.zeros((3, 3))
+    dcm[0, 0] = 4 * (2 * mrp[0] * mrp[0] - np.linalg.norm(mrp) ** 2) + S * S
+    dcm[0, 1] = 8 * mrp[0] * mrp[1] + 4 * mrp[2] * S
+    dcm[0, 2] = 8 * mrp[0] * mrp[2] - 4 * mrp[1] * S
+    dcm[1, 0] = 8 * mrp[1] * mrp[0] - 4 * mrp[2] * S
+    dcm[1, 1] = 4 * (2 * mrp[1] * mrp[1] - np.linalg.norm(mrp) ** 2) + S * S
+    dcm[1, 2] = 8 * mrp[1] * mrp[2] + 4 * mrp[0] * S
+    dcm[2, 0] = 8 * mrp[2] * mrp[0] + 4 * mrp[1] * S
+    dcm[2, 1] = 8 * mrp[2] * mrp[1] - 4 * mrp[0] * S
+    dcm[2, 2] = 4 * (2 * mrp[2] * mrp[2] - np.linalg.norm(mrp) ** 2) + S * S
+    return dcm / d
+
+
+def mrp_to_quaternion(mrp : np.ndarray) -> np.ndarray:
+    """
+    mrp_to_quaternion(mrp)
+
+    	quaternion = mrp_to_quaternion(mrp) translates the mrp vector
+    	into the euler parameter vector quaternion.
+    """
+    ps = 1 + np.linalg.norm(mrp) * np.linalg.norm(mrp)
+    quaternion = np.array([(1 - np.linalg.norm(mrp) * np.linalg.norm(mrp)) / ps, 2 * mrp[0] / ps, 2 * mrp[1] / ps, 2 * mrp[2] / ps])
+    return quaternion
+
+
+def mrp_to_euler321(mrp : np.ndarray) -> np.ndarray:
+    """
+    mrp_to_euler321(mrp)
+
+    	euler321 = mrp_to_euler321(mrp) translates the mrp
+    	 vector into the (3-2-1) euler angle vector euler321.
     """
 
-    q1 = q[0]
-    q2 = q[1]
-    q3 = q[2]
-    qm = np.linalg.norm(q)
-    d1 = qm * qm
-    S = 1 - d1
-    d = (1 + d1) * (1 + d1)
-    C = np.zeros((3, 3))
-    C[0, 0] = 4 * (2 * q1 * q1 - d1) + S * S
-    C[0, 1] = 8 * q1 * q2 + 4 * q3 * S
-    C[0, 2] = 8 * q1 * q3 - 4 * q2 * S
-    C[1, 0] = 8 * q2 * q1 - 4 * q3 * S
-    C[1, 1] = 4 * (2 * q2 * q2 - d1) + S * S
-    C[1, 2] = 8 * q2 * q3 + 4 * q1 * S
-    C[2, 0] = 8 * q3 * q1 + 4 * q2 * S
-    C[2, 1] = 8 * q3 * q2 - 4 * q1 * S
-    C[2, 2] = 4 * (2 * q3 * q3 - d1) + S * S
-    C = C / d
-    return C
+    return quaternion_to_euler321(mrp_to_quaternion(mrp))
 
 
-def mrp_to_quaternion(q1):
+def mrp_to_principalRotation(mrp : np.ndarray) -> np.ndarray:
     """
-    mrp_to_quaternion(Q1)
+    mrp_to_principalRotation(mrp)
 
-    	Q = mrp_to_quaternion(Q1) translates the mrp vector Q1
-    	into the euler parameter vector Q.
+    	prv = mrp_to_principalRotation(mrp) translates the mrp vector
+    	into the principal rotation vector prv.
     """
-    qm = np.linalg.norm(q1)
-    ps = 1 + qm * qm
-    q = np.array([(1 - qm * qm) / ps, 2 * q1[0] / ps, 2 * q1[1] / ps, 2 * q1[2] / ps])
-    return q
+    p = 4 * np.arctan(np.linalg.norm(mrp))
+    return np.array([mrp[0], mrp[1], mrp[2]])/ np.linalg.norm(mrp) * p
 
 
-def mrp_to_euler321(q):
-    """
-    mrp_to_euler321(Q)
-
-    	E = mrp_to_euler321(Q) translates the mrp
-    	 vector Q into the (3-2-1) euler angle vector E.
-    """
-
-    return quaternion_to_euler321(mrp_to_quaternion(q))
-
-
-def mrp_to_principalRotation(q):
-    """
-    mrp_to_principalRotation(Q1)
-
-    	Q = mrp_to_principalRotation(Q1) translates the mrp vector Q1
-    	into the principal rotation vector Q.
-    """
-
-    tp = np.linalg.norm(q)
-    p = 4 * math.atan(tp)
-    q0 = q[0] / tp * p
-    q1 = q[1] / tp * p
-    q2 = q[2] / tp * p
-    q = np.array([q0, q1, q2])
-
-    return q
-
-
-def mrp_switch(q, s2):
+def mrp_switch(mrp : np.ndarray, threshold : float) -> np.ndarray:
     """
     mrp_switch
 
-    	S = mrp_switch(Q,s2) checks to see if norm(Q) is larger than s2.
-    	If yes, then the mrp vector Q is mapped to its shadow set.
+    	S = mrp_switch(mrp,threshold) checks to see if norm(mrp) is larger than threshold.
+    	If yes, then the mrp vector mrp is mapped to its shadow set.
     """
 
-    q2 = np.dot(q, q)
-    if (q2 > s2 * s2):
-        s = -q / q2
+    if np.dot(mrp, mrp) > threshold ** 2:
+        s = -mrp / np.dot(mrp, mrp)
     else:
-        s = q
+        s = mrp
 
     return s
 
 
-def principalRotation_to_dcm(q):
+def principalRotation_to_dcm(prv: np.ndarray) -> np.ndarray:
     """
     principalRotation_to_dcm
 
-    	C = principalRotation_to_dcm(Q) returns the direction cosine
+    	dcm = principalRotation_to_dcm(prv) returns the direction cosine
     	matrix in terms of the 3x1 principal rotation vector
-    	Q.
+    	prv.
     """
-
-    q0 = np.linalg.norm(q)
-    if q0 == 0.0:
-        q1 = q[0]
-        q2 = q[1]
-        q3 = q[2]
+    if np.linalg.norm(prv) == 0.0:
+        prv1 = prv[0]
+        prv2 = prv[1]
+        prv3 = prv[2]
     else:
-        q1 = q[0] / q0
-        q2 = q[1] / q0
-        q3 = q[2] / q0
-    cp = np.cos(q0)
-    sp = np.sin(q0)
+        prv1 = prv[0] / np.linalg.norm(prv)
+        prv2 = prv[1] / np.linalg.norm(prv)
+        prv3 = prv[2] / np.linalg.norm(prv)
+    cp = np.cos(np.linalg.norm(prv))
+    sp = np.sin(np.linalg.norm(prv))
     d1 = 1 - cp
-    C = np.zeros((3, 3))
-    C[0, 0] = q1 * q1 * d1 + cp
-    C[0, 1] = q1 * q2 * d1 + q3 * sp
-    C[0, 2] = q1 * q3 * d1 - q2 * sp
-    C[1, 0] = q2 * q1 * d1 - q3 * sp
-    C[1, 1] = q2 * q2 * d1 + cp
-    C[1, 2] = q2 * q3 * d1 + q1 * sp
-    C[2, 0] = q3 * q1 * d1 + q2 * sp
-    C[2, 1] = q3 * q2 * d1 - q1 * sp
-    C[2, 2] = q3 * q3 * d1 + cp
-    return C
+    dcm = np.zeros((3, 3))
+    dcm[0, 0] = prv1 * prv1 * d1 + cp
+    dcm[0, 1] = prv1 * prv2 * d1 + prv3 * sp
+    dcm[0, 2] = prv1 * prv3 * d1 - prv2 * sp
+    dcm[1, 0] = prv2 * prv1 * d1 - prv3 * sp
+    dcm[1, 1] = prv2 * prv2 * d1 + cp
+    dcm[1, 2] = prv2 * prv3 * d1 + prv1 * sp
+    dcm[2, 0] = prv3 * prv1 * d1 + prv2 * sp
+    dcm[2, 1] = prv3 * prv2 * d1 - prv1 * sp
+    dcm[2, 2] = prv3 * prv3 * d1 + cp
+    return dcm
 
 
-def principalRotation_to_quaternion(qq1):
+def principalRotation_to_quaternion(prv : np.ndarray) -> np.ndarray:
     """"
-    principalRotation_to_quaternion(Q1)
+    principalRotation_to_quaternion(prv)
 
-    	Q = principalRotation_to_quaternion(Q1) translates the principal rotation vector Q1
-    	into the euler parameter vector Q.
+    	quaternion = principalRotation_to_quaternion(prv) translates the principal rotation vector prv
+    	into the euler parameter vector quaternion.
     """
 
-    return dcm_to_quaternion(principalRotation_to_dcm(qq1))
+    return dcm_to_quaternion(principalRotation_to_dcm(prv))
 
 
-def principalRotation_to_euler321(q):
+def principalRotation_to_euler321(prv : np.ndarray) -> np.ndarray:
     """
-    principalRotation_to_euler321(Q)
+    principalRotation_to_euler321(prv)
 
-    	E = principalRotation_to_euler321(Q) translates the principal rotation
-    	vector Q into the (3-2-1) euler angle vector E.
-    """
-
-    return quaternion_to_euler321(principalRotation_to_quaternion(q))
-
-
-def principalRotation_to_mrp(q):
-    """
-     principalRotation_to_mrp(Q1)
-
-    	Q = principalRotation_to_mrp(Q1) translates the principal rotation vector Q1
-    	into the mrp vector Q.
+    	euler321 = principalRotation_to_euler321(prv) translates the principal rotation
+    	vector prv into the (3-2-1) euler angle vector euler321.
     """
 
-    return dcm_to_mrp(principalRotation_to_dcm(q))
+    return quaternion_to_euler321(principalRotation_to_quaternion(prv))
 
 
-def quaternion_to_dcm(q):
+def principalRotation_to_mrp(prv : np.ndarray) -> np.ndarray:
+    """
+     principalRotation_to_mrp(prv)
+
+    	mrp = principalRotation_to_mrp(prv) translates the principal rotation vector prv
+    	into the mrp vector.
+    """
+
+    return dcm_to_mrp(principalRotation_to_dcm(prv))
+
+
+def quaternion_to_dcm(quaternion : np.ndarray) -> np.ndarray:
     """
 	quaternion_to_dcm
 
-        C = quaternion_to_dcm(Q) returns the direction math.cosine
+        dcm = quaternion_to_dcm(quaternion) returns the direction np.cosine
         matrix in terms of the 4x1 euler parameter vector
-        Q.  The first element is the non-dimensional euler
+        quaternion.  The first element is the non-dimensional euler
         parameter, while the remain three elements form
         the euler parameter vector.
 	"""
-    q0 = q[0]
-    q1 = q[1]
-    q2 = q[2]
-    q3 = q[3]
-    C = np.zeros([3, 3])
-    C[0, 0] = q0 * q0 + q1 * q1 - q2 * q2 - q3 * q3
-    C[0, 1] = 2 * (q1 * q2 + q0 * q3)
-    C[0, 2] = 2 * (q1 * q3 - q0 * q2)
-    C[1, 0] = 2 * (q1 * q2 - q0 * q3)
-    C[1, 1] = q0 * q0 - q1 * q1 + q2 * q2 - q3 * q3
-    C[1, 2] = 2 * (q2 * q3 + q0 * q1)
-    C[2, 0] = 2 * (q1 * q3 + q0 * q2)
-    C[2, 1] = 2 * (q2 * q3 - q0 * q1)
-    C[2, 2] = q0 * q0 - q1 * q1 - q2 * q2 + q3 * q3
-    return C
+    dcm = np.zeros([3, 3])
+    dcm[0, 0] = quaternion[0] ** 2 + quaternion[1] ** 2 - quaternion[2] ** 2 - quaternion[3] ** 2
+    dcm[0, 1] = 2 * (quaternion[1] * quaternion[2] + quaternion[0] * quaternion[3])
+    dcm[0, 2] = 2 * (quaternion[1] * quaternion[3] - quaternion[0] * quaternion[2])
+    dcm[1, 0] = 2 * (quaternion[1] * quaternion[2] - quaternion[0] * quaternion[3])
+    dcm[1, 1] = quaternion[0] ** 2 - quaternion[1] ** 2 + quaternion[2] ** 2 - quaternion[3] ** 2
+    dcm[1, 2] = 2 * (quaternion[2] * quaternion[3] + quaternion[0] * quaternion[1])
+    dcm[2, 0] = 2 * (quaternion[1] * quaternion[3] + quaternion[0] * quaternion[2])
+    dcm[2, 1] = 2 * (quaternion[2] * quaternion[3] - quaternion[0] * quaternion[1])
+    dcm[2, 2] = quaternion[0] ** 2 - quaternion[1] ** 2 - quaternion[2] ** 2 + quaternion[3] ** 2
+    return dcm
 
 
-def quaternion_to_euler321(q):
+def quaternion_to_euler321(quaternion : np.ndarray) -> np.ndarray:
     """
     quaternion_to_euler321
 
-    	E = quaternion_to_euler321(Q) translates the euler parameter vector
-    	Q into the corresponding (3-2-1) euler angle set.
+    	euler321 = quaternion_to_euler321(quaternion) translates the euler parameter vector
+    	quaternion into the corresponding (3-2-1) euler angle set.
     """
 
-    q0 = q[0]
-    q1 = q[1]
-    q2 = q[2]
-    q3 = q[3]
+    e1 = np.arctan2(2 * (quaternion[1] * quaternion[2] + quaternion[0] * quaternion[3]),
+                    quaternion[0] ** 2 + quaternion[1] ** 2 - quaternion[2] ** 2 - quaternion[3] ** 2)
+    e2 = np.arcsin(-2 * (quaternion[1] * quaternion[3] - quaternion[0] * quaternion[2]))
+    e3 = np.arctan2(2 * (quaternion[2] * quaternion[3] + quaternion[0] * quaternion[1]),
+                    quaternion[0] ** 2 - quaternion[1] ** 2 - quaternion[2] ** 2 + quaternion[3] ** 2)
 
-    e1 = math.atan2(2 * (q1 * q2 + q0 * q3), q0 * q0 + q1 * q1 - q2 * q2 - q3 * q3)
-    e2 = math.asin(-2 * (q1 * q3 - q0 * q2))
-    e3 = math.atan2(2 * (q2 * q3 + q0 * q1), q0 * q0 - q1 * q1 - q2 * q2 + q3 * q3)
-
-    e = np.array([e1, e2, e3])
-    return e
+    return np.array([e1, e2, e3])
 
 
-def quaternion_to_mrp(q):
+def quaternion_to_mrp(quaternion : np.ndarray) -> np.ndarray:
     """
-    quaternion_to_mrp(Q1)
-        Q = quaternion_to_mrp(Q1) translates the euler parameter vector Q1
-        into the mrp vector Q.
+    quaternion_to_mrp(quaternion)
+        mrp = quaternion_to_mrp(quaternion) translates the euler parameter vector quaternion
+        into the mrp vector.
     """
 
-    if q[0] < 0:
-        q = -q
+    if quaternion[0] < 0:
+        quaternion = -quaternion
 
-    q1 = q[1] / (1 + q[0])
-    q2 = q[2] / (1 + q[0])
-    q3 = q[3] / (1 + q[0])
-
-    return np.array([q1, q2, q3])
+    return np.array([quaternion[1], quaternion[2], quaternion[3]])/ (1 + quaternion[0])
 
 
-def quaternion_to_principalRotation(q):
+def quaternion_to_principalRotation(quaternion : np.ndarray) -> np.ndarray:
     """
-    quaternion_to_principalRotation(Q1)
+    quaternion_to_principalRotation(quaternion)
 
-    	Q = quaternion_to_principalRotation(Q1) translates the euler parameter vector Q1
-    	into the principal rotation vector Q.
+    	prv = quaternion_to_principalRotation(quaternion) translates the euler parameter vector quaternion
+    	into the principal rotation vector prv.
     """
 
-    p = 2 * math.acos(q[0])
-    sp = math.sin(p / 2)
-    q1 = q[1] / sp * p
-    q2 = q[2] / sp * p
-    q3 = q[3] / sp * p
+    p = 2 * np.arccos(quaternion[0])
+    sp = np.sin(p / 2)
 
-    return np.array([q1, q2, q3])
+    return np.array([quaternion[1], quaternion[2], quaternion[3]]) / sp * p
 
 
-def euler1(x):
+def euler1(angle :float) -> np.ndarray:
     """
 	EULER1 	Elementary rotation matrix
 	Returns the elementary rotation matrix about the first body axis.
 	"""
     m = np.identity(3)
-    m[1, 1] = math.cos(x)
-    m[1, 2] = math.sin(x)
+    m[1, 1] = np.cos(angle)
+    m[1, 2] = np.sin(angle)
     m[2, 1] = -m[1, 2]
     m[2, 2] = m[1, 1]
 
     return m
 
 
-def euler2(x):
+def euler2(angle :float) -> np.ndarray:
     """
 	EULER2 	Elementary rotation matrix
 	Returns the elementary rotation matrix about the
 	second body axis.
 	"""
     m = np.identity(3)
-    m[0, 0] = math.cos(x)
-    m[0, 2] = -math.sin(x)
+    m[0, 0] = np.cos(angle)
+    m[0, 2] = -np.sin(angle)
     m[2, 0] = -m[0, 2]
     m[2, 2] = m[0, 0]
 
     return m
 
 
-def euler3(x):
+def euler3(angle :float) -> np.ndarray:
     """
 	EULER3 	Elementary rotation matrix
 	Returns the elementary rotation matrix about the
 	third body axis.
 	"""
     m = np.identity(3)
-    m[0, 0] = math.cos(x)
-    m[0, 1] = math.sin(x)
+    m[0, 0] = np.cos(angle)
+    m[0, 1] = np.sin(angle)
     m[1, 0] = -m[0, 1]
     m[1, 1] = m[0, 0]
 
     return m
 
 
-def euler321_to_dcm(q):
+def euler321_to_dcm(euler321 :np.ndarray) -> np.ndarray:
     """
     euler321_to_dcm
-    	C = euler321_to_dcm(Q) returns the direction cosine
+    	dcm = euler321_to_dcm(euler321) returns the direction cosine
     	matrix in terms of the 3-2-1 euler angles.
     	Input Q must be a 3x1 vector of euler angles.
     """
 
-    st1 = math.sin(q[0])
-    ct1 = math.cos(q[0])
-    st2 = math.sin(q[1])
-    ct2 = math.cos(q[1])
-    st3 = math.sin(q[2])
-    ct3 = math.cos(q[2])
+    dcm = np.identity(3)
+    dcm[0, 0] = np.cos(euler321[1]) * np.cos(euler321[0])
+    dcm[0, 1] = np.cos(euler321[1]) * np.sin(euler321[0])
+    dcm[0, 2] = -np.sin(euler321[1])
+    dcm[1, 0] =  np.sin(euler321[2]) * np.sin(euler321[1]) * np.cos(euler321[0]) - np.cos(euler321[2]) * np.sin(euler321[0])
+    dcm[1, 1] =  np.sin(euler321[2]) * np.sin(euler321[1]) * np.sin(euler321[0]) + np.cos(euler321[2]) * np.cos(euler321[0])
+    dcm[1, 2] =  np.sin(euler321[2]) * np.cos(euler321[1])
+    dcm[2, 0] = np.cos(euler321[2]) * np.sin(euler321[1]) * np.cos(euler321[0]) +  np.sin(euler321[2]) * np.sin(euler321[0])
+    dcm[2, 1] = np.cos(euler321[2]) * np.sin(euler321[1]) * np.sin(euler321[0]) -  np.sin(euler321[2]) * np.cos(euler321[0])
+    dcm[2, 2] = np.cos(euler321[2]) * np.cos(euler321[1])
 
-    C = np.identity(3)
-    C[0, 0] = ct2 * ct1
-    C[0, 1] = ct2 * st1
-    C[0, 2] = -st2
-    C[1, 0] = st3 * st2 * ct1 - ct3 * st1
-    C[1, 1] = st3 * st2 * st1 + ct3 * ct1
-    C[1, 2] = st3 * ct2
-    C[2, 0] = ct3 * st2 * ct1 + st3 * st1
-    C[2, 1] = ct3 * st2 * st1 - st3 * ct1
-    C[2, 2] = ct3 * ct2
-
-    return C
+    return dcm
 
 
-def euler321_to_quaternion(e):
+def euler321_to_quaternion(euler321 : np.ndarray) -> np.ndarray:
     """
-    euler321_to_quaternion(E)
-        Q = euler321_to_quaternion(E) translates the 321 euler angle
-        vector E into the euler parameter vector Q.
+    euler321_to_quaternion(euler321)
+        quaternion = euler321_to_quaternion(euler321) translates the 321 euler angle
+        vector E into the euler parameter vector quaternion.
     """
 
-    c1 = math.cos(e[0] / 2)
-    s1 = math.sin(e[0] / 2)
-    c2 = math.cos(e[1] / 2)
-    s2 = math.sin(e[1] / 2)
-    c3 = math.cos(e[2] / 2)
-    s3 = math.sin(e[2] / 2)
-
-    q0 = c1 * c2 * c3 + s1 * s2 * s3
-    q1 = c1 * c2 * s3 - s1 * s2 * c3
-    q2 = c1 * s2 * c3 + s1 * c2 * s3
-    q3 = s1 * c2 * c3 - c1 * s2 * s3
+    q0 = (np.cos(euler321[0] / 2) * np.cos(euler321[1] / 2) * np.cos(euler321[2] / 2) + np.sin(euler321[0] / 2) *
+          np.sin(euler321[1] / 2) * np.sin(euler321[2] / 2))
+    q1 = (np.cos(euler321[0] / 2) * np.cos(euler321[1] / 2) * np.sin(euler321[2] / 2) - np.sin(euler321[0] / 2) *
+          np.sin(euler321[1] / 2) * np.cos(euler321[2] / 2))
+    q2 = (np.cos(euler321[0] / 2) * np.sin(euler321[1] / 2) * np.cos(euler321[2] / 2) + np.sin(euler321[0] / 2) *
+          np.cos(euler321[1] / 2) * np.sin(euler321[2] / 2))
+    q3 = (np.sin(euler321[0] / 2) * np.cos(euler321[1] / 2) * np.cos(euler321[2] / 2) - np.cos(euler321[0] / 2) *
+          np.sin(euler321[1] / 2) * np.sin(euler321[2] / 2))
 
     return np.array([q0, q1, q2, q3])
 
 
-def euler321_to_mrp(e):
+def euler321_to_mrp(euler321 : np.ndarray) -> np.ndarray:
     """
-    euler321_to_mrp(E)
-        Q = euler321_to_mrp(E) translates the (3-2-1) euler
-        angle vector E into the mrp vector Q.
-    """
-
-    return quaternion_to_mrp(euler321_to_quaternion(e))
-
-
-def euler321_to_principalRotation(e):
-    """
-     euler321_to_principalRotation(E)
-
-    	Q = euler321_to_principalRotation(E) translates the (3-2-1) euler
-    	angle vector E into the principal rotation vector Q.
+    euler321_to_mrp(euler321)
+        mrp = euler321_to_mrp(euler321) translates the (3-2-1) euler
+        angle vector euler321 into the mrp vector.
     """
 
-    return quaternion_to_principalRotation(euler321_to_quaternion(e))
+    return quaternion_to_mrp(euler321_to_quaternion(euler321))
+
+
+def euler321_to_principalRotation(euler321 : np.ndarray) -> np.ndarray:
+    """
+     euler321_to_principalRotation(euler321)
+
+    	prv = euler321_to_principalRotation(euler321) translates the (3-2-1) euler
+    	angle vector euler321 into the principal rotation vector prv.
+    """
+
+    return quaternion_to_principalRotation(euler321_to_quaternion(euler321))

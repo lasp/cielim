@@ -16,7 +16,7 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 import math
-
+from collections.abc import Callable
 import numpy as np
 
 
@@ -36,7 +36,7 @@ class ClassicElements(object):
     rApoap = None
 
 
-def elem2rv_parab(mu, elements):
+def elem2rv_parab(mu : float, elements : ClassicElements) -> (np.ndarray, np.ndarray):
     """
     Translates the orbit elements:
 
@@ -90,13 +90,13 @@ def elem2rv_parab(mu, elements):
     # TODO: Might want to have an error band on this equality #
     if np.abs(e - 1) < 1E-10 and a > 0.0:  # rectilinear elliptic orbit case #
         Ecc = f  # f is treated as ecc. anomaly #
-        r = a * (1.0 - e * math.cos(Ecc))  # orbit radius #
-        v = math.sqrt(2.0 * mu / r - mu / a)
-        ir[0] = math.cos(AN) * math.cos(AP) - math.sin(AN) * math.sin(AP) * math.cos(i)
-        ir[1] = math.sin(AN) * math.cos(AP) + math.cos(AN) * math.sin(AP) * math.cos(i)
-        ir[2] = math.sin(AP) * math.sin(i)
+        r = a * (1.0 - e * np.cos(Ecc))  # orbit radius #
+        v = np.sqrt(2.0 * mu / r - mu / a)
+        ir[0] = np.cos(AN) * np.cos(AP) - np.sin(AN) * np.sin(AP) * np.cos(i)
+        ir[1] = np.sin(AN) * np.cos(AP) + np.cos(AN) * np.sin(AP) * np.cos(i)
+        ir[2] = np.sin(AP) * np.sin(i)
         rVec = r * ir
-        if math.sin(Ecc) > 0.0:
+        if np.sin(Ecc) > 0.0:
             vVec = -v * ir
         else:
             vVec = v * ir
@@ -108,24 +108,24 @@ def elem2rv_parab(mu, elements):
         else:  # elliptic and hyperbolic cases #
             p = a * (1.0 - e * e)  # semi-latus rectum #
 
-        r = p / (1.0 + e * math.cos(f))  # orbit radius #
+        r = p / (1.0 + e * np.cos(f))  # orbit radius #
         theta = AP + f  # true latitude angle #
-        h = math.sqrt(mu * p)  # orbit ang. momentum mag.
+        h = np.sqrt(mu * p)  # orbit ang. momentum mag.
 
-        rVec[0] = r * (math.cos(AN) * math.cos(theta) - math.sin(AN) * math.sin(theta) * math.cos(i))
-        rVec[1] = r * (math.sin(AN) * math.cos(theta) + math.cos(AN) * math.sin(theta) * math.cos(i))
-        rVec[2] = r * (math.sin(theta) * math.sin(i))
+        rVec[0] = r * (np.cos(AN) * np.cos(theta) - np.sin(AN) * np.sin(theta) * np.cos(i))
+        rVec[1] = r * (np.sin(AN) * np.cos(theta) + np.cos(AN) * np.sin(theta) * np.cos(i))
+        rVec[2] = r * (np.sin(theta) * np.sin(i))
 
-        vVec[0] = -mu / h * (math.cos(AN) * (math.sin(theta) + e * math.sin(AP)) + math.sin(AN) * (
-                    math.cos(theta) + e * math.cos(AP)) * math.cos(i))
-        vVec[1] = -mu / h * (math.sin(AN) * (math.sin(theta) + e * math.sin(AP)) - math.cos(AN) * (
-                    math.cos(theta) + e * math.cos(AP)) * math.cos(i))
-        vVec[2] = -mu / h * (-(math.cos(theta) + e * math.cos(AP)) * math.sin(i))
+        vVec[0] = -mu / h * (np.cos(AN) * (np.sin(theta) + e * np.sin(AP)) + np.sin(AN) * (
+                    np.cos(theta) + e * np.cos(AP)) * np.cos(i))
+        vVec[1] = -mu / h * (np.sin(AN) * (np.sin(theta) + e * np.sin(AP)) - np.cos(AN) * (
+                    np.cos(theta) + e * np.cos(AP)) * np.cos(i))
+        vVec[2] = -mu / h * (-(np.cos(theta) + e * np.cos(AP)) * np.sin(i))
 
     return rVec, vVec
 
 
-def rv2elem_parab(mu, rVec, vVec):
+def rv2elem_parab(mu :float , rVec : np.ndarray, vVec : np.ndarray) -> ClassicElements:
     """
     Translates the orbit elements inertial Cartesian position
     vector rVec and velocity vector vVec into the corresponding
@@ -231,34 +231,34 @@ def rv2elem_parab(mu, rVec, vVec):
         ip = np.cross(ih, ie)
 
     # compute the 3-1-3 orbit plane orientation angles #
-    elements.i = math.acos(ih[2])
+    elements.i = np.arccos(ih[2])
     if elements.i > 1E-10 and elements.i < np.pi - 1E-10:
-        elements.Omega = math.atan2(ih[0], -ih[1])
-        elements.omega = math.atan2(ie[2], ip[2])
+        elements.Omega = np.arctan2(ih[0], -ih[1])
+        elements.omega = np.arctan2(ie[2], ip[2])
     else:
         elements.Omega = 0.
-        elements.omega = math.atan2(ie[1], ie[0])
+        elements.omega = np.arctan2(ie[1], ie[0])
 
     if h < 1E-10:  # rectilinear motion case #
         if elements.alpha > 0:  # elliptic case #
-            Ecc = math.acos(1 - r * elements.alpha)
+            Ecc = np.arccos(1 - r * elements.alpha)
             if np.dot(rVec, vVec) > 0:
                 Ecc = 2.0 * np.pi - Ecc
             elements.f = Ecc  # for this mode the eccentric anomaly is returned #
         else:  # hyperbolic case #
-            H = math.acosh(r * elements.alpha + 1)
+            H = np.arccosh(r * elements.alpha + 1)
             if np.dot(rVec, vVec) < 0:
                 H = 2.0 * np.pi - H
             elements.f = H  # for this mode the hyperbolic anomaly is returned #
     else:
         # compute true anomaly #
         dum = np.cross(ie, ir)
-        elements.f = math.atan2(np.dot(dum, ih), np.dot(ie, ir))
+        elements.f = np.arctan2(np.dot(dum, ih), np.dot(ie, ir))
 
     return elements
 
 
-def rk4(dynamics, time, initial_state, arg=None):
+def rk4(dynamics : Callable, time : np.ndarray, initial_state : np.ndarray, arg=None) -> np.ndarray:
     if arg is not None:
         functionArg = arg
     state = np.zeros([len(time), len(initial_state) + 1])
@@ -277,14 +277,14 @@ def rk4(dynamics, time, initial_state, arg=None):
     return state
 
 
-def point_mass_dynamics(time, state, gravitational_parameter):
+def point_mass_dynamics(time : np.ndarray, state : np.ndarray, gravitational_parameter : float) -> np.ndarray:
     dxdt = np.zeros(np.shape(state))
     dxdt[0:3] = state[3:]
     dxdt[3:] = -gravitational_parameter / np.linalg.norm(state[0:3]) ** 3. * state[0:3]
     return dxdt
 
 
-def propagate_cartesian(gravitational_parameter, initial_state, start_time, end_time):
+def propagate_cartesian(gravitational_parameter : float, initial_state : np.ndarray, start_time : float, end_time : float) -> np.ndarray:
     time = np.arange(start_time, end_time + 1, 1)  # 1 sec steps for orbital integration
     propagated = rk4(point_mass_dynamics, time, initial_state, arg=gravitational_parameter)
     return propagated[-1, 1:]
