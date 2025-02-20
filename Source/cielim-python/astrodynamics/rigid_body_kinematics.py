@@ -187,7 +187,7 @@ def mrp_to_quaternion(mrp : np.ndarray) -> np.ndarray:
     	quaternion = mrp_to_quaternion(mrp) translates the mrp vector
     	into the euler parameter vector quaternion.
     """
-    ps = 1 + np.linalg.norm(mrp) * np.linalg.norm(mrp)
+    ps = 1 + np.linalg.norm(mrp) ** 2
     quaternion = np.array([(1 - np.linalg.norm(mrp) * np.linalg.norm(mrp)) / ps, 2 * mrp[0] / ps, 2 * mrp[1] / ps, 2 * mrp[2] / ps])
     return quaternion
 

@@ -1,6 +1,8 @@
 import os
 import sys
 
+from numpy import ndarray
+
 import cielimMessage_pb2
 
 sys.path.insert(0, os.path.dirname(__file__) + "/../astrodynamics/")
@@ -15,28 +17,28 @@ class ProtoInterface:
         self.target_name = ""
         self.gravitational_parameter = 0
 
-    def set_existing_message(self, cielim_msg):
+    def set_existing_message(self, cielim_msg : cielimMessage_pb2.CielimMessage) -> None:
         """
         Set an existing message
         :param: cielim_msg (cielim message type)
         """
         self.cielim_msg = cielim_msg
 
-    def set_pointing_target(self, target_name):
+    def set_pointing_target(self, target_name : str) -> None:
         """
         Set the name of the pointing target for the camera
         :param: target_name (string)
         """
         self.target_name = target_name
 
-    def set_gravitational_parameter(self, gravitational_parameter):
+    def set_gravitational_parameter(self, gravitational_parameter : float) -> None:
         """
         Set gravitational parameter of central body in SI units
         :param: gravitational_parameter (SI)
         """
         self.gravitational_parameter = gravitational_parameter
 
-    def set_initial_orbital_elements(self, orbital_elements, gravitational_parameter=0):
+    def set_initial_orbital_elements(self, orbital_elements : ClassicElements, gravitational_parameter : float = 0) -> None:
         """
         Set spacecraft initial position with orbital elements
         :param: orbital_elements
@@ -50,7 +52,7 @@ class ProtoInterface:
         [self.cielim_msg.spacecraft.position.append(item) for item in position]
         [self.cielim_msg.spacecraft.velocity.append(item) for item in velocity]
 
-    def set_initial_mrp(self, mrp):
+    def set_initial_mrp(self, mrp : ndarray) -> None:
         """
         Set initial attitude with a modified rodrigues parameter
         :param: mrp
@@ -58,7 +60,7 @@ class ProtoInterface:
         self.cielim_msg.spacecraft.ClearField("attitude")
         [self.cielim_msg.spacecraft.attitude.append(item) for item in mrp]
 
-    def set_initial_prv(self, prv):
+    def set_initial_prv(self, prv :ndarray) -> None:
         """
         Set initial attitude with a principal rotation vector
         :param: prv
@@ -67,7 +69,7 @@ class ProtoInterface:
         self.cielim_msg.spacecraft.ClearField("attitude")
         [self.cielim_msg.spacecraft.attitude.append(item) for item in mrp]
 
-    def set_initial_dcm(self, dcm):
+    def set_initial_dcm(self, dcm : ndarray) -> None:
         """
         Set initial attitude with a direction cosine matrix
         :param: dcm
@@ -76,7 +78,7 @@ class ProtoInterface:
         self.cielim_msg.spacecraft.ClearField("attitude")
         [self.cielim_msg.spacecraft.attitude.append(item) for item in mrp]
 
-    def set_initial_euler321(self, euler321):
+    def set_initial_euler321(self, euler321 : ndarray) -> None:
         """
         Set initial attitude with euler angles
         :param: euler321
@@ -85,7 +87,7 @@ class ProtoInterface:
         self.cielim_msg.spacecraft.ClearField("attitude")
         [self.cielim_msg.spacecraft.attitude.append(item) for item in mrp]
 
-    def set_euler321_pointing_offset(self, delta_euler321):
+    def set_euler321_pointing_offset(self, delta_euler321 : ndarray) -> None:
         """
         Add a pointing offset using euler angles (assuming small offsets)
         :param: delta_euler321
@@ -96,7 +98,7 @@ class ProtoInterface:
         self.cielim_msg.spacecraft.ClearField("attitude")
         [self.cielim_msg.spacecraft.attitude.append(item) for item in mrp]
 
-    def look_at_target(self, target_name=""):
+    def look_at_target(self, target_name : str ="") -> None:
         """
         Function to point the camera at the target in the scene. The velocity direction of the 
         relative motion is used as the secondary direction to make the camera pointing frame.
@@ -130,7 +132,7 @@ class ProtoInterface:
         self.cielim_msg.spacecraft.ClearField("attitude")
         [self.cielim_msg.spacecraft.attitude.append(item) for item in dcm_to_mrp(BN)]
 
-    def propagate(self, end_time, gravitational_parameter=0):
+    def propagate(self, end_time : float, gravitational_parameter : float = 0) -> None:
         """
         Function to propagate the camera position.
         If the target is not found among the bodies, the pointing will point to the zero inertial point
@@ -151,7 +153,7 @@ class ProtoInterface:
         [self.cielim_msg.spacecraft.position.append(item) for item in final_state[:3]]
         [self.cielim_msg.spacecraft.velocity.append(item) for item in final_state[3:]]
 
-    def propagate_and_stare(self, end_time, gravitational_parameter=0, target_name=""):
+    def propagate_and_stare(self, end_time : float, gravitational_parameter : float = 0, target_name : str="") -> None:
         """
         Function to propagate the camera position and maintain the pointing of the camera to the target in the scene. 
         If the target is not found among the bodies, the pointing will point to the zero inertial point
@@ -163,7 +165,7 @@ class ProtoInterface:
         self.propagate(end_time, gravitational_parameter)
         self.look_at_target(target_name)
 
-    def return_message(self):
+    def return_message(self) -> cielimMessage_pb2.CielimMessage:
         """
         Return the current state of the protobuffer
         :return: protobuffer message

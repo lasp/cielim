@@ -1,7 +1,8 @@
 import os
 import sys
+sys.path.insert(0, os.path.dirname(__file__) + "/../")
 
-sys.path.insert(0, os.path.dirname(__file__) + "/../../python-driver/")
+import context
 from driver import *
 
 if __name__ == "__main__":

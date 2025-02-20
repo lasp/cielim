@@ -15,8 +15,8 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-import math
 from collections.abc import Callable
+
 import numpy as np
 
 
@@ -36,7 +36,7 @@ class ClassicElements(object):
     rApoap = None
 
 
-def elem2rv_parab(mu : float, elements : ClassicElements) -> (np.ndarray, np.ndarray):
+def elem2rv_parab(mu: float, elements: ClassicElements) -> (np.ndarray, np.ndarray):
     """
     Translates the orbit elements:
 
@@ -117,15 +117,15 @@ def elem2rv_parab(mu : float, elements : ClassicElements) -> (np.ndarray, np.nda
         rVec[2] = r * (np.sin(theta) * np.sin(i))
 
         vVec[0] = -mu / h * (np.cos(AN) * (np.sin(theta) + e * np.sin(AP)) + np.sin(AN) * (
-                    np.cos(theta) + e * np.cos(AP)) * np.cos(i))
+                np.cos(theta) + e * np.cos(AP)) * np.cos(i))
         vVec[1] = -mu / h * (np.sin(AN) * (np.sin(theta) + e * np.sin(AP)) - np.cos(AN) * (
-                    np.cos(theta) + e * np.cos(AP)) * np.cos(i))
+                np.cos(theta) + e * np.cos(AP)) * np.cos(i))
         vVec[2] = -mu / h * (-(np.cos(theta) + e * np.cos(AP)) * np.sin(i))
 
     return rVec, vVec
 
 
-def rv2elem_parab(mu :float , rVec : np.ndarray, vVec : np.ndarray) -> ClassicElements:
+def rv2elem_parab(mu: float, rVec: np.ndarray, vVec: np.ndarray) -> ClassicElements:
     """
     Translates the orbit elements inertial Cartesian position
     vector rVec and velocity vector vVec into the corresponding
@@ -258,7 +258,7 @@ def rv2elem_parab(mu :float , rVec : np.ndarray, vVec : np.ndarray) -> ClassicEl
     return elements
 
 
-def rk4(dynamics : Callable, time : np.ndarray, initial_state : np.ndarray, arg=None) -> np.ndarray:
+def rk4(dynamics: Callable, time: np.ndarray, initial_state: np.ndarray, arg=None) -> np.ndarray:
     if arg is not None:
         functionArg = arg
     state = np.zeros([len(time), len(initial_state) + 1])
@@ -277,14 +277,15 @@ def rk4(dynamics : Callable, time : np.ndarray, initial_state : np.ndarray, arg=
     return state
 
 
-def point_mass_dynamics(time : np.ndarray, state : np.ndarray, gravitational_parameter : float) -> np.ndarray:
+def point_mass_dynamics(time: np.ndarray, state: np.ndarray, gravitational_parameter: float) -> np.ndarray:
     dxdt = np.zeros(np.shape(state))
     dxdt[0:3] = state[3:]
     dxdt[3:] = -gravitational_parameter / np.linalg.norm(state[0:3]) ** 3. * state[0:3]
     return dxdt
 
 
-def propagate_cartesian(gravitational_parameter : float, initial_state : np.ndarray, start_time : float, end_time : float) -> np.ndarray:
+def propagate_cartesian(gravitational_parameter: float, initial_state: np.ndarray, start_time: float,
+                        end_time: float) -> np.ndarray:
     time = np.arange(start_time, end_time + 1, 1)  # 1 sec steps for orbital integration
     propagated = rk4(point_mass_dynamics, time, initial_state, arg=gravitational_parameter)
     return propagated[-1, 1:]
