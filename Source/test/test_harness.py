@@ -49,7 +49,11 @@ class Connector:
         if should_return_image:
             buf = np.asarray(bytearray(image_data), dtype="uint8")
             image = cv2.imdecode(buf, cv2.IMREAD_COLOR)
-        cob = np.array([struct.unpack("d", cob_x)[0], struct.unpack("d", cob_y)[0]])
+        
+        cob = None
+        if cob_x != b'' and cob_y != b'':
+            cob = np.array([struct.unpack("d", cob_x)[0], struct.unpack("d", cob_y)[0]])
+        
         return [image, cob]
 
     def disconnect(self):
