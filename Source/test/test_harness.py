@@ -24,22 +24,21 @@ class Connector:
 
         self.address = address
         self.request_socket.connect(address)
-        self._send_ping()
-        self._send_ping()
+        print(self._send_ping())
+        print(self._send_ping())
 
     def _send_ping(self):
         self.request_socket.send_string("PING")
-        result = self.request_socket.recv_string()
-        print(result)
+        return self.request_socket.recv_string()
+    
+    def send_init_request(self):
+        self.request_socket.send_string("INIT_SCENE")
+        return self.request_socket.recv_string()
 
     def send_frame(self, sim_frame: cielimMessage_pb2.CielimMessage):
-        self.request_socket.send_string("INIT_SCENE")
-        init_result = self.request_socket.recv_string()
-        print(init_result)
         result = self.request_socket.send_multipart([b"SIM_UPDATE", b"", b"", sim_frame.SerializePartialToString()])
         print(result)
-        response_message_parts = self.request_socket.recv()
-        print(response_message_parts)
+        return self.request_socket.recv_string()
 
     def request_image_for_camera_id(self, camera_id: int, should_return_image: bool = True):
         self.request_socket.send_multipart(
@@ -50,7 +49,11 @@ class Connector:
         if should_return_image:
             buf = np.asarray(bytearray(image_data), dtype="uint8")
             image = cv2.imdecode(buf, cv2.IMREAD_COLOR)
-        cob = np.array([struct.unpack("d", cob_x)[0], struct.unpack("d", cob_y)[0]])
+        
+        cob = None
+        if cob_x != b'' and cob_y != b'':
+            cob = np.array([struct.unpack("d", cob_x)[0], struct.unpack("d", cob_y)[0]])
+        
         return [image, cob]
 
     def disconnect(self):
