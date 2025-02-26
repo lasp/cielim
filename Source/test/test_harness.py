@@ -38,7 +38,7 @@ class Connector:
     def send_frame(self, sim_frame: cielimMessage_pb2.CielimMessage):
         result = self.request_socket.send_multipart([b"SIM_UPDATE", b"", b"", sim_frame.SerializePartialToString()])
         print(result)
-        return self.request_socket.recv()
+        return self.request_socket.recv_string()
 
     def request_image_for_camera_id(self, camera_id: int, should_return_image: bool = True):
         self.request_socket.send_multipart(
