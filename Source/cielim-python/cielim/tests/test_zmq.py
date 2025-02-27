@@ -1,8 +1,9 @@
-import pytest
+import context
+from driver import *
+from launcher import *
+from context import cielimMessage_pb2
 import numpy as np
-
-from test_harness import *
-import cielimMessage_pb2
+import pytest
 
 def scene_setup(spacecraft_position):
     protobuf_message = cielimMessage_pb2.CielimMessage()
@@ -14,8 +15,8 @@ def scene_setup(spacecraft_position):
     [body.position.append(item) for item in [0, 0, 0]]
     [body.attitude.append(item) for item in [0, 0, 0]]
 
-    body.models.shapeModel = "sphere_normalized"
-    body.models.meanRadius = 10000
+    body.model.shapeModel = "sphere_normalized"
+    body.model.meanRadius = 10000
 
     sun = protobuf_message.celestialBodies.add()
     sun.bodyName = "sun_planet_data"
@@ -36,7 +37,8 @@ def scene_setup(spacecraft_position):
 
 def test_ping():
     connector = Connector()
-    connector.connect("tcp://127.0.0.1:5556")
+    launcher = Launcher()
+    connector.connect(launcher.launch())
 
     message = connector._send_ping()
     try:
@@ -44,9 +46,13 @@ def test_ping():
     except AssertionError as e:
         print(f"Fail in test_ping: {e}")
 
+    connector.disconnect()
+    launcher.terminate()
+
 def test_init_scene():
     connector = Connector()
-    connector.connect("tcp://127.0.0.1:5556")
+    launcher = Launcher()
+    connector.connect(launcher.launch())
 
     # Init to ensure clean setup
 
@@ -90,10 +96,14 @@ def test_init_scene():
     
     np.testing.assert_equal(image, np.zeros_like(image), "Image was not cleared")
 
+    connector.disconnect()
+    launcher.terminate()
+
 @pytest.mark.parametrize("position", [((100000, 0, -1000000)), ((10000, 0, -1000000)), ((1000, 10000, -1000000))])
 def test_send_frame(position):
     connector = Connector()
-    connector.connect("tcp://127.0.0.1:5556")
+    launcher = Launcher()
+    connector.connect(launcher.launch())
 
     # Init to ensure clean setup
 
@@ -131,10 +141,14 @@ def test_send_frame(position):
     except AssertionError as e:
         print(f"Fail in test_send_frame: {e}")
 
+    connector.disconnect()
+    launcher.terminate()
+
 @pytest.mark.parametrize("position", [((100000, 0, -1000000)), ((10000, 0, -1000000)), ((1000, 10000, -1000000))])
 def test_request_image(position):
     connector = Connector()
-    connector.connect("tcp://127.0.0.1:5556")
+    launcher = Launcher()
+    connector.connect(launcher.launch())
 
     # Init to ensure clean setup
 
@@ -163,3 +177,6 @@ def test_request_image(position):
         assert np.any(image)
     except AssertionError as e:
         print(f"Fail in test_request_image: {e}")
+
+    connector.disconnect()
+    launcher.terminate()

@@ -1,4 +1,0 @@
-delimited-protobuf
-protobuf==3.19.1
-typing
-zmq
