@@ -1,76 +1,74 @@
 # cielim
-A photorealistic image generation tool for the space environment
+A photorealistic image generation tool for the space environment.
 
-## Building The Project
-
-This project is in pretty early stages and the build system/process is probably flaky. If you find an issue please
-create an issue.
+## Building the Project
 
 ### Cloning
 
 The repository uses git submodules to manage dependencies. To ensure all submodules are cloned
-pass `--recurse-submodules` e.g.
+properly, add the `--recurse-submodules` argument when doing git clone. For example:
 
 `git clone https://github.com/lasp/cielim.git --recurse-submodules`
 
 ### Dependencies
 
-To build this project install Unreal Engine (Currently version 5.4). Additionally, the following
-tools need to be installed and added to your PATH environment variable:
+To build this project install Unreal Engine (Currently version 5.4). Additionally, the following tools need to be installed and added to your PATH environment variable:
+
 #### Linux
   - Automake
   - Autoconf
   - Libtool
   - Make
   - CMake (3.0 or higher)
+  - Python (3.0 or higher)
 #### Mac
   - Automake `brew install automake`
-  - Autoconf `brew install autoconf`ter
+  - Autoconf `brew install autoconf`
   - Libtool `brew install libtool`
   - Make `brew install make`
-  - CMake `brew install cmake` (3.0 or higher)
+  - CMake (3.0 or higher) `brew install cmake`
+  - python (3.0 or higher)
 #### Windows
   - Visual Studio Community 2022 and MSVC Build Tools
-  - CMake version (3.0 or higher)
+  - CMake (3.0 or higher)
+  - Python (3.0 or higher)
 
-**Note:** If you have both Visual Studio and Msys2/MinGW on your Windows machine, you may have issues building OpenCV as it may try to use MinGW to build files generated for Visual Studio. In this case, rename or delete your Msys64 folder while building and then restore when it's finished.
+**Note:** If you have both Visual Studio and Msys2/MinGW on your Windows machine, you may have issues building OpenCV as it may try to use MinGW to build files generated for Visual Studio. In this case, rename or delete your Msys64 folder while building and then restore it when it's finished.
 
 **Additionally:** If you're working on Windows, you will need to copy and paste the .dll files corresponding to the linked .lib files in your `cielim\Binaries\Win64` directory. These include:
-  - libprotobuf.dll
-  - libzmq-(version).dll
-  - opencv_world(version).dll
-  - opencv_videoio_ffmpeg(version).dll
+- libprotobuf.dll
+- libzmq-(version).dll
+- opencv_world(version).dll
+- opencv_videoio_ffmpeg(version).dll
 
 ### Build Process
 
-Open (double click) the cielim.uproject file
-- This launches Unreal and if the project isn't built (which it won't be if you are starting fresh) it will try to build the project.
-- If the build fails or you would like more information, you can get further debug by manually invoking the build from the terminal
-  (replacing any user specific paths) using the following:
-  - `<Path to your UE installation>/UE_5.4/Engine/Binaries/ThirdParty/DotNet/6.0.302/mac-arm64/dotnet
-  "<Path to your UE installation>/UE_5.4/Engine/Binaries/DotNET/UnrealBuildTool/UnrealBuildTool.dll" Development <Mac or Linux or Win64>
-  -Project=<Path to cielim folder>/cielim/cielim.uproject -TargetType=Editor -Progress -NoEngineChanges -NoHotReloadFromIDE`
-- Generate project files
-	- From the editor Tools > Refresh/Generate Visual Studio Code Project
-	- A project can be generated for either XCode, CLion, or VSCode
+Building, cooking, and packaging Cielim can all be done using the `build.py` script. It can take the following command line arguments:
+- `-b or --build` This argument tells it to build Cielim.
+- `-c or --cook` This argument tells it to cook the content for Cielim.
+- `-p or --package` This argument tells it to package the Cielim executable.
+- `-r or --run` This argument tells it to run Cielim in the editor when the other tasks have finished.
+- `-d or --debug` This argument can take one of three values: `DebugGame`, `Development`, or `Shipping` which specify the debug mode that Cielim should be built/packaged in. It is recommended to stay on `Development` which is the default debug value.
 
-To open the project in VSCode, from a terminal window run the following (this ensures that the VSCode terminal
-picks up your default terminal environment variables)
-	- `code cielim.code-workspace`
+Alternatively, you can just run `build.py` with no arguments and this will build, cook, and package Cielim sequentially.
+You can also choose to cook and package Cielim from the Unreal Editor for more control over the process which is explained
+in a later section of this document.
+
+In order to run Cielim in the Unreal Editor, you can double click on the `cielim.uproject` file which will open the editor. Additionally, you can run Cielim from `build.py` and feed it arguments or launch the Unreal Editor from your IDE directly.
+
+To generate project files for your IDE of choice, either double click on the .uproject file and click "Generate ... project files" or open the .uproject with your IDE, or both.
 
 ### Common Errors When Working
 
 There are several common errors that you may encounter when working with the source code:
-- `Expecting to find a type to be declared in a module rules named 'cielim' in 'Unknown Assembly'. This type must derive from the 'ModuleRules' type defined by UnrealBuildTool.`
-  If you encounter this error, it means that you have modified one of the Target.cs or Build.cs files and they now contain an error. Resolve the issues in these files and this
-  error will go away.
-- `Missing third party include files`. If you get a compilation error saying one or many third party includes are missing, this is most likely due to one or multiple of the
-  third party libraries not being built. Make sure you have all of the dependencies installed. Alternatively, try deleting the Intermediate folder in /cielim and opening the
-  Build.cs files.
-- `Third party library directories could not be found`. If this happens, it means you didn't pull the git submodules when cloning the cielim repository. Try pulling the git submodules
-  or cloning their repositories into their respectives folders under the ThirdParty folder directly.
+- `Expecting to find a type to be declared in a module rules named 'cielim' in 'Unknown Assembly'. This type must derive from the 'ModuleRules' type defined by UnrealBuildTool`.
+If you encounter this error, it means that you have modified one of the Target.cs or Build.cs files and they now contain an error. Resolve the issues in these files and this error will go away.
+- `Missing third party include files`.
+If you get a compilation error saying one or many third party includes are missing, this is most likely due to one or multiple of the third party libraries not being built. Make sure you have all of the dependencies installed. Alternatively, try deleting the Intermediate folder in /cielim and opening theBuild.cs files.
+- `Third party library directories could not be found`.
+If this happens, it means you didn't pull the git submodules when cloning the cielim repository. Try pulling the git submodules or cloning their repositories into their respectives folders under the ThirdParty folder directly.
 
-## Packaging Game as Standalone Build
+### Packaging Game as Standalone Build
 - Follow Guide in Unreal Documentation for [Releasing Your Project](https://docs.unrealengine.com/5.2/en-US/preparing-unreal-engine-projects-for-release/)
   - **Note:** Set build configuration to `Developement` instead of `Shipping`
   - In **Build** -> **Advanced Settings** make sure `Build UAT` is unchecked
