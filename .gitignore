@@ -12,6 +12,8 @@
 
 /Content/FlybyData
 
+build_config.json
+
 .vsconfig
 /Source/cielim-python/examples/*.jpg
 /Source/cielim-python/examples/*.png
