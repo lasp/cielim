@@ -5,6 +5,7 @@ from context import cielimMessage_pb2
 import numpy as np
 import pytest
 
+
 @pytest.fixture
 def scene_setup():
     protobuf_message = cielimMessage_pb2.CielimMessage()
@@ -48,8 +49,13 @@ def test_request_image_and_center_of_brightness(scene_setup):
     np.testing.assert_allclose([4000, 3000], [width, height], rtol=0, atol=0, err_msg="Returned image not correct")
 
     true_center_of_brightness = [1499.5, 1999.5]
-    np.testing.assert_allclose(center_of_brightness, true_center_of_brightness, rtol=0, atol=1e-1,
-        err_msg="Center of brightness not close enough to expected", )
+    np.testing.assert_allclose(
+        center_of_brightness,
+        true_center_of_brightness,
+        rtol=0,
+        atol=1e-1,
+        err_msg="Center of brightness not close enough to expected",
+    )
 
     connector.disconnect()
     launcher.terminate()
@@ -68,8 +74,13 @@ def test_request_only_center_of_brightness(scene_setup):
     assert image == None
 
     true_center_of_brightness = [1499.5, 1999.5]
-    np.testing.assert_allclose(center_of_brightness, true_center_of_brightness, rtol=0, atol=1e-1,
-        err_msg="Center of brightness not close enough to expected", )
+    np.testing.assert_allclose(
+        center_of_brightness,
+        true_center_of_brightness,
+        rtol=0,
+        atol=1e-1,
+        err_msg="Center of brightness not close enough to expected",
+    )
 
     connector.disconnect()
     launcher.terminate()

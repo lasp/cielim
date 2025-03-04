@@ -4,7 +4,8 @@
 
 import numpy as np
 
-def form_dcm(primary_heading : np.ndarray, secondary_heading : np.ndarray) -> np.ndarray:
+
+def form_dcm(primary_heading: np.ndarray, secondary_heading: np.ndarray) -> np.ndarray:
     """
     Form DCM of the target frame in the base frame (inertial most commonly):
         - use the primary heading as the x direction
@@ -46,9 +47,9 @@ def camera_correction_rotation() -> np.ndarray:
     return np.array([[0, 0, 1], [-1, 0, 0], [0, -1, 0]])
 
 
-def body_to_inertial_for_pointing(primary_heading : np.ndarray,
-                                  secondary_heading : np.ndarray,
-                                  camera_to_body_dcm : np.ndarray) -> np.ndarray:
+def body_to_inertial_for_pointing(
+    primary_heading: np.ndarray, secondary_heading: np.ndarray, camera_to_body_dcm: np.ndarray
+) -> np.ndarray:
     """
     Create the BN dcm in order to point to the primary and secondary headings
 
@@ -66,7 +67,7 @@ def body_to_inertial_for_pointing(primary_heading : np.ndarray,
     return np.dot(BC, np.dot(CP, TN))
 
 
-def dcm_to_quaternion(dcm : np.ndarray) -> np.ndarray:
+def dcm_to_quaternion(dcm: np.ndarray) -> np.ndarray:
     """
     dcm_to_quaternion
         The first component of quaternion is the non-dimensional Euler parameter Beta_0 >= 0.
@@ -76,7 +77,9 @@ def dcm_to_quaternion(dcm : np.ndarray) -> np.ndarray:
     :return: Quaternion (Euler Parameter)
     """
     tr = np.trace(dcm)
-    quaternion2 = np.array([(1 + tr) / 4, (1 + 2 * dcm[0, 0] - tr) / 4, (1 + 2 * dcm[1, 1] - tr) / 4, (1 + 2 * dcm[2, 2] - tr) / 4])
+    quaternion2 = np.array(
+        [(1 + tr) / 4, (1 + 2 * dcm[0, 0] - tr) / 4, (1 + 2 * dcm[1, 1] - tr) / 4, (1 + 2 * dcm[2, 2] - tr) / 4]
+    )
     case = np.argmax(quaternion2)
     quaternion = quaternion2
     if case == 0:
@@ -111,7 +114,7 @@ def dcm_to_quaternion(dcm : np.ndarray) -> np.ndarray:
     return quaternion
 
 
-def dcm_to_euler321(dcm : np.ndarray) -> np.ndarray:
+def dcm_to_euler321(dcm: np.ndarray) -> np.ndarray:
     """
     dcm_to_euler321
 
@@ -126,7 +129,7 @@ def dcm_to_euler321(dcm : np.ndarray) -> np.ndarray:
     return euler
 
 
-def dcm_to_mrp(dcm : np.ndarray) -> np.ndarray:
+def dcm_to_mrp(dcm: np.ndarray) -> np.ndarray:
     """
     dcm_to_mrp
 
@@ -134,11 +137,13 @@ def dcm_to_mrp(dcm : np.ndarray) -> np.ndarray:
     :return: Modified Rodrigues Parameters
     """
     quaternion = dcm_to_quaternion(dcm)
-    mrp = np.array([quaternion[1] / (1 + quaternion[0]), quaternion[2] / (1 + quaternion[0]), quaternion[3] / (1 + quaternion[0])])
+    mrp = np.array(
+        [quaternion[1] / (1 + quaternion[0]), quaternion[2] / (1 + quaternion[0]), quaternion[3] / (1 + quaternion[0])]
+    )
     return mrp
 
 
-def dcm_to_principalRotation(dcm : np.ndarray) -> np.ndarray:
+def dcm_to_principalRotation(dcm: np.ndarray) -> np.ndarray:
     """
     dcm_to_principalRotation
 
@@ -148,12 +153,12 @@ def dcm_to_principalRotation(dcm : np.ndarray) -> np.ndarray:
 
     cp = (np.trace(dcm) - 1) / 2
     p = np.arccos(cp)
-    sp = p / 2. / np.sin(p)
+    sp = p / 2.0 / np.sin(p)
     prv = np.array([(dcm[1, 2] - dcm[2, 1]) * sp, (dcm[2, 0] - dcm[0, 2]) * sp, (dcm[0, 1] - dcm[1, 0]) * sp])
     return prv
 
 
-def mrp_to_dcm(mrp : np.ndarray) -> np.ndarray:
+def mrp_to_dcm(mrp: np.ndarray) -> np.ndarray:
     """
     mrp_to_dcm
 
@@ -176,7 +181,7 @@ def mrp_to_dcm(mrp : np.ndarray) -> np.ndarray:
     return dcm / d
 
 
-def mrp_to_quaternion(mrp : np.ndarray) -> np.ndarray:
+def mrp_to_quaternion(mrp: np.ndarray) -> np.ndarray:
     """
     mrp_to_quaternion
 
@@ -184,11 +189,13 @@ def mrp_to_quaternion(mrp : np.ndarray) -> np.ndarray:
     :return: Quaternion (Euler Parameter)
     """
     ps = 1 + np.linalg.norm(mrp) ** 2
-    quaternion = np.array([(1 - np.linalg.norm(mrp) * np.linalg.norm(mrp)) / ps, 2 * mrp[0] / ps, 2 * mrp[1] / ps, 2 * mrp[2] / ps])
+    quaternion = np.array(
+        [(1 - np.linalg.norm(mrp) * np.linalg.norm(mrp)) / ps, 2 * mrp[0] / ps, 2 * mrp[1] / ps, 2 * mrp[2] / ps]
+    )
     return quaternion
 
 
-def mrp_to_euler321(mrp : np.ndarray) -> np.ndarray:
+def mrp_to_euler321(mrp: np.ndarray) -> np.ndarray:
     """
     mrp_to_euler321
 
@@ -199,7 +206,7 @@ def mrp_to_euler321(mrp : np.ndarray) -> np.ndarray:
     return quaternion_to_euler321(mrp_to_quaternion(mrp))
 
 
-def mrp_to_principalRotation(mrp : np.ndarray) -> np.ndarray:
+def mrp_to_principalRotation(mrp: np.ndarray) -> np.ndarray:
     """
     mrp_to_principalRotation
 
@@ -208,10 +215,10 @@ def mrp_to_principalRotation(mrp : np.ndarray) -> np.ndarray:
     """
 
     p = 4 * np.arctan(np.linalg.norm(mrp))
-    return np.array([mrp[0], mrp[1], mrp[2]])/ np.linalg.norm(mrp) * p
+    return np.array([mrp[0], mrp[1], mrp[2]]) / np.linalg.norm(mrp) * p
 
 
-def mrp_switch(mrp : np.ndarray, threshold : float) -> np.ndarray:
+def mrp_switch(mrp: np.ndarray, threshold: float) -> np.ndarray:
     """
     mrp_switch
         Switch to the shadow set if the norm of the input MRP is greater than the threshold
@@ -222,7 +229,7 @@ def mrp_switch(mrp : np.ndarray, threshold : float) -> np.ndarray:
     :return: Modified Rodrigues Parameters
     """
 
-    if np.dot(mrp, mrp) > threshold ** 2:
+    if np.dot(mrp, mrp) > threshold**2:
         s = -mrp / np.dot(mrp, mrp)
     else:
         s = mrp
@@ -261,7 +268,7 @@ def principalRotation_to_dcm(prv: np.ndarray) -> np.ndarray:
     return dcm
 
 
-def principalRotation_to_quaternion(prv : np.ndarray) -> np.ndarray:
+def principalRotation_to_quaternion(prv: np.ndarray) -> np.ndarray:
     """
     principalRotation_to_quaternion
 
@@ -272,7 +279,7 @@ def principalRotation_to_quaternion(prv : np.ndarray) -> np.ndarray:
     return dcm_to_quaternion(principalRotation_to_dcm(prv))
 
 
-def principalRotation_to_euler321(prv : np.ndarray) -> np.ndarray:
+def principalRotation_to_euler321(prv: np.ndarray) -> np.ndarray:
     """
     principalRotation_to_euler321
 
@@ -283,7 +290,7 @@ def principalRotation_to_euler321(prv : np.ndarray) -> np.ndarray:
     return quaternion_to_euler321(principalRotation_to_quaternion(prv))
 
 
-def principalRotation_to_mrp(prv : np.ndarray) -> np.ndarray:
+def principalRotation_to_mrp(prv: np.ndarray) -> np.ndarray:
     """
     principalRotation_to_mrp
 
@@ -294,7 +301,7 @@ def principalRotation_to_mrp(prv : np.ndarray) -> np.ndarray:
     return dcm_to_mrp(principalRotation_to_dcm(prv))
 
 
-def quaternion_to_dcm(quaternion : np.ndarray) -> np.ndarray:
+def quaternion_to_dcm(quaternion: np.ndarray) -> np.ndarray:
     """
     quaternion_to_dcm
 
@@ -314,7 +321,7 @@ def quaternion_to_dcm(quaternion : np.ndarray) -> np.ndarray:
     return dcm
 
 
-def quaternion_to_euler321(quaternion : np.ndarray) -> np.ndarray:
+def quaternion_to_euler321(quaternion: np.ndarray) -> np.ndarray:
     """
     quaternion_to_euler321
 
@@ -322,16 +329,20 @@ def quaternion_to_euler321(quaternion : np.ndarray) -> np.ndarray:
     :return: Euler Angle 3-2-1
     """
 
-    e1 = np.arctan2(2 * (quaternion[1] * quaternion[2] + quaternion[0] * quaternion[3]),
-                    quaternion[0] ** 2 + quaternion[1] ** 2 - quaternion[2] ** 2 - quaternion[3] ** 2)
+    e1 = np.arctan2(
+        2 * (quaternion[1] * quaternion[2] + quaternion[0] * quaternion[3]),
+        quaternion[0] ** 2 + quaternion[1] ** 2 - quaternion[2] ** 2 - quaternion[3] ** 2,
+    )
     e2 = np.arcsin(-2 * (quaternion[1] * quaternion[3] - quaternion[0] * quaternion[2]))
-    e3 = np.arctan2(2 * (quaternion[2] * quaternion[3] + quaternion[0] * quaternion[1]),
-                    quaternion[0] ** 2 - quaternion[1] ** 2 - quaternion[2] ** 2 + quaternion[3] ** 2)
+    e3 = np.arctan2(
+        2 * (quaternion[2] * quaternion[3] + quaternion[0] * quaternion[1]),
+        quaternion[0] ** 2 - quaternion[1] ** 2 - quaternion[2] ** 2 + quaternion[3] ** 2,
+    )
 
     return np.array([e1, e2, e3])
 
 
-def quaternion_to_mrp(quaternion : np.ndarray) -> np.ndarray:
+def quaternion_to_mrp(quaternion: np.ndarray) -> np.ndarray:
     """
     quaternion_to_mrp
 
@@ -342,10 +353,10 @@ def quaternion_to_mrp(quaternion : np.ndarray) -> np.ndarray:
     if quaternion[0] < 0:
         quaternion = -quaternion
 
-    return np.array([quaternion[1], quaternion[2], quaternion[3]])/ (1 + quaternion[0])
+    return np.array([quaternion[1], quaternion[2], quaternion[3]]) / (1 + quaternion[0])
 
 
-def quaternion_to_principalRotation(quaternion : np.ndarray) -> np.ndarray:
+def quaternion_to_principalRotation(quaternion: np.ndarray) -> np.ndarray:
     """
     quaternion_to_principalRotation
 
@@ -359,7 +370,7 @@ def quaternion_to_principalRotation(quaternion : np.ndarray) -> np.ndarray:
     return np.array([quaternion[1], quaternion[2], quaternion[3]]) / sp * p
 
 
-def first_axis_rotation(angle :float) -> np.ndarray:
+def first_axis_rotation(angle: float) -> np.ndarray:
     """
     first_axis_rotation
         For the DCM for a rotation about the first body axis
@@ -376,7 +387,7 @@ def first_axis_rotation(angle :float) -> np.ndarray:
     return m
 
 
-def second_axis_rotation(angle :float) -> np.ndarray:
+def second_axis_rotation(angle: float) -> np.ndarray:
     """
     second_axis_rotation
         For the DCM for a rotation about the second body axis
@@ -393,7 +404,7 @@ def second_axis_rotation(angle :float) -> np.ndarray:
     return m
 
 
-def third_axis_rotation(angle :float) -> np.ndarray:
+def third_axis_rotation(angle: float) -> np.ndarray:
     """
     third_axis_rotation
         For the DCM for a rotation about the third body axis
@@ -410,7 +421,7 @@ def third_axis_rotation(angle :float) -> np.ndarray:
     return m
 
 
-def euler321_to_dcm(euler321 :np.ndarray) -> np.ndarray:
+def euler321_to_dcm(euler321: np.ndarray) -> np.ndarray:
     """
     euler321_to_dcm
 
@@ -422,17 +433,25 @@ def euler321_to_dcm(euler321 :np.ndarray) -> np.ndarray:
     dcm[0, 0] = np.cos(euler321[1]) * np.cos(euler321[0])
     dcm[0, 1] = np.cos(euler321[1]) * np.sin(euler321[0])
     dcm[0, 2] = -np.sin(euler321[1])
-    dcm[1, 0] =  np.sin(euler321[2]) * np.sin(euler321[1]) * np.cos(euler321[0]) - np.cos(euler321[2]) * np.sin(euler321[0])
-    dcm[1, 1] =  np.sin(euler321[2]) * np.sin(euler321[1]) * np.sin(euler321[0]) + np.cos(euler321[2]) * np.cos(euler321[0])
-    dcm[1, 2] =  np.sin(euler321[2]) * np.cos(euler321[1])
-    dcm[2, 0] = np.cos(euler321[2]) * np.sin(euler321[1]) * np.cos(euler321[0]) +  np.sin(euler321[2]) * np.sin(euler321[0])
-    dcm[2, 1] = np.cos(euler321[2]) * np.sin(euler321[1]) * np.sin(euler321[0]) -  np.sin(euler321[2]) * np.cos(euler321[0])
+    dcm[1, 0] = np.sin(euler321[2]) * np.sin(euler321[1]) * np.cos(euler321[0]) - np.cos(euler321[2]) * np.sin(
+        euler321[0]
+    )
+    dcm[1, 1] = np.sin(euler321[2]) * np.sin(euler321[1]) * np.sin(euler321[0]) + np.cos(euler321[2]) * np.cos(
+        euler321[0]
+    )
+    dcm[1, 2] = np.sin(euler321[2]) * np.cos(euler321[1])
+    dcm[2, 0] = np.cos(euler321[2]) * np.sin(euler321[1]) * np.cos(euler321[0]) + np.sin(euler321[2]) * np.sin(
+        euler321[0]
+    )
+    dcm[2, 1] = np.cos(euler321[2]) * np.sin(euler321[1]) * np.sin(euler321[0]) - np.sin(euler321[2]) * np.cos(
+        euler321[0]
+    )
     dcm[2, 2] = np.cos(euler321[2]) * np.cos(euler321[1])
 
     return dcm
 
 
-def euler321_to_quaternion(euler321 : np.ndarray) -> np.ndarray:
+def euler321_to_quaternion(euler321: np.ndarray) -> np.ndarray:
     """
     euler321_to_quaternion
 
@@ -440,19 +459,23 @@ def euler321_to_quaternion(euler321 : np.ndarray) -> np.ndarray:
     :return: Quaternion (Euler Parameter)
     """
 
-    q0 = (np.cos(euler321[0] / 2) * np.cos(euler321[1] / 2) * np.cos(euler321[2] / 2) + np.sin(euler321[0] / 2) *
-          np.sin(euler321[1] / 2) * np.sin(euler321[2] / 2))
-    q1 = (np.cos(euler321[0] / 2) * np.cos(euler321[1] / 2) * np.sin(euler321[2] / 2) - np.sin(euler321[0] / 2) *
-          np.sin(euler321[1] / 2) * np.cos(euler321[2] / 2))
-    q2 = (np.cos(euler321[0] / 2) * np.sin(euler321[1] / 2) * np.cos(euler321[2] / 2) + np.sin(euler321[0] / 2) *
-          np.cos(euler321[1] / 2) * np.sin(euler321[2] / 2))
-    q3 = (np.sin(euler321[0] / 2) * np.cos(euler321[1] / 2) * np.cos(euler321[2] / 2) - np.cos(euler321[0] / 2) *
-          np.sin(euler321[1] / 2) * np.sin(euler321[2] / 2))
+    q0 = np.cos(euler321[0] / 2) * np.cos(euler321[1] / 2) * np.cos(euler321[2] / 2) + np.sin(euler321[0] / 2) * np.sin(
+        euler321[1] / 2
+    ) * np.sin(euler321[2] / 2)
+    q1 = np.cos(euler321[0] / 2) * np.cos(euler321[1] / 2) * np.sin(euler321[2] / 2) - np.sin(euler321[0] / 2) * np.sin(
+        euler321[1] / 2
+    ) * np.cos(euler321[2] / 2)
+    q2 = np.cos(euler321[0] / 2) * np.sin(euler321[1] / 2) * np.cos(euler321[2] / 2) + np.sin(euler321[0] / 2) * np.cos(
+        euler321[1] / 2
+    ) * np.sin(euler321[2] / 2)
+    q3 = np.sin(euler321[0] / 2) * np.cos(euler321[1] / 2) * np.cos(euler321[2] / 2) - np.cos(euler321[0] / 2) * np.sin(
+        euler321[1] / 2
+    ) * np.sin(euler321[2] / 2)
 
     return np.array([q0, q1, q2, q3])
 
 
-def euler321_to_mrp(euler321 : np.ndarray) -> np.ndarray:
+def euler321_to_mrp(euler321: np.ndarray) -> np.ndarray:
     """
     euler321_to_mrp
 
@@ -463,7 +486,7 @@ def euler321_to_mrp(euler321 : np.ndarray) -> np.ndarray:
     return quaternion_to_mrp(euler321_to_quaternion(euler321))
 
 
-def euler321_to_principalRotation(euler321 : np.ndarray) -> np.ndarray:
+def euler321_to_principalRotation(euler321: np.ndarray) -> np.ndarray:
     """
     euler321_to_principalRotation
 

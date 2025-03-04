@@ -5,9 +5,10 @@ from context import cielimMessage_pb2
 import numpy as np
 import pytest
 
+
 def scene_setup(spacecraft_position):
     protobuf_message = cielimMessage_pb2.CielimMessage()
-    
+
     sc_pos_x, sc_pos_y, sc_pos_z = spacecraft_position
 
     body = protobuf_message.celestialBodies.add()
@@ -35,6 +36,7 @@ def scene_setup(spacecraft_position):
     [protobuf_message.spacecraft.attitude.append(item) for item in [0, 0, 0]]
     return protobuf_message
 
+
 def test_ping():
     connector = Connector()
     launcher = Launcher()
@@ -48,6 +50,7 @@ def test_ping():
 
     connector.disconnect()
     launcher.terminate()
+
 
 def test_init_scene():
     connector = Connector()
@@ -93,11 +96,12 @@ def test_init_scene():
     # Get image and check for blank
 
     [image, center_of_brightness] = connector.request_image_for_camera_id(1, 1)
-    
+
     np.testing.assert_equal(image, np.zeros_like(image), "Image was not cleared")
 
     connector.disconnect()
     launcher.terminate()
+
 
 @pytest.mark.parametrize("position", [((100000, 0, -1000000)), ((10000, 0, -1000000)), ((1000, 10000, -1000000))])
 def test_send_frame(position):
@@ -143,6 +147,7 @@ def test_send_frame(position):
 
     connector.disconnect()
     launcher.terminate()
+
 
 @pytest.mark.parametrize("position", [((100000, 0, -1000000)), ((10000, 0, -1000000)), ((1000, 10000, -1000000))])
 def test_request_image(position):

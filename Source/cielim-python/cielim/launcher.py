@@ -71,6 +71,7 @@ class ZmqTcpProtocol(ZmqNetworkProtocol):
         port = int(parts[2])
         return cls(ip_address, port)
 
+
 class Launcher:
     def __init__(self):
         self.process_id = None
@@ -99,9 +100,17 @@ class Launcher:
     def run(port=5556):
         end_point = ZmqTcpProtocol(port=port)
         try:
-            cielim_process = subprocess.Popen([appPath, "/Game/Maps/Lvl_Visualization", "-RenderOffscreen", "-directComm",
-                                               end_point.as_connect_address(), ], stdout=subprocess.DEVNULL,
-                                              stderr=subprocess.DEVNULL, )
+            cielim_process = subprocess.Popen(
+                [
+                    appPath,
+                    "/Game/Maps/Lvl_Visualization",
+                    "-RenderOffscreen",
+                    "-directComm",
+                    end_point.as_connect_address(),
+                ],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
             print("Cielim spawned with pid: {0} on port: {1}".format(str(cielim_process.pid), end_point.port))
             return cielim_process
         except FileNotFoundError:

@@ -17,8 +17,8 @@ def scene_setup():
     [body.attitude.append(item) for item in [4, 5, 6]]
 
     protobuf_message.spacecraft.spacecraftName = "cielim_sat"
-    [protobuf_message.spacecraft.position.append(item) for item in [35786 * 10 ** 3, 0, 0]]
-    [protobuf_message.spacecraft.velocity.append(item) for item in [0, 3.07 * 10 ** 3, 0]]
+    [protobuf_message.spacecraft.position.append(item) for item in [35786 * 10**3, 0, 0]]
+    [protobuf_message.spacecraft.velocity.append(item) for item in [0, 3.07 * 10**3, 0]]
     [protobuf_message.spacecraft.attitude.append(item) for item in [0, 0, 0]]
     [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
     [protobuf_message.camera.cameraPositionInBody.append(item) for item in [1, 1, 1]]
@@ -38,24 +38,24 @@ def test_setters_getters():
     scene_frame.set_pointing_target("testing")
     np.testing.assert_equal(scene_frame.target_name, "testing")
 
-    scene_frame.set_gravitational_parameter(3.2 * 1E-10)
-    np.testing.assert_equal(scene_frame.gravitational_parameter, 3.2 * 1E-10)
+    scene_frame.set_gravitational_parameter(3.2 * 1e-10)
+    np.testing.assert_equal(scene_frame.gravitational_parameter, 3.2 * 1e-10)
 
     orbital_elements = ClassicOrbitalElements()
     orbital_elements.eccentricity = 0
-    orbital_elements.semi_major_axis = 35786 * 10 ** 3
+    orbital_elements.semi_major_axis = 35786 * 10**3
     orbital_elements.inclination = np.pi / 6
     orbital_elements.ascending_node = np.pi / 12
     orbital_elements.argument_periapsis = np.pi / 10
     orbital_elements.true_anomaly = np.pi
-    mu = 3.986 * 10 ** 14
+    mu = 3.986 * 10**14
     scene_frame.set_orbital_elements(orbital_elements, mu)
     returned = scene_frame.get_scene()
 
     r = np.array(returned.spacecraft.position)
     v = np.array(returned.spacecraft.velocity)
     h = np.cross(r, v)
-    np.testing.assert_equal(np.dot(h / np.linalg.norm(h), [0., 0., 1.]), np.cos(orbital_elements.inclination))
+    np.testing.assert_equal(np.dot(h / np.linalg.norm(h), [0.0, 0.0, 1.0]), np.cos(orbital_elements.inclination))
     np.testing.assert_equal(np.linalg.norm(v), np.sqrt(mu / orbital_elements.semi_major_axis))
 
     mrp = [1, 2, 3]
@@ -70,7 +70,7 @@ def test_setters_getters():
     np.testing.assert_almost_equal(returned.spacecraft.attitude[0], np.tan(angle / 4), decimal=15)
 
     angle = np.pi / 4
-    dcm = np.array([[np.cos(angle), np.sin(angle), 0.], [-np.sin(angle), np.cos(angle), 0.], [0., 0., 1.]])
+    dcm = np.array([[np.cos(angle), np.sin(angle), 0.0], [-np.sin(angle), np.cos(angle), 0.0], [0.0, 0.0, 1.0]])
     scene_frame.set_dcm(dcm)
     returned = scene_frame.get_scene()
     np.testing.assert_almost_equal(returned.spacecraft.attitude[2], np.tan(angle / 4), decimal=15)
@@ -97,10 +97,10 @@ def test_camera_correction_rotation():
     BN = mrp_to_dcm(list(returned.spacecraft.attitude))
 
     CB = mrp_to_dcm(list(returned.camera.bodyFrameToCameraMrp))
-    CN = np.array([[0., 0., -1.], [1., 0., 0.], [0., -1, 0.]])
+    CN = np.array([[0.0, 0.0, -1.0], [1.0, 0.0, 0.0], [0.0, -1, 0.0]])
 
     # TODO confirm that CN.T is correct and not CN (or that the method is correct)
-    np.testing.assert_allclose(np.dot(CB, BN), CN.T, rtol=1E-6, atol=1E-3)
+    np.testing.assert_allclose(np.dot(CB, BN), CN.T, rtol=1e-6, atol=1e-3)
 
     return
 
@@ -108,7 +108,7 @@ def test_camera_correction_rotation():
 def test_propagation():
     scene_frame = scene.Scene()
     scene_frame.set_existing_message(scene_setup())
-    mu = 3.986 * 10 ** 14
+    mu = 3.986 * 10**14
     initial_position = list(scene_frame.get_scene().spacecraft.position)
     initial_velocity = list(scene_frame.get_scene().spacecraft.velocity)
 
@@ -128,8 +128,8 @@ def test_propagation():
         h[i, :] = np.cross(positions[i, :], velocities[i, :])
         energy[i] = np.linalg.norm(velocities[i, :]) ** 2 / 2 - mu / np.linalg.norm(positions[i, :])
 
-    np.testing.assert_almost_equal(h[-1, :] / np.linalg.norm(h[-1, :]), [0., 0., 1.])
-    np.testing.assert_allclose(h[:, 0], h[0, 0], rtol=1E-10)
-    np.testing.assert_allclose(h[:, 1], h[0, 1], rtol=1E-10)
-    np.testing.assert_allclose(h[:, 2], h[0, 2], rtol=1E-10)
+    np.testing.assert_almost_equal(h[-1, :] / np.linalg.norm(h[-1, :]), [0.0, 0.0, 1.0])
+    np.testing.assert_allclose(h[:, 0], h[0, 0], rtol=1e-10)
+    np.testing.assert_allclose(h[:, 1], h[0, 1], rtol=1e-10)
+    np.testing.assert_allclose(h[:, 2], h[0, 2], rtol=1e-10)
     np.testing.assert_allclose(energy, energy[0])

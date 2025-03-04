@@ -18,7 +18,7 @@ if __name__ == "__main__":
     while True:
         frame = file_handler.get_next_simulation_frame()
 
-        if (frame is None):
+        if frame is None:
             break
 
         connector.send_frame(frame)

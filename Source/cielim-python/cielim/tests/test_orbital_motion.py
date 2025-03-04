@@ -15,9 +15,10 @@ def test_rv_oe():
 
     gravitational_parameter = 1e10
     position = np.array([1e5, 1e6, 0])
-    h = np.array([0., 0., 1.])
-    velocity = np.sqrt(gravitational_parameter / np.linalg.norm(position)) * np.cross(h, position / np.linalg.norm(
-        position))
+    h = np.array([0.0, 0.0, 1.0])
+    velocity = np.sqrt(gravitational_parameter / np.linalg.norm(position)) * np.cross(
+        h, position / np.linalg.norm(position)
+    )
     elements = cartesian_to_orbital_elements(gravitational_parameter, position, velocity)
     np.testing.assert_almost_equal(elements.semi_major_axis, np.linalg.norm(position), 8)
     np.testing.assert_almost_equal(elements.eccentricity, 0, 8)
@@ -37,8 +38,9 @@ def test_equations_of_motion():
     gravitational_parameter = 1e10
     dstate_dt = point_mass_dynamics(time, state, gravitational_parameter)
     np.testing.assert_almost_equal(dstate_dt[:3], vel, 10)
-    np.testing.assert_almost_equal(np.linalg.norm(dstate_dt[3:]), gravitational_parameter / np.linalg.norm(pos) ** 2,
-                                   10)
+    np.testing.assert_almost_equal(
+        np.linalg.norm(dstate_dt[3:]), gravitational_parameter / np.linalg.norm(pos) ** 2, 10
+    )
 
     times = list(range(0, 1001, 10))
     states = [state]
@@ -52,7 +54,7 @@ def test_equations_of_motion():
         h[i, :] = np.cross(states[i, :3], states[i, 3:])
         energy[i] = np.linalg.norm(states[i, 3:]) ** 2 / 2 - gravitational_parameter / np.linalg.norm(states[i, :3])
 
-    np.testing.assert_allclose(h[:, 0], h[0, 0], rtol=1E-10)
-    np.testing.assert_allclose(h[:, 1], h[0, 1], rtol=1E-10)
-    np.testing.assert_allclose(h[:, 2], h[0, 2], rtol=1E-10)
+    np.testing.assert_allclose(h[:, 0], h[0, 0], rtol=1e-10)
+    np.testing.assert_allclose(h[:, 1], h[0, 1], rtol=1e-10)
+    np.testing.assert_allclose(h[:, 2], h[0, 2], rtol=1e-10)
     np.testing.assert_allclose(energy, energy[0])

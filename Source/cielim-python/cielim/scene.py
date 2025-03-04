@@ -12,28 +12,30 @@ class Scene(object):
         self.target_name = ""
         self.gravitational_parameter = 0
 
-    def set_existing_message(self, cielim_msg : cielimMessage_pb2.CielimMessage) -> None:
+    def set_existing_message(self, cielim_msg: cielimMessage_pb2.CielimMessage) -> None:
         """
         Set an existing message
         :param: cielim_msg (cielim message type)
         """
         self.cielim_msg = cielim_msg
 
-    def set_pointing_target(self, target_name : str) -> None:
+    def set_pointing_target(self, target_name: str) -> None:
         """
         Set the name of the pointing target for the camera
         :param: target_name (string)
         """
         self.target_name = target_name
 
-    def set_gravitational_parameter(self, gravitational_parameter : float) -> None:
+    def set_gravitational_parameter(self, gravitational_parameter: float) -> None:
         """
         Set gravitational parameter of central body in SI units
         :param: gravitational_parameter (SI)
         """
         self.gravitational_parameter = gravitational_parameter
 
-    def set_orbital_elements(self, orbital_elements : ClassicOrbitalElements, gravitational_parameter : float = 0) -> None:
+    def set_orbital_elements(
+        self, orbital_elements: ClassicOrbitalElements, gravitational_parameter: float = 0
+    ) -> None:
         """
         Set spacecraft position with orbital elements
         :param: orbital_elements
@@ -47,7 +49,7 @@ class Scene(object):
         [self.cielim_msg.spacecraft.position.append(item) for item in position]
         [self.cielim_msg.spacecraft.velocity.append(item) for item in velocity]
 
-    def set_mrp(self, mrp : ndarray) -> None:
+    def set_mrp(self, mrp: ndarray) -> None:
         """
         Set attitude with a modified rodrigues parameter
         :param: mrp
@@ -55,7 +57,7 @@ class Scene(object):
         self.cielim_msg.spacecraft.ClearField("attitude")
         [self.cielim_msg.spacecraft.attitude.append(item) for item in mrp]
 
-    def set_prv(self, prv :ndarray) -> None:
+    def set_prv(self, prv: ndarray) -> None:
         """
         Set attitude with a principal rotation vector
         :param: prv
@@ -64,7 +66,7 @@ class Scene(object):
         self.cielim_msg.spacecraft.ClearField("attitude")
         [self.cielim_msg.spacecraft.attitude.append(item) for item in mrp]
 
-    def set_dcm(self, dcm : ndarray) -> None:
+    def set_dcm(self, dcm: ndarray) -> None:
         """
         Set attitude with a direction cosine matrix
         :param: dcm
@@ -73,7 +75,7 @@ class Scene(object):
         self.cielim_msg.spacecraft.ClearField("attitude")
         [self.cielim_msg.spacecraft.attitude.append(item) for item in mrp]
 
-    def set_euler321(self, euler321 : ndarray) -> None:
+    def set_euler321(self, euler321: ndarray) -> None:
         """
         Set attitude with euler angles
         :param: euler321
@@ -82,7 +84,7 @@ class Scene(object):
         self.cielim_msg.spacecraft.ClearField("attitude")
         [self.cielim_msg.spacecraft.attitude.append(item) for item in mrp]
 
-    def set_euler321_pointing_offset(self, delta_euler321 : ndarray) -> None:
+    def set_euler321_pointing_offset(self, delta_euler321: ndarray) -> None:
         """
         Add a pointing offset using euler angles (assuming small offsets)
         :param: delta_euler321
@@ -93,13 +95,13 @@ class Scene(object):
         self.cielim_msg.spacecraft.ClearField("attitude")
         [self.cielim_msg.spacecraft.attitude.append(item) for item in mrp]
 
-    def look_at_target(self, target_name : str ="") -> None:
+    def look_at_target(self, target_name: str = "") -> None:
         """
-        Function to point the camera at the target in the scene. The velocity direction of the 
+        Function to point the camera at the target in the scene. The velocity direction of the
         relative motion is used as the secondary direction to make the camera pointing frame.
         If the target is not found among the bodies, the pointing will point to the zero inertial point
         :param target_name: optional, reset the target (string)
-        :return: 
+        :return:
         """
         if target_name != "":
             self.target_name = target_name
@@ -127,7 +129,7 @@ class Scene(object):
         self.cielim_msg.spacecraft.ClearField("attitude")
         [self.cielim_msg.spacecraft.attitude.append(item) for item in dcm_to_mrp(BN)]
 
-    def propagate(self, end_time : float, gravitational_parameter : float = 0) -> None:
+    def propagate(self, end_time: float, gravitational_parameter: float = 0) -> None:
         """
         Function to propagate the camera position.
         If the target is not found among the bodies, the pointing will point to the zero inertial point
@@ -148,14 +150,14 @@ class Scene(object):
         [self.cielim_msg.spacecraft.position.append(item) for item in final_state[:3]]
         [self.cielim_msg.spacecraft.velocity.append(item) for item in final_state[3:]]
 
-    def propagate_and_stare(self, end_time : float, gravitational_parameter : float = 0, target_name : str="") -> None:
+    def propagate_and_stare(self, end_time: float, gravitational_parameter: float = 0, target_name: str = "") -> None:
         """
-        Function to propagate the camera position and maintain the pointing of the camera to the target in the scene. 
+        Function to propagate the camera position and maintain the pointing of the camera to the target in the scene.
         If the target is not found among the bodies, the pointing will point to the zero inertial point
         :param end_time: time (seconds) to go to
         :param gravitational_parameter: optional, reset gravitational parameter (SI)
         :param target_name: optional, reset target (string)
-        :return: 
+        :return:
         """
         self.propagate(end_time, gravitational_parameter)
         self.look_at_target(target_name)

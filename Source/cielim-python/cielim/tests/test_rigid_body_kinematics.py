@@ -1,6 +1,7 @@
 import context
 from rigid_body_kinematics import *
 
+
 def test_dcm():
     camera_dcm = camera_correction_rotation()
     np.testing.assert_almost_equal(np.linalg.det(camera_dcm), 1, 5)
@@ -24,7 +25,8 @@ def test_dcm():
     np.testing.assert_almost_equal(np.arctan(np.linalg.norm(mrp)) * 4, np.pi / 4, 5)
     np.testing.assert_almost_equal(euler[0], np.pi / 4, 5)
     np.testing.assert_almost_equal(
-        np.sqrt(quaternion[0] ** 2 + quaternion[1] ** 2 + quaternion[2] ** 2 + quaternion[3] ** 2), 1, 5)
+        np.sqrt(quaternion[0] ** 2 + quaternion[1] ** 2 + quaternion[2] ** 2 + quaternion[3] ** 2), 1, 5
+    )
 
 
 def test_transformations():
