@@ -6,19 +6,34 @@ A photorealistic image generation tool for the space environment
 This project is in pretty early stages and the build system/process is probably flaky. If you find an issue please 
 create an issue.
 
+### Cloning
+
+The repository uses git submodules to manage dependencies. To ensure all submodules are cloned
+pass `--recurse-submodules` e.g. 
+
+`git clone https://github.com/lasp/cielim.git --recurse-submodules`
+
 ### Dependencies
 
-Firstly, to build this project you will need to install Unreal Engine (Currently version 5.4). Additionally, you will need the following 
-tools installed on your computer and added to your PATH environment variable:
-- Automake (only for MacOS and Linux)
-- Autoconf (only for MacOS and Linux)
-- Libtool (only for MacOS and Linux)
-- Make (only for MacOS and Linux)
-- Visual Studio Community 2022 and MSVC Build Tools (Windows Only)
-- CMake version 3.0 or higher
+To build this project install Unreal Engine (Currently version 5.4). Additionally, the following 
+tools need to be installed and added to your PATH environment variable:
+#### Linux
+  - Automake
+  - Autoconf
+  - Libtool
+  - Make
+  - CMake (3.0 or higher)
+#### Mac
+  - Automake `brew install automake`
+  - Autoconf `brew install autoconf`ter
+  - Libtool `brew install libtool`
+  - Make `brew install make`
+  - CMake `brew install cmake` (3.0 or higher)
+#### Windows
+  - Visual Studio Community 2022 and MSVC Build Tools
+  - CMake version (3.0 or higher)
 
-**Note:** If you have both Visual Studio and Msys2/MinGW on your Windows machine, you may have issues building OpenCV as it may try to use MinGW to build
-files generated for Visual Studio. In this case, rename or delete your Msys64 folder while building and then restore when it's finished.
+**Note:** If you have both Visual Studio and Msys2/MinGW on your Windows machine, you may have issues building OpenCV as it may try to use MinGW to build files generated for Visual Studio. In this case, rename or delete your Msys64 folder while building and then restore when it's finished.
 
 **Additionally:** If you're working on Windows, you will need to copy and paste the .dll files corresponding to the linked .lib files in your `cielim\Binaries\Win64` directory. These include:
   - libprotobuf.dll
@@ -28,8 +43,8 @@ files generated for Visual Studio. In this case, rename or delete your Msys64 fo
 
 ### Build Process
 
-Next, you will need to open (double click) the cielim.uproject file  
-- This will launch Unreal and if the project isn't built (which it won't be if you are starting fresh) it will try to build the project.
+Open (double click) the cielim.uproject file  
+- This launches Unreal and if the project isn't built (which it won't be if you are starting fresh) it will try to build the project.
 - If the build fails or you would like more information, you can get further debug by manually invoking the build from the terminal 
   (replacing any user specific paths) using the following:
   - `<Path to your UE installation>/UE_5.4/Engine/Binaries/ThirdParty/DotNet/6.0.302/mac-arm64/dotnet 
