@@ -1,15 +1,12 @@
-import delimited_protobuf
-import cv2
-import numpy as np
-import os
 import struct
-import sys
-import time
-import typing
-import base64
+
+import cv2
+import delimited_protobuf
+import numpy as np
 import zmq
 
-import cielimMessage_pb2
+import cielimMessage_pb2 as cielimMessage
+
 
 class Connector:
     def __init__(self):
@@ -30,12 +27,12 @@ class Connector:
     def _send_ping(self):
         self.request_socket.send_string("PING")
         return self.request_socket.recv_string()
-    
+
     def send_init_request(self):
         self.request_socket.send_string("INIT_SCENE")
         return self.request_socket.recv_string()
 
-    def send_frame(self, sim_frame: cielimMessage_pb2.CielimMessage):
+    def send_frame(self, sim_frame: cielimMessage.CielimMessage):
         result = self.request_socket.send_multipart([b"SIM_UPDATE", b"", b"", sim_frame.SerializePartialToString()])
         print(result)
         return self.request_socket.recv_string()
@@ -49,11 +46,11 @@ class Connector:
         if should_return_image:
             buf = np.asarray(bytearray(image_data), dtype="uint8")
             image = cv2.imdecode(buf, cv2.IMREAD_COLOR)
-        
+
         cob = None
-        if cob_x != b'' and cob_y != b'':
+        if cob_x != b"" and cob_y != b"":
             cob = np.array([struct.unpack("d", cob_x)[0], struct.unpack("d", cob_y)[0]])
-        
+
         return [image, cob]
 
     def disconnect(self):
@@ -73,8 +70,8 @@ class MessageFileHandler:
     def _read_simulation_frame_at_time(self, sim_time: float):
         proceed = True
         while proceed:
-            message = delimited_protobuf.read(self.file_handle, cielimMessage_pb2.CielimMessage)
-            if message.currentTime.simTimeElapsed >= sim_time:
+            message = delimited_protobuf.read(self.file_handle, cielimMessage.CielimMessage)
+            if cielimMessage.currentTime.simTimeElapsed >= sim_time:
                 proceed = False
                 return message
 
@@ -87,4 +84,4 @@ class MessageFileHandler:
         return self._read_simulation_frame_at_time(sim_time)
 
     def get_next_simulation_frame(self):
-        return delimited_protobuf.read(self.file_handle, cielimMessage_pb2.CielimMessage)
+        return delimited_protobuf.read(self.file_handle, cielimMessage.CielimMessage)

@@ -1,4 +1,6 @@
 delimited-protobuf
+numpy
+opencv-python
 protobuf==3.19.1
 typing
 zmq

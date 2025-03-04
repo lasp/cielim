@@ -18,7 +18,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
     syntax="proto3",
     serialized_options=b"H\003",
     create_key=_descriptor._internal_create_key,
-    serialized_pb=b'\n\x13\x63ielimMessage.proto\x12\rcielimMessage"8\n\tTimeStamp\x12\x13\n\x0b\x66rameNumber\x18\x01 \x01(\x03\x12\x16\n\x0esimTimeElapsed\x18\x02 \x01(\x01"j\n\rEpochDateTime\x12\x0c\n\x04year\x18\x01 \x01(\x05\x12\r\n\x05month\x18\x02 \x01(\x05\x12\x0b\n\x03\x64\x61y\x18\x03 \x01(\x05\x12\r\n\x05hours\x18\x04 \x01(\x05\x12\x0f\n\x07minutes\x18\x05 \x01(\x05\x12\x0f\n\x07seconds\x18\x06 \x01(\x01"\xc5\x01\n\x0e\x43\x65lestialModel\x12\x12\n\nshapeModel\x18\x01 \x01(\t\x12\x1f\n\x17perlinNoiseStdDeviation\x18\x02 \x01(\x01\x12\x17\n\x0fproceduralRocks\x18\x03 \x01(\x01\x12\x11\n\tbrdfModel\x18\x04 \x01(\t\x12\x1d\n\x15reflectanceParameters\x18\x05 \x03(\x01\x12\x12\n\nmeanRadius\x18\x06 \x01(\x01\x12\x1f\n\x17principalAxisDistortion\x18\x07 \x03(\x01"\x9b\x01\n\rCelestialBody\x12\x10\n\x08\x62odyName\x18\x01 \x01(\t\x12\x10\n\x08position\x18\x02 \x03(\x01\x12\x10\n\x08velocity\x18\x03 \x03(\x01\x12\x10\n\x08\x61ttitude\x18\x04 \x03(\x01\x12\x13\n\x0b\x63\x65ntralBody\x18\x05 \x01(\x08\x12-\n\x06models\x18\x06 \x01(\x0b\x32\x1d.cielimMessage.CelestialModel"Z\n\nSpacecraft\x12\x16\n\x0espacecraftName\x18\x01 \x01(\t\x12\x10\n\x08position\x18\x02 \x03(\x01\x12\x10\n\x08velocity\x18\x03 \x03(\x01\x12\x10\n\x08\x61ttitude\x18\x04 \x03(\x01"\x84\x01\n\x0eRenderingModel\x12\x1d\n\x15\x63osmicRayStdDeviation\x18\x01 \x01(\x01\x12\x18\n\x10\x65nableStrayLight\x18\x02 \x01(\x08\x12\x11\n\tstarField\x18\x03 \x01(\x08\x12\x11\n\trendering\x18\x04 \x01(\t\x12\x13\n\x0b\x65nableSmear\x18\x05 \x01(\x08"\xd4\x02\n\x0b\x43\x61meraModel\x12\x10\n\x08\x63\x61meraId\x18\x01 \x01(\x03\x12\x12\n\nparentName\x18\x02 \x01(\t\x12\x13\n\x0b\x66ieldOfView\x18\x03 \x03(\x01\x12\x12\n\nresolution\x18\x04 \x03(\x03\x12\x1c\n\x14\x63\x61meraPositionInBody\x18\x05 \x03(\x01\x12\x1c\n\x14\x62odyFrameToCameraMrp\x18\x06 \x03(\x01\x12\x12\n\nrenderRate\x18\x07 \x01(\x04\x12\x13\n\x0b\x66ocalLength\x18\x08 \x01(\x01\x12\x14\n\x0c\x65xposureTime\x18\t \x01(\x01\x12\x1b\n\x13pointSpreadFunction\x18\n \x01(\x04\x12\x11\n\treadNoise\x18\x0b \x01(\x01\x12\x12\n\nsystemGain\x18\x0c \x01(\x01\x12\x37\n\x10renderParameters\x18\r \x01(\x0b\x32\x1d.cielimMessage.RenderingModel"\xfd\x01\n\rCielimMessage\x12+\n\x05\x65poch\x18\x01 \x01(\x0b\x32\x1c.cielimMessage.EpochDateTime\x12-\n\x0b\x63urrentTime\x18\x02 \x01(\x0b\x32\x18.cielimMessage.TimeStamp\x12\x35\n\x0f\x63\x65lestialBodies\x18\x03 \x03(\x0b\x32\x1c.cielimMessage.CelestialBody\x12-\n\nspacecraft\x18\x04 \x01(\x0b\x32\x19.cielimMessage.Spacecraft\x12*\n\x06\x63\x61mera\x18\x05 \x01(\x0b\x32\x1a.cielimMessage.CameraModelB\x02H\x03\x62\x06proto3',
+    serialized_pb=b'\n\x13\x63ielimMessage.proto\x12\rcielimMessage"8\n\tTimeStamp\x12\x13\n\x0b\x66rameNumber\x18\x01 \x01(\x03\x12\x16\n\x0esimTimeElapsed\x18\x02 \x01(\x01"j\n\rEpochDateTime\x12\x0c\n\x04year\x18\x01 \x01(\x05\x12\r\n\x05month\x18\x02 \x01(\x05\x12\x0b\n\x03\x64\x61y\x18\x03 \x01(\x05\x12\r\n\x05hours\x18\x04 \x01(\x05\x12\x0f\n\x07minutes\x18\x05 \x01(\x05\x12\x0f\n\x07seconds\x18\x06 \x01(\x01"\xdb\x01\n\tMeshModel\x12\x12\n\nshapeModel\x18\x01 \x01(\t\x12\x1f\n\x17perlinNoiseStdDeviation\x18\x02 \x01(\x01\x12\x17\n\x0fproceduralRocks\x18\x03 \x01(\x01\x12\x11\n\tbrdfModel\x18\x04 \x01(\t\x12\x1d\n\x15reflectanceParameters\x18\x05 \x03(\x01\x12\x12\n\nmeanRadius\x18\x06 \x01(\x01\x12\x1f\n\x17principalAxisDistortion\x18\x07 \x03(\x01\x12\x19\n\x11inertialToBodyMrp\x18\x08 \x03(\x01"\x95\x01\n\rCelestialBody\x12\x10\n\x08\x62odyName\x18\x01 \x01(\t\x12\x10\n\x08position\x18\x02 \x03(\x01\x12\x10\n\x08velocity\x18\x03 \x03(\x01\x12\x10\n\x08\x61ttitude\x18\x04 \x03(\x01\x12\x13\n\x0b\x63\x65ntralBody\x18\x05 \x01(\x08\x12\'\n\x05model\x18\x06 \x01(\x0b\x32\x18.cielimMessage.MeshModel"Z\n\nSpacecraft\x12\x16\n\x0espacecraftName\x18\x01 \x01(\t\x12\x10\n\x08position\x18\x02 \x03(\x01\x12\x10\n\x08velocity\x18\x03 \x03(\x01\x12\x10\n\x08\x61ttitude\x18\x04 \x03(\x01"~\n\x0eRenderingModel\x12\x1d\n\x15\x63osmicRayStdDeviation\x18\x01 \x01(\x01\x12\x12\n\nstrayLight\x18\x02 \x01(\x01\x12\x11\n\tstarField\x18\x03 \x01(\x08\x12\x11\n\trendering\x18\x04 \x01(\t\x12\x13\n\x0b\x65nableSmear\x18\x05 \x01(\x08"\xd4\x02\n\x0b\x43\x61meraModel\x12\x10\n\x08\x63\x61meraId\x18\x01 \x01(\x03\x12\x12\n\nparentName\x18\x02 \x01(\t\x12\x13\n\x0b\x66ieldOfView\x18\x03 \x03(\x01\x12\x12\n\nresolution\x18\x04 \x03(\x03\x12\x1c\n\x14\x63\x61meraPositionInBody\x18\x05 \x03(\x01\x12\x1c\n\x14\x62odyFrameToCameraMrp\x18\x06 \x03(\x01\x12\x12\n\nrenderRate\x18\x07 \x01(\x04\x12\x13\n\x0b\x66ocalLength\x18\x08 \x01(\x01\x12\x14\n\x0c\x65xposureTime\x18\t \x01(\x01\x12\x1b\n\x13pointSpreadFunction\x18\n \x01(\x01\x12\x11\n\treadNoise\x18\x0b \x01(\x01\x12\x12\n\nsystemGain\x18\x0c \x01(\x01\x12\x37\n\x10renderParameters\x18\r \x01(\x0b\x32\x1d.cielimMessage.RenderingModel"\xfd\x01\n\rCielimMessage\x12+\n\x05\x65poch\x18\x01 \x01(\x0b\x32\x1c.cielimMessage.EpochDateTime\x12-\n\x0b\x63urrentTime\x18\x02 \x01(\x0b\x32\x18.cielimMessage.TimeStamp\x12\x35\n\x0f\x63\x65lestialBodies\x18\x03 \x03(\x0b\x32\x1c.cielimMessage.CelestialBody\x12-\n\nspacecraft\x18\x04 \x01(\x0b\x32\x19.cielimMessage.Spacecraft\x12*\n\x06\x63\x61mera\x18\x05 \x01(\x0b\x32\x1a.cielimMessage.CameraModelB\x02H\x03\x62\x06proto3',
 )
 
 
@@ -218,9 +218,9 @@ _EPOCHDATETIME = _descriptor.Descriptor(
 )
 
 
-_CELESTIALMODEL = _descriptor.Descriptor(
-    name="CelestialModel",
-    full_name="cielimMessage.CelestialModel",
+_MESHMODEL = _descriptor.Descriptor(
+    name="MeshModel",
+    full_name="cielimMessage.MeshModel",
     filename=None,
     file=DESCRIPTOR,
     containing_type=None,
@@ -228,7 +228,7 @@ _CELESTIALMODEL = _descriptor.Descriptor(
     fields=[
         _descriptor.FieldDescriptor(
             name="shapeModel",
-            full_name="cielimMessage.CelestialModel.shapeModel",
+            full_name="cielimMessage.MeshModel.shapeModel",
             index=0,
             number=1,
             type=9,
@@ -247,7 +247,7 @@ _CELESTIALMODEL = _descriptor.Descriptor(
         ),
         _descriptor.FieldDescriptor(
             name="perlinNoiseStdDeviation",
-            full_name="cielimMessage.CelestialModel.perlinNoiseStdDeviation",
+            full_name="cielimMessage.MeshModel.perlinNoiseStdDeviation",
             index=1,
             number=2,
             type=1,
@@ -266,7 +266,7 @@ _CELESTIALMODEL = _descriptor.Descriptor(
         ),
         _descriptor.FieldDescriptor(
             name="proceduralRocks",
-            full_name="cielimMessage.CelestialModel.proceduralRocks",
+            full_name="cielimMessage.MeshModel.proceduralRocks",
             index=2,
             number=3,
             type=1,
@@ -285,7 +285,7 @@ _CELESTIALMODEL = _descriptor.Descriptor(
         ),
         _descriptor.FieldDescriptor(
             name="brdfModel",
-            full_name="cielimMessage.CelestialModel.brdfModel",
+            full_name="cielimMessage.MeshModel.brdfModel",
             index=3,
             number=4,
             type=9,
@@ -304,7 +304,7 @@ _CELESTIALMODEL = _descriptor.Descriptor(
         ),
         _descriptor.FieldDescriptor(
             name="reflectanceParameters",
-            full_name="cielimMessage.CelestialModel.reflectanceParameters",
+            full_name="cielimMessage.MeshModel.reflectanceParameters",
             index=4,
             number=5,
             type=1,
@@ -323,7 +323,7 @@ _CELESTIALMODEL = _descriptor.Descriptor(
         ),
         _descriptor.FieldDescriptor(
             name="meanRadius",
-            full_name="cielimMessage.CelestialModel.meanRadius",
+            full_name="cielimMessage.MeshModel.meanRadius",
             index=5,
             number=6,
             type=1,
@@ -342,9 +342,28 @@ _CELESTIALMODEL = _descriptor.Descriptor(
         ),
         _descriptor.FieldDescriptor(
             name="principalAxisDistortion",
-            full_name="cielimMessage.CelestialModel.principalAxisDistortion",
+            full_name="cielimMessage.MeshModel.principalAxisDistortion",
             index=6,
             number=7,
+            type=1,
+            cpp_type=5,
+            label=3,
+            has_default_value=False,
+            default_value=[],
+            message_type=None,
+            enum_type=None,
+            containing_type=None,
+            is_extension=False,
+            extension_scope=None,
+            serialized_options=None,
+            file=DESCRIPTOR,
+            create_key=_descriptor._internal_create_key,
+        ),
+        _descriptor.FieldDescriptor(
+            name="inertialToBodyMrp",
+            full_name="cielimMessage.MeshModel.inertialToBodyMrp",
+            index=7,
+            number=8,
             type=1,
             cpp_type=5,
             label=3,
@@ -369,7 +388,7 @@ _CELESTIALMODEL = _descriptor.Descriptor(
     extension_ranges=[],
     oneofs=[],
     serialized_start=205,
-    serialized_end=402,
+    serialized_end=424,
 )
 
 
@@ -477,8 +496,8 @@ _CELESTIALBODY = _descriptor.Descriptor(
             create_key=_descriptor._internal_create_key,
         ),
         _descriptor.FieldDescriptor(
-            name="models",
-            full_name="cielimMessage.CelestialBody.models",
+            name="model",
+            full_name="cielimMessage.CelestialBody.model",
             index=5,
             number=6,
             type=11,
@@ -504,8 +523,8 @@ _CELESTIALBODY = _descriptor.Descriptor(
     syntax="proto3",
     extension_ranges=[],
     oneofs=[],
-    serialized_start=405,
-    serialized_end=560,
+    serialized_start=427,
+    serialized_end=576,
 )
 
 
@@ -602,8 +621,8 @@ _SPACECRAFT = _descriptor.Descriptor(
     syntax="proto3",
     extension_ranges=[],
     oneofs=[],
-    serialized_start=562,
-    serialized_end=652,
+    serialized_start=578,
+    serialized_end=668,
 )
 
 
@@ -635,15 +654,15 @@ _RENDERINGMODEL = _descriptor.Descriptor(
             create_key=_descriptor._internal_create_key,
         ),
         _descriptor.FieldDescriptor(
-            name="enableStrayLight",
-            full_name="cielimMessage.RenderingModel.enableStrayLight",
+            name="strayLight",
+            full_name="cielimMessage.RenderingModel.strayLight",
             index=1,
             number=2,
-            type=8,
-            cpp_type=7,
+            type=1,
+            cpp_type=5,
             label=1,
             has_default_value=False,
-            default_value=False,
+            default_value=float(0),
             message_type=None,
             enum_type=None,
             containing_type=None,
@@ -719,8 +738,8 @@ _RENDERINGMODEL = _descriptor.Descriptor(
     syntax="proto3",
     extension_ranges=[],
     oneofs=[],
-    serialized_start=655,
-    serialized_end=787,
+    serialized_start=670,
+    serialized_end=796,
 )
 
 
@@ -908,11 +927,11 @@ _CAMERAMODEL = _descriptor.Descriptor(
             full_name="cielimMessage.CameraModel.pointSpreadFunction",
             index=9,
             number=10,
-            type=4,
-            cpp_type=4,
+            type=1,
+            cpp_type=5,
             label=1,
             has_default_value=False,
-            default_value=0,
+            default_value=float(0),
             message_type=None,
             enum_type=None,
             containing_type=None,
@@ -988,8 +1007,8 @@ _CAMERAMODEL = _descriptor.Descriptor(
     syntax="proto3",
     extension_ranges=[],
     oneofs=[],
-    serialized_start=790,
-    serialized_end=1130,
+    serialized_start=799,
+    serialized_end=1139,
 )
 
 
@@ -1105,11 +1124,11 @@ _CIELIMMESSAGE = _descriptor.Descriptor(
     syntax="proto3",
     extension_ranges=[],
     oneofs=[],
-    serialized_start=1133,
-    serialized_end=1386,
+    serialized_start=1142,
+    serialized_end=1395,
 )
 
-_CELESTIALBODY.fields_by_name["models"].message_type = _CELESTIALMODEL
+_CELESTIALBODY.fields_by_name["model"].message_type = _MESHMODEL
 _CAMERAMODEL.fields_by_name["renderParameters"].message_type = _RENDERINGMODEL
 _CIELIMMESSAGE.fields_by_name["epoch"].message_type = _EPOCHDATETIME
 _CIELIMMESSAGE.fields_by_name["currentTime"].message_type = _TIMESTAMP
@@ -1118,7 +1137,7 @@ _CIELIMMESSAGE.fields_by_name["spacecraft"].message_type = _SPACECRAFT
 _CIELIMMESSAGE.fields_by_name["camera"].message_type = _CAMERAMODEL
 DESCRIPTOR.message_types_by_name["TimeStamp"] = _TIMESTAMP
 DESCRIPTOR.message_types_by_name["EpochDateTime"] = _EPOCHDATETIME
-DESCRIPTOR.message_types_by_name["CelestialModel"] = _CELESTIALMODEL
+DESCRIPTOR.message_types_by_name["MeshModel"] = _MESHMODEL
 DESCRIPTOR.message_types_by_name["CelestialBody"] = _CELESTIALBODY
 DESCRIPTOR.message_types_by_name["Spacecraft"] = _SPACECRAFT
 DESCRIPTOR.message_types_by_name["RenderingModel"] = _RENDERINGMODEL
@@ -1148,16 +1167,16 @@ EpochDateTime = _reflection.GeneratedProtocolMessageType(
 )
 _sym_db.RegisterMessage(EpochDateTime)
 
-CelestialModel = _reflection.GeneratedProtocolMessageType(
-    "CelestialModel",
+MeshModel = _reflection.GeneratedProtocolMessageType(
+    "MeshModel",
     (_message.Message,),
     {
-        "DESCRIPTOR": _CELESTIALMODEL,
+        "DESCRIPTOR": _MESHMODEL,
         "__module__": "cielimMessage_pb2",
-        # @@protoc_insertion_point(class_scope:cielimMessage.CelestialModel)
+        # @@protoc_insertion_point(class_scope:cielimMessage.MeshModel)
     },
 )
-_sym_db.RegisterMessage(CelestialModel)
+_sym_db.RegisterMessage(MeshModel)
 
 CelestialBody = _reflection.GeneratedProtocolMessageType(
     "CelestialBody",

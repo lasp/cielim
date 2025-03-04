@@ -1,10 +1,11 @@
-from test_harness import *
+import os
+from context import cielimMessage_pb2
+import delimited_protobuf
 
 if __name__ == "__main__":
-
-    file_dir = "../../../cielim/Content/FlybyData/bin/"
+    file_dir = os.path.dirname(__file__) + "/../../../Content/FlybyData/bin/"
     file_name = input("What is the bin file to test (name only): ")
-    
+
     file_handle = open(file_dir + file_name, "rb")
 
     message = delimited_protobuf.read(file_handle, cielimMessage_pb2.CielimMessage)

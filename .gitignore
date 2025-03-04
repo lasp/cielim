@@ -13,9 +13,9 @@
 /Content/FlybyData
 
 .vsconfig
-*.jpg
-*.png
-*.txt
+/Source/cielim-python/examples/*.jpg
+/Source/cielim-python/examples/*.png
+/Source/cielim-python/examples/*.txt
 
 # Visual Studio 2015 user specific files
 .vs/
