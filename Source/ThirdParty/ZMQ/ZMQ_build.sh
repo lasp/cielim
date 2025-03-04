@@ -23,7 +23,6 @@ else
     echo "Building libzmq..."
     mkdir build
     cd build
-    env
     cmake ..
     make -j4
 
