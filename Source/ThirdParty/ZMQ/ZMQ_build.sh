@@ -36,7 +36,7 @@ else
     echo "Building cppzmq..."
     mkdir build
     cd build
-    cmake ..
+    cmake .. -DCMAKE_INSTALL_PREFIX="../../libzmq"
     make -j4
     
 endif
