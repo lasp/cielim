@@ -112,59 +112,32 @@ def run_editor(editor_path, args):
     process.wait()
 
 
-if __name__ == "__main__":
+def retrieve_default_unreal_path():
     os_name = platform.system()
-
-    print(f"Build platform: {os_name} {platform.machine()}")
-
     unreal_path = None
 
-    # Check if build_config.json already exists
-
-    config = None
-
-    if os.path.exists("build_config.json"):
-        config = json.load(open("build_config.json", "r"))
+    print(f"Build platform: {os_name} {platform.machine()}")
+    
+    if os_name == "Darwin":
+        default_location = "/Users/Shared/Epic Games/UE_5*"
+    elif os_name == "Windows":
+        default_location = "C:/Program Files/Epic Games/UE_5*"
     else:
-        config = {}
+        default_location = "~/UnrealEngine/UE_5*"
 
-    # Check if unreal_path field is set and valid
+    for dir in glob.glob(default_location):
+        if os.path.exists(os.path.join(dir, "Engine/Build/BatchFiles")):
+            unreal_path = dir
+            break
 
-    if "unreal_path" in config and os.path.exists(config["unreal_path"] + "/Engine/Build/BatchFiles"):
-        unreal_path = config["unreal_path"]
-        print(f"Unreal path located from build config at {unreal_path}...")
-    else:
-        print("Build config not found or path invalid; checking default location")
+    if unreal_path is None:
+        print("Unreal path not found, provide path in the file build_config.json as "
+              "{\"unreal_path\" : \"your_path_to_unreal\"}")
 
-        # Check default locations
+    return unreal_path
 
-        default_location = ""
 
-        if os_name == "Darwin":
-            default_location = "/Users/Shared/Unreal Engine/UE_5*"
-        elif os_name == "Windows":
-            default_location = "C:/Program Files/Epic Games/UE_5*"
-        else:
-            default_location = "~/UnrealEngine/UE_5*"
-
-        for dir in glob.glob(default_location):
-            if os.path.exists(os.path.join(dir, "/Engine/Build/BatchFiles")):
-                unreal_path = dir
-                break
-
-        if unreal_path is None:
-            unreal_path = input("Input the absolute path to your Unreal Engine installation: ").strip()
-
-        # If the path is valid, save it to the config file
-
-        if os.path.exists(f"{unreal_path}/Engine/Build/BatchFiles"):
-            print("Saving path to build_config.json...")
-            config["unreal_path"] = unreal_path
-            json.dump(config, open("build_config.json", "w"))
-        else:
-            print('Path provided was incorrect; expected something like ".../UnrealEngine/UE_5.4"')
-            exit()
-
+if __name__ == "__main__":
     # Check arguments for build, cook, package, and debug mode
 
     parser = argparse.ArgumentParser(description="Build, cook, and/or package Cielim")
@@ -172,10 +145,21 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--cook", action="store_true", help="Cook content files for Cielim")
     parser.add_argument("-p", "--package", action="store_true", help="Package Cielim as standalone executable")
     parser.add_argument("-r", "--run", action="store_true", help="Run Cielim in Unreal Editor")
+    parser.add_argument("-f", "--configfile", type =str, help="Provide a configuration file "
+                                                                        "path to build_config.json")
     parser.add_argument("-d", "--debug", choices={"Development", "DebugGame", "Shipping"}, default="Development")
 
     args, remaining_args = parser.parse_known_args()
 
+    unreal_path = None
+    if args.configfile:
+        print(f"Config file found at {args.configfile}")
+        config = json.load(open(args.configfile, "r"))
+        if "unreal_path" in config:
+            unreal_path = config["unreal_path"]
+    else:
+        print(f"No config file found, retrieving default unreal path")
+        unreal_path = retrieve_default_unreal_path()
 
     os_name = platform.system()
     if os_name == "Darwin":
