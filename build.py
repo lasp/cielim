@@ -7,30 +7,14 @@ import argparse
 import json
 
 
-def build(os_name, unreal_path, debug_mode):
-    print(f"Building for {os_name} {platform.machine()} as {debug_mode}...")
+def build(platform_name, executable_path, debug_mode):
+    print(f"Building for {platform_name} {platform.machine()} as {debug_mode}...")
 
     cielim_path = os.path.dirname(os.path.abspath(__file__))
 
-    executable = ""
-    platform_name = ""
-
-    if os_name == "Darwin":
-        executable = "/Engine/Build/BatchFiles/RunUAT.sh"
-        platform_name = "Mac"
-    elif os_name == "Windows":
-        executable = "/Engine/Build/BatchFiles/RunUAT.bat"
-        platform_name = "Win64"
-    elif os_name == "Linux":
-        executable = "/Engine/Build/BatchFiles/RunUAT.sh"
-        platform_name = "Linux"
-    else:
-        executable = "NA"
-        platform_name = "NA"
-
     process = subprocess.Popen(
         [
-            f"{unreal_path}{executable}",
+            f"{executable_path}",
             "BuildCookRun",
             f"-project={cielim_path}/cielim.uproject",
             f"-platform={platform_name}",
@@ -44,30 +28,14 @@ def build(os_name, unreal_path, debug_mode):
     process.wait()
 
 
-def cook(os_name, unreal_path):
+def cook(platform_name, executable_path):
     print("Cooking content...")
 
     cielim_path = os.path.dirname(os.path.abspath(__file__))
 
-    executable = ""
-    platform_name = ""
-
-    if os_name == "Darwin":
-        executable = "/Engine/Build/BatchFiles/RunUAT.sh"
-        platform_name = "Mac"
-    elif os_name == "Windows":
-        executable = "/Engine/Build/BatchFiles/RunUAT.bat"
-        platform_name = "Win64"
-    elif os_name == "Linux":
-        executable = "/Engine/Build/BatchFiles/RunUAT.sh"
-        platform_name = "Linux"
-    else:
-        executable = "NA"
-        platform_name = "NA"
-
     process = subprocess.Popen(
         [
-            f"{unreal_path}{executable}",
+            f"{executable_path}",
             "BuildCookRun",
             f"-project={cielim_path}/cielim.uproject",
             f"-platform={platform_name}",
@@ -80,30 +48,14 @@ def cook(os_name, unreal_path):
     process.wait()
 
 
-def package(os_name, unreal_path, debug_mode):
+def package(platform_name, executable_path, debug_mode):
     print("Packaging...")
 
     cielim_path = os.path.dirname(os.path.abspath(__file__))
 
-    executable = ""
-    platform_name = ""
-
-    if os_name == "Darwin":
-        executable = "/Engine/Build/BatchFiles/RunUAT.sh"
-        platform_name = "Mac"
-    elif os_name == "Windows":
-        executable = "/Engine/Build/BatchFiles/RunUAT.bat"
-        platform_name = "Win64"
-    elif os_name == "Linux":
-        executable = "/Engine/Build/BatchFiles/RunUAT.sh"
-        platform_name = "Linux"
-    else:
-        executable = "NA"
-        platform_name = "NA"
-
     process = subprocess.Popen(
         [
-            f"{unreal_path}{executable}",
+            f"{executable_path}",
             "BuildCookRun",
             f"-project={cielim_path}/cielim.uproject",
             f"-platform={platform_name}",
@@ -122,30 +74,14 @@ def package(os_name, unreal_path, debug_mode):
     process.wait()
 
 
-def fullBuildCookRun(os_name, unreal_path, debug_mode):
+def fullBuildCookRun(platform_name, executable_path, debug_mode):
     print("Doing full run...")
 
     cielim_path = os.path.dirname(os.path.abspath(__file__))
 
-    executable = ""
-    platform_name = ""
-
-    if os_name == "Darwin":
-        executable = "/Engine/Build/BatchFiles/RunUAT.sh"
-        platform_name = "Mac"
-    elif os_name == "Windows":
-        executable = "/Engine/Build/BatchFiles/RunUAT.bat"
-        platform_name = "Win64"
-    elif os_name == "Linux":
-        executable = "/Engine/Build/BatchFiles/RunUAT.sh"
-        platform_name = "Linux"
-    else:
-        executable = "NA"
-        platform_name = "NA"
-
     process = subprocess.Popen(
         [
-            f"{unreal_path}{executable}",
+            f"{executable_path}",
             "BuildCookRun",
             f"-project={cielim_path}/cielim.uproject",
             f"-platform={platform_name}",
@@ -164,24 +100,13 @@ def fullBuildCookRun(os_name, unreal_path, debug_mode):
     process.wait()
 
 
-def run_editor(os_name, unreal_path, args):
+def run_editor(editor_path, args):
     print("Running Cielim in Unreal Editor...")
 
     cielim_path = os.path.dirname(os.path.abspath(__file__))
 
-    executable = ""
-
-    if os_name == "Darwin":
-        executable = "/Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor"
-    elif os_name == "Windows":
-        executable = "/Engine/Binaries/Win64/UnrealEditor.exe"
-    elif os_name == "Linux":
-        executable = "/Engine/Binaries/Linux/UnrealEditor"
-    else:
-        executable = "NA"
-
     process = subprocess.Popen(
-        [f"{unreal_path}{executable}", f"{cielim_path}"] + args, stdout=sys.stdout, stderr=sys.stderr
+        [f"{editor_path}", f"{cielim_path}"] + args, stdout=sys.stdout, stderr=sys.stderr
     )
 
     process.wait()
@@ -251,23 +176,43 @@ if __name__ == "__main__":
 
     args, remaining_args = parser.parse_known_args()
 
+
+    os_name = platform.system()
+    if os_name == "Darwin":
+        editor = "Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor"
+        executable = "Engine/Build/BatchFiles/RunUAT.sh"
+        platform_name = "Mac"
+    elif os_name == "Windows":
+        editor = "Engine/Binaries/Win64/UnrealEditor.exe"
+        executable = "Engine/Build/BatchFiles/RunUAT.bat"
+        platform_name = "Win64"
+    elif os_name == "Linux":
+        editor = "Engine/Binaries/Linux/UnrealEditor"
+        executable = "Engine/Build/BatchFiles/RunUAT.sh"
+        platform_name = "Linux"
+    else:
+        editor = "NA"
+        executable = "NA"
+        platform_name = "NA"
+
+
     debug_mode = args.debug
 
     ranAtLeastOnce = False
 
     if args.build:
-        build(os_name, unreal_path, debug_mode)
+        build(platform_name, os.path.join(unreal_path, executable), debug_mode)
         ranAtLeastOnce = True
     if args.cook:
-        cook(os_name, unreal_path)
+        cook(platform_name, os.path.join(unreal_path, executable))
         ranAtLeastOnce = True
     if args.package:
-        package(os_name, unreal_path, debug_mode)
+        package(platform_name, os.path.join(unreal_path, executable), debug_mode)
         ranAtLeastOnce = True
     if args.run:
-        run_editor(os_name, unreal_path, remaining_args)
+        run_editor(os.path.join(unreal_path, editor), remaining_args)
         ranAtLeastOnce = True
 
     # If no command has been run, default to full run
     if ranAtLeastOnce == False:
-        fullBuildCookRun(os_name, unreal_path, debug_mode)
+        fullBuildCookRun(platform_name, os.path.join(unreal_path, executable), debug_mode)
