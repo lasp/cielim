@@ -105,9 +105,7 @@ def run_editor(editor_path, args):
 
     cielim_path = os.path.dirname(os.path.abspath(__file__))
 
-    process = subprocess.Popen(
-        [f"{editor_path}", f"{cielim_path}"] + args, stdout=sys.stdout, stderr=sys.stderr
-    )
+    process = subprocess.Popen([f"{editor_path}", f"{cielim_path}"] + args, stdout=sys.stdout, stderr=sys.stderr)
 
     process.wait()
 
@@ -117,7 +115,7 @@ def retrieve_default_unreal_path():
     unreal_path = None
 
     print(f"Build platform: {os_name} {platform.machine()}")
-    
+
     if os_name == "Darwin":
         default_location = "/Users/Shared/Epic Games/UE_5*"
     elif os_name == "Windows":
@@ -131,8 +129,11 @@ def retrieve_default_unreal_path():
             break
 
     if unreal_path is None:
-        print("Unreal path not found, provide path in the file build_config.json as "
-              "{\"unreal_path\" : \"your_path_to_unreal\"}")
+        unreal_path = input("Input the absolute path to your Unreal Engine installation: ").strip()
+
+    print("Saving path to build_config.json...")
+    config["unreal_path"] = unreal_path
+    json.dump(config, open("build_config.json", "w"))
 
     return unreal_path
 
@@ -145,16 +146,14 @@ if __name__ == "__main__":
     parser.add_argument("-c", "--cook", action="store_true", help="Cook content files for Cielim")
     parser.add_argument("-p", "--package", action="store_true", help="Package Cielim as standalone executable")
     parser.add_argument("-r", "--run", action="store_true", help="Run Cielim in Unreal Editor")
-    parser.add_argument("-f", "--configfile", type =str, help="Provide a configuration file "
-                                                                        "path to build_config.json")
     parser.add_argument("-d", "--debug", choices={"Development", "DebugGame", "Shipping"}, default="Development")
 
     args, remaining_args = parser.parse_known_args()
 
     unreal_path = None
-    if args.configfile:
-        print(f"Config file found at {args.configfile}")
-        config = json.load(open(args.configfile, "r"))
+    if os.path.exists("build_config.json"):
+        print(f"Config file found")
+        config = json.load(open("build_config.json", "r"))
         if "unreal_path" in config:
             unreal_path = config["unreal_path"]
     else:
@@ -178,7 +177,6 @@ if __name__ == "__main__":
         editor = "NA"
         executable = "NA"
         platform_name = "NA"
-
 
     debug_mode = args.debug
 
