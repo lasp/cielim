@@ -36,8 +36,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "CelestialBody")
 	FRotator GetInertialToBodyRotator() const;
 
-	UFUNCTION(BlueprintCallable, Category = "CelestialBody")
-	FBPVector3D GetPrincipleAccessDistortions() const;
+	FVector3d GetPrincipleAxisDistortions() const;
 	
     // Don't know if there is a better way to do this
     UFUNCTION(BlueprintImplementableEvent)

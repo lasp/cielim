@@ -62,9 +62,9 @@ FString ACelestialBody::GetMeshModelName() const
 	return this->MeshModel.ShapeModel;
 }
 
-FBPVector3D ACelestialBody::GetPrincipleAccessDistortions() const
+FVector3d ACelestialBody::GetPrincipleAxisDistortions() const
 {
-	return FBPVector3D{this->MeshModel.PrincipalAxisDistortion.X,
+	return FVector3d{this->MeshModel.PrincipalAxisDistortion.X,
 		this->MeshModel.PrincipalAxisDistortion.Y,
 		this->MeshModel.PrincipalAxisDistortion.Z};
 }
