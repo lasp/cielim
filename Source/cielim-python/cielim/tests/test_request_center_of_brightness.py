@@ -19,7 +19,7 @@ def scene_setup():
     body.model.meanRadius = 10000
 
     sun = protobuf_message.celestialBodies.add()
-    sun.bodyName = "sun_planet_data"
+    sun.bodyName = "sun"
     [sun.position.append(item) for item in [0, 0, -10000]]
     [sun.attitude.append(item) for item in [0, 0, 0]]
 
