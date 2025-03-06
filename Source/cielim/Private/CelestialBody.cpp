@@ -20,6 +20,26 @@ ACelestialBody::ACelestialBody()
     }
 }
 
+void ACelestialBody::LoadMesh(CelestialBodyMeshModel Mesh)
+{
+	this->MeshModel = Mesh;
+	const FString TmpPath = FString("/Game/")
+	+ FString("AsteroidMeshes/")
+	+ this->MeshModel.ShapeModel
+	+ FString(".")
+	+ this->MeshModel.ShapeModel;
+	
+	FStringAssetReference MeshPath(TmpPath);
+	UStaticMesh* MeshAsset = Cast<UStaticMesh>(MeshPath.TryLoad());
+	
+	if (MeshAsset == nullptr) {
+		MeshPath = "/Game/AsteroidMeshes/sphere_normalized.sphere_normalized";
+		MeshAsset = Cast<UStaticMesh>(MeshPath.TryLoad());
+	}
+	
+	BodyStaticMeshComponent->SetStaticMesh(MeshAsset);
+}
+
 // Called when the game starts or when spawned
 void ACelestialBody::BeginPlay()
 {

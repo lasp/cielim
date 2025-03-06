@@ -51,6 +51,8 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     FString Name;
 
+	void LoadMesh(CelestialBodyMeshModel Mesh);
+
 protected:
     // Called when the game starts or when spawned
     virtual void BeginPlay() override;
