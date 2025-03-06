@@ -37,7 +37,7 @@ public:
 	FRotator GetInertialToBodyRotator() const;
 
 	FVector3d GetPrincipleAxisDistortions() const;
-	
+
     // Don't know if there is a better way to do this
     UFUNCTION(BlueprintImplementableEvent)
     void SetRadiusEvent(const double& Radius);
@@ -46,7 +46,7 @@ public:
     virtual void Tick(float DeltaTime) override;
 
     void Update(const FVector3d& NewPosition, const FRotator& NewRotation);
-    
+
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     FString Name;
 

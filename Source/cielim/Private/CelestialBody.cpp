@@ -9,10 +9,10 @@ ACelestialBody::ACelestialBody()
 	// Create the Static Mesh Component
     this->BodyStaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComponent"));
     this->RootComponent = BodyStaticMeshComponent;
- 
+
     // Load the mesh asset
     static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshAsset(TEXT("/Content/AsteroidMeshes/sphere_normalized"));
- 
+
     // Set the mesh on the component
     if (MeshAsset.Succeeded())
     {
@@ -28,15 +28,15 @@ void ACelestialBody::LoadMesh(CelestialBodyMeshModel Mesh)
 	+ this->MeshModel.ShapeModel
 	+ FString(".")
 	+ this->MeshModel.ShapeModel;
-	
+
 	FStringAssetReference MeshPath(TmpPath);
 	UStaticMesh* MeshAsset = Cast<UStaticMesh>(MeshPath.TryLoad());
-	
+
 	if (MeshAsset == nullptr) {
 		MeshPath = "/Game/AsteroidMeshes/sphere_normalized.sphere_normalized";
 		MeshAsset = Cast<UStaticMesh>(MeshPath.TryLoad());
 	}
-	
+
 	BodyStaticMeshComponent->SetStaticMesh(MeshAsset);
 }
 

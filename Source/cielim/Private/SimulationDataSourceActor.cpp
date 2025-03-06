@@ -128,7 +128,7 @@ void ASimulationDataSourceActor::FileReaderTick(float DeltaTime)
 		this->ShouldUpdateScene = true;
 	}
 
-	if (!this->IsSceneEstablished && this->ShouldUpdateScene) 
+	if (!this->IsSceneEstablished && this->ShouldUpdateScene)
 	{
 		UE_LOG(LogCielim, Display, TEXT("Initialize scene..."));
 		this->IsSceneEstablished = true;
@@ -146,7 +146,7 @@ void ASimulationDataSourceActor::FileReaderTick(float DeltaTime)
 void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 {
 	const TOptional<FCircularQueueData> QueueData = this->NetworkSimulationDataSource->GetQueueData();
-	
+
 	if (!QueueData.IsSet())
 		return;
 
@@ -165,7 +165,7 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 			if(CelestialBody != nullptr) CelestialBody->Destroy();
 		}
 		this->CelestialBodyArray.Reset();
-		
+
 		if(this->SunCelestialBody != nullptr) this->SunCelestialBody->Destroy();
 		this->SunCelestialBody = nullptr;
 
@@ -190,7 +190,7 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 		{
 			this->CielimMessage = tempPayload->message;
 		}
-		
+
 		if (!this->IsSceneEstablished)
 		{
 			this->IsSceneEstablished = true;
@@ -201,7 +201,7 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 			{
 				this->CielimMessage = tempPayload->message;
 			}
-			
+
 			this->SpawnCelestialBodies();
 			this->SpawnSpacecraft();
 
@@ -211,12 +211,12 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 				this->SpawnCaptureManager();
 			}
 		}
-		else 
+		else
 		{
 			this->ShouldUpdateScene = true;
 		}
-	} 
-	else if (QueueData.GetValue().query == CommandType::REQUEST_IMAGE) 
+	}
+	else if (QueueData.GetValue().query == CommandType::REQUEST_IMAGE)
 	{
 		if (!this->IsSceneEstablished)
 		{
@@ -228,7 +228,7 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 		const double readNoise = this->CielimMessage.GetMessage().camera().readnoise();
 		const double systemGain = this->CielimMessage.GetMessage().camera().systemgain();
 		const double cosmicRayStdDev = this->CielimMessage.GetMessage().camera().renderparameters().cosmicraystddeviation();
-		
+
 		TArray64<uint8> PngEncodedData;
 
 		auto *tempPayload = QueueData.GetValue().payload.TryGet<FImagePayload>();
@@ -238,8 +238,8 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 			this->CaptureManager->GetCorruptedImage(PngEncodedData, pointSpread, readNoise, systemGain, cosmicRayStdDev);
 			this->NetworkSimulationDataSource->PutImageQueueData(PngEncodedData,
 			this->CaptureManager->GetCenterOfBrightness(10));
-		} 
-		else 
+		}
+		else
 		{
 			this->NetworkSimulationDataSource->PutImageQueueData(PngEncodedData,
 			this->CaptureManager->GetCenterOfBrightness(10));
@@ -247,7 +247,7 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 
 		UE_LOG(LogCielim, Display, TEXT("Put back PNG image: ASimulationDataSourceActor"));
 	}
-	else 
+	else
 	{
 		UE_LOG(LogCielim, Display, TEXT("GetNextSimulationData received unrecognized Type"));
 	}
@@ -330,12 +330,12 @@ void ASimulationDataSourceActor::SpawnCelestialBodies()
 		ACelestialBody *TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>();
 		TempCelestialBody->SetActorTransform(SpawnLocAndRotation);
 
-		CelestialBodyMeshModel MeshModel{};	
+		CelestialBodyMeshModel MeshModel{};
 		if (CelestialBody.has_model())
 		{
 			MeshModel = CelestialBodyMeshModel::FromProtobuf(CelestialBody.model());
 		}
-		
+
 		TempCelestialBody->LoadMesh(MeshModel);
 		TempCelestialBody->SetActorRotation(MeshModel.InertialToBody);
 		TempCelestialBody->SetActorLocation(PositionCelestialBody);
@@ -344,12 +344,12 @@ void ASimulationDataSourceActor::SpawnCelestialBodies()
 			* CelestialBody.model().meanradius()/1000); // meshes are in 10m scale, bring to uu/
 		TempCelestialBody->Name = FString(CelestialBody.bodyname().c_str());
 		this->CelestialBodyArray.Add(TempCelestialBody);
-		
+
 		if (TempCelestialBody->Name == SunNaifBodyName)
 		{
 			this->SunCelestialBody = TempCelestialBody;
 		}
-		
+
 	}
 	this->IsCelestialBodiesSpawned = true;
 }
@@ -422,7 +422,7 @@ void ASimulationDataSourceActor::UpdateCelestialBodies() const
 		FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
 		FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
 		CelestialBodyArray[Index]->Update(PositionCelestialBody, CelestialBodyRotation);
-		Index++;	
+		Index++;
 	}
 }
 
