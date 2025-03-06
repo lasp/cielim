@@ -165,12 +165,6 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 			if(CelestialBody != nullptr) CelestialBody->Destroy();
 		}
 		this->CelestialBodyArray.Reset();
-
-		for (auto const AsteroidBody : this->AsteroidBodyArray)
-		{
-			if(AsteroidBody != nullptr) AsteroidBody->Destroy();
-		}
-		this->AsteroidBodyArray.Reset();
 		
 		if(this->SunCelestialBody != nullptr) this->SunCelestialBody->Destroy();
 		this->SunCelestialBody = nullptr;
@@ -322,18 +316,6 @@ FRotator GetCelestialBodyRotation(const cielimMessage::CelestialBody &CelestialB
 	return FRotator(QLeftHand);
 }
 
-static bool IsAsteroid(const std::string& BodyName)
-{
-	return BodyName == "2000269" //Justitia
-	|| BodyName == "2000623" //Chimera
-	|| BodyName == "2010253" //Westerwald
-	|| BodyName == "2088055" //A4
-	|| BodyName == "2059980" //A6
-	|| BodyName == "2023871" //A5
-	|| BodyName == "2013294" //Rockox
-	|| BodyName == "asteroid_b612";
-}
-
 /**
  * @brief SpawnCelestialBodies() Spawns all celestial bodies from the Cielim Protobuf Message into the level
  *
@@ -371,30 +353,6 @@ void ASimulationDataSourceActor::SpawnCelestialBodies()
 	}
 	this->IsCelestialBodiesSpawned = true;
 }
-
-// void ASimulationDataSourceActor::SpawnAsteroidBodies()
-// {
-// 	for (const auto &CelestialBody : CielimMessage.GetMessage().celestialbodies()) {
-// 		if (IsAsteroid(CelestialBody.bodyname())) {
-// 			FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
-// 			CelestialBodyMeshModel MeshModel{};	
-// 			if (CelestialBody.has_model())
-// 			{
-// 				MeshModel = CelestialBodyMeshModel::FromProtobuf(CelestialBody.model());
-// 			}
-//
-// 			AAsteroidBody* AsteroidBody = GetWorld()->SpawnActor<AAsteroidBody>();
-// 			AsteroidBody->LoadMesh(MeshModel);
-// 			AsteroidBody->SetActorRotation(MeshModel.InertialToBody);
-// 			AsteroidBody->SetActorLocation(PositionCelestialBody);
-// 			AsteroidBody->Name = FString(CelestialBody.bodyname().c_str());
-// 			AsteroidBody->SetActorScale3D(AsteroidBody->GetPrincipleAccessDistortions()
-// 				* CelestialBody.model().meanradius()/1000); // meshes are in 10m scale, bring to uu/
-// 			this->AsteroidBodyArray.Add(AsteroidBody);
-// 		}
-// 	}
-// 	this->IsAsteroidBodiesSpawned = true;
-// }
 
 /**
  * @brief SpawnSpacecraft() Spawns all spacecraft from the Cielim Protobuf Message into the level
@@ -467,25 +425,6 @@ void ASimulationDataSourceActor::UpdateCelestialBodies() const
 		Index++;	
 	}
 }
-
-/**
- * @brief UpdateAsteroidBodies() Updates all asteroid body positions and rotations
- *
- */
-// void ASimulationDataSourceActor::UpdateAsteroidBodies() const
-// {
-// 	int Index = 0;
-// 	for (const auto &CelestialBody : CielimMessage.GetMessage().celestialbodies())
-// 	{
-// 		if (!IsAsteroid(CelestialBody.bodyname()))
-// 		{
-// 			FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
-// 			FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
-// 			CelestialBodyArray[Index]->Update(PositionCelestialBody, CelestialBodyRotation);
-// 			Index++;	
-// 		}
-// 	}
-// }
 
 /**
  * @brief UpdateSpacecraft() Updates Spacecraft and camera positions and rotations
