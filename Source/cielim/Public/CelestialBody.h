@@ -36,9 +36,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "CelestialBody")
 	FRotator GetInertialToBodyRotator() const;
 
-	UFUNCTION(BlueprintCallable, Category = "CelestialBody")
-	FBPVector3D GetPrincipleAccessDistortions() const;
-	
+	FVector3d GetPrincipleAxisDistortions() const;
+
     // Don't know if there is a better way to do this
     UFUNCTION(BlueprintImplementableEvent)
     void SetRadiusEvent(const double& Radius);
@@ -47,9 +46,11 @@ public:
     virtual void Tick(float DeltaTime) override;
 
     void Update(const FVector3d& NewPosition, const FRotator& NewRotation);
-    
+
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
     FString Name;
+
+	void LoadMesh(CelestialBodyMeshModel Mesh);
 
 protected:
     // Called when the game starts or when spawned

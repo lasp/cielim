@@ -17,6 +17,8 @@
 
 #define m2cm 100.0
 #define km2m 1000.0
+const FString SunNaifBodyName("Sun");
+
 /**
  * @brief GetRotatorFromMrp(Sigma) Converts an MRP into an Unreal Rotation Container (FRotator)
  *
@@ -126,12 +128,11 @@ void ASimulationDataSourceActor::FileReaderTick(float DeltaTime)
 		this->ShouldUpdateScene = true;
 	}
 
-	if (!this->IsSceneEstablished && this->ShouldUpdateScene) 
+	if (!this->IsSceneEstablished && this->ShouldUpdateScene)
 	{
 		UE_LOG(LogCielim, Display, TEXT("Initialize scene..."));
 		this->IsSceneEstablished = true;
 		this->SpawnCelestialBodies();
-		this->SpawnAsteroidBodies();
 		this->SpawnSpacecraft();
 		if (this->CielimMessage.GetMessage().has_camera())
 		{
@@ -145,7 +146,7 @@ void ASimulationDataSourceActor::FileReaderTick(float DeltaTime)
 void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 {
 	const TOptional<FCircularQueueData> QueueData = this->NetworkSimulationDataSource->GetQueueData();
-	
+
 	if (!QueueData.IsSet())
 		return;
 
@@ -165,12 +166,6 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 		}
 		this->CelestialBodyArray.Reset();
 
-		for (auto const AsteroidBody : this->AsteroidBodyArray)
-		{
-			if(AsteroidBody != nullptr) AsteroidBody->Destroy();
-		}
-		this->AsteroidBodyArray.Reset();
-		
 		if(this->SunCelestialBody != nullptr) this->SunCelestialBody->Destroy();
 		this->SunCelestialBody = nullptr;
 
@@ -195,7 +190,7 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 		{
 			this->CielimMessage = tempPayload->message;
 		}
-		
+
 		if (!this->IsSceneEstablished)
 		{
 			this->IsSceneEstablished = true;
@@ -206,9 +201,8 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 			{
 				this->CielimMessage = tempPayload->message;
 			}
-			
+
 			this->SpawnCelestialBodies();
-			this->SpawnAsteroidBodies();
 			this->SpawnSpacecraft();
 
 			if (this->CielimMessage.GetMessage().has_camera())
@@ -217,12 +211,12 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 				this->SpawnCaptureManager();
 			}
 		}
-		else 
+		else
 		{
 			this->ShouldUpdateScene = true;
 		}
-	} 
-	else if (QueueData.GetValue().query == CommandType::REQUEST_IMAGE) 
+	}
+	else if (QueueData.GetValue().query == CommandType::REQUEST_IMAGE)
 	{
 		if (!this->IsSceneEstablished)
 		{
@@ -234,7 +228,7 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 		const double readNoise = this->CielimMessage.GetMessage().camera().readnoise();
 		const double systemGain = this->CielimMessage.GetMessage().camera().systemgain();
 		const double cosmicRayStdDev = this->CielimMessage.GetMessage().camera().renderparameters().cosmicraystddeviation();
-		
+
 		TArray64<uint8> PngEncodedData;
 
 		auto *tempPayload = QueueData.GetValue().payload.TryGet<FImagePayload>();
@@ -244,8 +238,8 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 			this->CaptureManager->GetCorruptedImage(PngEncodedData, pointSpread, readNoise, systemGain, cosmicRayStdDev);
 			this->NetworkSimulationDataSource->PutImageQueueData(PngEncodedData,
 			this->CaptureManager->GetCenterOfBrightness(10));
-		} 
-		else 
+		}
+		else
 		{
 			this->NetworkSimulationDataSource->PutImageQueueData(PngEncodedData,
 			this->CaptureManager->GetCenterOfBrightness(10));
@@ -253,7 +247,7 @@ void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
 
 		UE_LOG(LogCielim, Display, TEXT("Put back PNG image: ASimulationDataSourceActor"));
 	}
-	else 
+	else
 	{
 		UE_LOG(LogCielim, Display, TEXT("GetNextSimulationData received unrecognized Type"));
 	}
@@ -322,18 +316,6 @@ FRotator GetCelestialBodyRotation(const cielimMessage::CelestialBody &CelestialB
 	return FRotator(QLeftHand);
 }
 
-static bool IsAsteroid(const std::string& BodyName)
-{
-	return BodyName == "2000269" //Justitia
-	|| BodyName == "2000623" //Chimera
-	|| BodyName == "2010253" //Westerwald
-	|| BodyName == "2088055" //A4
-	|| BodyName == "2059980" //A6
-	|| BodyName == "2023871" //A5
-	|| BodyName == "2013294" //Rockox
-	|| BodyName == "asteroid_b612";
-}
-
 /**
  * @brief SpawnCelestialBodies() Spawns all celestial bodies from the Cielim Protobuf Message into the level
  *
@@ -341,46 +323,35 @@ static bool IsAsteroid(const std::string& BodyName)
 void ASimulationDataSourceActor::SpawnCelestialBodies()
 {
 	for (const auto &CelestialBody : CielimMessage.GetMessage().celestialbodies()) {
-		if (!IsAsteroid(CelestialBody.bodyname()))
+		FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
+		FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
+		const FTransform SpawnLocAndRotation = FTransform(CelestialBodyRotation, PositionCelestialBody);
+
+		ACelestialBody *TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>();
+		TempCelestialBody->SetActorTransform(SpawnLocAndRotation);
+
+		CelestialBodyMeshModel MeshModel{};
+		if (CelestialBody.has_model())
 		{
-			// Set Location
-			FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
-			// Set Rotation
-			FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
-			
-			const FTransform SpawnLocAndRotation = FTransform(CelestialBodyRotation, PositionCelestialBody);
-			ACelestialBody *TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>();
-			TempCelestialBody->SetActorTransform(SpawnLocAndRotation);
-			this->SunCelestialBody = TempCelestialBody;
-			TempCelestialBody->Name = FString(CelestialBody.bodyname().c_str());
-			CelestialBodyArray.Add(TempCelestialBody);
+			MeshModel = CelestialBodyMeshModel::FromProtobuf(CelestialBody.model());
 		}
+
+		TempCelestialBody->LoadMesh(MeshModel);
+		TempCelestialBody->SetActorRotation(MeshModel.InertialToBody);
+		TempCelestialBody->SetActorLocation(PositionCelestialBody);
+		TempCelestialBody->Name = FString(CelestialBody.bodyname().c_str());
+		TempCelestialBody->SetActorScale3D(TempCelestialBody->GetPrincipleAxisDistortions()
+			* CelestialBody.model().meanradius()/1000); // meshes are in 10m scale, bring to uu/
+		TempCelestialBody->Name = FString(CelestialBody.bodyname().c_str());
+		this->CelestialBodyArray.Add(TempCelestialBody);
+
+		if (TempCelestialBody->Name == SunNaifBodyName)
+		{
+			this->SunCelestialBody = TempCelestialBody;
+		}
+
 	}
 	this->IsCelestialBodiesSpawned = true;
-}
-
-void ASimulationDataSourceActor::SpawnAsteroidBodies()
-{
-	for (const auto &CelestialBody : CielimMessage.GetMessage().celestialbodies()) {
-		if (IsAsteroid(CelestialBody.bodyname())) {
-			FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
-			CelestialBodyMeshModel MeshModel{};	
-			if (CelestialBody.has_model())
-			{
-				MeshModel = CelestialBodyMeshModel::FromProtobuf(CelestialBody.model());
-			}
-
-			AAsteroidBody* AsteroidBody = GetWorld()->SpawnActor<AAsteroidBody>();
-			AsteroidBody->LoadMesh(MeshModel);
-			AsteroidBody->SetActorRotation(MeshModel.InertialToBody);
-			AsteroidBody->SetActorLocation(PositionCelestialBody);
-			AsteroidBody->Name = FString(CelestialBody.bodyname().c_str());
-			AsteroidBody->SetActorScale3D(AsteroidBody->GetPrincipleAccessDistortions()
-				* CelestialBody.model().meanradius()/1000); // meshes are in 10m scale, bring to uu/
-			this->AsteroidBodyArray.Add(AsteroidBody);
-		}
-	}
-	this->IsAsteroidBodiesSpawned = true;
 }
 
 /**
@@ -448,13 +419,10 @@ void ASimulationDataSourceActor::UpdateCelestialBodies() const
 	int Index = 0;
 	for (const auto &CelestialBody : CielimMessage.GetMessage().celestialbodies())
 	{
-		if (!IsAsteroid(CelestialBody.bodyname()))
-		{
-			FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
-			FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
-			CelestialBodyArray[Index]->Update(PositionCelestialBody, CelestialBodyRotation);
-			Index++;	
-		}
+		FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
+		FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
+		CelestialBodyArray[Index]->Update(PositionCelestialBody, CelestialBodyRotation);
+		Index++;
 	}
 }
 

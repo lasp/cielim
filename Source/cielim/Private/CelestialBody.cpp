@@ -9,15 +9,35 @@ ACelestialBody::ACelestialBody()
 	// Create the Static Mesh Component
     this->BodyStaticMeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMeshComponent"));
     this->RootComponent = BodyStaticMeshComponent;
- 
+
     // Load the mesh asset
     static ConstructorHelpers::FObjectFinder<UStaticMesh> MeshAsset(TEXT("/Content/AsteroidMeshes/sphere_normalized"));
- 
+
     // Set the mesh on the component
     if (MeshAsset.Succeeded())
     {
         BodyStaticMeshComponent->SetStaticMesh(MeshAsset.Object);
     }
+}
+
+void ACelestialBody::LoadMesh(CelestialBodyMeshModel Mesh)
+{
+	this->MeshModel = Mesh;
+	const FString TmpPath = FString("/Game/")
+	+ FString("AsteroidMeshes/")
+	+ this->MeshModel.ShapeModel
+	+ FString(".")
+	+ this->MeshModel.ShapeModel;
+
+	FStringAssetReference MeshPath(TmpPath);
+	UStaticMesh* MeshAsset = Cast<UStaticMesh>(MeshPath.TryLoad());
+
+	if (MeshAsset == nullptr) {
+		MeshPath = "/Game/AsteroidMeshes/sphere_normalized.sphere_normalized";
+		MeshAsset = Cast<UStaticMesh>(MeshPath.TryLoad());
+	}
+
+	BodyStaticMeshComponent->SetStaticMesh(MeshAsset);
 }
 
 // Called when the game starts or when spawned
@@ -42,9 +62,9 @@ FString ACelestialBody::GetMeshModelName() const
 	return this->MeshModel.ShapeModel;
 }
 
-FBPVector3D ACelestialBody::GetPrincipleAccessDistortions() const
+FVector3d ACelestialBody::GetPrincipleAxisDistortions() const
 {
-	return FBPVector3D{this->MeshModel.PrincipalAxisDistortion.X,
+	return FVector3d{this->MeshModel.PrincipalAxisDistortion.X,
 		this->MeshModel.PrincipalAxisDistortion.Y,
 		this->MeshModel.PrincipalAxisDistortion.Z};
 }
