@@ -67,6 +67,7 @@ If you encounter this error, it means that you have modified one of the Target.c
 If you get a compilation error saying one or many third party includes are missing, this is most likely due to one or multiple of the third party libraries not being built. Make sure you have all of the dependencies installed. Alternatively, try deleting the Intermediate folder in /cielim and opening theBuild.cs files.
 - `Third party library directories could not be found`.
 If this happens, it means you didn't pull the git submodules when cloning the cielim repository. Try pulling the git submodules or cloning their repositories into their respectives folders under the ThirdParty folder directly.
+- Errors linking to `UnrealEditor-DetailCustomizations.dylib` or `UnrealEditor-UMGEditor.dylib` during cooking or packaging can occur when your UE5 was recently updated. Go to your Epic Games and "Verify" your current engine version. Launch the editor from Epic Games (by hitting the launch on the engine version) to ensure it links all libraries properly on your machine.
 
 ### Packaging Game as Standalone Build
 - Follow Guide in Unreal Documentation for [Releasing Your Project](https://docs.unrealengine.com/5.2/en-US/preparing-unreal-engine-projects-for-release/)
