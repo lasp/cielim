@@ -39,7 +39,7 @@ void ACaptureManager::SaveImageToDisk(const FString& FilePath, const FString& Fi
 FImage ACaptureManager::GetUncorruptedImage() const
 {
 	FImage Image;
-	
+
 	this->SceneCaptureComponent->CaptureScene();
 	verify(FImageUtils::GetRenderTargetImage(this->SceneCaptureComponent->TextureTarget, Image));
 
@@ -84,10 +84,99 @@ TOptional<FVector2d> ACaptureManager::GetCenterOfBrightness(double Threshold) co
 	cv::threshold(GrayImage, GrayImage, Threshold, 255, cv::THRESH_BINARY);
 
 	// Compute the center of brightness
-	if (const cv::Moments Moments = cv::moments(GrayImage, true); Moments.m00 != 0) 
+	if (const cv::Moments Moments = cv::moments(GrayImage, true); Moments.m00 != 0)
 	{
 		Coordinates.Emplace(Moments.m10 / Moments.m00, Moments.m01 / Moments.m00);
 	}
 
 	return Coordinates;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCOBTest_Center, "CaptureManager.CenterOfBrightnessTest.Center", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FCOBTest_Center::RunTest(const FString& Parameters)
+{
+	// Create blank image with white square in center
+
+	// Create a 500x500 black single-channel image
+	cv::Mat Image = cv::Mat::zeros(500, 500, CV_8UC1);
+
+	// Define the size of the white square
+	int SquareSize = 10;
+
+	// Calculate starting pixel values
+	int StartX = 250 - SquareSize / 2;
+	int StartY = 250 - SquareSize / 2;
+
+	// Draw the white square
+	cv::rectangle(Image, cv::Point(StartX, StartY), cv::Point(StartX + SquareSize, StartY + SquareSize), cv::Scalar(255), cv::FILLED);
+
+	FVector2D Coordinates;
+
+	// Compute the center of brightness
+	cv::Moments Moments = cv::moments(Image, true);
+	if (Moments.m00 != 0)
+	{
+		Coordinates = FVector2D(Moments.m10 / Moments.m00, Moments.m01 / Moments.m00);
+	}
+
+	// Expected center should be directly in the middle of the image
+	return Coordinates.Equals(FVector2D(250, 250), 1);
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCOBTest_TopRight, "CaptureManager.CenterOfBrightnessTest.TopRight", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FCOBTest_TopRight::RunTest(const FString& Parameters)
+{
+	// Create blank image with white square in top-right quadrant
+
+	// Create a 500x500 black single-channel image
+	cv::Mat Image = cv::Mat::zeros(500, 500, CV_8UC1);
+
+	// Define the size of the white square
+	int SquareSize = 10;
+
+	// Calculate starting pixel values
+	int StartX = 375 - SquareSize / 2;
+	int StartY = 375 - SquareSize / 2;
+
+	// Draw the white square
+	cv::rectangle(Image, cv::Point(StartX, StartY), cv::Point(StartX + SquareSize, StartY + SquareSize), cv::Scalar(255), cv::FILLED);
+
+	FVector2D Coordinates;
+
+	// Compute the center of brightness
+	cv::Moments Moments = cv::moments(Image, true);
+	if (Moments.m00 != 0)
+	{
+		Coordinates = FVector2D(Moments.m10 / Moments.m00, Moments.m01 / Moments.m00);
+	}
+
+	// Expected center should be center of top right quadrant
+	return Coordinates.Equals(FVector2D(375, 375), 1);
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCOBTest_CenterRight, "CaptureManager.CenterOfBrightnessTest.CenterRight", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FCOBTest_CenterRight::RunTest(const FString& Parameters)
+{
+	// Create blank image with right half filled in
+
+	// Create a 500x500 black single-channel image
+	cv::Mat Image = cv::Mat::zeros(500, 500, CV_8UC1);
+
+	// Draw the white square
+	cv::rectangle(Image, cv::Point(250, 0), cv::Point(500, 500), cv::Scalar(255), cv::FILLED);
+
+	FVector2D Coordinates;
+
+	// Compute the center of brightness
+	cv::Moments Moments = cv::moments(Image, true);
+	if (Moments.m00 != 0)
+	{
+		Coordinates = FVector2D(Moments.m10 / Moments.m00, Moments.m01 / Moments.m00);
+	}
+
+	// Expected center should be in the middle of the right half of the image
+	return Coordinates.Equals(FVector2D(375, 250), 1);
 }
