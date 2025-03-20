@@ -13,7 +13,6 @@
 #include "CielimLoggingMacros.h"
 #include "CelestialBodyMeshModel.h"
 #include "KinematicsUtilities.h"
-#include "ProtobufFileReader.h"
 
 #define m2cm 100.0
 #define km2m 1000.0
@@ -90,19 +89,12 @@ void ASimulationDataSourceActor::BeginPlay()
 	if(FString CommAddress; FParse::Value(FCommandLine::Get(), TEXT("directComm"), CommAddress))
 	{
 	    UE_LOG(LogCielim, Display, TEXT("Parsed command line parameter (directComm) : %s"), *CommAddress);
-		this->DataSource = DataSourceType::Network;
 		this->NetworkSimulationDataSource = GetWorld()->SpawnActor<AZmqMultiThreadActor>(FVector::Zero(),FRotator::ZeroRotator);
 		this->NetworkSimulationDataSource->Connect(std::string(TCHAR_TO_UTF8(*CommAddress)));
-	} else if(FString SimulationDataFile;
-		FParse::Value(FCommandLine::Get(), TEXT("simulationDataFile"), SimulationDataFile)) {
-	    UE_LOG(LogCielim, Display, TEXT("Parsed command line parameter (simulationDataFile) : %s"), *SimulationDataFile);
-		this->DataSource = DataSourceType::File;
-	    this->SimulationDataSource = std::make_unique<ProtobufFileReader>(std::string(TCHAR_TO_UTF8(*SimulationDataFile)));
 	} else {
-		UE_LOG(LogCielim, Warning, TEXT("Did not receive start up mode from command line parameter"));
-		UE_LOG(LogCielim, Display, TEXT("Defaulted to (simulationDataFile) : %hs"), "protofile_proxOps.bin");
-		this->DataSource = DataSourceType::File;
-		this->SimulationDataSource = std::make_unique<ProtobufFileReader>("protofile_proxOps.bin");
+		UE_LOG(LogCielim, Display, TEXT("No command line parameter found; using default localhost"));
+		this->NetworkSimulationDataSource = GetWorld()->SpawnActor<AZmqMultiThreadActor>(FVector::Zero(),FRotator::ZeroRotator);
+		this->NetworkSimulationDataSource->Connect(std::string("tcp://localhost:5556"));
 	}
 
 	int major;
@@ -114,36 +106,12 @@ void ASimulationDataSourceActor::BeginPlay()
 
 void ASimulationDataSourceActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-	this->SimulationDataSource.reset();
 	google::protobuf::ShutdownProtobufLibrary();
 	Super::EndPlay(EndPlayReason);
 }
 
-void ASimulationDataSourceActor::FileReaderTick(float DeltaTime)
-{
-	auto messageResult = this->SimulationDataSource->GetNextSimulationData();
-	if (messageResult.IsSet())
-	{
-		this->CielimMessage = messageResult.GetValue();
-		this->ShouldUpdateScene = true;
-	}
-
-	if (!this->IsSceneEstablished && this->ShouldUpdateScene)
-	{
-		UE_LOG(LogCielim, Display, TEXT("Initialize scene..."));
-		this->IsSceneEstablished = true;
-		this->SpawnCelestialBodies();
-		this->SpawnSpacecraft();
-		if (this->CielimMessage.GetMessage().has_camera())
-		{
-			this->bHasCameras = true;
-			this->SpawnCaptureManager();
-		}
-	}
-}
-
 // This is a mad hack and needs to be changed
-void ASimulationDataSourceActor::NetworkTick(float DeltaTime)
+void ASimulationDataSourceActor::ParseQueue(float DeltaTime)
 {
 	const TOptional<FCircularQueueData> QueueData = this->NetworkSimulationDataSource->GetQueueData();
 
@@ -258,11 +226,8 @@ void ASimulationDataSourceActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	this->ShouldUpdateScene = false;
-	if (this->DataSource == DataSourceType::Network) {
-		this->NetworkTick(DeltaTime);
-	} else if (this->DataSource == DataSourceType::File) {
-		this->FileReaderTick(DeltaTime);
-	}
+
+	this->ParseQueue(DeltaTime);
 
 	if (this->ShouldUpdateScene)
 	{

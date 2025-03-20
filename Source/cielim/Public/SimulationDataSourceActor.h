@@ -14,11 +14,8 @@
 #include "CelestialBody.h"
 #include "Spacecraft.h"
 #include "CaptureManager.h"
-#include "ProtobufFileReader.h"
 
 #include "SimulationDataSourceActor.generated.h"
-
-enum class DataSourceType {Network, File};
 
 UCLASS(Blueprintable)
 class CIELIM_API ASimulationDataSourceActor : public AActor
@@ -57,11 +54,9 @@ public:
 	void PointSunLight();
 
 private:
-	void NetworkTick(float DeltaTime);
-	void FileReaderTick(float DeltaTime);
+	void ParseQueue(float DeltaTime);
 
 	AZmqMultiThreadActor* NetworkSimulationDataSource;
-	std::unique_ptr<ProtobufFileReader> SimulationDataSource;
     FCielimMessage CielimMessage;
     TArray<ACelestialBody*> CelestialBodyArray;
 	ACelestialBody* SunCelestialBody;
@@ -73,5 +68,4 @@ private:
     bool IsSpacecraftSpawned=false;
     bool IsSceneEstablished=false;
 	bool ShouldUpdateScene=false;
-	DataSourceType DataSource=DataSourceType::File;
 };
