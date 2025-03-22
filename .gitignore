@@ -6,10 +6,13 @@
 /.vscode
 /Intermediate
 
+# Support data for cielim-python
+/Source/cielim-python/support-data/*/
+
+
 # Third party build paths
 /Source/ThirdParty/ProtobufLibrary/include
 /Source/ThirdParty/ProtobufLibrary/lib
-
 /Content/FlybyData
 
 build_config.json
