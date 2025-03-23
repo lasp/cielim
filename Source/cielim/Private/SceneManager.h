@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 
+#include "SimulationDataSourceActor.h"
 #include "ZmqConnection/ZmqMultiThreadActor.h"
 
 #include "SceneManager.generated.h"
@@ -12,9 +13,20 @@ class CIELIM_API USceneManager : public UObject, public FTickableGameObject
     GENERATED_BODY()
 
 public:
-	USceneManager();
-	
+	void Init(const std::string& Address);
+	void InitWorldContext(const UObject* WorldContextObject);
+
 	virtual bool IsTickable() const override;
 	virtual void Tick(float DeltaTime) override;
+	virtual TStatId GetStatId() const override;
 
+private:
+	UPROPERTY()
+	UZmqMultiThreadActor* NetworkDataSource;
+
+	UPROPERTY()
+	UWorld* WorldContext;
+
+	UPROPERTY()
+	ASimulationDataSourceActor* Scene;
 };

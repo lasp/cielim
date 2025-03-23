@@ -6,8 +6,8 @@
 #include "Engine/DirectionalLight.h"
 #include "Components/LightComponent.h"
 #include "Math/UnrealMathUtility.h"
-#include "zmq.hpp"
 #include "ZmqConnection/ZmqMultiThreadActor.h"
+#include "../CielimGameInstance.h"
 
 #include "AstronomicalConstants.h"
 #include "CielimLoggingMacros.h"
@@ -74,53 +74,28 @@ FRotator GetCameraRotation(const cielimMessage::CameraModel &Camera)
 	return FRotator(RightQuat2LeftQuat(Quat_CB0));
 }
 
-
-// Sets default values
-ASimulationDataSourceActor::ASimulationDataSourceActor()
-{
-	PrimaryActorTick.bCanEverTick = true;
-}
-
-// Called when the game starts or when spawned
 void ASimulationDataSourceActor::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if(FString CommAddress; FParse::Value(FCommandLine::Get(), TEXT("directComm"), CommAddress))
+	if (UCielimGameInstance* GI = Cast<UCielimGameInstance>(GetGameInstance()))
 	{
-	    UE_LOG(LogCielim, Display, TEXT("Parsed command line parameter (directComm) : %s"), *CommAddress);
-		this->NetworkSimulationDataSource = GetWorld()->SpawnActor<AZmqMultiThreadActor>(FVector::Zero(),FRotator::ZeroRotator);
-		this->NetworkSimulationDataSource->Connect(std::string(TCHAR_TO_UTF8(*CommAddress)));
-	} else {
-		UE_LOG(LogCielim, Display, TEXT("No command line parameter found; using default localhost"));
-		this->NetworkSimulationDataSource = GetWorld()->SpawnActor<AZmqMultiThreadActor>(FVector::Zero(),FRotator::ZeroRotator);
-		this->NetworkSimulationDataSource->Connect(std::string("tcp://localhost:5556"));
+		if (GI->GetSceneManager())
+		{
+			GI->GetSceneManager()->InitWorldContext(this);
+		}
 	}
-
-	int major;
-	int minor;
-	int patch;
-	zmq::version(&major, &minor, &patch);
-	UE_LOG(LogCielim, Display, TEXT("ZeroMQ version: v%d.%d.%d"), major, minor, patch);
 }
 
-void ASimulationDataSourceActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	google::protobuf::ShutdownProtobufLibrary();
-	Super::EndPlay(EndPlayReason);
-}
 
 // This is a mad hack and needs to be changed
-void ASimulationDataSourceActor::ParseQueue(float DeltaTime)
+void ASimulationDataSourceActor::ParseCommand(const FCircularQueueData& CommandData, const UZmqMultiThreadActor* NetworkDataSource)
 {
-	const TOptional<FCircularQueueData> QueueData = this->NetworkSimulationDataSource->GetQueueData();
-
-	if (!QueueData.IsSet())
-		return;
+	this->ShouldUpdateScene = false;
 
 	// This code should be turned into some kind of handler function registration
-	// a bit like a RPC or http server
-	if (QueueData.GetValue().query == CommandType::INIT_SCENE)
+	// a bit like an RPC or http server
+	if (CommandData.query == CommandType::INIT_SCENE)
 	{
 		UE_LOG(LogCielim, Display, TEXT("Initiating new scene: ASimulationDataSourceActor"));
 
@@ -150,13 +125,13 @@ void ASimulationDataSourceActor::ParseQueue(float DeltaTime)
 		this->IsSpacecraftSpawned = false;
 		this->IsSceneEstablished = false;
 	}
-	else if (QueueData.GetValue().query == CommandType::SIM_UPDATE)
+	else if (CommandData.query == CommandType::SIM_UPDATE)
 	{
 		UE_LOG(LogCielim, Display, TEXT("Reading sim update data: ASimulationDataSourceActor"));
 
-		if (auto *tempPayload = QueueData.GetValue().payload.TryGet<FUpdatePayload>())
+		if (const auto *TempPayload = CommandData.payload.TryGet<FUpdatePayload>())
 		{
-			this->CielimMessage = tempPayload->message;
+			this->CielimMessage = TempPayload->message;
 		}
 
 		if (!this->IsSceneEstablished)
@@ -165,9 +140,9 @@ void ASimulationDataSourceActor::ParseQueue(float DeltaTime)
 
 			UE_LOG(LogCielim, Display, TEXT("Initialize scene..."));
 
-			if (auto *tempPayload = QueueData.GetValue().payload.TryGet<FUpdatePayload>())
+			if (const auto *TempPayload = CommandData.payload.TryGet<FUpdatePayload>())
 			{
-				this->CielimMessage = tempPayload->message;
+				this->CielimMessage = TempPayload->message;
 			}
 
 			this->SpawnCelestialBodies();
@@ -184,7 +159,7 @@ void ASimulationDataSourceActor::ParseQueue(float DeltaTime)
 			this->ShouldUpdateScene = true;
 		}
 	}
-	else if (QueueData.GetValue().query == CommandType::REQUEST_IMAGE)
+	else if (CommandData.query == CommandType::REQUEST_IMAGE)
 	{
 		if (!this->IsSceneEstablished)
 		{
@@ -192,24 +167,24 @@ void ASimulationDataSourceActor::ParseQueue(float DeltaTime)
 			return;
 		}
 
-		const double pointSpread = static_cast<double>(this->CielimMessage.GetMessage().camera().pointspreadfunction());
-		const double readNoise = this->CielimMessage.GetMessage().camera().readnoise();
-		const double systemGain = this->CielimMessage.GetMessage().camera().systemgain();
-		const double cosmicRayStdDev = this->CielimMessage.GetMessage().camera().renderparameters().cosmicraystddeviation();
+		const double PointSpread = this->CielimMessage.GetMessage().camera().pointspreadfunction();
+		const double ReadNoise = this->CielimMessage.GetMessage().camera().readnoise();
+		const double SystemGain = this->CielimMessage.GetMessage().camera().systemgain();
+		const double CosmicRayStdDev = this->CielimMessage.GetMessage().camera().renderparameters().cosmicraystddeviation();
 
 		TArray64<uint8> PngEncodedData;
 
-		auto *tempPayload = QueueData.GetValue().payload.TryGet<FImagePayload>();
+		const auto *TempPayload = CommandData.payload.TryGet<FImagePayload>();
 
-		if (tempPayload != nullptr && tempPayload -> shouldReturnImage)
+		if (TempPayload != nullptr && TempPayload -> shouldReturnImage)
 		{
-			this->CaptureManager->GetCorruptedImage(PngEncodedData, pointSpread, readNoise, systemGain, cosmicRayStdDev);
-			this->NetworkSimulationDataSource->PutImageQueueData(PngEncodedData,
+			this->CaptureManager->GetCorruptedImage(PngEncodedData, PointSpread, ReadNoise, SystemGain, CosmicRayStdDev);
+			NetworkDataSource->PutImageQueueData(PngEncodedData,
 			this->CaptureManager->GetCenterOfBrightness(10));
 		}
 		else
 		{
-			this->NetworkSimulationDataSource->PutImageQueueData(PngEncodedData,
+			NetworkDataSource->PutImageQueueData(PngEncodedData,
 			this->CaptureManager->GetCenterOfBrightness(10));
 		}
 
@@ -221,21 +196,19 @@ void ASimulationDataSourceActor::ParseQueue(float DeltaTime)
 	}
 }
 
-// Called every frame
-void ASimulationDataSourceActor::Tick(float DeltaTime)
+void ASimulationDataSourceActor::UpdateScene() const
 {
-	Super::Tick(DeltaTime);
-	this->ShouldUpdateScene = false;
-
-	this->ParseQueue(DeltaTime);
-
-	if (this->ShouldUpdateScene)
+	if (!this->ShouldUpdateScene)
+		return;
+	
+	if (this->CielimMessage.GetMessage().has_spacecraft() && this->IsSpacecraftSpawned)
 	{
-		if (this->CielimMessage.GetMessage().has_spacecraft() && this->IsSpacecraftSpawned) {
-			this->UpdateSpacecraft();
-		} if (!this->CielimMessage.GetMessage().celestialbodies().empty() && this->IsCelestialBodiesSpawned) {
-			this->UpdateCelestialBodies();
-		}
+		this->UpdateSpacecraft();
+	}
+
+	if (!this->CielimMessage.GetMessage().celestialbodies().empty() && this->IsCelestialBodiesSpawned)
+	{
+		this->UpdateCelestialBodies();
 	}
 }
 

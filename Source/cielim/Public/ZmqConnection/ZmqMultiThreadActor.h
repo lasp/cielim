@@ -1,7 +1,6 @@
 #pragma once
 
-#include "Engine/World.h"
-#include "GameFramework/Actor.h"
+#include "CoreMinimal.h"
 
 #include "CielimCircularQueue.h"
 #include "SimulationDataSource.h"
@@ -10,30 +9,19 @@
 #include "ZmqMultiThreadActor.generated.h"
 
 UCLASS()
-class CIELIM_API AZmqMultiThreadActor : public AActor
+class CIELIM_API UZmqMultiThreadActor : public UObject
 {
 	GENERATED_BODY()
 
 public:
-	AZmqMultiThreadActor()=default;
-	~AZmqMultiThreadActor()=default;
-
 	void Connect(const std::string& Address);
 	TOptional<FCircularQueueData> GetQueueData() const;
 	void PutQueueData(std::string Data) const;
 	void PutImageQueueData(const TArray64<uint8>& PNGData, const TOptional<FVector2d> CenterOfBrightness) const;
 
-	/** Start a timer in BP to *safely* check for thread updates! */
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category=Cielim)
-	void StartThreadTimerUpdate();
-
 	UFUNCTION(BlueprintPure, Category=Cielim)
 	bool IsThreadPaused() const;
 
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable, Category=Cielim)
-	void CielimLog(const FString& Str, FLinearColor Color=FLinearColor::Yellow, float Duration=2);
-
-	UWorld* WorldContext = nullptr;
 	std::shared_ptr<CielimCircularQueue> MultiThreadDataQueue = nullptr;
 
 	//
@@ -46,10 +34,10 @@ public:
 	// that is not the game's main thread
 	void ConnectorThreadTick();
 
-	virtual void BeginPlay() override;
+	virtual void PostInitProperties() override;
 
 	// Ensure the thread is shut down
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void BeginDestroy() override;
 
 private:
 	void ConnectorThreadInit();

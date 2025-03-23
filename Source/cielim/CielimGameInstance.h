@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
+#include "zmq.hpp"
 
 #include "SceneManager.h"
 

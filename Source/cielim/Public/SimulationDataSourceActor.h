@@ -2,18 +2,15 @@
 
 #pragma once
 
-#include <memory>
-
 #include "CoreMinimal.h"
 #include "Math/Vector.h"
-#include "GameFramework/Actor.h"
 #include "Engine/DirectionalLight.h"
-#include "ZmqConnection/ZmqMultiThreadActor.h"
 
 #include "FCielimMessage.h"
 #include "CelestialBody.h"
 #include "Spacecraft.h"
 #include "CaptureManager.h"
+#include "ZmqConnection/ZmqMultiThreadActor.h"
 
 #include "SimulationDataSourceActor.generated.h"
 
@@ -22,19 +19,10 @@ class CIELIM_API ASimulationDataSourceActor : public AActor
 {
     GENERATED_BODY()
 
-public:
-    // Sets default values for this actor's properties
-    ASimulationDataSourceActor();
-
 protected:
-    // Called when the game starts or when spawned
-    virtual void BeginPlay() override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void BeginPlay() override;
 
 public:
-    // Called every frame
-    virtual void Tick(float DeltaTime) override;
-
     void SpawnCelestialBodies();
     void SpawnSpacecraft();
     void SpawnCaptureManager();
@@ -53,10 +41,10 @@ public:
 
 	void PointSunLight();
 
-private:
-	void ParseQueue(float DeltaTime);
+	void ParseCommand(const FCircularQueueData& CommandData, const UZmqMultiThreadActor* NetworkDataSource);
+	void UpdateScene() const;
 
-	AZmqMultiThreadActor* NetworkSimulationDataSource;
+private:
     FCielimMessage CielimMessage;
     TArray<ACelestialBody*> CelestialBodyArray;
 	ACelestialBody* SunCelestialBody;

@@ -5,15 +5,16 @@
 #include "CielimLoggingMacros.h"
 
 //Static counter for thread creation process, for unique identification of the thread
-int32 AZmqMultiThreadActor::ThreadNameCounter = 0;
+int32 UZmqMultiThreadActor::ThreadNameCounter = 0;
 
-void AZmqMultiThreadActor::BeginPlay()
+void UZmqMultiThreadActor::PostInitProperties()
 {
-	Super::BeginPlay();
-	UE_LOG(LogCielim, Display, TEXT("AZmqMultiThreadActor::BeginPlay"));
+	UE_LOG(LogCielim, Display, TEXT("UZmqMultiThreadActor::BeginPlay"));
+
+	Super::PostInitProperties();
 }
 
-void AZmqMultiThreadActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
+void UZmqMultiThreadActor::BeginDestroy()
 {
 	//Allows thread to finish current task / tick cycle
 	//! Freezing game thread exit process in meantime
@@ -21,20 +22,21 @@ void AZmqMultiThreadActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 	this->ZmqContext.shutdown();
 	this->ZmqContext.close();
-	Super::EndPlay(EndPlayReason);
+
+	Super::BeginDestroy();
 }
 
-void AZmqMultiThreadActor::Connect(const std::string& Address)
+void UZmqMultiThreadActor::Connect(const std::string& Address)
 {
 	this->ZmqContext = zmq::context_t();
 	this->ConnectionAddress = Address;
 	this->ConnectorThreadInit();
 }
 
-void AZmqMultiThreadActor::ConnectorThreadInit()
+void UZmqMultiThreadActor::ConnectorThreadInit()
 {
 	//	Thread-Safe queue to pass data and commands between queue and game thread
-	UE_LOG(LogCielim, Display, TEXT("AZmqMultiThreadActor::ThreadInit"));
+	UE_LOG(LogCielim, Display, TEXT("UZmqMultiThreadActor::ThreadInit"));
 	this->MultiThreadDataQueue = std::make_shared<CielimCircularQueue>();
 
 	// Thread tick rate to prevent thread from spinning if a fast update is not needed
@@ -50,13 +52,13 @@ void AZmqMultiThreadActor::ConnectorThreadInit()
 														this->ConnectionAddress,
 														this->MultiThreadDataQueue);
 
-	UE_LOG(LogCielim, Display, TEXT("AZmqMultiThreadActor::ThreadInit end"));
+	UE_LOG(LogCielim, Display, TEXT("UZmqMultiThreadActor::ThreadInit end"));
 	// this->StartThreadTimerUpdate();
 }
 
-void AZmqMultiThreadActor::ConnectorThreadShutdown()
+void UZmqMultiThreadActor::ConnectorThreadShutdown()
 {
-	UE_LOG(LogCielim, Display, TEXT("AZmqMultiThreadActor::ConnectorThreadShutdown"));
+	UE_LOG(LogCielim, Display, TEXT("UZmqMultiThreadActor::ConnectorThreadShutdown"));
 	if(this->ConnectorThread)
 	{
 		this->ConnectorThread->Stop();
@@ -71,7 +73,7 @@ void AZmqMultiThreadActor::ConnectorThreadShutdown()
 		while(!this->ConnectorThread->ThreadHasStopped())
 		{
 			FPlatformProcess::Sleep(0.1);
-			UE_LOG(LogCielim, Display, TEXT("sleeping in AZmqMultiThreadActor::ConnectorThreadShutdown"));
+			UE_LOG(LogCielim, Display, TEXT("sleeping in UZmqMultiThreadActor::ConnectorThreadShutdown"));
 		}
 
 		this->ConnectorThread->ThreadShutdown();
@@ -81,7 +83,7 @@ void AZmqMultiThreadActor::ConnectorThreadShutdown()
 	this->ConnectorThread = nullptr;
 }
 
-TOptional<FCircularQueueData> AZmqMultiThreadActor::GetQueueData() const
+TOptional<FCircularQueueData> UZmqMultiThreadActor::GetQueueData() const
 {
 	TOptional<FCircularQueueData> queueData;
 
@@ -89,20 +91,20 @@ TOptional<FCircularQueueData> AZmqMultiThreadActor::GetQueueData() const
 	{
 		// Do nothing for now
 	}
-	else if (FCircularQueueData NextCommand{}; this->MultiThreadDataQueue->Requests.Dequeue(NextCommand)) 
+	else if (FCircularQueueData NextCommand{}; this->MultiThreadDataQueue->Requests.Dequeue(NextCommand))
 	{
-		UE_LOG(LogCielim, Display, TEXT("Dequeue command: AZmqMultiThreadActor"));
+		UE_LOG(LogCielim, Display, TEXT("Dequeue command: UZmqMultiThreadActor"));
 		queueData = NextCommand;
-	} 
-	else 
+	}
+	else
 	{
-		UE_LOG(LogCielim, Display, TEXT("No command received: AZmqMultiThreadActor"));
+		UE_LOG(LogCielim, Display, TEXT("No command received: UZmqMultiThreadActor"));
 	}
 
 	return queueData;
 }
 
-void AZmqMultiThreadActor::PutQueueData(std::string Data) const
+void UZmqMultiThreadActor::PutQueueData(std::string Data) const
 {
 	FCircularQueueData NextCommand;
 
@@ -110,7 +112,7 @@ void AZmqMultiThreadActor::PutQueueData(std::string Data) const
 	this->MultiThreadDataQueue->Responses.Enqueue(NextCommand);
 }
 
-void AZmqMultiThreadActor::PutImageQueueData(const TArray64<uint8>& PNGData, const TOptional<FVector2d> CenterOfBrightness) const
+void UZmqMultiThreadActor::PutImageQueueData(const TArray64<uint8>& PNGData, const TOptional<FVector2d> CenterOfBrightness) const
 {
 	FCircularQueueData NextCommand;
 
@@ -119,12 +121,12 @@ void AZmqMultiThreadActor::PutImageQueueData(const TArray64<uint8>& PNGData, con
 	NextCommand.payload.Get<FImagePayload>().image_data = PNGData;
 	NextCommand.payload.Get<FImagePayload>().centerOfBrightness = CenterOfBrightness;
 
-	UE_LOG(LogCielim, Display, TEXT("Enqueue image response: AZmqMultiThreadActor"));
+	UE_LOG(LogCielim, Display, TEXT("Enqueue image response: UZmqMultiThreadActor"));
 
 	this->MultiThreadDataQueue->Responses.Enqueue(NextCommand);
 }
 
-bool AZmqMultiThreadActor::IsThreadPaused() const
+bool UZmqMultiThreadActor::IsThreadPaused() const
 {
 	if(this->ConnectorThread)
 	{

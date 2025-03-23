@@ -24,7 +24,7 @@
 
 Connector::Connector(const FTimespan& ThreadTickRate,
                      const TCHAR* ThreadDescription,
-                     AZmqMultiThreadActor* Actor,
+                     UZmqMultiThreadActor* Actor,
                      zmq::context_t& Context,
                      const std::string& Address,
                      std::shared_ptr<CielimCircularQueue> Queue
@@ -124,7 +124,7 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage) const
 		Message.pushstr("OK");
 	}
 	else if (Command == "SIM_UPDATE")
-	{	
+	{
 		FCircularQueueData Data;
 		Data.payload.Emplace<FUpdatePayload>(FUpdatePayload());
 
@@ -133,7 +133,7 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage) const
 
 		// @TODO: fix this message parsing. It's a mad hack!
 		Data.payload.Get<FUpdatePayload>().message.GetMessageModifiable().ParseFromArray(RequestMessage[2].data(), RequestMessage[2].size() * sizeof(char));
-		
+
 		UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue SIM_UPDATE..."));
 
 		bool EnqueueResult = false;
@@ -198,9 +198,9 @@ zmq::multipart_t Connector::ParseMessage(zmq::multipart_t& RequestMessage) const
 		if (tempPayload != nullptr && tempPayload -> centerOfBrightness.IsSet())
 		{
 			Message.pushtyp<double>(tempPayload -> centerOfBrightness.GetValue().X);
-			Message.pushtyp<double>(tempPayload -> centerOfBrightness.GetValue().Y);	
+			Message.pushtyp<double>(tempPayload -> centerOfBrightness.GetValue().Y);
 		}
-		else 
+		else
 		{
 			Message.pushmem(nullptr, 0);
 			Message.pushmem(nullptr, 0);

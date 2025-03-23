@@ -5,7 +5,7 @@
 #include "zmq_addon.hpp"
 
 class CielimCircularQueue;
-class AZmqMultiThreadActor;
+class UZmqMultiThreadActor;
 
 class CIELIM_API Connector : public FThreadBase
 {
@@ -14,7 +14,7 @@ public:
 
 	Connector(const FTimespan& ThreadTickRate,
 			  const TCHAR* ThreadDescription,
-			  AZmqMultiThreadActor* Actor,
+			  UZmqMultiThreadActor* Actor,
 			  zmq::context_t& Context,
 			  const std::string& Address,
 			  std::shared_ptr<CielimCircularQueue> Queue);
