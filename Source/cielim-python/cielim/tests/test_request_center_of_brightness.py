@@ -54,7 +54,6 @@ def test_request_image_and_center_of_brightness(cielim_connection, scene_setup):
     )
 
 
-
 def test_request_only_center_of_brightness(cielim_connection, scene_setup):
     connector = cielim_connection
     connector.send_frame(scene_setup)
