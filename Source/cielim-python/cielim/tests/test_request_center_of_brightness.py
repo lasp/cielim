@@ -36,12 +36,8 @@ def scene_setup():
     return protobuf_message
 
 
-def test_request_image_and_center_of_brightness(scene_setup):
-    connector = Connector()
-    launcher = Launcher()
-    connector.connect(launcher.launch())
-
-    connector.send_init_request()
+def test_request_image_and_center_of_brightness(cielim_connection, scene_setup):
+    connector = cielim_connection
     connector.send_frame(scene_setup)
 
     [image, center_of_brightness] = connector.request_image_for_camera_id(1, 1)
@@ -57,16 +53,10 @@ def test_request_image_and_center_of_brightness(scene_setup):
         err_msg="Center of brightness not close enough to expected",
     )
 
-    connector.disconnect()
-    launcher.terminate()
 
 
-def test_request_only_center_of_brightness(scene_setup):
-    connector = Connector()
-    launcher = Launcher()
-    connector.connect(launcher.launch())
-
-    connector.send_init_request()
+def test_request_only_center_of_brightness(cielim_connection, scene_setup):
+    connector = cielim_connection
     connector.send_frame(scene_setup)
 
     [image, center_of_brightness] = connector.request_image_for_camera_id(1, 0)
@@ -81,6 +71,3 @@ def test_request_only_center_of_brightness(scene_setup):
         atol=1e-1,
         err_msg="Center of brightness not close enough to expected",
     )
-
-    connector.disconnect()
-    launcher.terminate()

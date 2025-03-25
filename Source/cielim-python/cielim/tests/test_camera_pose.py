@@ -52,16 +52,13 @@ def scene_setup():
         ("Move Down", [0, 10000, 0]),
     ],
 )
-def test_camera_position(scene_setup, test_name, shift):
+def test_camera_position(cielim_connection, scene_setup, test_name, shift):
     """
     This remote procedure call test tests the effect of moving the camera on the asteroid's apparent position in the image.
     The expected pixel shifts are **inverted** compared to asteroid movement.
     """
-    connector = Connector()
-    launcher = Launcher()
-    connector.connect(launcher.launch())
-    connector.send_init_request()
 
+    connector = cielim_connection
     scene = scene_setup
     initial_x, initial_y, initial_z = scene.spacecraft.position[:3]
 
@@ -117,9 +114,6 @@ def test_camera_position(scene_setup, test_name, shift):
         err_msg=f"Pixel shift mismatch for test: {test_name}",
     )
 
-    connector.disconnect()
-    launcher.terminate()
-
 
 @pytest.mark.parametrize(
     "test_name, mrp_rotation",
@@ -129,16 +123,13 @@ def test_camera_position(scene_setup, test_name, shift):
         ("Rotate Y-axis", [0, -0.001, 0]),
     ],
 )
-def test_camera_orientation(scene_setup, test_name, mrp_rotation):
+def test_camera_orientation(cielim_connection, scene_setup, test_name, mrp_rotation):
     """
     Tests the effect of modifying the camera's orientation using MRPs on the asteroid's apparent position in the image.
     The expected pixel shifts are computed based on the new orientation.
     """
-    connector = Connector()
-    launcher = Launcher()
-    connector.connect(launcher.launch())
-    connector.send_init_request()
 
+    connector = cielim_connection
     scene = scene_setup
 
     connector.send_frame(scene)
@@ -194,6 +185,3 @@ def test_camera_orientation(scene_setup, test_name, mrp_rotation):
         atol=2,
         err_msg=f"Pixel shift mismatch for test: {test_name}",
     )
-
-    connector.disconnect()
-    launcher.terminate()

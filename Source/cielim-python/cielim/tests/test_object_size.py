@@ -53,16 +53,12 @@ def scene_setup():
         ("Move Away, Left & Down", [-10000, 10000, 500000]),
     ],
 )
-def test_asteroid_size(scene_setup, test_name, shift):
+def test_asteroid_size(cielim_connection, scene_setup, test_name, shift):
     """
     This Remote Procedure call tests the asteroid size in pixels when its distance (Z) and slight position (X, Y) change.
     Parameters: Changing asteroid Z (closer/away) and slight X/Y shift, verifying pixel size.
     """
-    connector = Connector()
-    launcher = Launcher()
-    connector.connect(launcher.launch())
-    connector.send_init_request()
-
+    connector = cielim_connection
     scene = scene_setup
     initial_position = scene.celestialBodies[0].position[:3]
 
@@ -111,5 +107,3 @@ def test_asteroid_size(scene_setup, test_name, shift):
     )
 
     cv2.circle(moved_image, (int(moved_x), int(moved_y)), int(moved_radius), (255, 255, 255), 2)
-    connector.disconnect()
-    launcher.terminate()

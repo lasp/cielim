@@ -37,10 +37,8 @@ def scene_setup(spacecraft_position):
     return protobuf_message
 
 
-def test_ping():
-    connector = Connector()
-    launcher = Launcher()
-    connector.connect(launcher.launch())
+def test_ping(cielim_connection):
+    connector = cielim_connection
 
     message = connector._send_ping()
     try:
@@ -48,15 +46,9 @@ def test_ping():
     except AssertionError as e:
         print(f"Fail in test_ping: {e}")
 
-    connector.disconnect()
-    launcher.terminate()
 
-
-def test_init_scene():
-    connector = Connector()
-    launcher = Launcher()
-    connector.connect(launcher.launch())
-
+def test_init_scene(cielim_connection):
+    connector = cielim_connection
     # Init to ensure clean setup
 
     init_scene_message = connector.send_init_request()
@@ -99,16 +91,10 @@ def test_init_scene():
 
     np.testing.assert_equal(image, np.zeros_like(image), "Image was not cleared")
 
-    connector.disconnect()
-    launcher.terminate()
-
 
 @pytest.mark.parametrize("position", [((100000, 0, -1000000)), ((10000, 0, -1000000)), ((1000, 10000, -1000000))])
-def test_send_frame(position):
-    connector = Connector()
-    launcher = Launcher()
-    connector.connect(launcher.launch())
-
+def test_send_frame(cielim_connection, position):
+    connector = cielim_connection
     # Init to ensure clean setup
 
     init_scene_message = connector.send_init_request()
@@ -145,16 +131,10 @@ def test_send_frame(position):
     except AssertionError as e:
         print(f"Fail in test_send_frame: {e}")
 
-    connector.disconnect()
-    launcher.terminate()
-
 
 @pytest.mark.parametrize("position", [((100000, 0, -1000000)), ((10000, 0, -1000000)), ((1000, 10000, -1000000))])
-def test_request_image(position):
-    connector = Connector()
-    launcher = Launcher()
-    connector.connect(launcher.launch())
-
+def test_request_image(cielim_connection, position):
+    connector = cielim_connection
     # Init to ensure clean setup
 
     init_scene_message = connector.send_init_request()
@@ -182,6 +162,3 @@ def test_request_image(position):
         assert np.any(image)
     except AssertionError as e:
         print(f"Fail in test_request_image: {e}")
-
-    connector.disconnect()
-    launcher.terminate()
