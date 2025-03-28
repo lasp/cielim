@@ -5,6 +5,9 @@
 void UCielimGameInstance::Init()
 {
 	Super::Init();
+
+	this->Context = zmq::context_t(1);
+
 	FString CommAddress;
 
 	// Check for command line parameter for directComm and store in CommAddress
@@ -18,6 +21,8 @@ void UCielimGameInstance::Init()
 		UE_LOG(LogCielim, Display, TEXT("No command line parameter found; using default localhost."))
 		CommAddress = "tcp://localhost:5556";
 	}
+
+	this->Router = new FRouter(Context, std::string(TCHAR_TO_UTF8(*CommAddress)));
 
 	// Create the Scene Manager as a child of the GameInstance
 	this->SceneManager = NewObject<USceneManager>(this, USceneManager::StaticClass());
@@ -36,6 +41,9 @@ void UCielimGameInstance::Shutdown()
 {
 	// Let GC destroy the SceneManager instance
 	this->SceneManager = nullptr;
+
+	if (this->Router)
+		delete this->Router;
 
 	google::protobuf::ShutdownProtobufLibrary();
 

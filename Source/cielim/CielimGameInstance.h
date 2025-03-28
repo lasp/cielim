@@ -5,6 +5,7 @@
 #include "zmq.hpp"
 
 #include "SceneManager.h"
+#include "Router.h"
 
 #include "CielimGameInstance.generated.h"
 
@@ -24,4 +25,7 @@ protected:
 private:
     UPROPERTY()
     USceneManager* SceneManager;
+
+    zmq::context_t Context;
+    FRouter* Router;
 };
