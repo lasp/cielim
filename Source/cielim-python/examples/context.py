@@ -8,3 +8,4 @@ import launcher
 import cielimMessage_pb2
 import scene
 import rigid_body_kinematics
+import variable_map
