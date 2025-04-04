@@ -22,11 +22,11 @@ void UCielimGameInstance::Init()
 		CommAddress = "tcp://localhost:5556";
 	}
 
-	this->Router = new FRouter(Context, std::string(TCHAR_TO_UTF8(*CommAddress)));
+	this->Router = new FRouter(Context, std::string(TCHAR_TO_UTF8(*CommAddress)), MultiThreadQueue);
 
 	// Create the Scene Manager as a child of the GameInstance
 	this->SceneManager = NewObject<USceneManager>(this, USceneManager::StaticClass());
-	this->SceneManager->Init(std::string(TCHAR_TO_UTF8(*CommAddress)));
+	this->SceneManager->Init(Context, MultiThreadQueue);
 
 	int Major;
 	int Minor;

@@ -1,11 +1,14 @@
 #include "Router.h"
 
 #include "CielimLoggingMacros.h"
+#include "ZmqConnection/UCircularQueueData.h"
 
-FRouter::FRouter(zmq::context_t& ContextPtr, const std::string& Address)
+FRouter::FRouter(zmq::context_t& ContextPtr, const std::string& Address, CielimCircularQueue& CircularQueue)
 {
     this->Context = &ContextPtr;
     this->RouterSocket = zmq::socket_t(ContextPtr, zmq::socket_type::router);
+
+	this->MultiThreadQueue = &CircularQueue;
 
     this->bContinueRun = true;
 
@@ -33,7 +36,7 @@ bool FRouter::Init()
 {
     return true;
 }
-    
+
 uint32 FRouter::Run()
 {
     while (this->bContinueRun)
@@ -73,14 +76,15 @@ uint32 FRouter::Run()
                     bUseDelim = true;
                     ReceiveMessage.pop();
                 }
-                
+
                 // Send return message
 
                 zmq::multipart_t ReturnMessage;
 
                 ReturnMessage.addstr(ID);
                 if (bUseDelim) ReturnMessage.addstr("");
-                ReturnMessage.addstr(ReceiveMessage.popstr());
+
+            	ParseMessage(ReceiveMessage, ReturnMessage);
 
                 ReturnMessage.send(this->RouterSocket);
             }
@@ -90,11 +94,127 @@ uint32 FRouter::Run()
     return 0;
 }
 
+void FRouter::ParseMessage(zmq::multipart_t& Message, zmq::multipart_t& ReturnMessage) const
+{
+	UE_LOG(LogCielim, Display, TEXT("Router::ParseMessage"));
+
+	const std::string Command = Message.popstr();
+
+	UE_LOG(LogCielim, Display, TEXT("Basilisk command: %hs"), Command.c_str());
+
+	if (Command == "PING")
+	{
+		ReturnMessage.addstr("PONG");
+	}
+	else if (Command == "INIT_SCENE")
+	{
+		FCircularQueueData Data;
+		Data.query = CommandType::INIT_SCENE;
+
+		UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue INIT_SCENE..."));
+
+		bool EnqueueResult = false;
+		while (!EnqueueResult)
+		{
+			EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(Data);
+		}
+
+		ReturnMessage.addstr("OK");
+	}
+	else if (Command == "SIM_UPDATE")
+	{
+		FCircularQueueData Data;
+		Data.payload.Emplace<FUpdatePayload>(FUpdatePayload());
+
+		Data.query = CommandType::SIM_UPDATE;
+		Data.payload.Get<FUpdatePayload>().message = FCielimMessage();
+
+		// @TODO: fix this message parsing. It's a mad hack!
+		Data.payload.Get<FUpdatePayload>().message.GetMessageModifiable().ParseFromArray(Message[2].data(), Message[2].size() * sizeof(char));
+
+		UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue SIM_UPDATE..."));
+
+		bool EnqueueResult = false;
+		while(!EnqueueResult)
+		{
+			EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(Data);
+		}
+
+		ReturnMessage.addstr("OK");
+	}
+	else if (Command == "REQUEST_IMAGE")
+	{
+		uint32_t CameraID = -1;
+		CameraID = std::stoi(Message.popstr());
+
+		UE_LOG(LogCielim, Display, TEXT("Camera ID: %d"), CameraID);
+
+		// A request is received and is put in the queue to be handled by the main (game) thread
+		FCircularQueueData Request;
+
+		Request.query = CommandType::REQUEST_IMAGE;
+		Request.payload.Emplace<FImagePayload>(FImagePayload());
+		Request.payload.Get<FImagePayload>().shouldReturnImage = (bool) std::stoi(Message.popstr());
+
+		UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue REQUEST_IMAGE"));
+
+		bool EnqueueResult = false;
+		while(!EnqueueResult)
+		{
+			EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(Request);
+		}
+
+		// Loop until we get the response from the main (game) thread
+		FCircularQueueData Response;
+
+		UE_LOG(LogCielim, Display, TEXT("Waiting for reposnse to REQUEST_IMAGE"));
+
+		bool DequeueResult = false;
+		while(!DequeueResult)
+		{
+			// I can call this directly so the thread blocks on the image return.
+			// This assumes that the next item placed in the queue is the image response.
+			DequeueResult = this->MultiThreadQueue->Responses.Dequeue(Response);
+		}
+
+		UE_LOG(LogCielim, Display, TEXT("Reposnse to REQUEST_IMAGE received"));
+
+		TArray64<uint8> ResponseImage;
+
+		auto* TempPayload = Response.payload.TryGet<FImagePayload>();
+
+		if (TempPayload != nullptr)
+		{
+			ResponseImage = TempPayload->image_data;
+		}
+
+		const auto Bytes = sizeof(ResponseImage[0]) * ResponseImage.Num();
+
+		ReturnMessage.addmem(ResponseImage.GetData(), Bytes);
+		ReturnMessage.addtyp(Bytes);
+
+		if (TempPayload != nullptr && TempPayload -> centerOfBrightness.IsSet())
+		{
+			ReturnMessage.addtyp<double>(TempPayload -> centerOfBrightness.GetValue().X);
+			ReturnMessage.addtyp<double>(TempPayload -> centerOfBrightness.GetValue().Y);
+		}
+		else
+		{
+			ReturnMessage.addmem(nullptr, 0);
+			ReturnMessage.addmem(nullptr, 0);
+		}
+	}
+	else
+	{
+		ReturnMessage.addstr("ERROR");
+	}
+}
+
 void FRouter::Stop()
 {
     this->bContinueRun = false;
 }
-    
+
 void FRouter::Exit()
 {
     // Do nothing for now (called when Run() ends)

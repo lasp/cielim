@@ -2,10 +2,12 @@
 
 #include "Kismet/GameplayStatics.h"
 
-void USceneManager::Init(const std::string& Address)
+#include "CielimLoggingMacros.h"
+
+void USceneManager::Init(zmq::context_t& ContextPtr, CielimCircularQueue& CircularQueue)
 {
 	this->NetworkDataSource = NewObject<UZmqMultiThreadActor>(this, UZmqMultiThreadActor::StaticClass());
-	this->NetworkDataSource->Connect(Address);
+	this->NetworkDataSource->Connect(ContextPtr, CircularQueue);
 }
 
 void USceneManager::InitWorldContext(const UObject *WorldContextObject)

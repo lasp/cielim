@@ -25,23 +25,24 @@ class Connector:
         print(self._send_ping())
 
     def _send_ping(self):
-        self.request_socket.send_string("PING")
-        return self.request_socket.recv_string()
+        _ = self.request_socket.send_string("PING")
+        return self.request_socket.recv_multipart()[0].decode("utf-8")
 
     def send_init_request(self):
-        self.request_socket.send_string("INIT_SCENE")
-        return self.request_socket.recv_string()
+        _ = self.request_socket.send_string("INIT_SCENE")
+        return self.request_socket.recv_multipart()[0].decode("utf-8")
 
     def send_frame(self, sim_frame: cielimMessage.CielimMessage):
-        result = self.request_socket.send_multipart([b"SIM_UPDATE", b"", b"", sim_frame.SerializePartialToString()])
-        print(result)
-        return self.request_socket.recv_string()
+        _ = self.request_socket.send_multipart([b"SIM_UPDATE", b"", b"", sim_frame.SerializePartialToString()])
+        return self.request_socket.recv_multipart()[0].decode("utf-8")
 
     def request_image_for_camera_id(self, camera_id: int, should_return_image: bool = True):
-        self.request_socket.send_multipart(
+        _ = self.request_socket.send_multipart(
             [b"REQUEST_IMAGE", str.encode(str(camera_id)), str.encode(str(int(should_return_image)))]
         )
-        [cob_x, cob_y, image_data_size, image_data] = self.request_socket.recv_multipart()
+
+        [image_data, image_data_size, cob_x, cob_y] = self.request_socket.recv_multipart()
+
         image = None
         if should_return_image:
             buf = np.asarray(bytearray(image_data), dtype="uint8")

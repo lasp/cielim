@@ -1,11 +1,6 @@
 #include "ZmqConnection/ZmqMultiThreadActor.h"
 
-#include <fstream>
-
 #include "CielimLoggingMacros.h"
-
-//Static counter for thread creation process, for unique identification of the thread
-int32 UZmqMultiThreadActor::ThreadNameCounter = 0;
 
 void UZmqMultiThreadActor::PostInitProperties()
 {
@@ -16,76 +11,18 @@ void UZmqMultiThreadActor::PostInitProperties()
 
 void UZmqMultiThreadActor::BeginDestroy()
 {
-	//Allows thread to finish current task / tick cycle
-	//! Freezing game thread exit process in meantime
-	this->ConnectorThreadShutdown();
-
-	this->ZmqContext.shutdown();
-	this->ZmqContext.close();
-
 	Super::BeginDestroy();
 }
 
-void UZmqMultiThreadActor::Connect(const std::string& Address)
+void UZmqMultiThreadActor::Connect(zmq::context_t& ContextPtr, CielimCircularQueue& CircularQueue)
 {
-	this->ZmqContext = zmq::context_t();
-	this->ConnectionAddress = Address;
-	this->ConnectorThreadInit();
-}
-
-void UZmqMultiThreadActor::ConnectorThreadInit()
-{
-	//	Thread-Safe queue to pass data and commands between queue and game thread
-	UE_LOG(LogCielim, Display, TEXT("UZmqMultiThreadActor::ThreadInit"));
-	this->MultiThreadDataQueue = std::make_shared<CielimCircularQueue>();
-
-	// Thread tick rate to prevent thread from spinning if a fast update is not needed
-	FTimespan ThreadWaitTime = FTimespan::FromSeconds(0.0);
-
-	FString UniqueThreadName = "ZMQ Connector ";
-	UniqueThreadName += FString::FromInt(++ThreadNameCounter);
-
-	this->ConnectorThread = std::make_unique<Connector>(ThreadWaitTime,
-														*UniqueThreadName,
-														this,
-														this->ZmqContext,
-														this->ConnectionAddress,
-														this->MultiThreadDataQueue);
-
-	UE_LOG(LogCielim, Display, TEXT("UZmqMultiThreadActor::ThreadInit end"));
-	// this->StartThreadTimerUpdate();
-}
-
-void UZmqMultiThreadActor::ConnectorThreadShutdown()
-{
-	UE_LOG(LogCielim, Display, TEXT("UZmqMultiThreadActor::ConnectorThreadShutdown"));
-	if(this->ConnectorThread)
-	{
-		this->ConnectorThread->Stop();
-		// Empty the queue because we're not going to process anymore data
-		// This also unblocks the ActivePoller::wait call in teh Connector thread
-		// which will (likely) be blocked on enqueueing data into the thread safe
-		// data queue
-		this->MultiThreadDataQueue->Requests.Empty();
-		this->MultiThreadDataQueue->Responses.Empty();
-		/* Wait here until connectorThread is verified as having stopped. This will delay PIE EndPlay or closing of
-		 * the game while the thread have a chance to finish */
-		while(!this->ConnectorThread->ThreadHasStopped())
-		{
-			FPlatformProcess::Sleep(0.1);
-			UE_LOG(LogCielim, Display, TEXT("sleeping in UZmqMultiThreadActor::ConnectorThreadShutdown"));
-		}
-
-		this->ConnectorThread->ThreadShutdown();
-		this->ConnectorThread.release();
-	}
-
-	this->ConnectorThread = nullptr;
+	this->Context = &ContextPtr;
+	this->MultiThreadDataQueue = &CircularQueue;
 }
 
 TOptional<FCircularQueueData> UZmqMultiThreadActor::GetQueueData() const
 {
-	TOptional<FCircularQueueData> queueData;
+	TOptional<FCircularQueueData> QueueData;
 
 	if(!this->MultiThreadDataQueue || this->MultiThreadDataQueue->Requests.IsEmpty())
 	{
@@ -94,18 +31,20 @@ TOptional<FCircularQueueData> UZmqMultiThreadActor::GetQueueData() const
 	else if (FCircularQueueData NextCommand{}; this->MultiThreadDataQueue->Requests.Dequeue(NextCommand))
 	{
 		UE_LOG(LogCielim, Display, TEXT("Dequeue command: UZmqMultiThreadActor"));
-		queueData = NextCommand;
+		QueueData = NextCommand;
 	}
 	else
 	{
 		UE_LOG(LogCielim, Display, TEXT("No command received: UZmqMultiThreadActor"));
 	}
 
-	return queueData;
+	return QueueData;
 }
 
 void UZmqMultiThreadActor::PutQueueData(std::string Data) const
 {
+	/* Unused for now, will just return ERROR if usage is attempted */
+
 	FCircularQueueData NextCommand;
 
 	NextCommand.query = CommandType::ERROR;
@@ -124,13 +63,4 @@ void UZmqMultiThreadActor::PutImageQueueData(const TArray64<uint8>& PNGData, con
 	UE_LOG(LogCielim, Display, TEXT("Enqueue image response: UZmqMultiThreadActor"));
 
 	this->MultiThreadDataQueue->Responses.Enqueue(NextCommand);
-}
-
-bool UZmqMultiThreadActor::IsThreadPaused() const
-{
-	if(this->ConnectorThread)
-	{
-		return this->ConnectorThread->ThreadIsPaused();
-	}
-	return false;
 }

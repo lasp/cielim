@@ -13,7 +13,7 @@ class CIELIM_API USceneManager : public UObject, public FTickableGameObject
     GENERATED_BODY()
 
 public:
-	void Init(const std::string& Address);
+	void Init(zmq::context_t& ContextPtr, CielimCircularQueue& CircularQueue);
 	void InitWorldContext(const UObject* WorldContextObject);
 
 	virtual bool IsTickable() const override;

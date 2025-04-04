@@ -26,6 +26,8 @@ private:
     UPROPERTY()
     USceneManager* SceneManager;
 
+	CielimCircularQueue MultiThreadQueue;
+
     zmq::context_t Context;
     FRouter* Router;
 };
