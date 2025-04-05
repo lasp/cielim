@@ -6,8 +6,8 @@
 
 void USceneManager::Init(zmq::context_t& ContextPtr, CielimCircularQueue& CircularQueue)
 {
-	this->NetworkDataSource = NewObject<UZmqMultiThreadActor>(this, UZmqMultiThreadActor::StaticClass());
-	this->NetworkDataSource->Connect(ContextPtr, CircularQueue);
+	this->QueueBridge = NewObject<UQueueBridge>(this, UQueueBridge::StaticClass());
+	this->QueueBridge->Connect(ContextPtr, CircularQueue);
 }
 
 void USceneManager::InitWorldContext(const UObject *WorldContextObject)
@@ -27,20 +27,20 @@ bool USceneManager::IsTickable() const
 		return false;
 
 	// Should tick if request queue is not empty
-	if (this->NetworkDataSource != nullptr)
-		return this->NetworkDataSource->MultiThreadDataQueue->Requests.Count() != 0;
+	if (this->QueueBridge != nullptr)
+		return this->QueueBridge->MultiThreadDataQueue->Requests.Count() != 0;
 
 	return false;
 }
 
 void USceneManager::Tick(float DeltaTime)
 {
-	const TOptional<FCircularQueueData> QueueData = this->NetworkDataSource->GetQueueData();
+	const TOptional<FCircularQueueData> QueueData = this->QueueBridge->GetQueueData();
 
 	if (!QueueData.IsSet())
 		return;
 
-	this->Scene->ParseCommand(QueueData.GetValue(), this->NetworkDataSource);
+	this->Scene->ParseCommand(QueueData.GetValue(), this->QueueBridge);
 	this->Scene->UpdateScene();
 }
 

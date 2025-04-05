@@ -6,7 +6,7 @@
 #include "Engine/DirectionalLight.h"
 #include "Components/LightComponent.h"
 #include "Math/UnrealMathUtility.h"
-#include "ZmqConnection/ZmqMultiThreadActor.h"
+#include "ZmqConnection/QueueBridge.h"
 #include "../CielimGameInstance.h"
 
 #include "AstronomicalConstants.h"
@@ -89,7 +89,7 @@ void ASimulationDataSourceActor::BeginPlay()
 
 
 // This is a mad hack and needs to be changed
-void ASimulationDataSourceActor::ParseCommand(const FCircularQueueData& CommandData, const UZmqMultiThreadActor* NetworkDataSource)
+void ASimulationDataSourceActor::ParseCommand(const FCircularQueueData& CommandData, const UQueueBridge* NetworkDataSource)
 {
 	this->ShouldUpdateScene = false;
 

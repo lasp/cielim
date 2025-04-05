@@ -10,7 +10,7 @@
 #include "CelestialBody.h"
 #include "Spacecraft.h"
 #include "CaptureManager.h"
-#include "ZmqConnection/ZmqMultiThreadActor.h"
+#include "ZmqConnection/QueueBridge.h"
 
 #include "SimulationDataSourceActor.generated.h"
 
@@ -41,7 +41,7 @@ public:
 
 	void PointSunLight();
 
-	void ParseCommand(const FCircularQueueData& CommandData, const UZmqMultiThreadActor* NetworkDataSource);
+	void ParseCommand(const FCircularQueueData& CommandData, const UQueueBridge* NetworkDataSource);
 	void UpdateScene() const;
 
 private:

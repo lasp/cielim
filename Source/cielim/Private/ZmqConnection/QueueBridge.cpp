@@ -1,26 +1,26 @@
-#include "ZmqConnection/ZmqMultiThreadActor.h"
+#include "ZmqConnection/QueueBridge.h"
 
 #include "CielimLoggingMacros.h"
 
-void UZmqMultiThreadActor::PostInitProperties()
+void UQueueBridge::PostInitProperties()
 {
-	UE_LOG(LogCielim, Display, TEXT("UZmqMultiThreadActor::BeginPlay"));
+	UE_LOG(LogCielim, Display, TEXT("UQueueBridge::BeginPlay"));
 
 	Super::PostInitProperties();
 }
 
-void UZmqMultiThreadActor::BeginDestroy()
+void UQueueBridge::BeginDestroy()
 {
 	Super::BeginDestroy();
 }
 
-void UZmqMultiThreadActor::Connect(zmq::context_t& ContextPtr, CielimCircularQueue& CircularQueue)
+void UQueueBridge::Connect(zmq::context_t& ContextPtr, CielimCircularQueue& CircularQueue)
 {
 	this->Context = &ContextPtr;
 	this->MultiThreadDataQueue = &CircularQueue;
 }
 
-TOptional<FCircularQueueData> UZmqMultiThreadActor::GetQueueData() const
+TOptional<FCircularQueueData> UQueueBridge::GetQueueData() const
 {
 	TOptional<FCircularQueueData> QueueData;
 
@@ -30,18 +30,18 @@ TOptional<FCircularQueueData> UZmqMultiThreadActor::GetQueueData() const
 	}
 	else if (FCircularQueueData NextCommand{}; this->MultiThreadDataQueue->Requests.Dequeue(NextCommand))
 	{
-		UE_LOG(LogCielim, Display, TEXT("Dequeue command: UZmqMultiThreadActor"));
+		UE_LOG(LogCielim, Display, TEXT("Dequeue command: UQueueBridge"));
 		QueueData = NextCommand;
 	}
 	else
 	{
-		UE_LOG(LogCielim, Display, TEXT("No command received: UZmqMultiThreadActor"));
+		UE_LOG(LogCielim, Display, TEXT("No command received: UQueueBridge"));
 	}
 
 	return QueueData;
 }
 
-void UZmqMultiThreadActor::PutQueueData(std::string Data) const
+void UQueueBridge::PutQueueData(std::string Data) const
 {
 	/* Unused for now, will just return ERROR if usage is attempted */
 
@@ -51,7 +51,7 @@ void UZmqMultiThreadActor::PutQueueData(std::string Data) const
 	this->MultiThreadDataQueue->Responses.Enqueue(NextCommand);
 }
 
-void UZmqMultiThreadActor::PutImageQueueData(const TArray64<uint8>& PNGData, const TOptional<FVector2d> CenterOfBrightness) const
+void UQueueBridge::PutImageQueueData(const TArray64<uint8>& PNGData, const TOptional<FVector2d> CenterOfBrightness) const
 {
 	FCircularQueueData NextCommand;
 
@@ -60,7 +60,7 @@ void UZmqMultiThreadActor::PutImageQueueData(const TArray64<uint8>& PNGData, con
 	NextCommand.payload.Get<FImagePayload>().image_data = PNGData;
 	NextCommand.payload.Get<FImagePayload>().centerOfBrightness = CenterOfBrightness;
 
-	UE_LOG(LogCielim, Display, TEXT("Enqueue image response: UZmqMultiThreadActor"));
+	UE_LOG(LogCielim, Display, TEXT("Enqueue image response: UQueueBridge"));
 
 	this->MultiThreadDataQueue->Responses.Enqueue(NextCommand);
 }

@@ -5,10 +5,10 @@
 
 #include "CielimCircularQueue.h"
 
-#include "ZmqMultiThreadActor.generated.h"
+#include "QueueBridge.generated.h"
 
 UCLASS()
-class CIELIM_API UZmqMultiThreadActor : public UObject
+class CIELIM_API UQueueBridge : public UObject
 {
 	GENERATED_BODY()
 

@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 
 #include "SimulationDataSourceActor.h"
-#include "ZmqConnection/ZmqMultiThreadActor.h"
+#include "ZmqConnection/QueueBridge.h"
 
 #include "SceneManager.generated.h"
 
@@ -22,7 +22,7 @@ public:
 
 private:
 	UPROPERTY()
-	UZmqMultiThreadActor* NetworkDataSource;
+	UQueueBridge* QueueBridge;
 
 	UPROPERTY()
 	UWorld* WorldContext;
