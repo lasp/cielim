@@ -1,3 +1,12 @@
+//=================== Copyright (c) 2025 Laboratory for Atmospheric and Space Physics ===================//
+//
+// Purpose: Defines the FRouter class. The router handles all networking and passes commands to the
+//          circular queue to be processed by the scene manager.
+//
+// License: MIT License. See LICENSE file.
+//
+//=======================================================================================================//
+
 #pragma once
 
 #include "HAL/Runnable.h"
@@ -27,7 +36,7 @@ public:
     virtual void Exit() override;
 
 private:
-	// Parse incoming message and push proper data to reply message
+	// Parse incoming Message and push proper data to ReturnMessage
     void ParseMessage(zmq::multipart_t& Message, zmq::multipart_t& ReturnMessage) const;
 
 	CielimCircularQueue* MultiThreadQueue;

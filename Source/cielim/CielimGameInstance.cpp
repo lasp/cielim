@@ -1,3 +1,11 @@
+//=================== Copyright (c) 2025 Laboratory for Atmospheric and Space Physics ===================//
+//
+// Purpose: Implements the definition of UCielimGameInstance.
+//
+// License: MIT License. See LICENSE file.
+//
+//=======================================================================================================//
+
 #include "CielimGameInstance.h"
 
 #include "CielimLoggingMacros.h"

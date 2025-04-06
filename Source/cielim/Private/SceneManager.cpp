@@ -1,3 +1,11 @@
+//=================== Copyright (c) 2025 Laboratory for Atmospheric and Space Physics ===================//
+//
+// Purpose: Implements the definition of USceneManager.
+//
+// License: MIT License. See LICENSE file.
+//
+//=======================================================================================================//
+
 #include "SceneManager.h"
 
 #include "Kismet/GameplayStatics.h"

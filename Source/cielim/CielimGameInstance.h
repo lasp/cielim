@@ -1,3 +1,13 @@
+//=================== Copyright (c) 2025 Laboratory for Atmospheric and Space Physics ===================//
+//
+// Purpose: Defines the UCielimGameInstance class. This class is used as the game instance by Cielim
+//          instead of the default provided by Unreal and owns all persistent objects such as the
+//          network router and context.
+//
+// License: MIT License. See LICENSE file.
+//
+//=======================================================================================================//
+
 #pragma once
 
 #include "CoreMinimal.h"
