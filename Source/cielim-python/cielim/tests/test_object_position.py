@@ -52,16 +52,12 @@ def scene_setup():
         ("Move Down", [0, 10000, 0]),
     ],
 )
-def test_object_position(scene_setup, test_name, shift):
+def test_object_position(cielim_connection, scene_setup, test_name, shift):
     """
     This Remote Procedure call tests the asteroid movement in image space when shifted in 3D (X, Y).
     Parameters: Changing asteroid position in meters and verifying pixel shift.
     """
-    connector = Connector()
-    launcher = Launcher()
-    connector.connect(launcher.launch())
-
-    connector.send_init_request()
+    connector = cielim_connection
     scene = scene_setup
     initial_x, initial_y, initial_z = scene.celestialBodies[0].position[:3]
 
@@ -116,6 +112,3 @@ def test_object_position(scene_setup, test_name, shift):
         atol=2,
         err_msg=f"Pixel shift mismatch for test: {test_name}",
     )
-
-    connector.disconnect()
-    launcher.terminate()

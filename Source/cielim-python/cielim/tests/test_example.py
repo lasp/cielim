@@ -39,12 +39,9 @@ def scene_setup():
     return protobuf_message
 
 
-def test_example(scene_setup):
-    connector = Connector()
-    launcher = Launcher()
-    connector.connect(launcher.launch())
-    connector.send_init_request()
+def test_example(cielim_connection, scene_setup):
 
+    connector = cielim_connection
     scene_frame = scene.Scene()
     scene_frame.set_existing_message(scene_setup)
 
@@ -55,6 +52,3 @@ def test_example(scene_setup):
         [image, center_of_brightness] = connector.request_image_for_camera_id(1, 1)
         height, width, _ = image.shape
         np.testing.assert_allclose([4000, 3000], [width, height], rtol=0, atol=0, err_msg="Returned image not correct")
-
-    connector.disconnect()
-    launcher.terminate()
