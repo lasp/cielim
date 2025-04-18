@@ -37,7 +37,7 @@ class VariableMap(ABC):
         pass
 
     @abstractmethod
-    def get_simulation_variables(self, cielim_variable_name: str, run_number: int, time: double) -> np.ndarray:
+    def get_simulation_variables(self, cielim_variable_name: str, run_number: int, time: float) -> np.ndarray:
         """
         Retrieve a specific simulation variable
         """
