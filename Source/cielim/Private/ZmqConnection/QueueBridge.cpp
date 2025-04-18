@@ -52,3 +52,7 @@ void UQueueBridge::PutQueueData(const FCircularQueueData &Data) const
 
 	UE_LOG(LogCielim, Display, TEXT("Enqueue response: UQueueBridge"));
 }
+
+uint32 UQueueBridge::NumQueueInbound() const { return MultiThreadDataQueue->Requests.Count(); }
+
+uint32 UQueueBridge::NumQueueOutbound() const { return MultiThreadDataQueue->Responses.Count(); }

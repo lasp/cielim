@@ -36,8 +36,8 @@ bool USceneManager::IsTickable() const
 		return false;
 
 	// Should tick if request queue is not empty
-	if (this->QueueBridge != nullptr)
-		return this->QueueBridge->MultiThreadDataQueue->Requests.Count() != 0;
+	if (QueueBridge != nullptr)
+		return QueueBridge->NumQueueInbound() != 0;
 
 	return false;
 }

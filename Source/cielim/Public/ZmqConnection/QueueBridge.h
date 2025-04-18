@@ -41,6 +41,15 @@ public:
 	 */
 	void PutQueueData(const FCircularQueueData &Data) const;
 
+	/**
+	 * @brief Returns the number of items in the inbound queue.
+	 */
+	uint32 NumQueueInbound() const;
+	/**
+	 * @brief Returns the number of items in the outbound queue.
+	 */
+	uint32 NumQueueOutbound() const;
+
 	// These functions are public but should never be called;
 	// They are only ever used internally by Unreal Engine.
 
@@ -50,8 +59,8 @@ public:
 	// Called before the class instance is destroyed.
 	virtual void BeginDestroy() override;
 
+private:
 	CielimCircularQueue *MultiThreadDataQueue;
 
-private:
 	zmq::context_t *Context;
 };
