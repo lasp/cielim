@@ -41,7 +41,7 @@ public:
 
 	void PointSunLight();
 
-	void ParseCommand(const FCircularQueueData &CommandData, const UQueueBridge *NetworkDataSource);
+	void ParseCommand(const FCircularQueueData &CommandData, FCircularQueueData &ReturnData);
 	void UpdateScene() const;
 
 private:

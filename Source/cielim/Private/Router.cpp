@@ -193,6 +193,8 @@ void FRouter::ParseMessage(zmq::multipart_t &Message, zmq::multipart_t &ReturnMe
 		if (TempPayload != nullptr)
 		{
 			ResponseImage = TempPayload->image_data;
+
+			UE_LOG(LogCielim, Display, TEXT("Image data was not NULL"));
 		}
 
 		const auto Bytes = sizeof(ResponseImage[0]) * ResponseImage.Num();

@@ -12,7 +12,6 @@
 #include "CelestialBodyMeshModel.h"
 #include "CielimLoggingMacros.h"
 #include "KinematicsUtilities.h"
-#include "ZmqConnection/QueueBridge.h"
 
 #define m2cm 100.0
 #define km2m 1000.0
@@ -85,8 +84,7 @@ void ASimulationDataSourceActor::BeginPlay()
 
 
 // This is a mad hack and needs to be changed
-void ASimulationDataSourceActor::ParseCommand(const FCircularQueueData &CommandData,
-											  const UQueueBridge *NetworkDataSource)
+void ASimulationDataSourceActor::ParseCommand(const FCircularQueueData &CommandData, FCircularQueueData &ReturnData)
 {
 	this->ShouldUpdateScene = false;
 
@@ -183,12 +181,12 @@ void ASimulationDataSourceActor::ParseCommand(const FCircularQueueData &CommandD
 		{
 			this->CaptureManager->GetCorruptedImage(PngEncodedData, PointSpread, ReadNoise, SystemGain,
 													CosmicRayStdDev);
-			NetworkDataSource->PutImageQueueData(PngEncodedData, this->CaptureManager->GetCenterOfBrightness(10));
 		}
-		else
-		{
-			NetworkDataSource->PutImageQueueData(PngEncodedData, this->CaptureManager->GetCenterOfBrightness(10));
-		}
+
+		ReturnData.query = CommandType::REQUEST_IMAGE;
+		ReturnData.payload.Emplace<FImagePayload>(FImagePayload());
+		ReturnData.payload.Get<FImagePayload>().image_data = PngEncodedData;
+		ReturnData.payload.Get<FImagePayload>().centerOfBrightness = this->CaptureManager->GetCenterOfBrightness(10);
 
 		UE_LOG(LogCielim, Display, TEXT("Put back PNG image: ASimulationDataSourceActor"));
 	}

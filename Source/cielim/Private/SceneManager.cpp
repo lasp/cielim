@@ -49,8 +49,17 @@ void USceneManager::Tick(float DeltaTime)
 	if (!QueueData.IsSet())
 		return;
 
-	this->Scene->ParseCommand(QueueData.GetValue(), this->QueueBridge);
+	FCircularQueueData ReturnData;
+
+	this->Scene->ParseCommand(QueueData.GetValue(), ReturnData);
 	this->Scene->UpdateScene();
+
+	// Request Image is the only command that currently requests return data
+	// instead of an instant "OK" message currently.
+	if (ReturnData.query == CommandType::REQUEST_IMAGE)
+	{
+		QueueBridge->PutQueueData(ReturnData);
+	}
 }
 
 TStatId USceneManager::GetStatId() const { RETURN_QUICK_DECLARE_CYCLE_STAT(USceneManager, STATGROUP_Tickables); }
