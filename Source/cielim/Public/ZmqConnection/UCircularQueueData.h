@@ -17,27 +17,30 @@ enum class CommandType
 
 struct FUpdatePayload
 {
-    FCielimMessage message;
+	FCielimMessage message;
 };
 
 struct FImagePayload
 {
-    TArray64<uint8> image_data;
-    TOptional<FVector2d> centerOfBrightness;
+	TArray64<uint8> image_data;
+	TOptional<FVector2d> centerOfBrightness;
 
-    bool shouldReturnImage;
+	bool shouldReturnImage;
 
-    FImagePayload(): shouldReturnImage(false) {}
+	FImagePayload() : shouldReturnImage(false) {}
 };
 
 struct FCircularQueueData
 {
-    // Defines which command we're dealing with
-    CommandType query;
-    // Payload whose type depends on the query
-    TVariant<FUpdatePayload, FImagePayload> payload;
+	// ID of the client tied to this data
+	std::string ID;
+	// Whether that client uses empty delimiters
+	bool bUseDelim;
+	// Defines which command we're dealing with
+	CommandType query;
+	// Payload whose type depends on the query
+	TVariant<FUpdatePayload, FImagePayload> payload;
 
-    // Define default states (payload defaults to monostate)
-    FCircularQueueData() : query(CommandType::ERROR) {}
-
+	// Define default states (payload defaults to monostate)
+	FCircularQueueData() : bUseDelim(false), query(CommandType::ERROR) {}
 };

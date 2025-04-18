@@ -8,6 +8,8 @@
 
 #include "ZmqConnection/QueueBridge.h"
 
+#include <zmq_addon.hpp>
+
 #include "CielimLoggingMacros.h"
 
 void UQueueBridge::PostInitProperties()
@@ -23,6 +25,9 @@ void UQueueBridge::Connect(zmq::context_t &ContextPtr, CielimCircularQueue &Circ
 {
 	this->Context = &ContextPtr;
 	this->MultiThreadDataQueue = &CircularQueue;
+
+	this->QueueSocket = zmq::socket_t(ContextPtr, zmq::socket_type::pair);
+	this->QueueSocket.connect("inproc://OutboundQueueReady");
 }
 
 TOptional<FCircularQueueData> UQueueBridge::GetQueueData() const
@@ -46,9 +51,12 @@ TOptional<FCircularQueueData> UQueueBridge::GetQueueData() const
 	return QueueData;
 }
 
-void UQueueBridge::PutQueueData(const FCircularQueueData &Data) const
+void UQueueBridge::PutQueueData(const FCircularQueueData &Data)
 {
 	this->MultiThreadDataQueue->Responses.Enqueue(Data);
+
+	zmq::message_t Signal(1);
+	this->QueueSocket.send(Signal, zmq::send_flags::none);
 
 	UE_LOG(LogCielim, Display, TEXT("Enqueue response: UQueueBridge"));
 }

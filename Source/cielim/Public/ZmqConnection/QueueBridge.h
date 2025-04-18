@@ -39,7 +39,7 @@ public:
 	 * @brief Puts data onto outbound queue.
 	 * @param Data FCircularQueueData instance containing data to be put on outbound queue.
 	 */
-	void PutQueueData(const FCircularQueueData &Data) const;
+	void PutQueueData(const FCircularQueueData &Data);
 
 	/**
 	 * @brief Returns the number of items in the inbound queue.
@@ -63,4 +63,5 @@ private:
 	CielimCircularQueue *MultiThreadDataQueue;
 
 	zmq::context_t *Context;
+	zmq::socket_t QueueSocket;
 };

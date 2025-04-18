@@ -36,14 +36,22 @@ public:
 	virtual void Exit() override;
 
 private:
-	// Parse incoming Message and push proper data to ReturnMessage
-	void ParseMessage(zmq::multipart_t &Message, zmq::multipart_t &ReturnMessage) const;
+	// Parse incoming Message and push proper data to ReturnMessage and send to client
+	// Will also enqueue command to inbound queue
+	// ReturnMessage and ReturnData are modified
+	void ParseMessageAndSend(zmq::multipart_t &Message, zmq::multipart_t &ReturnMessage,
+							 FCircularQueueData &ReturnData);
+
+	// Send outgoing Message to client
+	// ReturnMessage is modified
+	void ParseCircularQueueDataAndSend(FCircularQueueData &Data, zmq::multipart_t &ReturnMessage);
 
 	CielimCircularQueue *MultiThreadQueue;
 
 	// Context shared from the game instance
 	zmq::context_t *Context;
 	zmq::socket_t RouterSocket;
+	zmq::socket_t QueueSocket;
 
 	FRunnableThread *Thread;
 	FThreadSafeBool bContinueRun;

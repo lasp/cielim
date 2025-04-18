@@ -15,12 +15,14 @@ FRouter::FRouter(zmq::context_t &ContextPtr, const std::string &Address, CielimC
 {
 	this->Context = &ContextPtr;
 	this->RouterSocket = zmq::socket_t(ContextPtr, zmq::socket_type::router);
+	this->QueueSocket = zmq::socket_t(ContextPtr, zmq::socket_type::pair);
 
 	this->MultiThreadQueue = &CircularQueue;
 
 	this->bContinueRun = true;
 
 	this->RouterSocket.bind(Address.c_str());
+	this->QueueSocket.bind("inproc://OutboundQueueReady");
 
 	UE_LOG(LogCielim, Display, TEXT("Router : Router bound to address: %hs"), Address.c_str());
 
@@ -46,22 +48,22 @@ uint32 FRouter::Run()
 {
 	while (this->bContinueRun)
 	{
-		zmq::pollitem_t PollItems[1] = {
+		zmq::pollitem_t PollItems[2] = {
 			{static_cast<void *>(this->RouterSocket), 0, ZMQ_POLLIN, 0},
+			{static_cast<void *>(this->QueueSocket), 0, ZMQ_POLLIN, 0},
 		};
 
 		// Poll with a timeout of 100ms
 
-		const int NumEvents = zmq::poll(PollItems, 1, std::chrono::milliseconds(100));
+		const int NumEvents = zmq::poll(PollItems, 2, std::chrono::milliseconds(100));
 
 		if (NumEvents < 0)
 			continue;
 
+		// Check for incoming messages
 		if (PollItems[0].revents & ZMQ_POLLIN)
 		{
-			zmq::multipart_t ReceiveMessage;
-
-			if (ReceiveMessage.recv(this->RouterSocket))
+			if (zmq::multipart_t ReceiveMessage; ReceiveMessage.recv(RouterSocket))
 			{
 				if (ReceiveMessage.size() < 2)
 				{
@@ -90,9 +92,41 @@ uint32 FRouter::Run()
 				if (bUseDelim)
 					ReturnMessage.addstr("");
 
-				ParseMessage(ReceiveMessage, ReturnMessage);
+				FCircularQueueData ReturnData;
 
-				ReturnMessage.send(this->RouterSocket);
+				ReturnData.ID = ID;
+				ReturnData.bUseDelim = bUseDelim;
+
+				ParseMessageAndSend(ReceiveMessage, ReturnMessage, ReturnData);
+			}
+		}
+		// Check for outgoing messages
+		if (PollItems[1].revents & ZMQ_POLLIN)
+		{
+			if (zmq::message_t Signal; QueueSocket.recv(Signal, zmq::recv_flags::none))
+			{
+				UE_LOG(LogCielim, Display, TEXT("Router : Outbound signal received."));
+
+				if (!MultiThreadQueue->Responses.IsEmpty())
+				{
+					FCircularQueueData Data;
+					MultiThreadQueue->Responses.Dequeue(Data);
+
+					std::string ID = Data.ID;
+					bool bUseDelim = Data.bUseDelim;
+
+					UE_LOG(LogCielim, Display, TEXT("Router : Dequeued data for client %hs."), ID.c_str());
+
+					// Send return message
+
+					zmq::multipart_t ReturnMessage;
+
+					ReturnMessage.addstr(ID);
+					if (bUseDelim)
+						ReturnMessage.addstr("");
+
+					ParseCircularQueueDataAndSend(Data, ReturnMessage);
+				}
 			}
 		}
 	}
@@ -100,7 +134,8 @@ uint32 FRouter::Run()
 	return 0;
 }
 
-void FRouter::ParseMessage(zmq::multipart_t &Message, zmq::multipart_t &ReturnMessage) const
+void FRouter::ParseMessageAndSend(zmq::multipart_t &Message, zmq::multipart_t &ReturnMessage,
+								  FCircularQueueData &ReturnData)
 {
 	UE_LOG(LogCielim, Display, TEXT("Router::ParseMessage"));
 
@@ -111,32 +146,32 @@ void FRouter::ParseMessage(zmq::multipart_t &Message, zmq::multipart_t &ReturnMe
 	if (Command == "PING")
 	{
 		ReturnMessage.addstr("PONG");
+		ReturnMessage.send(RouterSocket);
 	}
 	else if (Command == "INIT_SCENE")
 	{
-		FCircularQueueData Data;
-		Data.query = CommandType::INIT_SCENE;
+		ReturnData.query = CommandType::INIT_SCENE;
 
 		UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue INIT_SCENE..."));
 
 		bool EnqueueResult = false;
 		while (!EnqueueResult)
 		{
-			EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(Data);
+			EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(ReturnData);
 		}
 
 		ReturnMessage.addstr("OK");
+		ReturnMessage.send(RouterSocket);
 	}
 	else if (Command == "SIM_UPDATE")
 	{
-		FCircularQueueData Data;
-		Data.payload.Emplace<FUpdatePayload>(FUpdatePayload());
+		ReturnData.query = CommandType::SIM_UPDATE;
 
-		Data.query = CommandType::SIM_UPDATE;
-		Data.payload.Get<FUpdatePayload>().message = FCielimMessage();
+		ReturnData.payload.Emplace<FUpdatePayload>(FUpdatePayload());
+		ReturnData.payload.Get<FUpdatePayload>().message = FCielimMessage();
 
 		// @TODO: fix this message parsing. It's a mad hack!
-		Data.payload.Get<FUpdatePayload>().message.GetMessageModifiable().ParseFromArray(
+		ReturnData.payload.Get<FUpdatePayload>().message.GetMessageModifiable().ParseFromArray(
 			Message[2].data(), Message[2].size() * sizeof(char));
 
 		UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue SIM_UPDATE..."));
@@ -144,51 +179,52 @@ void FRouter::ParseMessage(zmq::multipart_t &Message, zmq::multipart_t &ReturnMe
 		bool EnqueueResult = false;
 		while (!EnqueueResult)
 		{
-			EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(Data);
+			EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(ReturnData);
 		}
 
 		ReturnMessage.addstr("OK");
+		ReturnMessage.send(RouterSocket);
 	}
 	else if (Command == "REQUEST_IMAGE")
 	{
+		ReturnData.query = CommandType::REQUEST_IMAGE;
+
 		uint32_t CameraID = -1;
 		CameraID = std::stoi(Message.popstr());
 
 		UE_LOG(LogCielim, Display, TEXT("Camera ID: %d"), CameraID);
 
-		// A request is received and is put in the queue to be handled by the main (game) thread
-		FCircularQueueData Request;
-
-		Request.query = CommandType::REQUEST_IMAGE;
-		Request.payload.Emplace<FImagePayload>(FImagePayload());
-		Request.payload.Get<FImagePayload>().shouldReturnImage = (bool)std::stoi(Message.popstr());
+		ReturnData.payload.Emplace<FImagePayload>(FImagePayload());
+		ReturnData.payload.Get<FImagePayload>().shouldReturnImage = static_cast<bool>(std::stoi(Message.popstr()));
 
 		UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue REQUEST_IMAGE"));
 
 		bool EnqueueResult = false;
 		while (!EnqueueResult)
 		{
-			EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(Request);
+			EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(ReturnData);
 		}
+	}
+	else
+	{
+		ReturnMessage.addstr("ERROR");
+		ReturnMessage.send(RouterSocket);
+	}
+}
 
-		// Loop until we get the response from the main (game) thread
-		FCircularQueueData Response;
+void FRouter::ParseCircularQueueDataAndSend(FCircularQueueData &Data, zmq::multipart_t &ReturnMessage)
+{
+	UE_LOG(LogCielim, Display, TEXT("Router::ParseCircularQueue"));
 
-		UE_LOG(LogCielim, Display, TEXT("Waiting for reposnse to REQUEST_IMAGE"));
+	const CommandType Command = Data.query;
 
-		bool DequeueResult = false;
-		while (!DequeueResult)
-		{
-			// I can call this directly so the thread blocks on the image return.
-			// This assumes that the next item placed in the queue is the image response.
-			DequeueResult = this->MultiThreadQueue->Responses.Dequeue(Response);
-		}
-
-		UE_LOG(LogCielim, Display, TEXT("Reposnse to REQUEST_IMAGE received"));
+	if (Command == CommandType::REQUEST_IMAGE)
+	{
+		UE_LOG(LogCielim, Display, TEXT("Response to REQUEST_IMAGE received"));
 
 		TArray64<uint8> ResponseImage;
 
-		auto *TempPayload = Response.payload.TryGet<FImagePayload>();
+		auto *TempPayload = Data.payload.TryGet<FImagePayload>();
 
 		if (TempPayload != nullptr)
 		{
@@ -217,6 +253,8 @@ void FRouter::ParseMessage(zmq::multipart_t &Message, zmq::multipart_t &ReturnMe
 	{
 		ReturnMessage.addstr("ERROR");
 	}
+
+	ReturnMessage.send(RouterSocket);
 }
 
 void FRouter::Stop() { this->bContinueRun = false; }

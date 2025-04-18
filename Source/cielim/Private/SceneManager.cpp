@@ -51,6 +51,9 @@ void USceneManager::Tick(float DeltaTime)
 
 	FCircularQueueData ReturnData;
 
+	ReturnData.ID = QueueData.GetValue().ID;
+	ReturnData.bUseDelim = QueueData.GetValue().bUseDelim;
+
 	this->Scene->ParseCommand(QueueData.GetValue(), ReturnData);
 	this->Scene->UpdateScene();
 
