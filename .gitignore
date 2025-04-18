@@ -8,7 +8,7 @@
 
 # Support data for cielim-python
 /Source/cielim-python/support-data/*/
-
+!/Source/cielim-python/support-data/monte-carlo-sample
 
 # Third party build paths
 /Source/ThirdParty/ProtobufLibrary/include
