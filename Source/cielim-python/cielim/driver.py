@@ -4,6 +4,7 @@ import cv2
 import delimited_protobuf
 import numpy as np
 import zmq
+import random
 
 import cielimMessage_pb2 as cielimMessage
 
@@ -13,11 +14,16 @@ class Connector:
         self.address = ""
         self.context = None
         self.request_socket = None
+        self.identity = ""
 
     def connect(self, address: str = "tcp://localhost:5556"):
+        # Ensure each connector has different ID
+        self.identity = "CielimConnector" + "".join(random.choices("0123456789", k=5))
+
         self.context = zmq.Context()
         self.request_socket = self.context.socket(zmq.REQ)
         self.request_socket.set(zmq.SocketOption.CONNECT_TIMEOUT, 10)
+        self.request_socket.setsockopt_string(zmq.IDENTITY, self.identity)
 
         self.address = address
         self.request_socket.connect(address)
