@@ -33,7 +33,7 @@ struct FImagePayload
 struct FCircularQueueData
 {
 	// ID of the client tied to this data
-	std::string ID;
+	TArray<uint8> ID;
 	// Whether that client uses empty delimiters
 	bool bUseDelim;
 	// Defines which command we're dealing with

@@ -65,15 +65,29 @@ uint32 FRouter::Run()
 		{
 			if (zmq::multipart_t ReceiveMessage; ReceiveMessage.recv(RouterSocket))
 			{
+				// Incoming messages should be of the form: ID | (optional) delimiter | data
+
 				if (ReceiveMessage.size() < 2)
 				{
 					UE_LOG(LogCielim, Warning, TEXT("Router : Message received was malformed; discarding."));
 					continue;
 				}
 
-				std::string ID = ReceiveMessage.popstr();
+				zmq::message_t IDByteBlob = ReceiveMessage.pop();
 
-				UE_LOG(LogCielim, Display, TEXT("Router : Message received from client %hs."), ID.c_str());
+				// IDs cannot be longer than 256 bytes long
+				if (IDByteBlob.size() <= 0 || IDByteBlob.size() > 256)
+				{
+					UE_LOG(LogCielim, Warning, TEXT("Router : ID of client was malformed; discarding."));
+					continue;
+				}
+
+				TArray<uint8> ID;
+				ID.Append(IDByteBlob.data<uint8>(), IDByteBlob.size());
+
+				FString IDStr = IDConvertToString(ID);
+
+				UE_LOG(LogCielim, Display, TEXT("Router : Message received from client %hs."), TCHAR_TO_UTF8(*IDStr));
 
 				bool bUseDelim = false;
 
@@ -88,7 +102,7 @@ uint32 FRouter::Run()
 
 				zmq::multipart_t ReturnMessage;
 
-				ReturnMessage.addstr(ID);
+				ReturnMessage.add(std::move(IDByteBlob));
 				if (bUseDelim)
 					ReturnMessage.addstr("");
 
@@ -112,17 +126,18 @@ uint32 FRouter::Run()
 					FCircularQueueData Data;
 					MultiThreadQueue->Responses.Dequeue(Data);
 
-					std::string ID = Data.ID;
-					bool bUseDelim = Data.bUseDelim;
+					FString IDStr = IDConvertToString(Data.ID);
 
-					UE_LOG(LogCielim, Display, TEXT("Router : Dequeued data for client %hs."), ID.c_str());
+					UE_LOG(LogCielim, Display, TEXT("Router : Dequeued data for client %hs."), TCHAR_TO_UTF8(*IDStr));
 
 					// Send return message
 
 					zmq::multipart_t ReturnMessage;
 
-					ReturnMessage.addstr(ID);
-					if (bUseDelim)
+					zmq::message_t IDByteBlob(Data.ID.GetData(), Data.ID.Num());
+
+					ReturnMessage.add(std::move(IDByteBlob));
+					if (Data.bUseDelim)
 						ReturnMessage.addstr("");
 
 					ParseCircularQueueDataAndSend(Data, ReturnMessage);
@@ -132,6 +147,40 @@ uint32 FRouter::Run()
 	}
 
 	return 0;
+}
+
+FString FRouter::IDConvertToString(const TArray<uint8> &ID)
+{
+	FString IDStr;
+
+	bool IsReadable = true;
+
+	for (const uint8 B : ID)
+	{
+		// This is the printable ASCII range
+		if (B < 0x20 || B > 0x7E)
+		{
+			IsReadable = false;
+			break;
+		}
+	}
+
+	if (IsReadable)
+	{
+		IDStr.Reserve(ID.Num());
+
+		for (const uint8 B : ID)
+		{
+			IDStr.AppendChar(B);
+		}
+	}
+	else
+	{
+		// Set the string to hex digits if ID isn't printable
+		IDStr = BytesToHex(ID.GetData(), ID.Num());
+	}
+
+	return IDStr;
 }
 
 void FRouter::ParseMessageAndSend(zmq::multipart_t &Message, zmq::multipart_t &ReturnMessage,

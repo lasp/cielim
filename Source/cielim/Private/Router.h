@@ -46,6 +46,8 @@ private:
 	// ReturnMessage is modified
 	void ParseCircularQueueDataAndSend(FCircularQueueData &Data, zmq::multipart_t &ReturnMessage);
 
+	static FString IDConvertToString(const TArray<uint8> &ID);
+
 	CielimCircularQueue *MultiThreadQueue;
 
 	// Context shared from the game instance
