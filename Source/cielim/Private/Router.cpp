@@ -14,15 +14,23 @@
 FRouter::FRouter(zmq::context_t &ContextPtr, const std::string &Address, CielimCircularQueue &CircularQueue)
 {
 	this->Context = &ContextPtr;
+
 	this->RouterSocket = zmq::socket_t(ContextPtr, zmq::socket_type::router);
+	this->RouterSocket.bind(Address.c_str());
+
 	this->QueueSocket = zmq::socket_t(ContextPtr, zmq::socket_type::pair);
+	this->QueueSocket.bind("inproc://OutboundQueueReady");
+
+	// Monitor Router Socket for accepted connections and clean (or abrupt) disconnections
+	zmq_socket_monitor(RouterSocket.handle(), "inproc://RouterSocketMonitor",
+					   ZMQ_EVENT_ACCEPTED | ZMQ_EVENT_DISCONNECTED | ZMQ_EVENT_CLOSED);
+
+	this->RouterMonitor = zmq::socket_t(ContextPtr, zmq::socket_type::pair);
+	this->RouterMonitor.connect("inproc://RouterSocketMonitor");
 
 	this->MultiThreadQueue = &CircularQueue;
 
 	this->bContinueRun = true;
-
-	this->RouterSocket.bind(Address.c_str());
-	this->QueueSocket.bind("inproc://OutboundQueueReady");
 
 	UE_LOG(LogCielim, Display, TEXT("Router : Router bound to address: %hs"), Address.c_str());
 
@@ -48,20 +56,47 @@ uint32 FRouter::Run()
 {
 	while (this->bContinueRun)
 	{
-		zmq::pollitem_t PollItems[2] = {
+		zmq::pollitem_t PollItems[3] = {
+			{static_cast<void *>(this->RouterMonitor), 0, ZMQ_POLLIN, 0},
 			{static_cast<void *>(this->RouterSocket), 0, ZMQ_POLLIN, 0},
 			{static_cast<void *>(this->QueueSocket), 0, ZMQ_POLLIN, 0},
 		};
 
 		// Poll with a timeout of 100ms
 
-		const int NumEvents = zmq::poll(PollItems, 2, std::chrono::milliseconds(100));
+		const int NumEvents = zmq::poll(PollItems, 3, std::chrono::milliseconds(100));
 
 		if (NumEvents < 0)
 			continue;
 
-		// Check for incoming messages
+		// Check for connections and disconnections
 		if (PollItems[0].revents & ZMQ_POLLIN)
+		{
+			if (zmq::multipart_t Event; Event.recv(RouterMonitor))
+			{
+				zmq::message_t EventMessage = Event.pop();
+				zmq::message_t EventAddress = Event.pop();
+
+				// First two bytes of this are the event ID
+				uint8 *EventData = EventMessage.data<uint8>();
+				uint16 EventID = *reinterpret_cast<uint16 *>(EventData);
+
+				// NOTE: This is the address of the server, not the client
+				FString Address = FString(EventAddress.size(), EventAddress.data<char>());
+
+				if (EventID == ZMQ_EVENT_ACCEPTED)
+				{
+					UE_LOG(LogCielim, Display, TEXT("Router : New connection accepted on %hs."),
+						   TCHAR_TO_UTF8(*Address));
+				}
+				else if (EventID == ZMQ_EVENT_DISCONNECTED || EventID == ZMQ_EVENT_CLOSED)
+				{
+					UE_LOG(LogCielim, Display, TEXT("Router : Connection closed on %hs."), TCHAR_TO_UTF8(*Address));
+				}
+			}
+		}
+		// Check for incoming messages
+		if (PollItems[1].revents & ZMQ_POLLIN)
 		{
 			if (zmq::multipart_t ReceiveMessage; ReceiveMessage.recv(RouterSocket))
 			{
@@ -115,7 +150,7 @@ uint32 FRouter::Run()
 			}
 		}
 		// Check for outgoing messages
-		if (PollItems[1].revents & ZMQ_POLLIN)
+		if (PollItems[2].revents & ZMQ_POLLIN)
 		{
 			if (zmq::message_t Signal; QueueSocket.recv(Signal, zmq::recv_flags::none))
 			{

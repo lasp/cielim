@@ -53,6 +53,7 @@ private:
 	// Context shared from the game instance
 	zmq::context_t *Context;
 	zmq::socket_t RouterSocket;
+	zmq::socket_t RouterMonitor;
 	zmq::socket_t QueueSocket;
 
 	FRunnableThread *Thread;
