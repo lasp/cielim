@@ -17,6 +17,26 @@
 
 #include "ZmqConnection/CielimCircularQueue.h"
 
+enum class EClientState
+{
+	Active,
+	WaitingResponse
+};
+
+/* This struct contains information for each client and is the value in the Clients map.
+ * ID and bUseDelim are included here so that they can be accessed during heartbeat polling
+ * without incurring a slowdown with the minor cost of increased executable size.
+ */
+struct FClientInfo
+{
+	uint8 SceneID;
+	TArray<uint8> ID;
+	bool bUseDelim;
+	EClientState ClientState;
+	double LastSeen;
+	double DispatchTime;
+};
+
 class CIELIM_API FRouter final : public FRunnable
 {
 public:
@@ -58,4 +78,7 @@ private:
 
 	FRunnableThread *Thread;
 	FThreadSafeBool bContinueRun;
+
+	// Hash table mapping client connections
+	TMap<FString, FClientInfo> Clients;
 };

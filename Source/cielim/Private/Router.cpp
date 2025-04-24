@@ -54,8 +54,20 @@ bool FRouter::Init() { return true; }
 
 uint32 FRouter::Run()
 {
+	uint8 ActiveConnections = 0;
+	uint8 NextSceneID = 0; // This is used for SceneID to avoid collisions
+
+	// These are arbitrary numbers and can be changed as necessary
+	constexpr uint8 MaxConnections = 10;
+	constexpr uint32 MaxDispatchTimeoutMilliseconds = 2000;
+	constexpr uint32 PruneIntervalMilliseconds = 750;
+
+	double PruneTimer = FPlatformTime::Seconds();
+
 	while (this->bContinueRun)
 	{
+		bool DetectDisconnections = false;
+
 		zmq::pollitem_t PollItems[3] = {
 			{static_cast<void *>(this->RouterMonitor), 0, ZMQ_POLLIN, 0},
 			{static_cast<void *>(this->RouterSocket), 0, ZMQ_POLLIN, 0},
@@ -92,6 +104,7 @@ uint32 FRouter::Run()
 				else if (EventID == ZMQ_EVENT_DISCONNECTED || EventID == ZMQ_EVENT_CLOSED)
 				{
 					UE_LOG(LogCielim, Display, TEXT("Router : Connection closed on %hs."), TCHAR_TO_UTF8(*Address));
+					DetectDisconnections = true;
 				}
 			}
 		}
@@ -131,6 +144,33 @@ uint32 FRouter::Run()
 				{
 					bUseDelim = true;
 					ReceiveMessage.pop();
+				}
+
+				if (!Clients.Contains(IDStr))
+				{
+					if (ActiveConnections < MaxConnections)
+					{
+						ActiveConnections++;
+						NextSceneID++;
+						FClientInfo ClientInfo = {NextSceneID, ID, bUseDelim, EClientState::Active, 0, 0};
+						Clients.Add(IDStr, ClientInfo);
+
+						UE_LOG(LogCielim, Display, TEXT("Router : Client %hs has been added to active connections."),
+							   TCHAR_TO_UTF8(*IDStr));
+					}
+					else
+					{
+						UE_LOG(LogCielim, Display,
+							   TEXT("Router : Client %hs could not be added because there are too many connections."),
+							   TCHAR_TO_UTF8(*IDStr));
+						continue;
+					}
+				}
+
+				if (FClientInfo *Client = Clients.Find(IDStr); Client != nullptr)
+				{
+					Client->ClientState = EClientState::Active;
+					Client->LastSeen = FPlatformTime::Seconds();
 				}
 
 				// Send return message
@@ -179,6 +219,53 @@ uint32 FRouter::Run()
 				}
 			}
 		}
+		// Only prune every so often to avoid blocking
+		if (double CurrentTime = FPlatformTime::Seconds();
+			(CurrentTime - PruneTimer) * 1000 >= PruneIntervalMilliseconds)
+		{
+			// Prune active client list of dead connections
+			for (auto ClientIterator = Clients.CreateIterator(); ClientIterator; ++ClientIterator)
+			{
+				if (ClientIterator.Value().ClientState != EClientState::WaitingResponse)
+					continue;
+
+				if ((CurrentTime - ClientIterator.Value().DispatchTime) * 1000 >= MaxDispatchTimeoutMilliseconds)
+				{
+					UE_LOG(LogCielim, Display, TEXT("Router : Client %hs has been removed from active connections."),
+						   TCHAR_TO_UTF8(*ClientIterator.Key()));
+
+					ClientIterator.RemoveCurrent();
+					ActiveConnections--;
+				}
+			}
+
+			PruneTimer = FPlatformTime::Seconds();
+		}
+		// If there was disconnection, poll every connection for a heartbeat
+		if (DetectDisconnections)
+		{
+			for (auto &ClientPair : Clients)
+			{
+				// We don't want to send duplicate PINGs
+				if (ClientPair.Value.ClientState == EClientState::WaitingResponse)
+					continue;
+
+				ClientPair.Value.ClientState = EClientState::WaitingResponse;
+				ClientPair.Value.DispatchTime = FPlatformTime::Seconds();
+
+				// Send the ping
+
+				zmq::multipart_t ReturnMessage;
+
+				zmq::message_t IDByteBlob(ClientPair.Value.ID.GetData(), ClientPair.Value.ID.Num());
+
+				ReturnMessage.add(std::move(IDByteBlob));
+				if (ClientPair.Value.bUseDelim)
+					ReturnMessage.addstr("");
+				ReturnMessage.addstr("PING");
+				ReturnMessage.send(RouterSocket);
+			}
+		}
 	}
 
 	return 0;
@@ -225,12 +312,16 @@ void FRouter::ParseMessageAndSend(zmq::multipart_t &Message, zmq::multipart_t &R
 
 	const std::string Command = Message.popstr();
 
-	UE_LOG(LogCielim, Display, TEXT("Basilisk command: %hs"), Command.c_str());
+	UE_LOG(LogCielim, Display, TEXT("Router : Received command %hs"), Command.c_str());
 
 	if (Command == "PING")
 	{
 		ReturnMessage.addstr("PONG");
 		ReturnMessage.send(RouterSocket);
+	}
+	else if (Command == "PONG")
+	{
+		// We've verified connection is alive, nothing left to do
 	}
 	else if (Command == "INIT_SCENE")
 	{
@@ -243,6 +334,8 @@ void FRouter::ParseMessageAndSend(zmq::multipart_t &Message, zmq::multipart_t &R
 		{
 			EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(ReturnData);
 		}
+
+		UE_LOG(LogCielim, Display, TEXT("Command enqueued."));
 
 		ReturnMessage.addstr("OK");
 		ReturnMessage.send(RouterSocket);
@@ -266,6 +359,8 @@ void FRouter::ParseMessageAndSend(zmq::multipart_t &Message, zmq::multipart_t &R
 			EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(ReturnData);
 		}
 
+		UE_LOG(LogCielim, Display, TEXT("Command enqueued."));
+
 		ReturnMessage.addstr("OK");
 		ReturnMessage.send(RouterSocket);
 	}
@@ -288,6 +383,8 @@ void FRouter::ParseMessageAndSend(zmq::multipart_t &Message, zmq::multipart_t &R
 		{
 			EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(ReturnData);
 		}
+
+		UE_LOG(LogCielim, Display, TEXT("Command enqueued."));
 	}
 	else
 	{
