@@ -32,8 +32,10 @@ void UCielimGameInstance::Init()
 
 	this->Router = new FRouter(Context, std::string(TCHAR_TO_UTF8(*CommAddress)), MultiThreadQueue);
 
-	// Create the Scene Manager as a child of the GameInstance
-	this->SceneManager = NewObject<USceneManager>(this, USceneManager::StaticClass());
+	// Get pointer to scene manager subsystem
+	this->SceneManager = GetSubsystem<USceneManager>();
+	check(this->SceneManager);
+
 	this->SceneManager->Init(Context, MultiThreadQueue);
 
 	int Major;

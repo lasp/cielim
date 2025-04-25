@@ -69,18 +69,7 @@ FRotator GetCameraRotation(const cielimMessage::CameraModel &Camera)
 	return FRotator(RightQuat2LeftQuat(Quat_CB0));
 }
 
-void ASimulationDataSourceActor::BeginPlay()
-{
-	Super::BeginPlay();
-
-	if (UCielimGameInstance *GI = Cast<UCielimGameInstance>(GetGameInstance()))
-	{
-		if (GI->GetSceneManager())
-		{
-			GI->GetSceneManager()->InitWorldContext(this);
-		}
-	}
-}
+void ASimulationDataSourceActor::BeginPlay() { Super::BeginPlay(); }
 
 
 // This is a mad hack and needs to be changed

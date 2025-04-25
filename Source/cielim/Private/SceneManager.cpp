@@ -18,23 +18,8 @@ void USceneManager::Init(zmq::context_t &ContextPtr, CielimCircularQueue &Circul
 	this->QueueBridge->Connect(ContextPtr, CircularQueue);
 }
 
-void USceneManager::InitWorldContext(const UObject *WorldContextObject)
-{
-	this->WorldContext = GEngine->GetWorldFromContextObjectChecked(WorldContextObject);
-
-	UE_LOG(LogCielim, Display, TEXT("USceneManager : World context initialized."));
-
-	// Find the simulation data source actor
-	this->Scene = Cast<ASimulationDataSourceActor>(
-		UGameplayStatics::GetActorOfClass(WorldContext, ASimulationDataSourceActor::StaticClass()));
-}
-
 bool USceneManager::IsTickable() const
 {
-	// If the scene doesn't exist yet, tick won't do anything
-	if (!this->Scene)
-		return false;
-
 	// Should tick if request queue is not empty
 	if (QueueBridge != nullptr)
 		return QueueBridge->NumQueueInbound() != 0;
@@ -44,6 +29,11 @@ bool USceneManager::IsTickable() const
 
 void USceneManager::Tick(float DeltaTime)
 {
+	// Retry scene search
+	if (!this->Scene)
+		this->Scene = Cast<ASimulationDataSourceActor>(
+			UGameplayStatics::GetActorOfClass(this, ASimulationDataSourceActor::StaticClass()));
+
 	const TOptional<FCircularQueueData> QueueData = this->QueueBridge->GetQueueData();
 
 	if (!QueueData.IsSet())
