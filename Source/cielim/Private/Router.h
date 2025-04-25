@@ -20,31 +20,31 @@
 class CIELIM_API FRouter : public FRunnable
 {
 public:
-    FRouter(zmq::context_t& ContextPtr, const std::string& Address, CielimCircularQueue& CircularQueue);
-    ~FRouter();
+	FRouter(zmq::context_t &ContextPtr, const std::string &Address, CielimCircularQueue &CircularQueue);
+	~FRouter();
 
-    // Returns whether the thread should start (always true)
-    virtual bool Init() override;
+	// Returns whether the thread should start (always true)
+	virtual bool Init() override;
 
-    // Function executed by spawned thread
-    virtual uint32 Run() override;
+	// Function executed by spawned thread
+	virtual uint32 Run() override;
 
-    // Called when thread is killed
-    virtual void Stop() override;
+	// Called when thread is killed
+	virtual void Stop() override;
 
-    // Called when spawned thread has finished execution
-    virtual void Exit() override;
+	// Called when spawned thread has finished execution
+	virtual void Exit() override;
 
 private:
 	// Parse incoming Message and push proper data to ReturnMessage
-    void ParseMessage(zmq::multipart_t& Message, zmq::multipart_t& ReturnMessage) const;
+	void ParseMessage(zmq::multipart_t &Message, zmq::multipart_t &ReturnMessage) const;
 
-	CielimCircularQueue* MultiThreadQueue;
+	CielimCircularQueue *MultiThreadQueue;
 
-    // Context shared from the game instance
-    zmq::context_t* Context;
-    zmq::socket_t RouterSocket;
+	// Context shared from the game instance
+	zmq::context_t *Context;
+	zmq::socket_t RouterSocket;
 
-    FRunnableThread* Thread;
-    FThreadSafeBool bContinueRun;
+	FRunnableThread *Thread;
+	FThreadSafeBool bContinueRun;
 };

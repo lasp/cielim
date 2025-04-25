@@ -27,7 +27,7 @@ public:
 	 * @param ContextPtr Reference to the global ZMQ context.
 	 * @param CircularQueue Reference to the queue in question.
 	 */
-	void Connect(zmq::context_t& ContextPtr, CielimCircularQueue& CircularQueue);
+	void Connect(zmq::context_t &ContextPtr, CielimCircularQueue &CircularQueue);
 
 	/**
 	 * @brief Gets data off of the queue and returns it.
@@ -43,7 +43,7 @@ public:
 	 * @param PNGData Reference to serialized image data.
 	 * @param CenterOfBrightness CenterOfBrightness vector; could be null.
 	 */
-	void PutImageQueueData(const TArray64<uint8>& PNGData, const TOptional<FVector2d> CenterOfBrightness) const;
+	void PutImageQueueData(const TArray64<uint8> &PNGData, const TOptional<FVector2d> CenterOfBrightness) const;
 
 	// These functions are public but should never be called;
 	// They are only ever used internally by Unreal Engine.
@@ -54,8 +54,8 @@ public:
 	// Called before the class instance is destroyed.
 	virtual void BeginDestroy() override;
 
-	CielimCircularQueue* MultiThreadDataQueue;
+	CielimCircularQueue *MultiThreadDataQueue;
 
 private:
-	zmq::context_t* Context;
+	zmq::context_t *Context;
 };

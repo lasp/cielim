@@ -19,7 +19,7 @@
 UCLASS()
 class CIELIM_API USceneManager : public UObject, public FTickableGameObject
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
 
 public:
 	/**
@@ -27,7 +27,7 @@ public:
 	 * @param ContextPtr Reference to the global ZMQ context.
 	 * @param CircularQueue Reference to the circular queue.
 	 */
-	void Init(zmq::context_t& ContextPtr, CielimCircularQueue& CircularQueue);
+	void Init(zmq::context_t &ContextPtr, CielimCircularQueue &CircularQueue);
 
 	/**
 	 * @brief Called by actor to pass pointer to the world context.
@@ -35,7 +35,7 @@ public:
 	 * @note UObjects don't have references to world context by default
 	 * and thus need one passed to it via an actor in the world.
 	 */
-	void InitWorldContext(const UObject* WorldContextObject);
+	void InitWorldContext(const UObject *WorldContextObject);
 
 	// These functions are public but should never be called;
 	// They are only ever used internally by Unreal Engine.
@@ -47,11 +47,11 @@ public:
 
 private:
 	UPROPERTY()
-	UQueueBridge* QueueBridge;
+	UQueueBridge *QueueBridge;
 
 	UPROPERTY()
-	UWorld* WorldContext;
+	UWorld *WorldContext;
 
 	UPROPERTY()
-	ASimulationDataSourceActor* Scene;
+	ASimulationDataSourceActor *Scene;
 };

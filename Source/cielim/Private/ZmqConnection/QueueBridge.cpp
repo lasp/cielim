@@ -17,12 +17,9 @@ void UQueueBridge::PostInitProperties()
 	Super::PostInitProperties();
 }
 
-void UQueueBridge::BeginDestroy()
-{
-	Super::BeginDestroy();
-}
+void UQueueBridge::BeginDestroy() { Super::BeginDestroy(); }
 
-void UQueueBridge::Connect(zmq::context_t& ContextPtr, CielimCircularQueue& CircularQueue)
+void UQueueBridge::Connect(zmq::context_t &ContextPtr, CielimCircularQueue &CircularQueue)
 {
 	this->Context = &ContextPtr;
 	this->MultiThreadDataQueue = &CircularQueue;
@@ -32,7 +29,7 @@ TOptional<FCircularQueueData> UQueueBridge::GetQueueData() const
 {
 	TOptional<FCircularQueueData> QueueData;
 
-	if(!this->MultiThreadDataQueue || this->MultiThreadDataQueue->Requests.IsEmpty())
+	if (!this->MultiThreadDataQueue || this->MultiThreadDataQueue->Requests.IsEmpty())
 	{
 		// Do nothing for now
 	}
@@ -59,7 +56,8 @@ void UQueueBridge::PutQueueData(std::string Data) const
 	this->MultiThreadDataQueue->Responses.Enqueue(NextCommand);
 }
 
-void UQueueBridge::PutImageQueueData(const TArray64<uint8>& PNGData, const TOptional<FVector2d> CenterOfBrightness) const
+void UQueueBridge::PutImageQueueData(const TArray64<uint8> &PNGData,
+									 const TOptional<FVector2d> CenterOfBrightness) const
 {
 	FCircularQueueData NextCommand;
 

@@ -3,13 +3,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Math/Vector.h"
 #include "Engine/DirectionalLight.h"
+#include "Math/Vector.h"
 
-#include "FCielimMessage.h"
-#include "CelestialBody.h"
-#include "Spacecraft.h"
 #include "CaptureManager.h"
+#include "CelestialBody.h"
+#include "FCielimMessage.h"
+#include "Spacecraft.h"
 #include "ZmqConnection/QueueBridge.h"
 
 #include "SimulationDataSourceActor.generated.h"
@@ -17,43 +17,43 @@
 UCLASS(Blueprintable)
 class CIELIM_API ASimulationDataSourceActor : public AActor
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
 
 protected:
 	virtual void BeginPlay() override;
 
 public:
-    void SpawnCelestialBodies();
-    void SpawnSpacecraft();
-    void SpawnCaptureManager();
+	void SpawnCelestialBodies();
+	void SpawnSpacecraft();
+	void SpawnCaptureManager();
 
-    void UpdateCelestialBodies() const;
-    void UpdateSpacecraft() const;
+	void UpdateCelestialBodies() const;
+	void UpdateSpacecraft() const;
 
-    UPROPERTY(EditDefaultsOnly)
-    TSubclassOf<ACelestialBody> BpSun;
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<ACelestialBody> BpSun;
 
-    UPROPERTY(EditDefaultsOnly)
-    TSubclassOf<ASpacecraft> BpSpacecraft;
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<ASpacecraft> BpSpacecraft;
 
-    UFUNCTION(BlueprintCallable)
-    void DebugCielimMessage() const;
+	UFUNCTION(BlueprintCallable)
+	void DebugCielimMessage() const;
 
 	void PointSunLight();
 
-	void ParseCommand(const FCircularQueueData& CommandData, const UQueueBridge* NetworkDataSource);
+	void ParseCommand(const FCircularQueueData &CommandData, const UQueueBridge *NetworkDataSource);
 	void UpdateScene() const;
 
 private:
-    FCielimMessage CielimMessage;
-    TArray<ACelestialBody*> CelestialBodyArray;
-	ACelestialBody* SunCelestialBody;
-	ADirectionalLight* SunLight;
-    ASpacecraft* Spacecraft=nullptr;
-    ACaptureManager* CaptureManager=nullptr;
-    bool bHasCameras=false;
-    bool IsCelestialBodiesSpawned=false;
-    bool IsSpacecraftSpawned=false;
-    bool IsSceneEstablished=false;
-	bool ShouldUpdateScene=false;
+	FCielimMessage CielimMessage;
+	TArray<ACelestialBody *> CelestialBodyArray;
+	ACelestialBody *SunCelestialBody;
+	ADirectionalLight *SunLight;
+	ASpacecraft *Spacecraft = nullptr;
+	ACaptureManager *CaptureManager = nullptr;
+	bool bHasCameras = false;
+	bool IsCelestialBodiesSpawned = false;
+	bool IsSpacecraftSpawned = false;
+	bool IsSceneEstablished = false;
+	bool ShouldUpdateScene = false;
 };

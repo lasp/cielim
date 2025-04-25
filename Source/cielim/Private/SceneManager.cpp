@@ -12,7 +12,7 @@
 
 #include "CielimLoggingMacros.h"
 
-void USceneManager::Init(zmq::context_t& ContextPtr, CielimCircularQueue& CircularQueue)
+void USceneManager::Init(zmq::context_t &ContextPtr, CielimCircularQueue &CircularQueue)
 {
 	this->QueueBridge = NewObject<UQueueBridge>(this, UQueueBridge::StaticClass());
 	this->QueueBridge->Connect(ContextPtr, CircularQueue);
@@ -25,7 +25,8 @@ void USceneManager::InitWorldContext(const UObject *WorldContextObject)
 	UE_LOG(LogCielim, Display, TEXT("USceneManager : World context initialized."));
 
 	// Find the simulation data source actor
-	this->Scene = Cast<ASimulationDataSourceActor>(UGameplayStatics::GetActorOfClass(WorldContext, ASimulationDataSourceActor::StaticClass()));
+	this->Scene = Cast<ASimulationDataSourceActor>(
+		UGameplayStatics::GetActorOfClass(WorldContext, ASimulationDataSourceActor::StaticClass()));
 }
 
 bool USceneManager::IsTickable() const
@@ -52,7 +53,4 @@ void USceneManager::Tick(float DeltaTime)
 	this->Scene->UpdateScene();
 }
 
-TStatId USceneManager::GetStatId() const
-{
-	RETURN_QUICK_DECLARE_CYCLE_STAT(USceneManager, STATGROUP_Tickables);
-}
+TStatId USceneManager::GetStatId() const { RETURN_QUICK_DECLARE_CYCLE_STAT(USceneManager, STATGROUP_Tickables); }

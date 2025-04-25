@@ -11,98 +11,96 @@
 #include "CielimLoggingMacros.h"
 #include "ZmqConnection/UCircularQueueData.h"
 
-FRouter::FRouter(zmq::context_t& ContextPtr, const std::string& Address, CielimCircularQueue& CircularQueue)
+FRouter::FRouter(zmq::context_t &ContextPtr, const std::string &Address, CielimCircularQueue &CircularQueue)
 {
-    this->Context = &ContextPtr;
-    this->RouterSocket = zmq::socket_t(ContextPtr, zmq::socket_type::router);
+	this->Context = &ContextPtr;
+	this->RouterSocket = zmq::socket_t(ContextPtr, zmq::socket_type::router);
 
 	this->MultiThreadQueue = &CircularQueue;
 
-    this->bContinueRun = true;
+	this->bContinueRun = true;
 
-    this->RouterSocket.bind(Address.c_str());
+	this->RouterSocket.bind(Address.c_str());
 
-    UE_LOG(LogCielim, Display, TEXT("Router : Router bound to address: %hs"), Address.c_str());
+	UE_LOG(LogCielim, Display, TEXT("Router : Router bound to address: %hs"), Address.c_str());
 
-    this->Thread = FRunnableThread::Create(this, TEXT("CielimRouterThread"));
+	this->Thread = FRunnableThread::Create(this, TEXT("CielimRouterThread"));
 }
 
 FRouter::~FRouter()
 {
-    if (!this->Thread)
-        return;
+	if (!this->Thread)
+		return;
 
-    this->Thread->Kill();
+	this->Thread->Kill();
 
-    this->Thread->WaitForCompletion();
+	this->Thread->WaitForCompletion();
 
-    delete this->Thread;
-    this->Thread = nullptr;
+	delete this->Thread;
+	this->Thread = nullptr;
 }
 
-bool FRouter::Init()
-{
-    return true;
-}
+bool FRouter::Init() { return true; }
 
 uint32 FRouter::Run()
 {
-    while (this->bContinueRun)
-    {
-        zmq::pollitem_t PollItems[1] =
-        {
-            {static_cast<void*>(this->RouterSocket), 0, ZMQ_POLLIN, 0},
-        };
+	while (this->bContinueRun)
+	{
+		zmq::pollitem_t PollItems[1] = {
+			{static_cast<void *>(this->RouterSocket), 0, ZMQ_POLLIN, 0},
+		};
 
-        // Poll with a timeout of 100ms
+		// Poll with a timeout of 100ms
 
-        const int NumEvents = zmq::poll(PollItems, 1, std::chrono::milliseconds(100));
+		const int NumEvents = zmq::poll(PollItems, 1, std::chrono::milliseconds(100));
 
-        if (NumEvents < 0) continue;
+		if (NumEvents < 0)
+			continue;
 
-        if (PollItems[0].revents & ZMQ_POLLIN)
-        {
-            zmq::multipart_t ReceiveMessage;
+		if (PollItems[0].revents & ZMQ_POLLIN)
+		{
+			zmq::multipart_t ReceiveMessage;
 
-            if (ReceiveMessage.recv(this->RouterSocket))
-            {
-                if (ReceiveMessage.size() < 2)
-                {
-                    UE_LOG(LogCielim, Warning, TEXT("Router : Message received was malformed; discarding."));
-                    continue;
-                }
+			if (ReceiveMessage.recv(this->RouterSocket))
+			{
+				if (ReceiveMessage.size() < 2)
+				{
+					UE_LOG(LogCielim, Warning, TEXT("Router : Message received was malformed; discarding."));
+					continue;
+				}
 
-                std::string ID = ReceiveMessage.popstr();
+				std::string ID = ReceiveMessage.popstr();
 
-                UE_LOG(LogCielim, Display, TEXT("Router : Message received from client %hs."), ID.c_str());
+				UE_LOG(LogCielim, Display, TEXT("Router : Message received from client %hs."), ID.c_str());
 
-                bool bUseDelim = false;
+				bool bUseDelim = false;
 
-                // Message may or may not include empty delimiter depending on client type
-                if (ReceiveMessage.front().size() == 0)
-                {
-                    bUseDelim = true;
-                    ReceiveMessage.pop();
-                }
+				// Message may or may not include empty delimiter depending on client type
+				if (ReceiveMessage.front().size() == 0)
+				{
+					bUseDelim = true;
+					ReceiveMessage.pop();
+				}
 
-                // Send return message
+				// Send return message
 
-                zmq::multipart_t ReturnMessage;
+				zmq::multipart_t ReturnMessage;
 
-                ReturnMessage.addstr(ID);
-                if (bUseDelim) ReturnMessage.addstr("");
+				ReturnMessage.addstr(ID);
+				if (bUseDelim)
+					ReturnMessage.addstr("");
 
-            	ParseMessage(ReceiveMessage, ReturnMessage);
+				ParseMessage(ReceiveMessage, ReturnMessage);
 
-                ReturnMessage.send(this->RouterSocket);
-            }
-        }
-    }
+				ReturnMessage.send(this->RouterSocket);
+			}
+		}
+	}
 
-    return 0;
+	return 0;
 }
 
-void FRouter::ParseMessage(zmq::multipart_t& Message, zmq::multipart_t& ReturnMessage) const
+void FRouter::ParseMessage(zmq::multipart_t &Message, zmq::multipart_t &ReturnMessage) const
 {
 	UE_LOG(LogCielim, Display, TEXT("Router::ParseMessage"));
 
@@ -138,12 +136,13 @@ void FRouter::ParseMessage(zmq::multipart_t& Message, zmq::multipart_t& ReturnMe
 		Data.payload.Get<FUpdatePayload>().message = FCielimMessage();
 
 		// @TODO: fix this message parsing. It's a mad hack!
-		Data.payload.Get<FUpdatePayload>().message.GetMessageModifiable().ParseFromArray(Message[2].data(), Message[2].size() * sizeof(char));
+		Data.payload.Get<FUpdatePayload>().message.GetMessageModifiable().ParseFromArray(
+			Message[2].data(), Message[2].size() * sizeof(char));
 
 		UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue SIM_UPDATE..."));
 
 		bool EnqueueResult = false;
-		while(!EnqueueResult)
+		while (!EnqueueResult)
 		{
 			EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(Data);
 		}
@@ -162,12 +161,12 @@ void FRouter::ParseMessage(zmq::multipart_t& Message, zmq::multipart_t& ReturnMe
 
 		Request.query = CommandType::REQUEST_IMAGE;
 		Request.payload.Emplace<FImagePayload>(FImagePayload());
-		Request.payload.Get<FImagePayload>().shouldReturnImage = (bool) std::stoi(Message.popstr());
+		Request.payload.Get<FImagePayload>().shouldReturnImage = (bool)std::stoi(Message.popstr());
 
 		UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue REQUEST_IMAGE"));
 
 		bool EnqueueResult = false;
-		while(!EnqueueResult)
+		while (!EnqueueResult)
 		{
 			EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(Request);
 		}
@@ -178,7 +177,7 @@ void FRouter::ParseMessage(zmq::multipart_t& Message, zmq::multipart_t& ReturnMe
 		UE_LOG(LogCielim, Display, TEXT("Waiting for reposnse to REQUEST_IMAGE"));
 
 		bool DequeueResult = false;
-		while(!DequeueResult)
+		while (!DequeueResult)
 		{
 			// I can call this directly so the thread blocks on the image return.
 			// This assumes that the next item placed in the queue is the image response.
@@ -189,7 +188,7 @@ void FRouter::ParseMessage(zmq::multipart_t& Message, zmq::multipart_t& ReturnMe
 
 		TArray64<uint8> ResponseImage;
 
-		auto* TempPayload = Response.payload.TryGet<FImagePayload>();
+		auto *TempPayload = Response.payload.TryGet<FImagePayload>();
 
 		if (TempPayload != nullptr)
 		{
@@ -201,10 +200,10 @@ void FRouter::ParseMessage(zmq::multipart_t& Message, zmq::multipart_t& ReturnMe
 		ReturnMessage.addmem(ResponseImage.GetData(), Bytes);
 		ReturnMessage.addtyp(Bytes);
 
-		if (TempPayload != nullptr && TempPayload -> centerOfBrightness.IsSet())
+		if (TempPayload != nullptr && TempPayload->centerOfBrightness.IsSet())
 		{
-			ReturnMessage.addtyp<double>(TempPayload -> centerOfBrightness.GetValue().X);
-			ReturnMessage.addtyp<double>(TempPayload -> centerOfBrightness.GetValue().Y);
+			ReturnMessage.addtyp<double>(TempPayload->centerOfBrightness.GetValue().X);
+			ReturnMessage.addtyp<double>(TempPayload->centerOfBrightness.GetValue().Y);
 		}
 		else
 		{
@@ -218,12 +217,9 @@ void FRouter::ParseMessage(zmq::multipart_t& Message, zmq::multipart_t& ReturnMe
 	}
 }
 
-void FRouter::Stop()
-{
-    this->bContinueRun = false;
-}
+void FRouter::Stop() { this->bContinueRun = false; }
 
 void FRouter::Exit()
 {
-    // Do nothing for now (called when Run() ends)
+	// Do nothing for now (called when Run() ends)
 }
