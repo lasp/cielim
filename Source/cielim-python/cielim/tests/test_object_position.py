@@ -58,6 +58,7 @@ def test_object_position(cielim_connection, scene_setup, test_name, shift):
     Parameters: Changing asteroid position in meters and verifying pixel shift.
     """
     connector = cielim_connection
+    connector.send_init_request()
     scene = scene_setup
     initial_x, initial_y, initial_z = scene.celestialBodies[0].position[:3]
 

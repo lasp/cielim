@@ -42,6 +42,7 @@ def scene_setup():
 def test_example(cielim_connection, scene_setup):
 
     connector = cielim_connection
+    connector.send_init_request()
     scene_frame = scene.Scene()
     scene_frame.set_existing_message(scene_setup)
 

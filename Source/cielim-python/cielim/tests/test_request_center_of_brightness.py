@@ -38,6 +38,7 @@ def scene_setup():
 
 def test_request_image_and_center_of_brightness(cielim_connection, scene_setup):
     connector = cielim_connection
+    connector.send_init_request()
     connector.send_frame(scene_setup)
 
     [image, center_of_brightness] = connector.request_image_for_camera_id(1, 1)
