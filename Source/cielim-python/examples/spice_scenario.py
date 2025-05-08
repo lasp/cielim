@@ -19,8 +19,9 @@ def get_spice_data(filename):
     directory = filename.rsplit(".", 1)[0]
     meta_kernel = filename.rsplit("/")[-1].rsplit(".")[0]
     if not os.path.exists(directory):
+        print("Retrieving spice data")
         os.makedirs(directory)
-        with open(directory + "/" + meta_kernel + ".txt", "r") as file:
+        with open(directory + "/" + meta_kernel + ".txt", "w") as file:
             file.write("\\begindata\nPATH_VALUES = ( '" + directory + "' )\n")
             file.write("PATH_SYMBOLS = ( 'KERNELS' )\n")
             file.write("KERNELS_TO_LOAD=( \n\n")
