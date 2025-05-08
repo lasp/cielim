@@ -59,6 +59,7 @@ def test_asteroid_size(cielim_connection, scene_setup, test_name, shift):
     Parameters: Changing asteroid Z (closer/away) and slight X/Y shift, verifying pixel size.
     """
     connector = cielim_connection
+    connector.send_init_request()
     scene = scene_setup
     initial_position = scene.celestialBodies[0].position[:3]
 

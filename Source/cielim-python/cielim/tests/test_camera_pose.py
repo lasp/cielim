@@ -130,6 +130,7 @@ def test_camera_orientation(cielim_connection, scene_setup, test_name, mrp_rotat
     """
 
     connector = cielim_connection
+    connector.send_init_request()
     scene = scene_setup
 
     connector.send_frame(scene)
