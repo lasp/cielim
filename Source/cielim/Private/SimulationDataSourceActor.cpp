@@ -288,8 +288,7 @@ void ASimulationDataSourceActor::SpawnSpacecraft()
 	const FRotator SpacecraftRotation = GetRotatorFromMrp(
 		FVector3d(SpacecraftMessage.attitude(0), SpacecraftMessage.attitude(1), SpacecraftMessage.attitude(2)));
 	// Create Spacecraft Actor instance
-	ASpacecraft *TempSpacecraft =
-		GetWorld()->SpawnActor<ASpacecraft>(BpSpacecraft, PositionSpacecraft, SpacecraftRotation);
+	ASpacecraft *TempSpacecraft = GetWorld()->SpawnActor<ASpacecraft>(PositionSpacecraft, SpacecraftRotation);
 	TempSpacecraft->Name = FString(SpacecraftMessage.spacecraftname().c_str());
 	// Set camera
 	if (this->CielimMessage.GetMessage().has_camera())
@@ -365,14 +364,4 @@ void ASimulationDataSourceActor::UpdateSpacecraft() const
 		const FRotator CameraRotation = GetCameraRotation(Camera);
 		this->Spacecraft->UpdateCameraOrientation(CameraRotation);
 	}
-}
-
-/**
- * @brief DebugCielimMessage() Prints Cielim Protobuf Message to the console
- *
- */
-void ASimulationDataSourceActor::DebugCielimMessage() const
-{
-	const std::string DebugStr = this->CielimMessage.GetMessage().DebugString();
-	UE_LOG(LogCielim, Display, TEXT("%hs"), DebugStr.c_str());
 }

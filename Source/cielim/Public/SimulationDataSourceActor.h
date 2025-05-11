@@ -30,15 +30,6 @@ public:
 	void UpdateCelestialBodies() const;
 	void UpdateSpacecraft() const;
 
-	UPROPERTY(EditDefaultsOnly)
-	TSubclassOf<ACelestialBody> BpSun;
-
-	UPROPERTY(EditDefaultsOnly)
-	TSubclassOf<ASpacecraft> BpSpacecraft;
-
-	UFUNCTION(BlueprintCallable)
-	void DebugCielimMessage() const;
-
 	void PointSunLight();
 
 	void ParseCommand(const FCircularQueueData &CommandData, FCircularQueueData &ReturnData);
@@ -46,11 +37,18 @@ public:
 
 private:
 	FCielimMessage CielimMessage;
+
+	UPROPERTY()
 	TArray<ACelestialBody *> CelestialBodyArray;
+	UPROPERTY()
 	ACelestialBody *SunCelestialBody;
+	UPROPERTY()
 	ADirectionalLight *SunLight;
+	UPROPERTY()
 	ASpacecraft *Spacecraft = nullptr;
+	UPROPERTY()
 	ACaptureManager *CaptureManager = nullptr;
+
 	bool bHasCameras = false;
 	bool IsCelestialBodiesSpawned = false;
 	bool IsSpacecraftSpawned = false;
