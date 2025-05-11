@@ -15,7 +15,7 @@ void USceneManager::Init(zmq::context_t &ContextPtr, CielimCircularQueue &Circul
 	this->QueueBridge = NewObject<UQueueBridge>(this, UQueueBridge::StaticClass());
 	this->QueueBridge->Connect(ContextPtr, CircularQueue);
 
-	this->Scene = NewObject<USimulationDataSourceActor>(this, USimulationDataSourceActor::StaticClass());
+	this->Scene = NewObject<USceneData>(this, USceneData::StaticClass());
 }
 
 bool USceneManager::IsTickable() const

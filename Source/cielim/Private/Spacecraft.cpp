@@ -1,3 +1,11 @@
+//=================== Copyright (c) 2025 Laboratory for Atmospheric and Space Physics ===================//
+//
+// Purpose: Implements the definition of ASpacecraft.
+//
+// License: MIT License. See LICENSE file.
+//
+//=======================================================================================================//
+
 #include "Spacecraft.h"
 
 #include "Components/SceneCaptureComponent2D.h"

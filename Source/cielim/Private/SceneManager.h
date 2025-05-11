@@ -11,7 +11,7 @@
 
 #include "CoreMinimal.h"
 
-#include "SimulationDataSourceActor.h"
+#include "SceneData.h"
 #include "ZmqConnection/QueueBridge.h"
 
 #include "SceneManager.generated.h"
@@ -42,5 +42,5 @@ private:
 	UQueueBridge *QueueBridge;
 
 	UPROPERTY()
-	USimulationDataSourceActor *Scene;
+	USceneData *Scene;
 };

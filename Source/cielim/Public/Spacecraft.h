@@ -1,4 +1,12 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//=================== Copyright (c) 2025 Laboratory for Atmospheric and Space Physics ===================//
+//
+// Purpose: Defines the ASpacecraft class. The spacecraft is an entity owned by a SceneData instance
+//          and itself holds the SceneCaptureComponent2D used to capture the scene from the point of
+//          view of the spacecraft.
+//
+// License: MIT License. See LICENSE file.
+//
+//=======================================================================================================//
 
 #pragma once
 
