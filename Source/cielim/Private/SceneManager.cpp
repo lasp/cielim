@@ -8,18 +8,22 @@
 
 #include "SceneManager.h"
 
-#include "Kismet/GameplayStatics.h"
-
 #include "CielimLoggingMacros.h"
 
 void USceneManager::Init(zmq::context_t &ContextPtr, CielimCircularQueue &CircularQueue)
 {
 	this->QueueBridge = NewObject<UQueueBridge>(this, UQueueBridge::StaticClass());
 	this->QueueBridge->Connect(ContextPtr, CircularQueue);
+
+	this->Scene = NewObject<USimulationDataSourceActor>(this, USimulationDataSourceActor::StaticClass());
 }
 
 bool USceneManager::IsTickable() const
 {
+	// If the scene doesn't exist yet, tick won't do anything
+	if (!this->Scene)
+		return false;
+
 	// Should tick if request queue is not empty
 	if (QueueBridge != nullptr)
 		return QueueBridge->NumQueueInbound() != 0;
@@ -29,11 +33,6 @@ bool USceneManager::IsTickable() const
 
 void USceneManager::Tick(float DeltaTime)
 {
-	// Retry scene search
-	if (!this->Scene)
-		this->Scene = Cast<ASimulationDataSourceActor>(
-			UGameplayStatics::GetActorOfClass(this, ASimulationDataSourceActor::StaticClass()));
-
 	const TOptional<FCircularQueueData> QueueData = this->QueueBridge->GetQueueData();
 
 	if (!QueueData.IsSet())

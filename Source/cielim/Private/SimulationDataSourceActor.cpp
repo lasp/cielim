@@ -69,11 +69,8 @@ FRotator GetCameraRotation(const cielimMessage::CameraModel &Camera)
 	return FRotator(RightQuat2LeftQuat(Quat_CB0));
 }
 
-void ASimulationDataSourceActor::BeginPlay() { Super::BeginPlay(); }
-
-
 // This is a mad hack and needs to be changed
-void ASimulationDataSourceActor::ParseCommand(const FCircularQueueData &CommandData, FCircularQueueData &ReturnData)
+void USimulationDataSourceActor::ParseCommand(const FCircularQueueData &CommandData, FCircularQueueData &ReturnData)
 {
 	this->ShouldUpdateScene = false;
 
@@ -185,7 +182,7 @@ void ASimulationDataSourceActor::ParseCommand(const FCircularQueueData &CommandD
 	}
 }
 
-void ASimulationDataSourceActor::UpdateScene() const
+void USimulationDataSourceActor::UpdateScene() const
 {
 	if (!this->ShouldUpdateScene)
 		return;
@@ -240,7 +237,7 @@ FRotator GetCelestialBodyRotation(const cielimMessage::CelestialBody &CelestialB
  * @brief SpawnCelestialBodies() Spawns all celestial bodies from the Cielim Protobuf Message into the level
  *
  */
-void ASimulationDataSourceActor::SpawnCelestialBodies()
+void USimulationDataSourceActor::SpawnCelestialBodies()
 {
 	for (const auto &CelestialBody : CielimMessage.GetMessage().celestialbodies())
 	{
@@ -279,7 +276,7 @@ void ASimulationDataSourceActor::SpawnCelestialBodies()
  * @brief SpawnSpacecraft() Spawns all spacecraft from the Cielim Protobuf Message into the level
  *
  */
-void ASimulationDataSourceActor::SpawnSpacecraft()
+void USimulationDataSourceActor::SpawnSpacecraft()
 {
 	const cielimMessage::Spacecraft &SpacecraftMessage = this->CielimMessage.GetMessage().spacecraft();
 	// Set Location
@@ -309,7 +306,7 @@ void ASimulationDataSourceActor::SpawnSpacecraft()
 	this->PointSunLight();
 }
 
-void ASimulationDataSourceActor::PointSunLight()
+void USimulationDataSourceActor::PointSunLight()
 {
 	this->SunLight = GetWorld()->SpawnActor<ADirectionalLight>(FVector3d::ZeroVector, FRotator::ZeroRotator);
 	double exposuretime = this->CielimMessage.GetMessage().camera().exposuretime();
@@ -323,7 +320,7 @@ void ASimulationDataSourceActor::PointSunLight()
 	this->SunLight->GetLightComponent()->SetRelativeRotation(thing.Rotator());
 }
 
-void ASimulationDataSourceActor::SpawnCaptureManager()
+void USimulationDataSourceActor::SpawnCaptureManager()
 {
 	this->CaptureManager = GetWorld()->SpawnActor<ACaptureManager>();
 	this->CaptureManager->SetSceneCaptureComponent(this->Spacecraft->SceneCaptureComponent2D);
@@ -334,7 +331,7 @@ void ASimulationDataSourceActor::SpawnCaptureManager()
  * @brief UpdateCelestialBodies() Updates all celestial body positions and rotations
  *
  */
-void ASimulationDataSourceActor::UpdateCelestialBodies() const
+void USimulationDataSourceActor::UpdateCelestialBodies() const
 {
 	int Index = 0;
 	for (const auto &CelestialBody : CielimMessage.GetMessage().celestialbodies())
@@ -350,7 +347,7 @@ void ASimulationDataSourceActor::UpdateCelestialBodies() const
  * @brief UpdateSpacecraft() Updates Spacecraft and camera positions and rotations
  *
  */
-void ASimulationDataSourceActor::UpdateSpacecraft() const
+void USimulationDataSourceActor::UpdateSpacecraft() const
 {
 	const cielimMessage::Spacecraft &SpacecraftMessage = CielimMessage.GetMessage().spacecraft();
 	const FVector3d PositionSpacecraft = GetSpacecraftPosition(SpacecraftMessage);

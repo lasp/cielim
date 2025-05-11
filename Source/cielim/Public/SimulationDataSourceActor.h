@@ -14,13 +14,10 @@
 
 #include "SimulationDataSourceActor.generated.h"
 
-UCLASS(Blueprintable)
-class CIELIM_API ASimulationDataSourceActor : public AActor
+UCLASS()
+class CIELIM_API USimulationDataSourceActor : public UObject
 {
 	GENERATED_BODY()
-
-protected:
-	virtual void BeginPlay() override;
 
 public:
 	void SpawnCelestialBodies();

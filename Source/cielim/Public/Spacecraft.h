@@ -2,9 +2,7 @@
 
 #pragma once
 
-#include "Components/SceneCaptureComponent2D.h"
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
 
 #include "Spacecraft.generated.h"
 

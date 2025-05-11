@@ -42,5 +42,5 @@ private:
 	UQueueBridge *QueueBridge;
 
 	UPROPERTY()
-	ASimulationDataSourceActor *Scene;
+	USimulationDataSourceActor *Scene;
 };
