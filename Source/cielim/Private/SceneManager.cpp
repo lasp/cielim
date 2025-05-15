@@ -14,19 +14,13 @@ void USceneManager::Init(zmq::context_t &ContextPtr, CielimCircularQueue &Circul
 {
 	this->QueueBridge = NewObject<UQueueBridge>(this, UQueueBridge::StaticClass());
 	this->QueueBridge->Connect(ContextPtr, CircularQueue);
-
-	this->Scene = NewObject<USceneData>(this, USceneData::StaticClass());
 }
 
 bool USceneManager::IsTickable() const
 {
-	// If the scene doesn't exist yet, tick won't do anything
-	if (!this->Scene)
-		return false;
-
 	// Should tick if request queue is not empty
-	if (QueueBridge != nullptr)
-		return QueueBridge->NumQueueInbound() != 0;
+	if (this->QueueBridge != nullptr)
+		return this->QueueBridge->NumQueueInbound() != 0;
 
 	return false;
 }
@@ -38,19 +32,47 @@ void USceneManager::Tick(float DeltaTime)
 	if (!QueueData.IsSet())
 		return;
 
-	FCircularQueueData ReturnData;
+	const uint8 SceneID = QueueData.GetValue().SceneID;
 
-	ReturnData.ID = QueueData.GetValue().ID;
-	ReturnData.bUseDelim = QueueData.GetValue().bUseDelim;
-
-	this->Scene->ParseCommand(QueueData.GetValue(), ReturnData);
-	this->Scene->UpdateScene();
-
-	// Request Image is the only command that currently requests return data
-	// instead of an instant "OK" message currently.
-	if (ReturnData.query == CommandType::REQUEST_IMAGE)
+	if (QueueData.GetValue().query == CommandType::NEW_SCENE)
 	{
-		QueueBridge->PutQueueData(ReturnData);
+		Scenes.Add(SceneID, NewObject<USceneData>(this, USceneData::StaticClass()));
+
+		UE_LOG(LogCielim, Display, TEXT("SceneManager : New Scene created with ID %d"), SceneID);
+	}
+	else if (QueueData.GetValue().query == CommandType::REMOVE_SCENE)
+	{
+		if (USceneData *Scene = *Scenes.Find(SceneID); Scene != nullptr)
+		{
+			Scene->MarkAsGarbage();
+			Scenes.Remove(SceneID);
+
+			UE_LOG(LogCielim, Display, TEXT("SceneManager : Scene removed for ID %d"), SceneID);
+		}
+		else
+		{
+			UE_LOG(LogCielim, Warning, TEXT("SceneManager : Scene for ID %d didn't exist."), SceneID);
+		}
+	}
+	else
+	{
+		FCircularQueueData ReturnData;
+
+		ReturnData.ID = QueueData.GetValue().ID;
+		ReturnData.bUseDelim = QueueData.GetValue().bUseDelim;
+
+		if (USceneData *Scene = *Scenes.Find(SceneID); Scene != nullptr)
+		{
+			Scene->ParseCommand(QueueData.GetValue(), ReturnData);
+			Scene->UpdateScene();
+
+			// Request Image is the only command that currently requests return data
+			// instead of an instant "OK" message currently.
+			if (ReturnData.query == CommandType::REQUEST_IMAGE)
+			{
+				this->QueueBridge->PutQueueData(ReturnData);
+			}
+		}
 	}
 }
 

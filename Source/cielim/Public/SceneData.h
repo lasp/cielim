@@ -37,6 +37,10 @@ public:
 	 * @brief Updates the entities according to the Protobuf Message.
 	 */
 	void UpdateScene() const;
+	/**
+	 * @brief Called when instance is destroyed by GC system, should not be called directly.
+	 */
+	virtual void BeginDestroy() override;
 
 private:
 	// Spawns all necessary entities from the Cielim Protobuf Message into the level
@@ -51,6 +55,8 @@ private:
 
 	FCielimMessage CielimMessage;
 
+	UPROPERTY()
+	TArray<AActor *> Actors;
 	UPROPERTY()
 	TArray<ACelestialBody *> CelestialBodyArray;
 	UPROPERTY()

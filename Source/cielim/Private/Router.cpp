@@ -146,14 +146,29 @@ uint32 FRouter::Run()
 					ReceiveMessage.pop();
 				}
 
-				if (!Clients.Contains(IDStr))
+				FClientInfo *Client = Clients.Find(IDStr);
+
+				if (!Client)
 				{
 					if (ActiveConnections < MaxConnections)
 					{
 						ActiveConnections++;
 						NextSceneID++;
 						FClientInfo ClientInfo = {NextSceneID, ID, bUseDelim, EClientState::Active, 0, 0};
-						Clients.Add(IDStr, ClientInfo);
+						Client = &Clients.Add(IDStr, ClientInfo);
+
+						// Send NEW_SCENE command to the SceneManager
+
+						FCircularQueueData NewSceneSignal;
+
+						NewSceneSignal.SceneID = NextSceneID;
+						NewSceneSignal.query = CommandType::NEW_SCENE;
+
+						bool EnqueueResult = false;
+						while (!EnqueueResult)
+						{
+							EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(NewSceneSignal);
+						}
 
 						UE_LOG(LogCielim, Display, TEXT("Router : Client %hs has been added to active connections."),
 							   TCHAR_TO_UTF8(*IDStr));
@@ -167,11 +182,8 @@ uint32 FRouter::Run()
 					}
 				}
 
-				if (FClientInfo *Client = Clients.Find(IDStr); Client != nullptr)
-				{
-					Client->ClientState = EClientState::Active;
-					Client->LastSeen = FPlatformTime::Seconds();
-				}
+				Client->ClientState = EClientState::Active;
+				Client->LastSeen = FPlatformTime::Seconds();
 
 				// Send return message
 
@@ -183,6 +195,7 @@ uint32 FRouter::Run()
 
 				FCircularQueueData ReturnData;
 
+				ReturnData.SceneID = Client->SceneID;
 				ReturnData.ID = ID;
 				ReturnData.bUseDelim = bUseDelim;
 
@@ -231,6 +244,19 @@ uint32 FRouter::Run()
 
 				if ((CurrentTime - ClientIterator.Value().DispatchTime) * 1000 >= MaxDispatchTimeoutMilliseconds)
 				{
+					// Send REMOVE_SCENE command to the SceneManager
+
+					FCircularQueueData RemoveSceneSignal;
+
+					RemoveSceneSignal.SceneID = ClientIterator.Value().SceneID;
+					RemoveSceneSignal.query = CommandType::REMOVE_SCENE;
+
+					bool EnqueueResult = false;
+					while (!EnqueueResult)
+					{
+						EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(RemoveSceneSignal);
+					}
+
 					UE_LOG(LogCielim, Display, TEXT("Router : Client %hs has been removed from active connections."),
 						   TCHAR_TO_UTF8(*ClientIterator.Key()));
 

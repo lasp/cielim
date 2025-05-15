@@ -12,6 +12,7 @@
 #include "CoreMinimal.h"
 
 #include "SceneData.h"
+#include "ZmqConnection/CielimCircularQueue.h"
 #include "ZmqConnection/QueueBridge.h"
 
 #include "SceneManager.generated.h"
@@ -42,5 +43,5 @@ private:
 	UQueueBridge *QueueBridge;
 
 	UPROPERTY()
-	USceneData *Scene;
+	TMap<uint8, USceneData *> Scenes;
 };

@@ -9,6 +9,7 @@
 #include "SceneData.h"
 
 #include "Components/LightComponent.h"
+#include "Components/SceneCaptureComponent2D.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/World.h"
 #include "Math/UnrealMathUtility.h"
@@ -44,6 +45,11 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 		this->bIsSceneEstablished = false;
 
 		// Clear existing objects
+
+		this->Actors.Reset();
+
+		if (this->Spacecraft != nullptr)
+			this->Spacecraft->SceneCaptureComponent2D->ShowOnlyActors.Reset();
 
 		for (auto const CelestialBody : this->CelestialBodyArray)
 		{
@@ -102,6 +108,11 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 
 			this->SpawnCelestialBodies();
 			this->SpawnSpacecraft();
+			this->SpawnSunLight();
+
+			this->Spacecraft->SceneCaptureComponent2D->PrimitiveRenderMode =
+				ESceneCapturePrimitiveRenderMode::PRM_UseShowOnlyList;
+			this->Spacecraft->SceneCaptureComponent2D->ShowOnlyActors = Actors;
 
 			if (this->CielimMessage.GetMessage().has_camera())
 			{
@@ -179,6 +190,10 @@ void USceneData::SpawnCelestialBodies()
 		ACelestialBody *TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>();
 		TempCelestialBody->SetActorTransform(SpawnLocAndRotation);
 
+#if WITH_EDITOR
+		TempCelestialBody->SetActorLabel(CelestialBody.bodyname().c_str());
+#endif
+
 		CelestialBodyMeshModel MeshModel{};
 		if (CelestialBody.has_model())
 		{
@@ -195,6 +210,7 @@ void USceneData::SpawnCelestialBodies()
 		TempCelestialBody->SetActorScale3D(ActorScale);
 
 		this->CelestialBodyArray.Add(TempCelestialBody);
+		this->Actors.Add(TempCelestialBody);
 
 		if (TempCelestialBody->Name == SunNaifBodyName)
 		{
@@ -234,14 +250,15 @@ void USceneData::SpawnSpacecraft()
 	}
 
 	this->Spacecraft = TempSpacecraft;
+	this->Actors.Add(TempSpacecraft);
 	this->bIsSpacecraftSpawned = true;
-
-	this->SpawnSunLight();
 }
 
 void USceneData::SpawnSunLight()
 {
 	this->SunLight = GetWorld()->SpawnActor<ADirectionalLight>(FVector3d::ZeroVector, FRotator::ZeroRotator);
+
+	this->Actors.Add(SunLight);
 
 	const double ExposureTime = this->CielimMessage.GetMessage().camera().exposuretime();
 	const double LuxAt1AU = ExposureTime != 0 ? 1280 * ExposureTime : 1280;
@@ -301,6 +318,25 @@ void USceneData::UpdateSpacecraft() const
 
 		this->Spacecraft->UpdateCameraOrientation(CameraRotation);
 	}
+}
+
+void USceneData::BeginDestroy()
+{
+	for (auto const Actor : this->Actors)
+	{
+		if (Actor != nullptr)
+			Actor->Destroy();
+	}
+
+	this->Actors.Reset();
+
+	if (this->CaptureManager != nullptr)
+	{
+		this->CaptureManager->Destroy();
+		this->CaptureManager = nullptr;
+	}
+
+	Super::BeginDestroy();
 }
 
 // ---------- Helper Function Definitions ----------

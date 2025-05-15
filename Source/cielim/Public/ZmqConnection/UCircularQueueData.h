@@ -11,6 +11,8 @@ enum class CommandType
 	INIT_SCENE,
 	SIM_UPDATE,
 	REQUEST_IMAGE,
+	NEW_SCENE,
+	REMOVE_SCENE,
 };
 
 // Payload definitions
@@ -32,6 +34,8 @@ struct FImagePayload
 
 struct FCircularQueueData
 {
+	// Scene ID of the client (only important for inbound data)
+	uint8 SceneID;
 	// ID of the client tied to this data
 	TArray<uint8> ID;
 	// Whether that client uses empty delimiters
@@ -42,5 +46,5 @@ struct FCircularQueueData
 	TVariant<FUpdatePayload, FImagePayload> payload;
 
 	// Define default states (payload defaults to monostate)
-	FCircularQueueData() : bUseDelim(false), query(CommandType::ERROR) {}
+	FCircularQueueData() : SceneID(0), bUseDelim(false), query(CommandType::ERROR) {}
 };
