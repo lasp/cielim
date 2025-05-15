@@ -70,9 +70,10 @@ if __name__ == "__main__":
         idx = idx + 1
 
     if not args.hide_image:
-        cv2.namedWindow("window_name", cv2.WINDOW_NORMAL)
-        cv2.imshow("window_name", image)
-        cv2.resizeWindow("window_name", 640, 480)
+        WindowName = f"Image_Client_{connector.identity}"
+        cv2.namedWindow(WindowName, cv2.WINDOW_NORMAL)
+        cv2.imshow(WindowName, image)
+        cv2.resizeWindow(WindowName, 640, 480)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
