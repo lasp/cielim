@@ -2,76 +2,58 @@
 
 #pragma once
 
-#include <memory>
-
 #include "CoreMinimal.h"
-#include "Math/Vector.h"
-#include "GameFramework/Actor.h"
 #include "Engine/DirectionalLight.h"
-#include "ZmqConnection/ZmqMultiThreadActor.h"
+#include "Math/Vector.h"
 
-#include "FCielimMessage.h"
-#include "CelestialBody.h"
-#include "Spacecraft.h"
 #include "CaptureManager.h"
-#include "ProtobufFileReader.h"
+#include "CelestialBody.h"
+#include "FCielimMessage.h"
+#include "Spacecraft.h"
+#include "ZmqConnection/QueueBridge.h"
 
 #include "SimulationDataSourceActor.generated.h"
-
-enum class DataSourceType {Network, File};
 
 UCLASS(Blueprintable)
 class CIELIM_API ASimulationDataSourceActor : public AActor
 {
-    GENERATED_BODY()
-
-public:
-    // Sets default values for this actor's properties
-    ASimulationDataSourceActor();
+	GENERATED_BODY()
 
 protected:
-    // Called when the game starts or when spawned
-    virtual void BeginPlay() override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void BeginPlay() override;
 
 public:
-    // Called every frame
-    virtual void Tick(float DeltaTime) override;
+	void SpawnCelestialBodies();
+	void SpawnSpacecraft();
+	void SpawnCaptureManager();
 
-    void SpawnCelestialBodies();
-    void SpawnSpacecraft();
-    void SpawnCaptureManager();
+	void UpdateCelestialBodies() const;
+	void UpdateSpacecraft() const;
 
-    void UpdateCelestialBodies() const;
-    void UpdateSpacecraft() const;
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<ACelestialBody> BpSun;
 
-    UPROPERTY(EditDefaultsOnly)
-    TSubclassOf<ACelestialBody> BpSun;
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<ASpacecraft> BpSpacecraft;
 
-    UPROPERTY(EditDefaultsOnly)
-    TSubclassOf<ASpacecraft> BpSpacecraft;
-
-    UFUNCTION(BlueprintCallable)
-    void DebugCielimMessage() const;
+	UFUNCTION(BlueprintCallable)
+	void DebugCielimMessage() const;
 
 	void PointSunLight();
 
-private:
-	void NetworkTick(float DeltaTime);
-	void FileReaderTick(float DeltaTime);
+	void ParseCommand(const FCircularQueueData &CommandData, const UQueueBridge *NetworkDataSource);
+	void UpdateScene() const;
 
-	AZmqMultiThreadActor* NetworkSimulationDataSource;
-	std::unique_ptr<ProtobufFileReader> SimulationDataSource;
-    FCielimMessage CielimMessage;
-    TArray<ACelestialBody*> CelestialBodyArray;
-	ACelestialBody* SunCelestialBody;
-	ADirectionalLight* SunLight;
-    ASpacecraft* Spacecraft=nullptr;
-    ACaptureManager* CaptureManager=nullptr;
-    bool bHasCameras=false;
-    bool IsCelestialBodiesSpawned=false;
-    bool IsSpacecraftSpawned=false;
-    bool IsSceneEstablished=false;
-	bool ShouldUpdateScene=false;
-	DataSourceType DataSource=DataSourceType::File;
+private:
+	FCielimMessage CielimMessage;
+	TArray<ACelestialBody *> CelestialBodyArray;
+	ACelestialBody *SunCelestialBody;
+	ADirectionalLight *SunLight;
+	ASpacecraft *Spacecraft = nullptr;
+	ACaptureManager *CaptureManager = nullptr;
+	bool bHasCameras = false;
+	bool IsCelestialBodiesSpawned = false;
+	bool IsSpacecraftSpawned = false;
+	bool IsSceneEstablished = false;
+	bool ShouldUpdateScene = false;
 };
