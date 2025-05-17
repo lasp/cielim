@@ -45,7 +45,7 @@ def test_request_image_and_center_of_brightness(cielim_connection, scene_setup):
     height, width, channels = image.shape
     np.testing.assert_allclose([4000, 3000], [width, height], rtol=0, atol=0, err_msg="Returned image not correct")
 
-    true_center_of_brightness = [1499.5, 1999.5]
+    true_center_of_brightness = [1999.5, 1499.5]
     np.testing.assert_allclose(
         center_of_brightness,
         true_center_of_brightness,
@@ -63,7 +63,7 @@ def test_request_only_center_of_brightness(cielim_connection, scene_setup):
 
     assert image == None
 
-    true_center_of_brightness = [1499.5, 1999.5]
+    true_center_of_brightness = [1999.5, 1499.5]
     np.testing.assert_allclose(
         center_of_brightness,
         true_center_of_brightness,
