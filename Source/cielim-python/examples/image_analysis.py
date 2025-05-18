@@ -30,7 +30,7 @@ def analysis_function(img: np.ndarray, top_left: list, size: list) -> float:
         return np.nan
 
 
-def data_analysis():
+def data_analysis(show_plots = True):
     """Example script to read and process images from a directory"""
     folder = "saved_monte_carlo_images"
 
@@ -70,8 +70,10 @@ def data_analysis():
         plt.xlabel(r"Time (min)")
         plt.ylabel(r"Coverage (%)")
         plt.legend()
-        plt.show()
+        plt.savefig("./coverage.png")
+        if show_plots:
+            plt.show()
 
 
 if __name__ == "__main__":
-    data_analysis()
+    data_analysis(True)
