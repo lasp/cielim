@@ -2,7 +2,9 @@ import os
 import glob
 from context import cielimMessage_pb2
 import delimited_protobuf
+
 current_file_path = os.path.dirname(__file__)
+
 
 def print_protobuffer_content():
     file_dir = os.path.join(current_file_path, "../../../Content/FlybyData/bin/")
@@ -18,6 +20,7 @@ def print_protobuffer_content():
         print(message, file=out_file)
 
     return output_name, message
+
 
 if __name__ == "__main__":
     print_protobuffer_content()

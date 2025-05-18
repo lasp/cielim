@@ -2,6 +2,7 @@ from context import driver, launcher
 import os
 import cv2
 import argparse
+
 current_file_path = os.path.dirname(__file__)
 
 if __name__ == "__main__":
@@ -27,7 +28,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-s",
         "--hide_image",
-        action='store_true',
+        action="store_true",
         help="Hide image",
     )
 

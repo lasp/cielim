@@ -13,6 +13,7 @@ import cv2
 
 current_file_path = os.path.dirname(__file__)
 
+
 def get_spice_data(filename):
     with open(filename, "r") as file:
         data = json.load(file)
