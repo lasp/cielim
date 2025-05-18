@@ -111,14 +111,15 @@ uint32 FRouter::Run()
 		// Check for incoming messages
 		if (PollItems[1].revents & ZMQ_POLLIN)
 		{
-			if (zmq::multipart_t ReceiveMessage; ReceiveMessage.recv(RouterSocket))
+			zmq::multipart_t ReceiveMessage;
+			while (ReceiveMessage.recv(RouterSocket))
 			{
 				// Incoming messages should be of the form: ID | (optional) delimiter | data
 
 				if (ReceiveMessage.size() < 2)
 				{
 					UE_LOG(LogCielim, Warning, TEXT("Router : Message received was malformed; discarding."));
-					continue;
+					break;
 				}
 
 				zmq::message_t IDByteBlob = ReceiveMessage.pop();
@@ -127,7 +128,7 @@ uint32 FRouter::Run()
 				if (IDByteBlob.size() <= 0 || IDByteBlob.size() > 256)
 				{
 					UE_LOG(LogCielim, Warning, TEXT("Router : ID of client was malformed; discarding."));
-					continue;
+					break;
 				}
 
 				TArray<uint8> ID;
@@ -144,6 +145,13 @@ uint32 FRouter::Run()
 				{
 					bUseDelim = true;
 					ReceiveMessage.pop();
+				}
+
+				// Check there is actual data to process
+				if (ReceiveMessage.empty())
+				{
+					UE_LOG(LogCielim, Warning, TEXT("Router : Message received contained empty data; discarding."));
+					break;
 				}
 
 				FClientInfo *Client = Clients.Find(IDStr);
@@ -164,6 +172,8 @@ uint32 FRouter::Run()
 						NewSceneSignal.SceneID = NextSceneID;
 						NewSceneSignal.query = CommandType::NEW_SCENE;
 
+						UE_LOG(LogCielim, Display, TEXT("Router : Waiting to enqueue NEW_SCENE..."));
+
 						bool EnqueueResult = false;
 						while (!EnqueueResult)
 						{
@@ -175,10 +185,10 @@ uint32 FRouter::Run()
 					}
 					else
 					{
-						UE_LOG(LogCielim, Display,
+						UE_LOG(LogCielim, Warning,
 							   TEXT("Router : Client %hs could not be added because there are too many connections."),
 							   TCHAR_TO_UTF8(*IDStr));
-						continue;
+						break;
 					}
 				}
 
@@ -200,6 +210,9 @@ uint32 FRouter::Run()
 				ReturnData.bUseDelim = bUseDelim;
 
 				ParseMessageAndSend(ReceiveMessage, ReturnMessage, ReturnData);
+
+				// We only want to handle one message at a time
+				break;
 			}
 		}
 		// Check for outgoing messages
@@ -250,6 +263,8 @@ uint32 FRouter::Run()
 
 					RemoveSceneSignal.SceneID = ClientIterator.Value().SceneID;
 					RemoveSceneSignal.query = CommandType::REMOVE_SCENE;
+
+					UE_LOG(LogCielim, Display, TEXT("Router : Waiting to enqueue REMOVE_SCENE..."));
 
 					bool EnqueueResult = false;
 					while (!EnqueueResult)
@@ -353,7 +368,7 @@ void FRouter::ParseMessageAndSend(zmq::multipart_t &Message, zmq::multipart_t &R
 	{
 		ReturnData.query = CommandType::INIT_SCENE;
 
-		UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue INIT_SCENE..."));
+		UE_LOG(LogCielim, Display, TEXT("Router : Waiting to enqueue INIT_SCENE..."));
 
 		bool EnqueueResult = false;
 		while (!EnqueueResult)
@@ -361,23 +376,38 @@ void FRouter::ParseMessageAndSend(zmq::multipart_t &Message, zmq::multipart_t &R
 			EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(ReturnData);
 		}
 
-		UE_LOG(LogCielim, Display, TEXT("Command enqueued."));
+		UE_LOG(LogCielim, Display, TEXT("Router : Command enqueued."));
 
 		ReturnMessage.addstr("OK");
 		ReturnMessage.send(RouterSocket);
 	}
 	else if (Command == "SIM_UPDATE")
 	{
+		if (Message.empty())
+		{
+			UE_LOG(LogCielim, Warning, TEXT("Router : SIM_UPDATE command came with empty data."));
+
+			ReturnMessage.addstr("ERROR");
+			ReturnMessage.send(RouterSocket);
+			return;
+		}
 		ReturnData.query = CommandType::SIM_UPDATE;
 
 		ReturnData.payload.Emplace<FUpdatePayload>(FUpdatePayload());
 		ReturnData.payload.Get<FUpdatePayload>().message = FCielimMessage();
 
 		// @TODO: fix this message parsing. It's a mad hack!
-		ReturnData.payload.Get<FUpdatePayload>().message.GetMessageModifiable().ParseFromArray(
-			Message[0].data(), Message[0].size() * sizeof(char));
+		if (!ReturnData.payload.Get<FUpdatePayload>().message.GetMessageModifiable().ParseFromArray(
+				Message[0].data(), Message[0].size() * sizeof(char)))
+		{
+			UE_LOG(LogCielim, Warning, TEXT("Router : Protobuf data failed to be parsed for SIM_UPDATE."));
 
-		UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue SIM_UPDATE..."));
+			ReturnMessage.addstr("ERROR");
+			ReturnMessage.send(RouterSocket);
+			return;
+		}
+
+		UE_LOG(LogCielim, Display, TEXT("Router : Waiting to enqueue SIM_UPDATE..."));
 
 		bool EnqueueResult = false;
 		while (!EnqueueResult)
@@ -385,7 +415,7 @@ void FRouter::ParseMessageAndSend(zmq::multipart_t &Message, zmq::multipart_t &R
 			EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(ReturnData);
 		}
 
-		UE_LOG(LogCielim, Display, TEXT("Command enqueued."));
+		UE_LOG(LogCielim, Display, TEXT("Router : Command enqueued."));
 
 		ReturnMessage.addstr("OK");
 		ReturnMessage.send(RouterSocket);
@@ -397,12 +427,12 @@ void FRouter::ParseMessageAndSend(zmq::multipart_t &Message, zmq::multipart_t &R
 		uint32_t CameraID = -1;
 		CameraID = std::stoi(Message.popstr());
 
-		UE_LOG(LogCielim, Display, TEXT("Camera ID: %d"), CameraID);
+		UE_LOG(LogCielim, Display, TEXT("Router : Camera ID: %d"), CameraID);
 
 		ReturnData.payload.Emplace<FImagePayload>(FImagePayload());
 		ReturnData.payload.Get<FImagePayload>().shouldReturnImage = static_cast<bool>(std::stoi(Message.popstr()));
 
-		UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue REQUEST_IMAGE"));
+		UE_LOG(LogCielim, Display, TEXT("Router : Waiting to enqueue REQUEST_IMAGE..."));
 
 		bool EnqueueResult = false;
 		while (!EnqueueResult)
@@ -410,10 +440,12 @@ void FRouter::ParseMessageAndSend(zmq::multipart_t &Message, zmq::multipart_t &R
 			EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(ReturnData);
 		}
 
-		UE_LOG(LogCielim, Display, TEXT("Command enqueued."));
+		UE_LOG(LogCielim, Display, TEXT("Router : Command enqueued."));
 	}
 	else
 	{
+		UE_LOG(LogCielim, Warning, TEXT("Router : Command received is unknown."));
+
 		ReturnMessage.addstr("ERROR");
 		ReturnMessage.send(RouterSocket);
 	}
@@ -427,7 +459,7 @@ void FRouter::ParseCircularQueueDataAndSend(FCircularQueueData &Data, zmq::multi
 
 	if (Command == CommandType::REQUEST_IMAGE)
 	{
-		UE_LOG(LogCielim, Display, TEXT("Response to REQUEST_IMAGE received"));
+		UE_LOG(LogCielim, Display, TEXT("Router : Response to REQUEST_IMAGE received."));
 
 		TArray64<uint8> ResponseImage;
 
@@ -437,7 +469,7 @@ void FRouter::ParseCircularQueueDataAndSend(FCircularQueueData &Data, zmq::multi
 		{
 			ResponseImage = TempPayload->image_data;
 
-			UE_LOG(LogCielim, Display, TEXT("Image data was not NULL"));
+			UE_LOG(LogCielim, Display, TEXT("Router : Image data was not NULL."));
 		}
 
 		const auto Bytes = sizeof(ResponseImage[0]) * ResponseImage.Num();
