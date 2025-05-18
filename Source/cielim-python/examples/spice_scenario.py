@@ -11,23 +11,26 @@ import json
 import os
 import cv2
 
+current_file_path = os.path.dirname(__file__)
 
 def get_spice_data(filename):
     with open(filename, "r") as file:
         data = json.load(file)
 
     directory = filename.rsplit(".", 1)[0]
+    absolute_path = os.path.dirname(directory)
+    local_path = directory.split("/")[-1]
     meta_kernel = filename.rsplit("/")[-1].rsplit(".")[0]
     if not os.path.exists(directory):
         print("Retrieving spice data")
         os.makedirs(directory)
         with open(directory + "/" + meta_kernel + ".txt", "w") as file:
-            file.write("\\begindata\nPATH_VALUES = ( '" + directory + "' )\n")
+            file.write("\\begindata\nPATH_VALUES = ( '" + absolute_path + "' )\n")
             file.write("PATH_SYMBOLS = ( 'KERNELS' )\n")
             file.write("KERNELS_TO_LOAD=( \n\n")
             for key, value in data.items():
-                urllib.request.urlretrieve(value, directory + "/" + key)
-                file.write("'$KERNELS/" + key + "', \n")
+                urllib.request.urlretrieve(value, absolute_path + "/" + local_path + "/" + key)
+                file.write("'$KERNELS/" + local_path + "/" + key + "', \n")
             file.write(") \n\n\\begintext \n")
 
     return directory + "/" + meta_kernel + ".txt"
@@ -69,7 +72,7 @@ def spice_scenario():
     scene_frame = scene.Scene()
     scene_frame.set_existing_message(scene_setup())
 
-    meta_data = get_spice_data("../support-data/cassini-spice.json")
+    meta_data = get_spice_data(os.path.dirname(current_file_path) + "/support-data/cassini-spice.json")
     spice.furnsh(meta_data)
     instrument_id = "CASSINI_UVIS_FUV"
     # Define time range
@@ -79,7 +82,7 @@ def spice_scenario():
     et_range = np.arange(start_et, end_et, time_step)
 
     # prep file for saving
-    directory_path = "./cassini-images"
+    directory_path = current_file_path + "/cassini-images"
     os.makedirs(directory_path, exist_ok=True)
 
     connector = Connector()

@@ -2,6 +2,7 @@ from context import driver, launcher
 import os
 import cv2
 import argparse
+current_file_path = os.path.dirname(__file__)
 
 if __name__ == "__main__":
     connector = driver.Connector()
@@ -40,7 +41,7 @@ if __name__ == "__main__":
         launch = launcher.Launcher()
         connector.connect(launch.launch())
 
-    file_dir = os.path.dirname(__file__) + "/../../../Content/FlybyData/bin/"
+    file_dir = os.path.dirname(os.path.dirname(os.path.dirname(current_file_path))) + "/Content/FlybyData/bin/"
     if args.filename is not None:
         file = file_dir + args.filename
     else:
@@ -63,7 +64,7 @@ if __name__ == "__main__":
         print(connector.send_frame(frame))
         [image, center_of_brightness] = connector.request_image_for_camera_id(1)
 
-        cv2.imwrite("received_image_" + str(idx) + ".png", image)
+        cv2.imwrite(current_file_path + "/received_image_" + str(idx) + ".png", image)
 
         idx = idx + 1
 

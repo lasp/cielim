@@ -12,6 +12,9 @@ from variable_map import *
 from context import cielimMessage_pb2
 from context import scene
 
+current_file_path = os.path.dirname(__file__)
+
+
 """ Populate abstract variables of the VariableMap class in order to instruct it on how to read Basilisk MC data """
 
 
@@ -121,12 +124,13 @@ def saved_monte_carlo_scenario():
     scene_frame.set_existing_message(scene_setup())
 
     reader = BasiliskMCReader()
-    reader.set_data_directory("../support-data/monte-carlo-sample/")
+    data_path = os.path.dirname(current_file_path) + "/support-data/monte-carlo-sample/"
+    reader.set_data_directory(data_path)
     reader.add_variable_mapping("scStateOutMsg.sigma_BN.data", "attitude")
     reader.add_variable_mapping("sNavTransMsg.r_BN_N.data", "position")
     reader.read_simulation_data()
     # prep file for saving
-    directory_path = "./saved_monte_carlo_images"
+    directory_path = current_file_path + "/saved_monte_carlo_images"
     os.makedirs(directory_path, exist_ok=True)
 
     connector = Connector()
