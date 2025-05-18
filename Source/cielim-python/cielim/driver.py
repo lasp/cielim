@@ -55,7 +55,7 @@ class Connector:
         return self.safe_recv_multipart()[0].decode("utf-8")
 
     def send_frame(self, sim_frame: cielimMessage.CielimMessage):
-        _ = self.request_socket.send_multipart([b"SIM_UPDATE", b"", b"", sim_frame.SerializePartialToString()])
+        _ = self.request_socket.send_multipart([b"SIM_UPDATE", sim_frame.SerializePartialToString()])
         return self.safe_recv_multipart()[0].decode("utf-8")
 
     def request_image_for_camera_id(self, camera_id: int, should_return_image: bool = True):

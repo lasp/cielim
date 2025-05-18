@@ -375,7 +375,7 @@ void FRouter::ParseMessageAndSend(zmq::multipart_t &Message, zmq::multipart_t &R
 
 		// @TODO: fix this message parsing. It's a mad hack!
 		ReturnData.payload.Get<FUpdatePayload>().message.GetMessageModifiable().ParseFromArray(
-			Message[2].data(), Message[2].size() * sizeof(char));
+			Message[0].data(), Message[0].size() * sizeof(char));
 
 		UE_LOG(LogCielim, Display, TEXT("Waiting to enqueue SIM_UPDATE..."));
 
