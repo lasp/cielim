@@ -17,6 +17,18 @@ if __name__ == "__main__":
         default=None,
         help="Use existing Cielim process via specified host; default is localhost",
     )
+    parser.add_argument(
+        "-f",
+        "--filename",
+        default=None,
+        help="File to send to Cielim",
+    )
+    parser.add_argument(
+        "-s",
+        "--hide_image",
+        action='store_true',
+        help="Hide image",
+    )
 
     args = parser.parse_args()
 
@@ -29,9 +41,13 @@ if __name__ == "__main__":
         connector.connect(launch.launch())
 
     file_dir = os.path.dirname(__file__) + "/../../../Content/FlybyData/bin/"
-    file_name = input("What is the bin file to test (name only): ")
+    if args.filename is not None:
+        file = file_dir + args.filename
+    else:
+        file_name = input("What is the bin file to test (name only): ")
+        file = file_dir + file_name
 
-    file_handler = driver.MessageFileHandler(file_dir + file_name)
+    file_handler = driver.MessageFileHandler(file)
 
     idx = 0
     image = None
@@ -51,11 +67,12 @@ if __name__ == "__main__":
 
         idx = idx + 1
 
-    cv2.namedWindow("window_name", cv2.WINDOW_NORMAL)
-    cv2.imshow("window_name", image)
-    cv2.resizeWindow("window_name", 640, 480)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    if not args.hide_image:
+        cv2.namedWindow("window_name", cv2.WINDOW_NORMAL)
+        cv2.imshow("window_name", image)
+        cv2.resizeWindow("window_name", 640, 480)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
     connector.disconnect()
 
