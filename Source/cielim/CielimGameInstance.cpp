@@ -51,7 +51,10 @@ void UCielimGameInstance::Shutdown()
 	this->SceneManager = nullptr;
 
 	if (this->Router)
+	{
+		this->Router->Shutdown();
 		delete this->Router;
+	}
 
 	google::protobuf::ShutdownProtobufLibrary();
 

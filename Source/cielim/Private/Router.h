@@ -21,7 +21,7 @@ class CIELIM_API FRouter : public FRunnable
 {
 public:
 	FRouter(zmq::context_t &ContextPtr, const std::string &Address, CielimCircularQueue &CircularQueue);
-	~FRouter();
+	void Shutdown();
 
 	// Returns whether the thread should start (always true)
 	virtual bool Init() override;

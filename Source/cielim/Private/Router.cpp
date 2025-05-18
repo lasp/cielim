@@ -27,12 +27,12 @@ FRouter::FRouter(zmq::context_t &ContextPtr, const std::string &Address, CielimC
 	this->Thread = FRunnableThread::Create(this, TEXT("CielimRouterThread"));
 }
 
-FRouter::~FRouter()
+void FRouter::Shutdown()
 {
 	if (!this->Thread)
 		return;
 
-	this->Thread->Kill();
+	this->Stop();
 
 	this->Thread->WaitForCompletion();
 
