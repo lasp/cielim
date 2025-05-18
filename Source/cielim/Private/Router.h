@@ -17,7 +17,7 @@
 
 #include "ZmqConnection/CielimCircularQueue.h"
 
-class CIELIM_API FRouter : public FRunnable
+class CIELIM_API FRouter final : public FRunnable
 {
 public:
 	FRouter(zmq::context_t &ContextPtr, const std::string &Address, CielimCircularQueue &CircularQueue);
