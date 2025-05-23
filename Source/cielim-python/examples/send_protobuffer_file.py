@@ -3,6 +3,8 @@ import os
 import cv2
 import argparse
 
+current_file_path = os.path.dirname(__file__)
+
 if __name__ == "__main__":
     connector = driver.Connector()
 
@@ -17,6 +19,18 @@ if __name__ == "__main__":
         default=None,
         help="Use existing Cielim process via specified host; default is localhost",
     )
+    parser.add_argument(
+        "-f",
+        "--filename",
+        default=None,
+        help="File to send to Cielim",
+    )
+    parser.add_argument(
+        "-s",
+        "--hide_image",
+        action="store_true",
+        help="Hide image",
+    )
 
     args = parser.parse_args()
 
@@ -28,10 +42,14 @@ if __name__ == "__main__":
         launch = launcher.Launcher()
         connector.connect(launch.launch())
 
-    file_dir = os.path.dirname(__file__) + "/../../../Content/FlybyData/bin/"
-    file_name = input("What is the bin file to test (name only): ")
+    file_dir = os.path.dirname(os.path.dirname(os.path.dirname(current_file_path))) + "/Content/FlybyData/bin/"
+    if args.filename is not None:
+        file = file_dir + args.filename
+    else:
+        file_name = input("What is the bin file to test (name only): ")
+        file = file_dir + file_name
 
-    file_handler = driver.MessageFileHandler(file_dir + file_name)
+    file_handler = driver.MessageFileHandler(file)
 
     idx = 0
     image = None
@@ -47,15 +65,16 @@ if __name__ == "__main__":
         print(connector.send_frame(frame))
         [image, center_of_brightness] = connector.request_image_for_camera_id(1)
 
-        cv2.imwrite("received_image_" + str(idx) + ".png", image)
+        cv2.imwrite(current_file_path + "/received_image_" + str(idx) + ".png", image)
 
         idx = idx + 1
 
-    cv2.namedWindow("window_name", cv2.WINDOW_NORMAL)
-    cv2.imshow("window_name", image)
-    cv2.resizeWindow("window_name", 640, 480)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    if not args.hide_image:
+        cv2.namedWindow("window_name", cv2.WINDOW_NORMAL)
+        cv2.imshow("window_name", image)
+        cv2.resizeWindow("window_name", 640, 480)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
     connector.disconnect()
 

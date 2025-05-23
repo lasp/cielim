@@ -3,6 +3,8 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 
+current_file_path = os.path.dirname(__file__)
+
 
 def list_files_alphabetically(directory: str) -> list:
     """method to read files from directory assuming an alphabetical/chronological naming convention"""
@@ -30,9 +32,9 @@ def analysis_function(img: np.ndarray, top_left: list, size: list) -> float:
         return np.nan
 
 
-def data_analysis():
+def data_analysis(show_plots=True):
     """Example script to read and process images from a directory"""
-    folder = "saved_monte_carlo_images"
+    folder = current_file_path + "/saved_monte_carlo_images"
 
     # Define some image parameters for the analysis
     image_resolution = [2000, 1500]
@@ -70,8 +72,10 @@ def data_analysis():
         plt.xlabel(r"Time (min)")
         plt.ylabel(r"Coverage (%)")
         plt.legend()
-        plt.show()
+        plt.savefig(current_file_path + "/coverage.png")
+        if show_plots:
+            plt.show()
 
 
 if __name__ == "__main__":
-    data_analysis()
+    data_analysis(True)
