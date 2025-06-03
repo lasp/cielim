@@ -24,7 +24,9 @@ def test_run_spice_scenario():
 
 
 def test_run_print_protobuffer_content():
-    print_protobuffer_content.print_protobuffer_content()
+    test_dir = os.path.dirname(current_file_path) + "/support-data/protobufs/"
+    file_name = "bennu_image.bin"
+    print_protobuffer_content.print_protobuffer_content(test_dir, file_name)
     assert os.path.exists(current_file_path + "/bennu_image_decoded.txt")
     os.remove(current_file_path + "/bennu_image_decoded.txt")
 

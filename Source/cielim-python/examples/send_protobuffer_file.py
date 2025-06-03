@@ -43,11 +43,20 @@ if __name__ == "__main__":
         connector.connect(launch.launch())
 
     file_dir = os.path.dirname(os.path.dirname(os.path.dirname(current_file_path))) + "/Content/FlybyData/bin/"
+    test_dir = os.path.dirname(current_file_path) + "/support-data/protobufs/"
+
     if args.filename is not None:
-        file = file_dir + args.filename
+        if os.path.exists(file_dir + args.filename):
+            file = file_dir + args.filename
+        else:
+            file = test_dir + args.filename
     else:
         file_name = input("What is the bin file to test (name only): ")
-        file = file_dir + file_name
+
+        if os.path.exists(file_dir + file_name):
+            file = file_dir + file_name
+        else:
+            file = test_dir + file_name
 
     file_handler = driver.MessageFileHandler(file)
 
