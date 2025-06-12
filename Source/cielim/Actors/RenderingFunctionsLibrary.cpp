@@ -7,7 +7,7 @@
 #include "OpenCV/opencv/modules/imgcodecs/include/opencv2/imgcodecs.hpp"
 #include "OpenCV/PostOpenCVHeaders.h"
 
-#include "CielimLoggingMacros.h"
+#include "../Utilities/Logging/CielimLoggingMacros.h"
 
 static std::default_random_engine generator;
 

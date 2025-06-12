@@ -1,5 +1,5 @@
 #include "CelestialBodyMeshModel.h"
-#include "KinematicsUtilities.h"
+#include "../Utilities/Math/KinematicsUtilities.h"
 
 CelestialBodyMeshModel CelestialBodyMeshModel::FromProtobuf(const cielimMessage::MeshModel& Model)
 {

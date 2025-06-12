@@ -15,10 +15,10 @@
 #include "Math/UnrealMathUtility.h"
 
 #include "../CielimGameInstance.h"
-#include "AstronomicalConstants.h"
-#include "CelestialBodyMeshModel.h"
-#include "CielimLoggingMacros.h"
-#include "KinematicsUtilities.h"
+#include "../Utilities/Constants/AstronomicalConstants.h"
+#include "../Actors/CelestialBodyMeshModel.h"
+#include "../Utilities/Logging/CielimLoggingMacros.h"
+#include "../Utilities/Math/KinematicsUtilities.h"
 
 #define m2cm 100.0
 #define km2m 1000.0

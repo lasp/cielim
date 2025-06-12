@@ -2,7 +2,7 @@
 
 #include "Containers/CircularQueue.h"
 
-#include "UCircularQueueData.h"
+#include "CircularQueueData.h"
 
 class CielimCircularQueue
 {

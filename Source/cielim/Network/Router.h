@@ -15,7 +15,7 @@
 #include "zmq.hpp"
 #include "zmq_addon.hpp"
 
-#include "ZmqConnection/CielimCircularQueue.h"
+#include "CielimCircularQueue.h"
 
 enum class EClientState
 {

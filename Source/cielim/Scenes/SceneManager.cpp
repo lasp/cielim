@@ -8,7 +8,7 @@
 
 #include "SceneManager.h"
 
-#include "CielimLoggingMacros.h"
+#include "../Utilities/Logging/CielimLoggingMacros.h"
 
 void USceneManager::Init(zmq::context_t &ContextPtr, CielimCircularQueue &CircularQueue)
 {

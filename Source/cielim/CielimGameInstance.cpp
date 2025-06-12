@@ -8,7 +8,7 @@
 
 #include "CielimGameInstance.h"
 
-#include "CielimLoggingMacros.h"
+#include "Utilities/Logging/CielimLoggingMacros.h"
 
 void UCielimGameInstance::Init()
 {

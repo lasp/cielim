@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 
-#include "cielimMessage.pb.h"
+#include "../Protobuf/cielimMessage.pb.h"
 
 class CelestialBodyMeshModel
 {

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <optional>
-
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "OpenCV/PreOpenCVHeaders.h"

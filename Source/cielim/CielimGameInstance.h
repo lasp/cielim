@@ -14,8 +14,8 @@
 #include "Engine/GameInstance.h"
 #include "zmq.hpp"
 
-#include "Router.h"
-#include "SceneManager.h"
+#include "Network/Router.h"
+#include "Scenes/SceneManager.h"
 
 #include "CielimGameInstance.generated.h"
 
