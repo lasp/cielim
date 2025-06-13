@@ -1,54 +1,58 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+//=================== Copyright (c) 2025 Laboratory for Atmospheric and Space Physics ===================//
+//
+// Purpose: Defines the ASpacecraft class. The spacecraft is an entity owned by a SceneData instance
+//          and itself holds the SceneCaptureComponent2D used to capture the scene from the point of
+//          view of the spacecraft.
+//
+// License: MIT License. See LICENSE file.
+//
+//=======================================================================================================//
 
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
-#include "Components/SceneCaptureComponent2D.h"
 
 #include "Spacecraft.generated.h"
 
 UCLASS()
 class CIELIM_API ASpacecraft : public AActor
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
 
 public:
-    // Sets default values for this actor's properties
-    ASpacecraft();
+	// Sets default values for this actor's properties
+	ASpacecraft();
 
 protected:
-    // Called when the game starts or when spawned
-    virtual void BeginPlay() override;
+	// Called when the game starts or when spawned
+	virtual void BeginPlay() override;
 
 public:
-    // Called every frame
-    virtual void Tick(const float DeltaTime) override;
+	// Called every frame
+	virtual void Tick(const float DeltaTime) override;
 
-    UPROPERTY(EditAnywhere)
-    USceneComponent* Root;
+	UPROPERTY(VisibleAnywhere)
+	UStaticMeshComponent *Body;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spacecraft Components")
-    UStaticMeshComponent* Body;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	USceneCaptureComponent2D *SceneCaptureComponent2D;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spacecraft Components")
-    USceneCaptureComponent2D* SceneCaptureComponent2D;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	FString Name;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-    FString Name;
+	void SetFOV(double X, double Y) const;
 
-    UFUNCTION(BlueprintImplementableEvent)
-    void SetFOV(double X, double Y);
+	void SetResolution(const int ResolutionWidth, const int ResolutionHeight) const;
 
-    UFUNCTION(BlueprintImplementableEvent)
-    void SetResolution(const int ResolutionWidth, const int ResolutionHeight);
+	void SetCameraPosition(const FVector &Position) const;
 
-    UFUNCTION(BlueprintImplementableEvent)
-    void SetCameraPosition(const FVector& Position);
+	void UpdateCameraOrientation(const FRotator &Orientation) const;
 
-    UFUNCTION(BlueprintImplementableEvent)
-    void UpdateCameraOrientation(const FRotator& Orientation);
-
-    void Update(const FVector3d& NewPosition, const FRotator& NewRotation);
-
+	/**
+	 * @brief Update(NewPosition, NewRotation) Updates the spacecraft's position and rotation
+	 *
+	 * @param NewPosition The new position
+	 * @param NewRotation The new rotation
+	 */
+	void Update(const FVector3d &NewPosition, const FRotator &NewRotation);
 };

@@ -30,20 +30,25 @@ public:
 	void Connect(zmq::context_t &ContextPtr, CielimCircularQueue &CircularQueue);
 
 	/**
-	 * @brief Gets data off of the queue and returns it.
+	 * @brief Gets data off of inbound queue and returns it if exists.
 	 * @note Queue could be empty, hence the need for TOptional.
 	 */
 	TOptional<FCircularQueueData> GetQueueData() const;
 
-	// This is unused for now
-	void PutQueueData(std::string Data) const;
+	/**
+	 * @brief Puts data onto outbound queue.
+	 * @param Data FCircularQueueData instance containing data to be put on outbound queue.
+	 */
+	void PutQueueData(const FCircularQueueData &Data);
 
 	/**
-	 * @brief Puts image data in serialized byte form onto the queue.
-	 * @param PNGData Reference to serialized image data.
-	 * @param CenterOfBrightness CenterOfBrightness vector; could be null.
+	 * @brief Returns the number of items in the inbound queue.
 	 */
-	void PutImageQueueData(const TArray64<uint8> &PNGData, const TOptional<FVector2d> CenterOfBrightness) const;
+	uint32 NumQueueInbound() const;
+	/**
+	 * @brief Returns the number of items in the outbound queue.
+	 */
+	uint32 NumQueueOutbound() const;
 
 	// These functions are public but should never be called;
 	// They are only ever used internally by Unreal Engine.
@@ -54,8 +59,9 @@ public:
 	// Called before the class instance is destroyed.
 	virtual void BeginDestroy() override;
 
+private:
 	CielimCircularQueue *MultiThreadDataQueue;
 
-private:
 	zmq::context_t *Context;
+	zmq::socket_t QueueSocket;
 };

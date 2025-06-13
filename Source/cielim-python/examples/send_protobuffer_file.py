@@ -43,11 +43,20 @@ if __name__ == "__main__":
         connector.connect(launch.launch())
 
     file_dir = os.path.dirname(os.path.dirname(os.path.dirname(current_file_path))) + "/Content/FlybyData/bin/"
+    test_dir = os.path.dirname(current_file_path) + "/support-data/protobufs/"
+
     if args.filename is not None:
-        file = file_dir + args.filename
+        if os.path.exists(file_dir + args.filename):
+            file = file_dir + args.filename
+        else:
+            file = test_dir + args.filename
     else:
         file_name = input("What is the bin file to test (name only): ")
-        file = file_dir + file_name
+
+        if os.path.exists(file_dir + file_name):
+            file = file_dir + file_name
+        else:
+            file = test_dir + file_name
 
     file_handler = driver.MessageFileHandler(file)
 
@@ -70,9 +79,10 @@ if __name__ == "__main__":
         idx = idx + 1
 
     if not args.hide_image:
-        cv2.namedWindow("window_name", cv2.WINDOW_NORMAL)
-        cv2.imshow("window_name", image)
-        cv2.resizeWindow("window_name", 640, 480)
+        WindowName = f"Image_Client_{connector.identity}"
+        cv2.namedWindow(WindowName, cv2.WINDOW_NORMAL)
+        cv2.imshow(WindowName, image)
+        cv2.resizeWindow(WindowName, 640, 480)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 

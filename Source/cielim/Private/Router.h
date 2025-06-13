@@ -17,11 +17,31 @@
 
 #include "ZmqConnection/CielimCircularQueue.h"
 
-class CIELIM_API FRouter : public FRunnable
+enum class EClientState
+{
+	Active,
+	WaitingResponse
+};
+
+/* This struct contains information for each client and is the value in the Clients map.
+ * ID and bUseDelim are included here so that they can be accessed during heartbeat polling
+ * without incurring a slowdown with the minor cost of increased executable size.
+ */
+struct FClientInfo
+{
+	uint8 SceneID;
+	TArray<uint8> ID;
+	bool bUseDelim;
+	EClientState ClientState;
+	double LastSeen;
+	double DispatchTime;
+};
+
+class CIELIM_API FRouter final : public FRunnable
 {
 public:
 	FRouter(zmq::context_t &ContextPtr, const std::string &Address, CielimCircularQueue &CircularQueue);
-	~FRouter();
+	void Shutdown();
 
 	// Returns whether the thread should start (always true)
 	virtual bool Init() override;
@@ -36,15 +56,29 @@ public:
 	virtual void Exit() override;
 
 private:
-	// Parse incoming Message and push proper data to ReturnMessage
-	void ParseMessage(zmq::multipart_t &Message, zmq::multipart_t &ReturnMessage) const;
+	// Parse incoming Message and push proper data to ReturnMessage and send to client
+	// Will also enqueue command to inbound queue
+	// ReturnMessage and ReturnData are modified
+	void ParseMessageAndSend(zmq::multipart_t &Message, zmq::multipart_t &ReturnMessage,
+							 FCircularQueueData &ReturnData);
+
+	// Send outgoing Message to client
+	// ReturnMessage is modified
+	void ParseCircularQueueDataAndSend(FCircularQueueData &Data, zmq::multipart_t &ReturnMessage);
+
+	static FString IDConvertToString(const TArray<uint8> &ID);
 
 	CielimCircularQueue *MultiThreadQueue;
 
 	// Context shared from the game instance
 	zmq::context_t *Context;
 	zmq::socket_t RouterSocket;
+	zmq::socket_t RouterMonitor;
+	zmq::socket_t QueueSocket;
 
 	FRunnableThread *Thread;
 	FThreadSafeBool bContinueRun;
+
+	// Hash table mapping client connections
+	TMap<FString, FClientInfo> Clients;
 };

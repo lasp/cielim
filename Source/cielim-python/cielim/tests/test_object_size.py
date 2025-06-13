@@ -86,7 +86,7 @@ def test_asteroid_size(cielim_connection, scene_setup, test_name, shift):
     contours, _ = cv2.findContours(moved_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     largest_contour = max(contours, key=cv2.contourArea)
     (moved_x, moved_y), moved_radius = cv2.minEnclosingCircle(largest_contour)
-    asteroid_size_pixels = 2 * int(moved_radius)
+    asteroid_size_pixels = 2 * moved_radius
 
     mean_radius = scene.celestialBodies[0].model.meanRadius
     spacecraft_position = np.array(scene.spacecraft.position)

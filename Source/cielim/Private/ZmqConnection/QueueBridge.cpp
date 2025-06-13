@@ -8,6 +8,8 @@
 
 #include "ZmqConnection/QueueBridge.h"
 
+#include <zmq_addon.hpp>
+
 #include "CielimLoggingMacros.h"
 
 void UQueueBridge::PostInitProperties()
@@ -23,6 +25,9 @@ void UQueueBridge::Connect(zmq::context_t &ContextPtr, CielimCircularQueue &Circ
 {
 	this->Context = &ContextPtr;
 	this->MultiThreadDataQueue = &CircularQueue;
+
+	this->QueueSocket = zmq::socket_t(ContextPtr, zmq::socket_type::pair);
+	this->QueueSocket.connect("inproc://OutboundQueueReady");
 }
 
 TOptional<FCircularQueueData> UQueueBridge::GetQueueData() const
@@ -46,27 +51,16 @@ TOptional<FCircularQueueData> UQueueBridge::GetQueueData() const
 	return QueueData;
 }
 
-void UQueueBridge::PutQueueData(std::string Data) const
+void UQueueBridge::PutQueueData(const FCircularQueueData &Data)
 {
-	/* Unused for now, will just return ERROR if usage is attempted */
+	this->MultiThreadDataQueue->Responses.Enqueue(Data);
 
-	FCircularQueueData NextCommand;
+	zmq::message_t Signal(1);
+	this->QueueSocket.send(Signal, zmq::send_flags::none);
 
-	NextCommand.query = CommandType::ERROR;
-	this->MultiThreadDataQueue->Responses.Enqueue(NextCommand);
+	UE_LOG(LogCielim, Display, TEXT("Enqueue response: UQueueBridge"));
 }
 
-void UQueueBridge::PutImageQueueData(const TArray64<uint8> &PNGData,
-									 const TOptional<FVector2d> CenterOfBrightness) const
-{
-	FCircularQueueData NextCommand;
+uint32 UQueueBridge::NumQueueInbound() const { return MultiThreadDataQueue->Requests.Count(); }
 
-	NextCommand.query = CommandType::REQUEST_IMAGE;
-	NextCommand.payload.Emplace<FImagePayload>(FImagePayload());
-	NextCommand.payload.Get<FImagePayload>().image_data = PNGData;
-	NextCommand.payload.Get<FImagePayload>().centerOfBrightness = CenterOfBrightness;
-
-	UE_LOG(LogCielim, Display, TEXT("Enqueue image response: UQueueBridge"));
-
-	this->MultiThreadDataQueue->Responses.Enqueue(NextCommand);
-}
+uint32 UQueueBridge::NumQueueOutbound() const { return MultiThreadDataQueue->Responses.Count(); }
