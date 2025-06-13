@@ -3,6 +3,11 @@
 #include "ImageUtils.h"
 #include "Kismet/KismetRenderingLibrary.h"
 #include "Components/SceneCaptureComponent2D.h"
+// clang-format off
+#include "OpenCV/PreOpenCVHeaders.h"
+#include "opencv2/imgproc.hpp"
+#include "OpenCV/PostOpenCVHeaders.h"
+// clang-format on
 
 #include "RenderingFunctionsLibrary.h"
 

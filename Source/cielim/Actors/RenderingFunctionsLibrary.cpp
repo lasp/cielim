@@ -2,10 +2,12 @@
 
 #include <random>
 
+// clang-format off
 #include "OpenCV/PreOpenCVHeaders.h"
 #include "opencv2/imgproc.hpp"
 #include "OpenCV/opencv/modules/imgcodecs/include/opencv2/imgcodecs.hpp"
 #include "OpenCV/PostOpenCVHeaders.h"
+// clang-format on
 
 #include "../Utilities/Logging/CielimLoggingMacros.h"
 

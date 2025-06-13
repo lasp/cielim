@@ -3,9 +3,11 @@
 #include "CoreMinimal.h"
 #include "Math/Vector.h"
 #include "Engine/World.h"
+// clang-format off
 #include "OpenCV/PreOpenCVHeaders.h"
 #include "opencv2/core.hpp"
 #include "OpenCV/PostOpenCVHeaders.h"
+// clang-format on
 
 #include "RenderingFunctionsLibrary.generated.h"
 

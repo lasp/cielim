@@ -2,11 +2,11 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+// clang-format off
 #include "OpenCV/PreOpenCVHeaders.h"
 #include "opencv2/core.hpp"
-#include "opencv2/imgproc.hpp"
-#include "OpenCV/opencv/modules/imgcodecs/include/opencv2/imgcodecs.hpp"
 #include "OpenCV/PostOpenCVHeaders.h"
+// clang-format on
 
 #include "CaptureManager.generated.h"
 
