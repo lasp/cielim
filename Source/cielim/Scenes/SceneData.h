@@ -15,9 +15,9 @@
 
 #include "../Actors/CaptureManager.h"
 #include "../Actors/CelestialBody.h"
-#include "../Protobuf/CielimMessage.h"
 #include "../Actors/Spacecraft.h"
 #include "../Network/QueueBridge.h"
+#include "../Protobuf/CielimMessage.h"
 
 #include "SceneData.generated.h"
 

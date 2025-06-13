@@ -14,9 +14,9 @@
 #include "Engine/World.h"
 #include "Math/UnrealMathUtility.h"
 
+#include "../Actors/CelestialBodyMeshModel.h"
 #include "../CielimGameInstance.h"
 #include "../Utilities/Constants/AstronomicalConstants.h"
-#include "../Actors/CelestialBodyMeshModel.h"
 #include "../Utilities/Logging/CielimLoggingMacros.h"
 #include "../Utilities/Math/KinematicsUtilities.h"
 

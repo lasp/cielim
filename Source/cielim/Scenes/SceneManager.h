@@ -11,9 +11,9 @@
 
 #include "CoreMinimal.h"
 
-#include "SceneData.h"
 #include "../Network/CielimCircularQueue.h"
 #include "../Network/QueueBridge.h"
+#include "SceneData.h"
 
 #include "SceneManager.generated.h"
 
