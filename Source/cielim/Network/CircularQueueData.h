@@ -1,7 +1,7 @@
 #pragma once
 
+#include "../Protobuf/CielimMessage.h"
 #include "CoreMinimal.h"
-#include "FCielimMessage.h"
 
 // List of recognized commands
 enum class CommandType

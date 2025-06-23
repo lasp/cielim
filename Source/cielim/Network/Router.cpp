@@ -8,8 +8,8 @@
 
 #include "Router.h"
 
-#include "CielimLoggingMacros.h"
-#include "ZmqConnection/UCircularQueueData.h"
+#include "../Utilities/Logging/CielimLoggingMacros.h"
+#include "CircularQueueData.h"
 
 FRouter::FRouter(zmq::context_t &ContextPtr, const std::string &Address, CielimCircularQueue &CircularQueue)
 {

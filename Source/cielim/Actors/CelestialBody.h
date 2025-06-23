@@ -22,11 +22,11 @@ struct FBPVector3D
 UCLASS()
 class CIELIM_API ACelestialBody : public AActor
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
 
 public:
-    // Sets default values for this actor's properties
-    ACelestialBody();
+	// Sets default values for this actor's properties
+	ACelestialBody();
 
 	void SetMeshModel(CelestialBodyMeshModel Model);
 
@@ -38,26 +38,26 @@ public:
 
 	FVector3d GetPrincipleAxisDistortions() const;
 
-    // Don't know if there is a better way to do this
-    UFUNCTION(BlueprintImplementableEvent)
-    void SetRadiusEvent(const double& Radius);
+	// Don't know if there is a better way to do this
+	UFUNCTION(BlueprintImplementableEvent)
+	void SetRadiusEvent(const double &Radius);
 
-    // Called every frame
-    virtual void Tick(float DeltaTime) override;
+	// Called every frame
+	virtual void Tick(float DeltaTime) override;
 
-    void Update(const FVector3d& NewPosition, const FRotator& NewRotation);
+	void Update(const FVector3d &NewPosition, const FRotator &NewRotation);
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-    FString Name;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	FString Name;
 
 	void LoadMesh(CelestialBodyMeshModel Mesh);
 
 protected:
-    // Called when the game starts or when spawned
-    virtual void BeginPlay() override;
+	// Called when the game starts or when spawned
+	virtual void BeginPlay() override;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    class UStaticMeshComponent* BodyStaticMeshComponent;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	class UStaticMeshComponent *BodyStaticMeshComponent;
 
 private:
 	CelestialBodyMeshModel MeshModel;

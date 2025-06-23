@@ -1,39 +1,35 @@
 #include "CaptureManager.h"
 
+#include "Components/SceneCaptureComponent2D.h"
 #include "ImageUtils.h"
 #include "Kismet/KismetRenderingLibrary.h"
-#include "Components/SceneCaptureComponent2D.h"
+// clang-format off
+#include "OpenCV/PreOpenCVHeaders.h"
+#include "opencv2/imgproc.hpp"
+#include "OpenCV/PostOpenCVHeaders.h"
+// clang-format on
 
 #include "RenderingFunctionsLibrary.h"
 
 // Called when the game starts or when spawned
-void ACaptureManager::BeginPlay()
-{
-	Super::BeginPlay();
-}
+void ACaptureManager::BeginPlay() { Super::BeginPlay(); }
 
 // Called every frame
-void ACaptureManager::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-}
+void ACaptureManager::Tick(float DeltaTime) { Super::Tick(DeltaTime); }
 
-void ACaptureManager::SetupRenderTarget(UTextureRenderTarget2D* RenderTarget)
+void ACaptureManager::SetupRenderTarget(UTextureRenderTarget2D *RenderTarget)
 {
 	this->CaptureRenderTarget = RenderTarget;
 }
 
-void ACaptureManager::SetSceneCaptureComponent(USceneCaptureComponent2D* CaptureComponent)
+void ACaptureManager::SetSceneCaptureComponent(USceneCaptureComponent2D *CaptureComponent)
 {
 	this->SceneCaptureComponent = CaptureComponent;
 }
 
-void ACaptureManager::SaveImageToDisk(const FString& FilePath, const FString& Filename)
+void ACaptureManager::SaveImageToDisk(const FString &FilePath, const FString &Filename)
 {
-	UKismetRenderingLibrary::ExportRenderTarget(this,
-	                                            this->SceneCaptureComponent->TextureTarget,
-	                                            FilePath,
-	                                            Filename);
+	UKismetRenderingLibrary::ExportRenderTarget(this, this->SceneCaptureComponent->TextureTarget, FilePath, Filename);
 }
 
 FImage ACaptureManager::GetUncorruptedImage() const
@@ -46,15 +42,16 @@ FImage ACaptureManager::GetUncorruptedImage() const
 	return Image;
 }
 
-cv::Mat ACaptureManager::FImageToOpenCVMat(const FImage& Image) const
+cv::Mat ACaptureManager::FImageToOpenCVMat(const FImage &Image) const
 {
 	// Access color data of Image and create 4 channel matrix
-	const TArrayView64<const FColor>& PixelData = Image.AsBGRA8();
-	cv::Mat OpenCVMat(Image.GetHeight(), Image.GetWidth(), CV_8UC4, (void*)PixelData.GetData());
+	const TArrayView64<const FColor> &PixelData = Image.AsBGRA8();
+	cv::Mat OpenCVMat(Image.GetHeight(), Image.GetWidth(), CV_8UC4, (void *)PixelData.GetData());
 	return OpenCVMat;
 }
 
-void ACaptureManager::GetCorruptedImage(TArray64<uint8>& ImageData, double pointSpread, double readNoise, double systemGain, double cosmicRaysStdDev) const
+void ACaptureManager::GetCorruptedImage(TArray64<uint8> &ImageData, double pointSpread, double readNoise,
+										double systemGain, double cosmicRaysStdDev) const
 {
 	FImage Image = GetUncorruptedImage();
 	cv::Mat CvImage = FImageToOpenCVMat(Image);
@@ -64,7 +61,7 @@ void ACaptureManager::GetCorruptedImage(TArray64<uint8>& ImageData, double point
 	URenderingFunctionsLibrary::ApplyCosmicRays(CvImage, cosmicRaysStdDev, 50.0f, 50.0f);
 	URenderingFunctionsLibrary::ApplyReadNoise(CvImage, readNoise, 1.0f);
 	URenderingFunctionsLibrary::ApplySignalGain(CvImage, 1.0f, systemGain);
-	//URenderingFunctionsLibrary::ApplyQE(PNGImageDataSerialized, 5.0f, 5.0f, 5.0f);
+	// URenderingFunctionsLibrary::ApplyQE(PNGImageDataSerialized, 5.0f, 5.0f, 5.0f);
 
 	FImage corruptImage(Image);
 	FMemory::Memcpy(corruptImage.RawData.GetData(), CvImage.data, corruptImage.RawData.Num());
@@ -92,9 +89,10 @@ TOptional<FVector2d> ACaptureManager::GetCenterOfBrightness(double Threshold) co
 	return Coordinates;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCOBTest_Center, "CaptureManager.CenterOfBrightnessTest.Center", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCOBTest_Center, "CaptureManager.CenterOfBrightnessTest.Center",
+								 EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-bool FCOBTest_Center::RunTest(const FString& Parameters)
+bool FCOBTest_Center::RunTest(const FString &Parameters)
 {
 	// Create blank image with white square in center
 
@@ -109,7 +107,8 @@ bool FCOBTest_Center::RunTest(const FString& Parameters)
 	int StartY = 250 - SquareSize / 2;
 
 	// Draw the white square
-	cv::rectangle(Image, cv::Point(StartX, StartY), cv::Point(StartX + SquareSize, StartY + SquareSize), cv::Scalar(255), cv::FILLED);
+	cv::rectangle(Image, cv::Point(StartX, StartY), cv::Point(StartX + SquareSize, StartY + SquareSize),
+				  cv::Scalar(255), cv::FILLED);
 
 	FVector2D Coordinates;
 
@@ -124,9 +123,10 @@ bool FCOBTest_Center::RunTest(const FString& Parameters)
 	return Coordinates.Equals(FVector2D(250, 250), 1);
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCOBTest_TopRight, "CaptureManager.CenterOfBrightnessTest.TopRight", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCOBTest_TopRight, "CaptureManager.CenterOfBrightnessTest.TopRight",
+								 EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-bool FCOBTest_TopRight::RunTest(const FString& Parameters)
+bool FCOBTest_TopRight::RunTest(const FString &Parameters)
 {
 	// Create blank image with white square in top-right quadrant
 
@@ -141,7 +141,8 @@ bool FCOBTest_TopRight::RunTest(const FString& Parameters)
 	int StartY = 375 - SquareSize / 2;
 
 	// Draw the white square
-	cv::rectangle(Image, cv::Point(StartX, StartY), cv::Point(StartX + SquareSize, StartY + SquareSize), cv::Scalar(255), cv::FILLED);
+	cv::rectangle(Image, cv::Point(StartX, StartY), cv::Point(StartX + SquareSize, StartY + SquareSize),
+				  cv::Scalar(255), cv::FILLED);
 
 	FVector2D Coordinates;
 
@@ -156,9 +157,10 @@ bool FCOBTest_TopRight::RunTest(const FString& Parameters)
 	return Coordinates.Equals(FVector2D(375, 375), 1);
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCOBTest_CenterRight, "CaptureManager.CenterOfBrightnessTest.CenterRight", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCOBTest_CenterRight, "CaptureManager.CenterOfBrightnessTest.CenterRight",
+								 EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 
-bool FCOBTest_CenterRight::RunTest(const FString& Parameters)
+bool FCOBTest_CenterRight::RunTest(const FString &Parameters)
 {
 	// Create blank image with right half filled in
 

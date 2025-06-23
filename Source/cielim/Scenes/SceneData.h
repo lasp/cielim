@@ -13,11 +13,11 @@
 #include "Engine/DirectionalLight.h"
 #include "Math/Vector.h"
 
-#include "CaptureManager.h"
-#include "CelestialBody.h"
-#include "FCielimMessage.h"
-#include "Spacecraft.h"
-#include "ZmqConnection/QueueBridge.h"
+#include "../Actors/CaptureManager.h"
+#include "../Actors/CelestialBody.h"
+#include "../Actors/Spacecraft.h"
+#include "../Network/QueueBridge.h"
+#include "../Protobuf/CielimMessage.h"
 
 #include "SceneData.generated.h"
 
