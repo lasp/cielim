@@ -1,4 +1,4 @@
-#include "CaptureManager.h"
+#include "CameraModel.h"
 
 #include "Components/SceneCaptureComponent2D.h"
 #include "ImageUtils.h"
@@ -11,38 +11,44 @@
 
 #include "RenderingFunctionsLibrary.h"
 
-// Called when the game starts or when spawned
-void ACaptureManager::BeginPlay() { Super::BeginPlay(); }
+ACameraModel::ACameraModel()
+{
+	// Set up the SceneCaptureComponent2D and its settings
+	this->SceneCaptureComponent2D = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCaptureComponent2D"));
+	this->SceneCaptureComponent2D->TextureTarget = NewObject<UTextureRenderTarget2D>(this, TEXT("RT_Spacecraft"));
+	this->SceneCaptureComponent2D->TextureTarget->RenderTargetFormat = ETextureRenderTargetFormat::RTF_RGBA8;
+	this->SceneCaptureComponent2D->TextureTarget->InitAutoFormat(2560, 1440);
+	this->SceneCaptureComponent2D->TextureTarget->UpdateResourceImmediate();
+	this->SceneCaptureComponent2D->bCaptureEveryFrame = false;
+
+	this->RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+
+	this->Body = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Body"));
+	this->Body->SetupAttachment(RootComponent);
+	this->SceneCaptureComponent2D->SetupAttachment(Body);
+}
+
+void ACameraModel::BeginPlay() { Super::BeginPlay(); }
 
 // Called every frame
-void ACaptureManager::Tick(float DeltaTime) { Super::Tick(DeltaTime); }
+void ACameraModel::Tick(float DeltaTime) { Super::Tick(DeltaTime); }
 
-void ACaptureManager::SetupRenderTarget(UTextureRenderTarget2D *RenderTarget)
+void ACameraModel::SaveImageToDisk(const FString &FilePath, const FString &Filename)
 {
-	this->CaptureRenderTarget = RenderTarget;
+	UKismetRenderingLibrary::ExportRenderTarget(this, this->SceneCaptureComponent2D->TextureTarget, FilePath, Filename);
 }
 
-void ACaptureManager::SetSceneCaptureComponent(USceneCaptureComponent2D *CaptureComponent)
-{
-	this->SceneCaptureComponent = CaptureComponent;
-}
-
-void ACaptureManager::SaveImageToDisk(const FString &FilePath, const FString &Filename)
-{
-	UKismetRenderingLibrary::ExportRenderTarget(this, this->SceneCaptureComponent->TextureTarget, FilePath, Filename);
-}
-
-FImage ACaptureManager::GetUncorruptedImage() const
+FImage ACameraModel::GetUncorruptedImage() const
 {
 	FImage Image;
 
-	this->SceneCaptureComponent->CaptureScene();
-	verify(FImageUtils::GetRenderTargetImage(this->SceneCaptureComponent->TextureTarget, Image));
+	this->SceneCaptureComponent2D->CaptureScene();
+	verify(FImageUtils::GetRenderTargetImage(this->SceneCaptureComponent2D->TextureTarget, Image));
 
 	return Image;
 }
 
-cv::Mat ACaptureManager::FImageToOpenCVMat(const FImage &Image) const
+cv::Mat ACameraModel::FImageToOpenCVMat(const FImage &Image) const
 {
 	// Access color data of Image and create 4 channel matrix
 	const TArrayView64<const FColor> &PixelData = Image.AsBGRA8();
@@ -50,7 +56,7 @@ cv::Mat ACaptureManager::FImageToOpenCVMat(const FImage &Image) const
 	return OpenCVMat;
 }
 
-void ACaptureManager::GetCorruptedImage(TArray64<uint8> &ImageData, double pointSpread, double readNoise,
+void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, double pointSpread, double readNoise,
 										double systemGain, double cosmicRaysStdDev) const
 {
 	FImage Image = GetUncorruptedImage();
@@ -70,7 +76,7 @@ void ACaptureManager::GetCorruptedImage(TArray64<uint8> &ImageData, double point
 	verify(FImageUtils::CompressImage(ImageData, TEXT("PNG"), corruptImage));
 }
 
-TOptional<FVector2d> ACaptureManager::GetCenterOfBrightness(double Threshold) const
+TOptional<FVector2d> ACameraModel::GetCenterOfBrightness(double Threshold) const
 {
 	uint32_t WeightSum = 0;
 	TOptional<FVector2D> Coordinates; // Default the case where the image has no brightness

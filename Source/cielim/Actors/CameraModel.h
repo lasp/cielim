@@ -8,21 +8,18 @@
 #include "OpenCV/PostOpenCVHeaders.h"
 // clang-format on
 
-#include "CaptureManager.generated.h"
+#include "CameraModel.generated.h"
 
 UCLASS()
-class CIELIM_API ACaptureManager : public AActor
+class CIELIM_API ACameraModel : public AActor
 {
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this actor's properties
-	ACaptureManager() = default;
-
+	ACameraModel();
+	
+	// Called every tick; should not be manually called
 	virtual void Tick(float DeltaTime) override;
-
-	void SetupRenderTarget(UTextureRenderTarget2D *RenderTarget);
-	void SetSceneCaptureComponent(USceneCaptureComponent2D *CaptureComponent);
 
 	UFUNCTION(BlueprintCallable)
 	void SaveImageToDisk(const FString &FilePath, const FString &Filename);
@@ -33,14 +30,13 @@ public:
 	FImage GetUncorruptedImage() const;
 	cv::Mat FImageToOpenCVMat(const FImage &Image) const;
 
+	UPROPERTY(VisibleAnywhere)
+	UStaticMeshComponent *Body;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	USceneCaptureComponent2D *SceneCaptureComponent2D;
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	UTextureRenderTarget2D *CaptureRenderTarget;
-
-private:
-	USceneCaptureComponent2D *SceneCaptureComponent;
 };

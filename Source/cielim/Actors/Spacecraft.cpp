@@ -8,6 +8,7 @@
 
 #include "Spacecraft.h"
 
+#include "CameraModel.h"
 #include "Components/SceneCaptureComponent2D.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/TextureRenderTarget2D.h"
@@ -22,39 +23,44 @@ ASpacecraft::ASpacecraft()
 
 	this->Body = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Body"));
 	this->Body->SetupAttachment(RootComponent);
-
-	this->SceneCaptureComponent2D = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCaptureComponent2D"));
-
-	// Add settings
-	this->SceneCaptureComponent2D->TextureTarget = NewObject<UTextureRenderTarget2D>(this, TEXT("RT_Spacecraft"));
-	this->SceneCaptureComponent2D->TextureTarget->RenderTargetFormat = ETextureRenderTargetFormat::RTF_RGBA8;
-	this->SceneCaptureComponent2D->TextureTarget->InitAutoFormat(2560, 1440);
-	this->SceneCaptureComponent2D->TextureTarget->UpdateResourceImmediate();
-	this->SceneCaptureComponent2D->bCaptureEveryFrame = false;
-	this->SceneCaptureComponent2D->SetupAttachment(Body);
 }
 
 // Called when the game starts or when spawned
-void ASpacecraft::BeginPlay() { Super::BeginPlay(); }
+void ASpacecraft::BeginPlay()
+{
+	Super::BeginPlay();
+
+	this->CameraModel = GetWorld()->SpawnActor<ACameraModel>(ACameraModel::StaticClass(), this->GetActorLocation(),
+															 this->GetActorRotation());
+}
 
 // Called every frame
 void ASpacecraft::Tick(const float DeltaTime) { Super::Tick(DeltaTime); }
 
-void ASpacecraft::SetFOV(double X, double Y) const { this->SceneCaptureComponent2D->FOVAngle = X; }
+// Called when actor is destroyed
+void ASpacecraft::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	this->CameraModel->Destroy();
+	this->CameraModel = nullptr;
+
+	Super::EndPlay(EndPlayReason);
+}
+
+void ASpacecraft::SetFOV(double X, double Y) const { this->CameraModel->SceneCaptureComponent2D->FOVAngle = X; }
 
 void ASpacecraft::SetResolution(const int ResolutionWidth, const int ResolutionHeight) const
 {
-	this->SceneCaptureComponent2D->TextureTarget->ResizeTarget(ResolutionWidth, ResolutionHeight);
+	this->CameraModel->SceneCaptureComponent2D->TextureTarget->ResizeTarget(ResolutionWidth, ResolutionHeight);
 }
 
-void ASpacecraft::SetCameraPosition(const FVector &Position) const
+void ASpacecraft::SetCameraRelativePosition(const FVector &RelativePosition) const
 {
-	this->SceneCaptureComponent2D->SetRelativeLocation(Position);
+	this->CameraModel->SetActorLocation(this->GetActorLocation() + this->GetActorRotation().RotateVector(RelativePosition));
 }
 
-void ASpacecraft::UpdateCameraOrientation(const FRotator &Orientation) const
+void ASpacecraft::SetCameraRelativeOrientation(const FRotator &RelativeOrientation) const
 {
-	this->SceneCaptureComponent2D->SetRelativeRotation(Orientation);
+	this->CameraModel->SetActorRotation(this->GetActorRotation().Quaternion() * RelativeOrientation.Quaternion());
 }
 
 void ASpacecraft::Update(const FVector3d &NewPosition, const FRotator &NewRotation)

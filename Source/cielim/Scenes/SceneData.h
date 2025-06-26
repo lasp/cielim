@@ -13,7 +13,6 @@
 #include "Engine/DirectionalLight.h"
 #include "Math/Vector.h"
 
-#include "../Actors/CaptureManager.h"
 #include "../Actors/CelestialBody.h"
 #include "../Actors/Spacecraft.h"
 #include "../Network/QueueBridge.h"
@@ -47,7 +46,6 @@ private:
 	void SpawnCelestialBodies();
 	void SpawnSpacecraft();
 	void SpawnSunLight();
-	void SpawnCaptureManager();
 
 	// Updates all entity positions and rotations
 	void UpdateCelestialBodies() const;
@@ -65,8 +63,6 @@ private:
 	ASpacecraft *Spacecraft;
 	UPROPERTY()
 	ADirectionalLight *SunLight;
-	UPROPERTY()
-	ACaptureManager *CaptureManager;
 
 	bool bHasCameras = false;
 	bool bIsCelestialBodiesSpawned = false;

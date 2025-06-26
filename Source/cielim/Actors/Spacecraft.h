@@ -1,7 +1,7 @@
 //=================== Copyright (c) 2025 Laboratory for Atmospheric and Space Physics ===================//
 //
 // Purpose: Defines the ASpacecraft class. The spacecraft is an entity owned by a SceneData instance
-//          and itself holds the SceneCaptureComponent2D used to capture the scene from the point of
+//          and itself holds the CameraModel actor used to capture the scene from the point of
 //          view of the spacecraft.
 //
 // License: MIT License. See LICENSE file.
@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "CameraModel.h"
 #include "CoreMinimal.h"
 
 #include "Spacecraft.generated.h"
@@ -30,12 +31,14 @@ protected:
 public:
 	// Called every frame
 	virtual void Tick(const float DeltaTime) override;
+	// Called when actor is destroyed
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent *Body;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	USceneCaptureComponent2D *SceneCaptureComponent2D;
+	ACameraModel *CameraModel;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	FString Name;
@@ -44,9 +47,9 @@ public:
 
 	void SetResolution(const int ResolutionWidth, const int ResolutionHeight) const;
 
-	void SetCameraPosition(const FVector &Position) const;
+	void SetCameraRelativePosition(const FVector &RelativePosition) const;
 
-	void UpdateCameraOrientation(const FRotator &Orientation) const;
+	void SetCameraRelativeOrientation(const FRotator &RelativeOrientation) const;
 
 	/**
 	 * @brief Update(NewPosition, NewRotation) Updates the spacecraft's position and rotation
