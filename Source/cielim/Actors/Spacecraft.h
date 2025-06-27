@@ -43,7 +43,7 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	FString Name;
 
-	void SetFOV(double X, double Y) const;
+	void SetFOV(const double X, const double Y) const;
 
 	void SetResolution(const int ResolutionWidth, const int ResolutionHeight) const;
 

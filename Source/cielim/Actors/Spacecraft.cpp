@@ -47,7 +47,19 @@ void ASpacecraft::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
-void ASpacecraft::SetFOV(double X, double Y) const { this->CameraModel->SceneCaptureComponent2D->FOVAngle = X; }
+void ASpacecraft::SetFOV(const double X, const double Y) const
+{
+	constexpr float NearPlaneDistance = 10.0f; // This is an arbitrary value
+
+	const float TanHalfFovX = FMath::Tan(FMath::DegreesToRadians(X / 2.0f));
+	const float TanHalfFovY = FMath::Tan(FMath::DegreesToRadians(Y / 2.0f));
+
+	// Construct reversed-Z perspective matrix
+	const FMatrix ProjectionMatrix = FMatrix(FPlane(1.0f / TanHalfFovX, 0, 0, 0), FPlane(0, 1.0f / TanHalfFovY, 0, 0),
+											 FPlane(0, 0, 0, 1), FPlane(0, 0, NearPlaneDistance, 0));
+
+	this->CameraModel->SceneCaptureComponent2D->CustomProjectionMatrix = ProjectionMatrix;
+}
 
 void ASpacecraft::SetResolution(const int ResolutionWidth, const int ResolutionHeight) const
 {

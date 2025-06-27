@@ -13,13 +13,19 @@
 
 ACameraModel::ACameraModel()
 {
-	// Set up the SceneCaptureComponent2D and its settings
+	// Default reversed-Z perspective matrix with fov = 90 degrees in the case none is given
+	const FMatrix ProjectionMatrix =
+		FMatrix(FPlane(1.0f, 0, 0, 0), FPlane(0, 1.0f, 0, 0), FPlane(0, 0, 0, 1), FPlane(0, 0, 10.0f, 0));
+
+	// Set up the SceneCaptureComponent2D and its default settings
 	this->SceneCaptureComponent2D = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCaptureComponent2D"));
 	this->SceneCaptureComponent2D->TextureTarget = NewObject<UTextureRenderTarget2D>(this, TEXT("RT_Spacecraft"));
-	this->SceneCaptureComponent2D->TextureTarget->RenderTargetFormat = ETextureRenderTargetFormat::RTF_RGBA8;
+	this->SceneCaptureComponent2D->TextureTarget->RenderTargetFormat = RTF_RGBA8;
 	this->SceneCaptureComponent2D->TextureTarget->InitAutoFormat(2560, 1440);
 	this->SceneCaptureComponent2D->TextureTarget->UpdateResourceImmediate();
 	this->SceneCaptureComponent2D->bCaptureEveryFrame = false;
+	this->SceneCaptureComponent2D->bUseCustomProjectionMatrix = true;
+	this->SceneCaptureComponent2D->CustomProjectionMatrix = ProjectionMatrix;
 
 	this->RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 
@@ -57,7 +63,7 @@ cv::Mat ACameraModel::FImageToOpenCVMat(const FImage &Image) const
 }
 
 void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, double pointSpread, double readNoise,
-										double systemGain, double cosmicRaysStdDev) const
+									 double systemGain, double cosmicRaysStdDev) const
 {
 	FImage Image = GetUncorruptedImage();
 	cv::Mat CvImage = FImageToOpenCVMat(Image);

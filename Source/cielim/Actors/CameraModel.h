@@ -17,7 +17,7 @@ class CIELIM_API ACameraModel : public AActor
 
 public:
 	ACameraModel();
-	
+
 	// Called every tick; should not be manually called
 	virtual void Tick(float DeltaTime) override;
 
