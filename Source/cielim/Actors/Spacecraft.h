@@ -43,17 +43,34 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	FString Name;
 
+	/**
+	 * @brief Sets the fov of the spacecraft's camera.
+	 * @param X Horizontal fov value in degrees.
+	 * @param Y Vertical fov value in degrees.
+	 */
 	void SetFOV(const double X, const double Y) const;
 
+	/**
+	 * @brief Sets the resolution of the spacecraft's camera.
+	 * @param ResolutionWidth Horizontal resolution in pixels.
+	 * @param ResolutionHeight Vertical resolution in pixels.
+	 */
 	void SetResolution(const int ResolutionWidth, const int ResolutionHeight) const;
 
+	/**
+	 * @brief Sets the position of the spacecraft's camera relative to the spacecraft.
+	 * @param RelativePosition 3D position vector for the intended relative position of the camera.
+	 */
 	void SetCameraRelativePosition(const FVector &RelativePosition) const;
 
+	/**
+	 * @brief Sets the orientation of the spacecraft's camera relative to the spacecraft.
+	 * @param RelativeOrientation 3D rotation vector for the intended relative orientation of the camera.
+	 */
 	void SetCameraRelativeOrientation(const FRotator &RelativeOrientation) const;
 
 	/**
-	 * @brief Update(NewPosition, NewRotation) Updates the spacecraft's position and rotation
-	 *
+	 * @brief Updates the spacecraft's position and rotation
 	 * @param NewPosition The new position
 	 * @param NewRotation The new rotation
 	 */

@@ -1,3 +1,11 @@
+//=================== Copyright (c) 2025 Laboratory for Atmospheric and Space Physics ===================//
+//
+// Purpose: Implements the definition of ACameraModel.
+//
+// License: MIT License. See LICENSE file.
+//
+//=======================================================================================================//
+
 #include "CameraModel.h"
 
 #include "Components/SceneCaptureComponent2D.h"

@@ -1,3 +1,12 @@
+//=================== Copyright (c) 2025 Laboratory for Atmospheric and Space Physics ===================//
+//
+// Purpose: Defines the ACameraModel class. The CameraModel actor owns a SceneCaptureComponent2D that
+//          renders the scene and returns image data.
+//
+// License: MIT License. See LICENSE file.
+//
+//=======================================================================================================//
+
 #pragma once
 
 #include "CoreMinimal.h"
