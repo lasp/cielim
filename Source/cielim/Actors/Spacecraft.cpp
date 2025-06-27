@@ -32,6 +32,7 @@ void ASpacecraft::BeginPlay()
 
 	this->CameraModel = GetWorld()->SpawnActor<ACameraModel>(ACameraModel::StaticClass(), this->GetActorLocation(),
 															 this->GetActorRotation());
+	this->CameraModel->AttachToActor(this, FAttachmentTransformRules::KeepRelativeTransform);
 }
 
 // Called every frame
@@ -55,12 +56,12 @@ void ASpacecraft::SetResolution(const int ResolutionWidth, const int ResolutionH
 
 void ASpacecraft::SetCameraRelativePosition(const FVector &RelativePosition) const
 {
-	this->CameraModel->SetActorLocation(this->GetActorLocation() + this->GetActorRotation().RotateVector(RelativePosition));
+	this->CameraModel->SetActorRelativeLocation(RelativePosition);
 }
 
 void ASpacecraft::SetCameraRelativeOrientation(const FRotator &RelativeOrientation) const
 {
-	this->CameraModel->SetActorRotation(this->GetActorRotation().Quaternion() * RelativeOrientation.Quaternion());
+	this->CameraModel->SetActorRelativeRotation(RelativeOrientation);
 }
 
 void ASpacecraft::Update(const FVector3d &NewPosition, const FRotator &NewRotation)
