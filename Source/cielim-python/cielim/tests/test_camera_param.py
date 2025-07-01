@@ -95,12 +95,10 @@ def test_camera_fov(cielim_connection, scene_setup, test_name, fov_x_deg, fov_y_
     )
 
 
-def get_baseline_resolution(connector):
+def get_baseline_bounds(connector):
     scene = default_scene()
 
-    del scene.camera.resolution[:]
-    [scene.camera.resolution.append(val) for val in [4000, 3000]]
-
+    connector.send_init_request()
     connector.send_frame(scene)
     image, _ = connector.request_image_for_camera_id(1, 1)
 
@@ -110,12 +108,9 @@ def get_baseline_resolution(connector):
     contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     largest_contour = max(contours, key=cv2.contourArea)
-    (_, _), radius = cv2.minEnclosingCircle(largest_contour)
-    baseline_size_pixels = 2 * int(radius)
+    _, _, w, h = cv2.boundingRect(largest_contour)
 
-    connector.send_init_request()
-
-    return baseline_size_pixels
+    return (w, h)
 
 
 @pytest.mark.parametrize(
@@ -127,14 +122,16 @@ def get_baseline_resolution(connector):
 )
 def test_camera_resolution(cielim_connection, scene_setup, test_name, resolution_w, resolution_h):
     """
-    This remote procedure call test changes the resolution and checks for appropriate apparent size along with ratio of the image and the apparent diameter.
+    Tests that the relative apparent image size is constant across different resolutions by comparing
+    the side lengths of the bounding box surrounding the object in the scene to a baseline at 4k x 3k.
     """
     connector = cielim_connection
-    connector.send_init_request()
 
     scene = scene_setup
     del scene.camera.resolution[:]
     [scene.camera.resolution.append(val) for val in [resolution_w, resolution_h]]
+
+    connector.send_init_request()
     connector.send_frame(scene)
     image, _ = connector.request_image_for_camera_id(1, 1)
 
@@ -144,28 +141,30 @@ def test_camera_resolution(cielim_connection, scene_setup, test_name, resolution
     contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     largest_contour = max(contours, key=cv2.contourArea)
-    (_, _), radius = cv2.minEnclosingCircle(largest_contour)
-    asteroid_size_pixels = 2 * int(radius)
+    _, _, w, h = cv2.boundingRect(largest_contour)
 
-    connector.send_init_request()
+    w_ratio_to_res = w / resolution_w
+    h_ratio_to_res = h / resolution_h
 
-    baseline_size_pixels = get_baseline_resolution(cielim_connection)
-    asteroid_size_pixels_ratio = asteroid_size_pixels / resolution_w
-    baseline_size_pixels_ration = baseline_size_pixels / 4000
+    image_width = 4000  # Given in default_scene
+    image_height = 3000
 
-    resolution_deg = resolution_w * (30 * np.pi / 180 / resolution_w)
-    baseline_resolution_deg = 4000 * (30 * np.pi / 180 / 4000)
+    baseline_w, baseline_h = get_baseline_bounds(cielim_connection)
+    w_ratio_to_res_baseline = baseline_w / image_width
+    h_ratio_to_res_baseline = baseline_h / image_height
+
+    connector.send_init_request()  # Make sure scene is cleared
 
     np.testing.assert_allclose(
-        asteroid_size_pixels_ratio,
-        baseline_size_pixels_ration,
+        w_ratio_to_res,
+        w_ratio_to_res_baseline,
         rtol=0.1,
-        err_msg=f"Ratio of the image and the apparent diameter does not match: {test_name}",
+        err_msg=f"Mismatch between horizontal apparent size with baseline: {test_name}",
     )
 
     np.testing.assert_allclose(
-        resolution_deg,
-        baseline_resolution_deg,
+        h_ratio_to_res,
+        h_ratio_to_res_baseline,
         rtol=0.1,
-        err_msg=f"Resolution in degrees does not match: {test_name}",
+        err_msg=f"Mismatch between vertical apparent size with baseline: {test_name}",
     )
