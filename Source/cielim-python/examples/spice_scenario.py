@@ -83,7 +83,7 @@ def spice_scenario():
     et_range = np.arange(start_et, end_et, time_step)
 
     # prep file for saving
-    directory_path = current_file_path + "/cassini-images"
+    directory_path = current_file_path + "/images-cassini-spice"
     os.makedirs(directory_path, exist_ok=True)
 
     connector = Connector()
