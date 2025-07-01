@@ -1,11 +1,23 @@
 import saved_monte_carlo_scenario
 import image_analysis
 import spice_scenario
+import random_asteroid_generation
+import com_cob_analysis
 import print_protobuffer_content
 import os, shutil
 import subprocess
 
 current_file_path = os.path.dirname(__file__)
+
+
+def test_run_random_asteroid_generation():
+    random_asteroid_generation.random_asteroid_generation(5)
+    assert os.path.exists(current_file_path + "/images-com-cob")
+    com_cob_analysis.com_cob_analysis(current_file_path + "/images-com-cob", False)
+    assert os.path.exists(current_file_path + "/images-com-cob-analysis" + "/annotated-image-0.png")
+    assert os.path.exists(current_file_path + "/images-com-cob-analysis" + "/cob-com-correction-errors.png")
+    assert os.path.exists(current_file_path + "/images-com-cob-analysis" + "/error-by-phase.png")
+    shutil.rmtree(current_file_path + "/images-com-cob")
 
 
 def test_run_saved_monte_carlo_scenario():
