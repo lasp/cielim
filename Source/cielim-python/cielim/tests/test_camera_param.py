@@ -45,22 +45,25 @@ def scene_setup():
 @pytest.mark.parametrize(
     "test_name, fov_x_deg, fov_y_deg",
     [
-        ("FOV", 20 * np.pi / 180, 15 * np.pi / 180),
+        ("Standard FOV", 20 * np.pi / 180, 15 * np.pi / 180),
         ("Medium FOV", 10 * np.pi / 180, 8 * np.pi / 180),
         ("Narrow FOV", 5 * np.pi / 180, 4 * np.pi / 180),
+        ("Wide FOV", 20 * np.pi / 180, 5 * np.pi / 180),
+        ("Tall FOV", 5 * np.pi / 180, 20 * np.pi / 180),
     ],
 )
 def test_camera_fov(cielim_connection, scene_setup, test_name, fov_x_deg, fov_y_deg):
     """
-    This remote procedure call test changes the field of view and checks for appropriate apparent size.
+    Tests that the object in the scene is the correct apparent size given the x and y fov values.
+    Does not account for perspective distortion.
     """
     connector = cielim_connection
-    connector.send_init_request()
 
     scene = scene_setup
     del scene.camera.fieldOfView[:]
     [scene.camera.fieldOfView.append(val) for val in [fov_x_deg, fov_y_deg]]
 
+    connector.send_init_request()
     connector.send_frame(scene)
     image, _ = connector.request_image_for_camera_id(1, 1)
 
@@ -70,10 +73,9 @@ def test_camera_fov(cielim_connection, scene_setup, test_name, fov_x_deg, fov_y_
     contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     largest_contour = max(contours, key=cv2.contourArea)
-    (_, _), radius = cv2.minEnclosingCircle(largest_contour)
-    asteroid_size_pixels = 2 * int(radius)
+    _, _, w, h = cv2.boundingRect(largest_contour)
 
-    connector.send_init_request()
+    connector.send_init_request()  # Make sure scene is cleared
 
     mean_radius = scene.celestialBodies[0].model.meanRadius
     spacecraft_position = np.array(scene.spacecraft.position)
@@ -81,17 +83,27 @@ def test_camera_fov(cielim_connection, scene_setup, test_name, fov_x_deg, fov_y_
     distance = np.linalg.norm(spacecraft_position - asteroid_position)
 
     expected_angular_size_rad = 2 * np.arcsin(mean_radius / distance)
-    camera_fov_horizontal = fov_x_deg
-    image_width = 4000
 
-    expected_asteroid_size_pixels = (expected_angular_size_rad / camera_fov_horizontal) * image_width
+    image_width = 4000  # Given in default_scene
+    image_height = 3000
+
+    expected_asteroid_w_pixels = (expected_angular_size_rad / fov_x_deg) * image_width
+    expected_asteroid_h_pixels = (expected_angular_size_rad / fov_y_deg) * image_height
 
     np.testing.assert_allclose(
-        asteroid_size_pixels,
-        expected_asteroid_size_pixels,
+        w,
+        expected_asteroid_w_pixels,
         rtol=0.01,
         atol=1,
-        err_msg=f"Asteroid size in pixels does not match expected value for test: {test_name}",
+        err_msg=f"Asteroid width in pixels does not match expected value for test: {test_name}",
+    )
+
+    np.testing.assert_allclose(
+        h,
+        expected_asteroid_h_pixels,
+        rtol=0.01,
+        atol=1,
+        err_msg=f"Asteroid height in pixels does not match expected value for test: {test_name}",
     )
 
 
