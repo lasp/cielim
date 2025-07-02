@@ -212,7 +212,7 @@ void USceneData::SpawnCelestialBodies()
 		this->CelestialBodyArray.Add(TempCelestialBody);
 		this->Actors.Add(TempCelestialBody);
 
-		if (TempCelestialBody->Name == SunNaifBodyName)
+		if (TempCelestialBody->Name.ToLower() == SunNaifBodyName)
 		{
 			this->SunCelestialBody = TempCelestialBody;
 		}
