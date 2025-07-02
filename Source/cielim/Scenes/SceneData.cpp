@@ -22,7 +22,7 @@
 
 #define m2cm 100.0
 #define km2m 1000.0
-const FString SunNaifBodyName("Sun");
+const FString SunNaifBodyName("sun");
 
 static FVector3d GetSpacecraftPosition(const cielimMessage::Spacecraft &Craft);
 static FRotator GetRotatorFromMrp(const FVector3d &Sigma);
@@ -212,7 +212,7 @@ void USceneData::SpawnCelestialBodies()
 		this->CelestialBodyArray.Add(TempCelestialBody);
 		this->Actors.Add(TempCelestialBody);
 
-		if (TempCelestialBody->Name == SunNaifBodyName)
+		if (TempCelestialBody->Name.ToLower() == SunNaifBodyName)
 		{
 			this->SunCelestialBody = TempCelestialBody;
 		}
