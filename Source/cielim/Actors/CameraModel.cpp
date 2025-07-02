@@ -52,16 +52,6 @@ void ACameraModel::SaveImageToDisk(const FString &FilePath, const FString &Filen
 	UKismetRenderingLibrary::ExportRenderTarget(this, this->SceneCaptureComponent2D->TextureTarget, FilePath, Filename);
 }
 
-FImage ACameraModel::GetUncorruptedImage() const
-{
-	FImage Image;
-
-	this->SceneCaptureComponent2D->CaptureScene();
-	verify(FImageUtils::GetRenderTargetImage(this->SceneCaptureComponent2D->TextureTarget, Image));
-
-	return Image;
-}
-
 cv::Mat ACameraModel::FImageToOpenCVMat(const FImage &Image) const
 {
 	// Access color data of Image and create 4 channel matrix
@@ -70,24 +60,28 @@ cv::Mat ACameraModel::FImageToOpenCVMat(const FImage &Image) const
 	return OpenCVMat;
 }
 
-void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, double pointSpread, double readNoise,
-									 double systemGain, double cosmicRaysStdDev) const
+void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, const double PointSpread, const double ReadNoise,
+									 const double SystemGain, const double CosmicRaysStdDev) const
 {
-	FImage Image = GetUncorruptedImage();
+	FImage Image;
+
+	this->SceneCaptureComponent2D->CaptureScene();
+	verify(FImageUtils::GetRenderTargetImage(this->SceneCaptureComponent2D->TextureTarget, Image));
+
 	cv::Mat CvImage = FImageToOpenCVMat(Image);
 
 	// Apply corruptions to image data matrix
-	URenderingFunctionsLibrary::ApplyPSF_Gaussian(CvImage, 9, 9, pointSpread, pointSpread);
-	URenderingFunctionsLibrary::ApplyCosmicRays(CvImage, cosmicRaysStdDev, 50.0f, 50.0f);
-	URenderingFunctionsLibrary::ApplyReadNoise(CvImage, readNoise, 1.0f);
-	URenderingFunctionsLibrary::ApplySignalGain(CvImage, 1.0f, systemGain);
+	URenderingFunctionsLibrary::ApplyPSF_Gaussian(CvImage, 9, 9, PointSpread, PointSpread);
+	URenderingFunctionsLibrary::ApplyCosmicRays(CvImage, CosmicRaysStdDev, 50.0f, 50.0f);
+	URenderingFunctionsLibrary::ApplyReadNoise(CvImage, ReadNoise, 1.0f);
+	URenderingFunctionsLibrary::ApplySignalGain(CvImage, 1.0f, SystemGain);
 	// URenderingFunctionsLibrary::ApplyQE(PNGImageDataSerialized, 5.0f, 5.0f, 5.0f);
 
-	FImage corruptImage(Image);
-	FMemory::Memcpy(corruptImage.RawData.GetData(), CvImage.data, corruptImage.RawData.Num());
+	FImage CorruptImage(Image);
+	FMemory::Memcpy(CorruptImage.RawData.GetData(), CvImage.data, CorruptImage.RawData.Num());
 
 	// Take modified image data from Image and copy to ImageData as PNG
-	verify(FImageUtils::CompressImage(ImageData, TEXT("PNG"), corruptImage));
+	verify(FImageUtils::CompressImage(ImageData, TEXT("PNG"), CorruptImage));
 }
 
 TOptional<FVector2d> ACameraModel::GetCenterOfBrightness(double Threshold) const
@@ -96,7 +90,11 @@ TOptional<FVector2d> ACameraModel::GetCenterOfBrightness(double Threshold) const
 	TOptional<FVector2D> Coordinates; // Default the case where the image has no brightness
 
 	cv::Mat GrayImage;
-	const FImage Image = GetUncorruptedImage();
+	FImage Image;
+
+	this->SceneCaptureComponent2D->CaptureScene();
+	verify(FImageUtils::GetRenderTargetImage(this->SceneCaptureComponent2D->TextureTarget, Image));
+	
 	cv::cvtColor(FImageToOpenCVMat(Image), GrayImage, cv::COLOR_BGR2GRAY);
 	cv::threshold(GrayImage, GrayImage, Threshold, 255, cv::THRESH_BINARY);
 

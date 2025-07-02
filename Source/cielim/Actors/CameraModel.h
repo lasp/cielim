@@ -32,11 +32,12 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void SaveImageToDisk(const FString &FilePath, const FString &Filename);
-	void GetCorruptedImage(TArray64<uint8> &ImageData, double pointSpread, double readNoise, double systemGain,
-						   double cosmicRaysStdDev) const;
+
+	void GetCorruptedImage(TArray64<uint8> &ImageData, const double PointSpread, const double ReadNoise,
+						   const double SystemGain, const double CosmicRaysStdDev) const;
+
 	TOptional<FVector2d> GetCenterOfBrightness(double Threshold) const;
 
-	FImage GetUncorruptedImage() const;
 	cv::Mat FImageToOpenCVMat(const FImage &Image) const;
 
 	UPROPERTY(VisibleAnywhere)
