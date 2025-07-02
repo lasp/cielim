@@ -16,7 +16,9 @@
 #include "opencv2/imgproc.hpp"
 #include "OpenCV/PostOpenCVHeaders.h"
 // clang-format on
+#include "ScreenPass.h"
 
+#include "../Shaders/ClearShader.h"
 #include "RenderingFunctionsLibrary.h"
 
 ACameraModel::ACameraModel()
@@ -66,6 +68,7 @@ void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, const double Po
 	FImage Image;
 
 	this->SceneCaptureComponent2D->CaptureScene();
+	this->ApplyPostProcessShaders(this->SceneCaptureComponent2D->TextureTarget);
 	verify(FImageUtils::GetRenderTargetImage(this->SceneCaptureComponent2D->TextureTarget, Image));
 
 	cv::Mat CvImage = FImageToOpenCVMat(Image);
@@ -82,6 +85,39 @@ void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, const double Po
 
 	// Take modified image data from Image and copy to ImageData as PNG
 	verify(FImageUtils::CompressImage(ImageData, TEXT("PNG"), CorruptImage));
+}
+
+void ACameraModel::ApplyPostProcessShaders(UTextureRenderTarget2D *RenderTarget)
+{
+	if (!RenderTarget)
+		return;
+
+	FTextureRenderTargetResource *RTResource = RenderTarget->GameThread_GetRenderTargetResource();
+
+	ENQUEUE_RENDER_COMMAND(ApplyCorruptionPostProcess)
+	(
+		[RTResource](FRHICommandListImmediate &RHICmdList)
+		{
+			FRDGBuilder GraphBuilder(RHICmdList);
+
+			const FRDGTextureRef OutputTexture =
+				RegisterExternalTexture(GraphBuilder, RTResource->GetRenderTargetTexture(), TEXT("OutputTexture"));
+
+			const FScreenPassTextureViewport Viewport(OutputTexture);
+
+			// Pass parameters to the shader
+			FClearShader::FParameters *PassParameters = GraphBuilder.AllocParameters<FClearShader::FParameters>();
+			PassParameters->InputTexture = OutputTexture;
+			PassParameters->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
+			PassParameters->RenderTargets[0] = FRenderTargetBinding(OutputTexture, ERenderTargetLoadAction::ENoAction);
+
+			const TShaderMapRef<FClearShader> PixelShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+
+			AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("ApplyCorruptions"), GMaxRHIFeatureLevel, Viewport, Viewport,
+							  PixelShader, PassParameters);
+
+			GraphBuilder.Execute();
+		});
 }
 
 TOptional<FVector2d> ACameraModel::GetCenterOfBrightness(double Threshold) const

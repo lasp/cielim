@@ -36,6 +36,8 @@ public:
 	void GetCorruptedImage(TArray64<uint8> &ImageData, const double PointSpread, const double ReadNoise,
 						   const double SystemGain, const double CosmicRaysStdDev) const;
 
+	static void ApplyPostProcessShaders(UTextureRenderTarget2D *RenderTarget);
+
 	TOptional<FVector2d> GetCenterOfBrightness(double Threshold) const;
 
 	cv::Mat FImageToOpenCVMat(const FImage &Image) const;
