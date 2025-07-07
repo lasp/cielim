@@ -23,7 +23,7 @@ else
     echo "Building libzmq..."
     mkdir build
     cd build
-    cmake ..
+    cmake .. -DWITH_TLS="NO"
     make -j4
 
     cd ../..
