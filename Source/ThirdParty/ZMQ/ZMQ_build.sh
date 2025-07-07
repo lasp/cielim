@@ -9,7 +9,7 @@ set zmq_lib_full_path = ${1}${zmq_lib_path}
 echo "zmq_lib_full_path: ${zmq_lib_full_path}"
 
 if ( -f $zmq_lib_full_path ) then
-  echo "ZMQ will not be rebuilt. Library ${zmq_lib_full_path} exists."
+    echo "ZMQ will not be rebuilt. Library ${zmq_lib_full_path} exists."
 else
     echo "ZMQ will be built. Library ${zmq_lib_full_path} not found."
 
@@ -19,7 +19,7 @@ else
     cd libzmq
     git submodule update --init --recursive
 
-    # CMake Build 
+    # CMake Build
     echo "Building libzmq..."
     mkdir build
     cd build

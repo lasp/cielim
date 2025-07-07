@@ -24,7 +24,7 @@ if exist "%zmq_lib_full_path%" (
     cd libzmq
     git submodule update --init --recursive
 
-    @REM CMake Build 
+    @REM CMake Build
     echo Building libzmq...
     mkdir build
     cd build

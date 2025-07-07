@@ -17,7 +17,7 @@ if exist "%opencv_lib_full_path%" (
 ) else (
 
     echo OpenCV will be built. Library %opencv_lib_full_path% not found.
-    
+
     @REM Make sure we're in the OpenCV folder
     cd /d "%~1"
 
