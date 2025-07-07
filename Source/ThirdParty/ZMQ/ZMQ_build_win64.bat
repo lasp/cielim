@@ -28,7 +28,9 @@ if exist "%zmq_lib_full_path%" (
     echo Building libzmq...
     mkdir build
     cd build
-    cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DWITH_TLS="NO"
+    cmake .. -G "Visual Studio 17 2022" -A x64 ^
+        -DCMAKE_BUILD_TYPE=Release ^
+        -DWITH_TLS="NO"
     cmake --build . --parallel 8 --config Release
 
     cd "..\.."

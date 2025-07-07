@@ -23,8 +23,10 @@ else
     echo "Building libzmq..."
     mkdir build
     cd build
-    cmake .. -DWITH_TLS="NO"
-    make -j4
+    cmake .. \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DWITH_TLS="NO"
+    cmake --build . --parallel 8 --config Release
 
     cd ../..
 
