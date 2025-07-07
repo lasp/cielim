@@ -28,15 +28,8 @@ else
 
     cd ../..
 
-    # Do all of that for cppZMQ
+    # Check cppZMQ
     cd cppzmq
     git submodule update --init --recursive
 
-    # CMake Build 
-    echo "Building cppzmq..."
-    mkdir build
-    cd build
-    cmake .. -DCMAKE_INSTALL_PREFIX="../../libzmq"
-    make -j4
-    
 endif
