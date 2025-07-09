@@ -18,7 +18,7 @@
 // clang-format on
 #include "ScreenPass.h"
 
-#include "../Shaders/ClearShader.h"
+#include "../Shaders/GaussianPSF.h"
 #include "RenderingFunctionsLibrary.h"
 
 ACameraModel::ACameraModel()
@@ -67,14 +67,15 @@ void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, const double Po
 {
 	FImage Image;
 
+	FImageCorruptionParams CorruptionParams = {7, PointSpread};
+
 	this->SceneCaptureComponent2D->CaptureScene();
-	this->ApplyPostProcessShaders(this->SceneCaptureComponent2D->TextureTarget);
+	this->ApplyPostProcessShaders(this->SceneCaptureComponent2D->TextureTarget, &CorruptionParams);
 	verify(FImageUtils::GetRenderTargetImage(this->SceneCaptureComponent2D->TextureTarget, Image));
 
 	cv::Mat CvImage = FImageToOpenCVMat(Image);
 
 	// Apply corruptions to image data matrix
-	URenderingFunctionsLibrary::ApplyPSF_Gaussian(CvImage, 9, 9, PointSpread, PointSpread);
 	URenderingFunctionsLibrary::ApplyCosmicRays(CvImage, CosmicRaysStdDev, 50.0f, 50.0f);
 	URenderingFunctionsLibrary::ApplyReadNoise(CvImage, ReadNoise, 1.0f);
 	URenderingFunctionsLibrary::ApplySignalGain(CvImage, 1.0f, SystemGain);
@@ -87,34 +88,78 @@ void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, const double Po
 	verify(FImageUtils::CompressImage(ImageData, TEXT("PNG"), CorruptImage));
 }
 
-void ACameraModel::ApplyPostProcessShaders(UTextureRenderTarget2D *RenderTarget)
+void ACameraModel::ApplyPostProcessShaders(UTextureRenderTarget2D *RenderTarget,
+										   FImageCorruptionParams *CorruptionParams)
 {
 	if (!RenderTarget)
 		return;
 
 	FTextureRenderTargetResource *RTResource = RenderTarget->GameThread_GetRenderTargetResource();
 
-	ENQUEUE_RENDER_COMMAND(ApplyCorruptionPostProcess)
+	ENQUEUE_RENDER_COMMAND(ApplyPostProcess)
 	(
-		[RTResource](FRHICommandListImmediate &RHICmdList)
+		[RTResource, CorruptionParams](FRHICommandListImmediate &RHICmdList)
 		{
 			FRDGBuilder GraphBuilder(RHICmdList);
 
-			const FRDGTextureRef OutputTexture =
-				RegisterExternalTexture(GraphBuilder, RTResource->GetRenderTargetTexture(), TEXT("OutputTexture"));
+			const FRDGTextureRef RenderTargetBase =
+				RegisterExternalTexture(GraphBuilder, RTResource->GetRenderTargetTexture(), TEXT("RenderTargetBase"));
 
-			const FScreenPassTextureViewport Viewport(OutputTexture);
+			// Intermediates used for texture ping-pong
+			FRDGTextureRef TempTextureIn =
+				GraphBuilder.CreateTexture(RenderTargetBase->Desc, TEXT("Temp Input Texture"));
+			FRDGTextureRef TempTextureOut =
+				GraphBuilder.CreateTexture(RenderTargetBase->Desc, TEXT("Temp Output Texture"));
 
-			// Pass parameters to the shader
-			FClearShader::FParameters *PassParameters = GraphBuilder.AllocParameters<FClearShader::FParameters>();
-			PassParameters->InputTexture = OutputTexture;
-			PassParameters->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
-			PassParameters->RenderTargets[0] = FRenderTargetBinding(OutputTexture, ERenderTargetLoadAction::ENoAction);
+			AddCopyTexturePass(GraphBuilder, RenderTargetBase, TempTextureIn);
 
-			const TShaderMapRef<FClearShader> PixelShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+			const FScreenPassTextureViewport Viewport(RenderTargetBase);
 
-			AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("ApplyCorruptions"), GMaxRHIFeatureLevel, Viewport, Viewport,
-							  PixelShader, PassParameters);
+			if (CorruptionParams->Sigma != 0.0f)
+			{
+				// GaussianPSF Horizontal
+
+				FGaussianPSF::FPermutationDomain PermutationDomain;
+				PermutationDomain.Set<FGaussianPSF::FHorizontal>(true);
+
+				FGaussianPSF::FParameters *PSFParamsH = GraphBuilder.AllocParameters<FGaussianPSF::FParameters>();
+				PSFParamsH->InputTexture = TempTextureIn;
+				PSFParamsH->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
+				PSFParamsH->TexelSize = FVector2f(1.0f / Viewport.Rect.Width(), 1.0f / Viewport.Rect.Height());
+				PSFParamsH->KernelRadius = (CorruptionParams->KernelWidth - 1.0f) / 2.0f;
+				PSFParamsH->Sigma = CorruptionParams->Sigma;
+				PSFParamsH->RenderTargets[0] = FRenderTargetBinding(TempTextureOut, ERenderTargetLoadAction::ENoAction);
+
+				const TShaderMapRef<FGaussianPSF> GaussianPSFShaderH(GetGlobalShaderMap(GMaxRHIFeatureLevel),
+																	 PermutationDomain);
+
+				AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply GaussianPSF H"), GMaxRHIFeatureLevel, Viewport,
+					              Viewport, GaussianPSFShaderH, PSFParamsH);
+
+				Swap(TempTextureIn, TempTextureOut);
+
+				// GaussianPSF Vertical
+
+				PermutationDomain.Set<FGaussianPSF::FHorizontal>(false);
+
+				const TShaderMapRef<FGaussianPSF> GaussianPSFShaderV(GetGlobalShaderMap(GMaxRHIFeatureLevel),
+																	 PermutationDomain);
+
+				FGaussianPSF::FParameters *PSFParamsV = GraphBuilder.AllocParameters<FGaussianPSF::FParameters>();
+				PSFParamsV->InputTexture = TempTextureIn;
+				PSFParamsV->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
+				PSFParamsV->TexelSize = FVector2f(1.0f / Viewport.Rect.Width(), 1.0f / Viewport.Rect.Height());
+				PSFParamsV->KernelRadius = (CorruptionParams->KernelWidth - 1.0f) / 2.0f;
+				PSFParamsV->Sigma = CorruptionParams->Sigma;
+				PSFParamsV->RenderTargets[0] = FRenderTargetBinding(TempTextureOut, ERenderTargetLoadAction::ENoAction);
+
+				AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply GaussianPSF V"), GMaxRHIFeatureLevel, Viewport,
+					              Viewport, GaussianPSFShaderV, PSFParamsV);
+
+				Swap(TempTextureIn, TempTextureOut);
+			}
+
+			AddCopyTexturePass(GraphBuilder, TempTextureIn, RenderTargetBase);
 
 			GraphBuilder.Execute();
 		});
@@ -130,7 +175,7 @@ TOptional<FVector2d> ACameraModel::GetCenterOfBrightness(double Threshold) const
 
 	this->SceneCaptureComponent2D->CaptureScene();
 	verify(FImageUtils::GetRenderTargetImage(this->SceneCaptureComponent2D->TextureTarget, Image));
-	
+
 	cv::cvtColor(FImageToOpenCVMat(Image), GrayImage, cv::COLOR_BGR2GRAY);
 	cv::threshold(GrayImage, GrayImage, Threshold, 255, cv::THRESH_BINARY);
 

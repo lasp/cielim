@@ -19,6 +19,13 @@
 
 #include "CameraModel.generated.h"
 
+struct FImageCorruptionParams
+{
+	// Gaussian PSF
+	int KernelWidth;
+	double Sigma;
+};
+
 UCLASS()
 class CIELIM_API ACameraModel : public AActor
 {
@@ -36,7 +43,7 @@ public:
 	void GetCorruptedImage(TArray64<uint8> &ImageData, const double PointSpread, const double ReadNoise,
 						   const double SystemGain, const double CosmicRaysStdDev) const;
 
-	static void ApplyPostProcessShaders(UTextureRenderTarget2D *RenderTarget);
+	static void ApplyPostProcessShaders(UTextureRenderTarget2D *RenderTarget, FImageCorruptionParams *CorruptionParams);
 
 	TOptional<FVector2d> GetCenterOfBrightness(double Threshold) const;
 
