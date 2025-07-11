@@ -30,6 +30,9 @@ struct FImageCorruptionParams
 	TResourceArray<FVector2f> StartPoints;
 	TResourceArray<FVector2f> EndPoints;
 	TResourceArray<float> LineWidths;
+
+	// Read Noise
+	float ReadNoiseSigma;
 };
 
 UCLASS()

@@ -23,6 +23,7 @@
 #include "../Shaders/GaussianPSF.h"
 #include "RenderingFunctionsLibrary.h"
 #include "cielim/Shaders/CosmicRays.h"
+#include "cielim/Shaders/ReadNoise.h"
 
 ACameraModel::ACameraModel()
 {
@@ -77,7 +78,8 @@ void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, const double Po
 	TResourceArray<FVector2f> EndPoints = CosmicRays.Get<2>();
 	TResourceArray<float> LineWidths = CosmicRays.Get<3>();
 
-	FImageCorruptionParams CorruptionParams = {7, PointSpread, NumCosmicRays, StartPoints, EndPoints, LineWidths};
+	FImageCorruptionParams CorruptionParams = {
+		7, PointSpread, NumCosmicRays, StartPoints, EndPoints, LineWidths, static_cast<float>(ReadNoise)};
 
 	this->SceneCaptureComponent2D->CaptureScene();
 	this->ApplyPostProcessShaders(this->SceneCaptureComponent2D->TextureTarget, &CorruptionParams);
@@ -86,7 +88,6 @@ void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, const double Po
 	cv::Mat CvImage = FImageToOpenCVMat(Image);
 
 	// Apply corruptions to image data matrix
-	URenderingFunctionsLibrary::ApplyReadNoise(CvImage, ReadNoise, 1.0f);
 	URenderingFunctionsLibrary::ApplySignalGain(CvImage, 1.0f, SystemGain);
 	// URenderingFunctionsLibrary::ApplyQE(PNGImageDataSerialized, 5.0f, 5.0f, 5.0f);
 
@@ -192,6 +193,23 @@ void ACameraModel::ApplyPostProcessShaders(UTextureRenderTarget2D *RenderTarget,
 
 				AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply Cosmic Rays"), GMaxRHIFeatureLevel, Viewport,
 								  Viewport, CosmicRayShader, RayParams);
+
+				Swap(TempTextureIn, TempTextureOut);
+			}
+
+			if (CorruptionParams->ReadNoiseSigma != 0.0f)
+			{
+				FReadNoise::FParameters *RnParams = GraphBuilder.AllocParameters<FReadNoise::FParameters>();
+				RnParams->InputTexture = TempTextureIn;
+				RnParams->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
+				RnParams->CurrentTime = static_cast<uint32>(FDateTime::UtcNow().ToUnixTimestamp());
+				RnParams->ReadNoiseSigma = CorruptionParams->ReadNoiseSigma;
+				RnParams->RenderTargets[0] = FRenderTargetBinding(TempTextureOut, ERenderTargetLoadAction::ENoAction);
+
+				const TShaderMapRef<FReadNoise> ReadNoiseShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+
+				AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply Read Noise"), GMaxRHIFeatureLevel, Viewport,
+								  Viewport, ReadNoiseShader, RnParams);
 
 				Swap(TempTextureIn, TempTextureOut);
 			}
