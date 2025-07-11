@@ -33,6 +33,9 @@ struct FImageCorruptionParams
 
 	// Read Noise
 	float ReadNoiseSigma;
+
+	// Signal Gain
+	float SignalGain;
 };
 
 UCLASS()
@@ -72,7 +75,7 @@ private:
 	// Returns the list of all parameters for all cosmic rays
 	TTuple<float, TResourceArray<FVector2f>, TResourceArray<FVector2f>, TResourceArray<float>>
 	GetCosmicRays(const float Sigma) const;
-	
+
 	// Calculates the parameters for a single cosmic ray at random in pixels
 	TTuple<FVector2f, FVector2f, float> GetCosmicRayParams() const;
 };

@@ -24,6 +24,7 @@
 #include "RenderingFunctionsLibrary.h"
 #include "cielim/Shaders/CosmicRays.h"
 #include "cielim/Shaders/ReadNoise.h"
+#include "cielim/Shaders/SignalGain.h"
 
 ACameraModel::ACameraModel()
 {
@@ -78,24 +79,21 @@ void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, const double Po
 	TResourceArray<FVector2f> EndPoints = CosmicRays.Get<2>();
 	TResourceArray<float> LineWidths = CosmicRays.Get<3>();
 
-	FImageCorruptionParams CorruptionParams = {
-		7, PointSpread, NumCosmicRays, StartPoints, EndPoints, LineWidths, static_cast<float>(ReadNoise)};
+	FImageCorruptionParams CorruptionParams = {7,
+											   PointSpread,
+											   NumCosmicRays,
+											   StartPoints,
+											   EndPoints,
+											   LineWidths,
+											   static_cast<float>(ReadNoise),
+											   static_cast<float>(SystemGain)};
 
 	this->SceneCaptureComponent2D->CaptureScene();
 	this->ApplyPostProcessShaders(this->SceneCaptureComponent2D->TextureTarget, &CorruptionParams);
 	verify(FImageUtils::GetRenderTargetImage(this->SceneCaptureComponent2D->TextureTarget, Image));
 
-	cv::Mat CvImage = FImageToOpenCVMat(Image);
-
-	// Apply corruptions to image data matrix
-	URenderingFunctionsLibrary::ApplySignalGain(CvImage, 1.0f, SystemGain);
-	// URenderingFunctionsLibrary::ApplyQE(PNGImageDataSerialized, 5.0f, 5.0f, 5.0f);
-
-	FImage CorruptImage(Image);
-	FMemory::Memcpy(CorruptImage.RawData.GetData(), CvImage.data, CorruptImage.RawData.Num());
-
 	// Take modified image data from Image and copy to ImageData as PNG
-	verify(FImageUtils::CompressImage(ImageData, TEXT("PNG"), CorruptImage));
+	verify(FImageUtils::CompressImage(ImageData, TEXT("PNG"), Image));
 }
 
 void ACameraModel::ApplyPostProcessShaders(UTextureRenderTarget2D *RenderTarget,
@@ -210,6 +208,22 @@ void ACameraModel::ApplyPostProcessShaders(UTextureRenderTarget2D *RenderTarget,
 
 				AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply Read Noise"), GMaxRHIFeatureLevel, Viewport,
 								  Viewport, ReadNoiseShader, RnParams);
+
+				Swap(TempTextureIn, TempTextureOut);
+			}
+
+			if (CorruptionParams->SignalGain != 0.0f)
+			{
+				FSignalGain::FParameters *GainParams = GraphBuilder.AllocParameters<FSignalGain::FParameters>();
+				GainParams->InputTexture = TempTextureIn;
+				GainParams->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
+				GainParams->SignalGain = CorruptionParams->SignalGain;
+				GainParams->RenderTargets[0] = FRenderTargetBinding(TempTextureOut, ERenderTargetLoadAction::ENoAction);
+
+				const TShaderMapRef<FSignalGain> SignalGainShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+
+				AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply Signal Gain"), GMaxRHIFeatureLevel, Viewport,
+								  Viewport, SignalGainShader, GainParams);
 
 				Swap(TempTextureIn, TempTextureOut);
 			}

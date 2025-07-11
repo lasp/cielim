@@ -1,0 +1,12 @@
+// SignalGain.usf
+#include "/Engine/Public/Platform.ush"
+
+Texture2D InputTexture;
+SamplerState InputSampler;
+
+float SignalGain;
+
+float4 MainPS(float4 UV : TEXCOORD0) : SV_Target0
+{
+	return InputTexture.Sample(InputSampler, UV) * SignalGain;
+}
