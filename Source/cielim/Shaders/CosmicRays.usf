@@ -1,0 +1,45 @@
+// CosmicRays.usf
+#include "/Engine/Public/Platform.ush"
+
+Texture2D InputTexture;
+SamplerState InputSampler;
+
+uint NumRays;
+StructuredBuffer<float2> StartPoints;
+StructuredBuffer<float2> EndPoints;
+StructuredBuffer<float> LineWidths;
+
+float4 MainPS(float4 UV : TEXCOORD0, float4 Position : SV_Position) : SV_Target0
+{
+	float4 Color = InputTexture.Sample(InputSampler, UV.xy);
+	float2 CurrentPoint = Position.xy;
+
+	for (int i = 0; i < NumRays; i++)
+	{
+		float2 StartPoint = StartPoints[i];
+		float2 EndPoint = EndPoints[i];
+		float LineWidth = LineWidths[i];
+
+		float2 LineVector = EndPoint - StartPoint;
+		float2 PixelVector = CurrentPoint - StartPoint;
+
+		/* The dot product divided by the length of the line segment vector gives the length of the pixel vector
+		 * in the direction of the line segment. Dividing again gives this length as a fraction of the length
+		 * of the line vector's length. This multiplied by the line vector gives the offset from the starting pixel
+		 * of the line segment to the closest point on the line segment to the current pixel. The fraction is bound
+		 * to [0,1] so that the closest point remains on the line segment. */
+
+		float LineMagnitudeSquared = max(dot(LineVector, LineVector), 1e-6);
+		float Multiplier = saturate(dot(PixelVector, LineVector) / LineMagnitudeSquared);
+
+		float2 Closest = StartPoint + Multiplier * LineVector;
+
+		float Distance = length(CurrentPoint - Closest);
+
+		float ColorAdd = step(Distance, LineWidth + 0.5f); // We only want to add color to pixels within the line width
+
+		Color.rgb += ColorAdd;
+	}
+
+	return Color;
+}

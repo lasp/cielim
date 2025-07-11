@@ -8,6 +8,8 @@
 
 #include "CameraModel.h"
 
+#include <random>
+
 #include "Components/SceneCaptureComponent2D.h"
 #include "ImageUtils.h"
 #include "Kismet/KismetRenderingLibrary.h"
@@ -20,6 +22,7 @@
 
 #include "../Shaders/GaussianPSF.h"
 #include "RenderingFunctionsLibrary.h"
+#include "cielim/Shaders/CosmicRays.h"
 
 ACameraModel::ACameraModel()
 {
@@ -67,7 +70,14 @@ void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, const double Po
 {
 	FImage Image;
 
-	FImageCorruptionParams CorruptionParams = {7, PointSpread};
+	auto CosmicRays = GetCosmicRays(CosmicRaysStdDev);
+
+	uint32 NumCosmicRays = CosmicRays.Get<0>();
+	TResourceArray<FVector2f> StartPoints = CosmicRays.Get<1>();
+	TResourceArray<FVector2f> EndPoints = CosmicRays.Get<2>();
+	TResourceArray<float> LineWidths = CosmicRays.Get<3>();
+
+	FImageCorruptionParams CorruptionParams = {7, PointSpread, NumCosmicRays, StartPoints, EndPoints, LineWidths};
 
 	this->SceneCaptureComponent2D->CaptureScene();
 	this->ApplyPostProcessShaders(this->SceneCaptureComponent2D->TextureTarget, &CorruptionParams);
@@ -76,7 +86,6 @@ void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, const double Po
 	cv::Mat CvImage = FImageToOpenCVMat(Image);
 
 	// Apply corruptions to image data matrix
-	URenderingFunctionsLibrary::ApplyCosmicRays(CvImage, CosmicRaysStdDev, 50.0f, 50.0f);
 	URenderingFunctionsLibrary::ApplyReadNoise(CvImage, ReadNoise, 1.0f);
 	URenderingFunctionsLibrary::ApplySignalGain(CvImage, 1.0f, SystemGain);
 	// URenderingFunctionsLibrary::ApplyQE(PNGImageDataSerialized, 5.0f, 5.0f, 5.0f);
@@ -155,6 +164,34 @@ void ACameraModel::ApplyPostProcessShaders(UTextureRenderTarget2D *RenderTarget,
 
 				AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply GaussianPSF V"), GMaxRHIFeatureLevel, Viewport,
 					              Viewport, GaussianPSFShaderV, PSFParamsV);
+
+				Swap(TempTextureIn, TempTextureOut);
+			}
+
+			if (CorruptionParams->NumCosmicRays != 0.0f)
+			{
+				// Cosmic Rays
+
+				const FRDGBufferRef StartBuffer =
+					CreateStructuredBuffer<FVector2f>(GraphBuilder, TEXT("StartPoints"), CorruptionParams->StartPoints);
+				const FRDGBufferRef EndBuffer =
+					CreateStructuredBuffer<FVector2f>(GraphBuilder, TEXT("EndPoints"), CorruptionParams->EndPoints);
+				const FRDGBufferRef WidthBuffer =
+					CreateStructuredBuffer<float>(GraphBuilder, TEXT("LineWidths"), CorruptionParams->LineWidths);
+
+				FCosmicRays::FParameters *RayParams = GraphBuilder.AllocParameters<FCosmicRays::FParameters>();
+				RayParams->InputTexture = TempTextureIn;
+				RayParams->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
+				RayParams->NumRays = CorruptionParams->NumCosmicRays;
+				RayParams->StartPoints = GraphBuilder.CreateSRV(StartBuffer, PF_G32R32F);
+				RayParams->EndPoints = GraphBuilder.CreateSRV(EndBuffer, PF_G32R32F);
+				RayParams->LineWidths = GraphBuilder.CreateSRV(WidthBuffer, PF_R32_FLOAT);
+				RayParams->RenderTargets[0] = FRenderTargetBinding(TempTextureOut, ERenderTargetLoadAction::ENoAction);
+
+				const TShaderMapRef<FCosmicRays> CosmicRayShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+
+				AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply Cosmic Rays"), GMaxRHIFeatureLevel, Viewport,
+								  Viewport, CosmicRayShader, RayParams);
 
 				Swap(TempTextureIn, TempTextureOut);
 			}
@@ -280,4 +317,71 @@ bool FCOBTest_CenterRight::RunTest(const FString &Parameters)
 
 	// Expected center should be in the middle of the right half of the image
 	return Coordinates.Equals(FVector2D(375, 250), 1);
+}
+
+// Helper Functions
+
+TTuple<float, TResourceArray<FVector2f>, TResourceArray<FVector2f>, TResourceArray<float>>
+ACameraModel::GetCosmicRays(const float Sigma) const
+{
+	std::default_random_engine Generator;
+
+	std::poisson_distribution CosmicRayDistribution(Sigma);
+	const uint32 NumCosmicRays = CosmicRayDistribution(Generator);
+
+	TResourceArray<FVector2f> StartPoints;
+	TResourceArray<FVector2f> EndPoints;
+	TResourceArray<float> LineWidths;
+
+	if (NumCosmicRays != 0)
+	{
+		StartPoints.Reserve(NumCosmicRays);
+		EndPoints.Reserve(NumCosmicRays);
+		LineWidths.Reserve(NumCosmicRays);
+
+		for (uint32 i = 0; i < NumCosmicRays; i++)
+		{
+			auto TempParams = GetCosmicRayParams();
+			StartPoints.Add(TempParams.Get<0>());
+			EndPoints.Add(TempParams.Get<1>());
+			LineWidths.Add(TempParams.Get<2>());
+		}
+	}
+
+	return TTuple<float, TResourceArray<FVector2f>, TResourceArray<FVector2f>, TResourceArray<float>>(
+		NumCosmicRays, StartPoints, EndPoints, LineWidths);
+}
+
+TTuple<FVector2f, FVector2f, float> ACameraModel::GetCosmicRayParams() const
+{
+	const uint32 SizeX = this->SceneCaptureComponent2D->TextureTarget->SizeX;
+	const uint32 SizeY = this->SceneCaptureComponent2D->TextureTarget->SizeY;
+
+	// Calculate starting point
+	const float XStartCoord = FMath::RandRange(0, SizeX);
+	const float YStartCoord = FMath::RandRange(0, SizeY);
+
+	FVector2f StartPoint(XStartCoord, YStartCoord);
+
+	// Calculate angle
+	const float Angle = FMath::FRandRange(0.0f, 2 * PI);
+
+	// Calculate length (Exponential)
+	const float Uniform0 = FMath::FRandRange(0.0, 1.0);
+	const float Length = -1 * 50 * FMath::Loge(Uniform0);
+
+	// Calculate ending point
+	float XStopCoord = XStartCoord + Length * FMath::Cos(Angle);
+	float YStopCoord = YStartCoord + Length * FMath::Sin(Angle);
+
+	XStopCoord = FMath::Clamp(XStopCoord, 0.0f, static_cast<float>(SizeX));
+	YStopCoord = FMath::Clamp(YStopCoord, 0.0f, static_cast<float>(SizeY));
+
+	FVector2f EndPoint(XStopCoord, YStopCoord);
+
+	// calculate width (Exponential)
+	const float Uniform1 = FMath::FRandRange(0.0, 1.0);
+	float Width = -1 * 0.5f * FMath::Loge(Uniform1);
+
+	return TTuple<FVector2f, FVector2f, float>(StartPoint, EndPoint, Width);
 }
