@@ -11,11 +11,6 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-// clang-format off
-#include "OpenCV/PreOpenCVHeaders.h"
-#include "opencv2/core.hpp"
-#include "OpenCV/PostOpenCVHeaders.h"
-// clang-format on
 
 #include "CameraModel.generated.h"
 
@@ -58,8 +53,6 @@ public:
 	static void ApplyPostProcessShaders(UTextureRenderTarget2D *RenderTarget, FImageCorruptionParams *CorruptionParams);
 
 	TOptional<FVector2d> GetCenterOfBrightness() const;
-
-	cv::Mat FImageToOpenCVMat(const FImage &Image) const;
 
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent *Body;

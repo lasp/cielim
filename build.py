@@ -43,10 +43,6 @@ def build(platform_name, executable, debug_mode):
 
     print("Status of third party libraries:")
 
-    opencv_exists = os.path.exists(os.path.join(cielim_path, "Source/ThirdParty/OpenCV/opencv/build"))
-    opencv_status = "Built" if opencv_exists else "Not built"
-    print(f"OpenCV... {opencv_status}")
-
     proto_exists = os.path.exists(os.path.join(cielim_path, "Source/ThirdParty/ProtobufLibrary/lib"))
     proto_status = "Built" if proto_exists else "Not built"
     print(f"Protobuf... {proto_status}")

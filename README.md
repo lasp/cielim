@@ -35,13 +35,9 @@ To build this project install Unreal Engine (Currently version 5.4). Additionall
 
 These tools are necessary to build Cielim and the third party libraries it uses. These third party libraries will be built automatically when building Cielim, but can also be built on their own using the .sh build scripts located in the respective folders in `Source/ThirdParty`.
 
-**Note:** If you have both Visual Studio and Msys2/MinGW on your Windows machine, you may have issues building OpenCV as it may try to use MinGW to build files generated for Visual Studio. In this case, rename or delete your Msys64 folder while building and then restore it when it's finished.
-
 **Additionally:** If you're working on Windows, you will need to copy and paste the .dll files corresponding to the linked .lib files in your `cielim\Binaries\Win64` directory. These include:
 - libprotobuf.dll
 - libzmq-(version).dll
-- opencv_world(version).dll
-- opencv_videoio_ffmpeg(version).dll
 
 ### Build Process
 
