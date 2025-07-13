@@ -78,13 +78,15 @@ if __name__ == "__main__":
 
         idx = idx + 1
 
-    if not args.hide_image:
-        WindowName = f"Image_Client_{connector.identity}"
-        cv2.namedWindow(WindowName, cv2.WINDOW_NORMAL)
-        cv2.imshow(WindowName, image)
-        cv2.resizeWindow(WindowName, 640, 480)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        print(f"Center of Brightness: {center_of_brightness}")
+
+        if not args.hide_image:
+            WindowName = f"Image_Client_{connector.identity}"
+            cv2.namedWindow(WindowName, cv2.WINDOW_NORMAL)
+            cv2.imshow(WindowName, image)
+            cv2.resizeWindow(WindowName, 1250, 1000)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
 
     connector.disconnect()
 

@@ -57,7 +57,7 @@ public:
 
 	static void ApplyPostProcessShaders(UTextureRenderTarget2D *RenderTarget, FImageCorruptionParams *CorruptionParams);
 
-	TOptional<FVector2d> GetCenterOfBrightness(double Threshold) const;
+	TOptional<FVector2d> GetCenterOfBrightness() const;
 
 	cv::Mat FImageToOpenCVMat(const FImage &Image) const;
 

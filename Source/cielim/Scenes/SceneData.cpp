@@ -144,7 +144,7 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 		ReturnData.payload.Emplace<FImagePayload>(FImagePayload());
 		ReturnData.payload.Get<FImagePayload>().image_data = PngEncodedData;
 		ReturnData.payload.Get<FImagePayload>().centerOfBrightness =
-			this->Spacecraft->CameraModel->GetCenterOfBrightness(10);
+			this->Spacecraft->CameraModel->GetCenterOfBrightness();
 
 		UE_LOG(LogCielim, Display, TEXT("Put back PNG image: ASimulationDataSourceActor"));
 	}
