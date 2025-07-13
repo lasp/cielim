@@ -21,10 +21,9 @@
 #include "RHIGPUReadback.h"
 #include "ScreenPass.h"
 
-#include "../Shaders/GaussianPSF.h"
-#include "RenderingFunctionsLibrary.h"
 #include "cielim/Shaders/CenBrightReduce.h"
 #include "cielim/Shaders/CosmicRays.h"
+#include "cielim/Shaders/GaussianPSF.h"
 #include "cielim/Shaders/ReadNoise.h"
 #include "cielim/Shaders/SignalGain.h"
 #include "cielim/Utilities/Logging/CielimLoggingMacros.h"
