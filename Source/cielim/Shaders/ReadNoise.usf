@@ -1,4 +1,11 @@
-// ReadNoise.usf
+//=================== Copyright (c) 2025 Laboratory for Atmospheric and Space Physics ===================//
+//
+// Purpose: Pixel shader that adds random Gaussian noise to the image to simulate camera Read noise.
+//
+// License: MIT License. See LICENSE file.
+//
+//=======================================================================================================//
+
 #include "/Engine/Public/Platform.ush"
 
 Texture2D InputTexture;

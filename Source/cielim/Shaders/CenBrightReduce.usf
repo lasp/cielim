@@ -1,4 +1,13 @@
-//CenBrightReduce.usf
+//=================== Copyright (c) 2025 Laboratory for Atmospheric and Space Physics ===================//
+//
+// Purpose: Compute shader used to reduce summation calculations for calculating the center of brightness
+//          of an image on the GPU. Outputs array containing reduced values which must be summed together
+//          on the CPU to obtain the final center of brightness values.
+//
+// License: MIT License. See LICENSE file.
+//
+//=======================================================================================================//
+
 #include "/Engine/Public/Platform.ush"
 
 Texture2D InputTexture;

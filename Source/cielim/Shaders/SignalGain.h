@@ -1,3 +1,11 @@
+//=================== Copyright (c) 2025 Laboratory for Atmospheric and Space Physics ===================//
+//
+// Purpose: Defines the FSignalGain class used to wrap its corresponding global shader.
+//
+// License: MIT License. See LICENSE file.
+//
+//=======================================================================================================//
+
 #pragma once
 
 #include "GlobalShader.h"

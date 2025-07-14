@@ -1,4 +1,11 @@
-// GaussianPSF.usf
+//=================== Copyright (c) 2025 Laboratory for Atmospheric and Space Physics ===================//
+//
+// Purpose: Pixel shader that adds Gaussian blur to the image to simulate camera point spreading.
+//
+// License: MIT License. See LICENSE file.
+//
+//=======================================================================================================//
+
 #include "/Engine/Public/Platform.ush"
 
 Texture2D InputTexture;

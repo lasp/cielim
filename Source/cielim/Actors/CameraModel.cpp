@@ -242,7 +242,7 @@ void ACameraModel::ApplyPostProcessShaders(UTextureRenderTarget2D *RenderTarget,
 																	 PermutationDomain);
 
 				AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply GaussianPSF H"), GMaxRHIFeatureLevel, Viewport,
-					              Viewport, GaussianPSFShaderH, PSFParamsH);
+								  Viewport, GaussianPSFShaderH, PSFParamsH);
 
 				Swap(TempTextureIn, TempTextureOut);
 
@@ -262,7 +262,7 @@ void ACameraModel::ApplyPostProcessShaders(UTextureRenderTarget2D *RenderTarget,
 				PSFParamsV->RenderTargets[0] = FRenderTargetBinding(TempTextureOut, ERenderTargetLoadAction::ENoAction);
 
 				AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply GaussianPSF V"), GMaxRHIFeatureLevel, Viewport,
-					              Viewport, GaussianPSFShaderV, PSFParamsV);
+								  Viewport, GaussianPSFShaderV, PSFParamsV);
 
 				Swap(TempTextureIn, TempTextureOut);
 			}
