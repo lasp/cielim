@@ -47,12 +47,12 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void SaveImageToDisk(const FString &FilePath, const FString &Filename);
 
-	void GetCorruptedImage(TArray64<uint8> &ImageData, const double PointSpread, const double ReadNoise,
-						   const double SystemGain, const double CosmicRaysStdDev) const;
+	void GetCorruptedImage(TArray64<uint8> &ImageData, TOptional<FVector2D> &CobCoordinates, const double PointSpread,
+						   const double ReadNoise, const double SystemGain, const double CosmicRaysStdDev) const;
+
+	static TOptional<FVector2d> GetCenterOfBrightness(UTextureRenderTarget2D *RenderTarget);
 
 	static void ApplyPostProcessShaders(UTextureRenderTarget2D *RenderTarget, FImageCorruptionParams *CorruptionParams);
-
-	TOptional<FVector2d> GetCenterOfBrightness() const;
 
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent *Body;

@@ -56,8 +56,9 @@ void ACameraModel::SaveImageToDisk(const FString &FilePath, const FString &Filen
 	UKismetRenderingLibrary::ExportRenderTarget(this, this->SceneCaptureComponent2D->TextureTarget, FilePath, Filename);
 }
 
-void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, const double PointSpread, const double ReadNoise,
-									 const double SystemGain, const double CosmicRaysStdDev) const
+void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, TOptional<FVector2D> &CobCoordinates,
+									 const double PointSpread, const double ReadNoise, const double SystemGain,
+									 const double CosmicRaysStdDev) const
 {
 	FImage Image;
 
@@ -78,11 +79,121 @@ void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, const double Po
 											   static_cast<float>(SystemGain)};
 
 	this->SceneCaptureComponent2D->CaptureScene();
+
+	CobCoordinates = this->GetCenterOfBrightness(this->SceneCaptureComponent2D->TextureTarget);
+
 	this->ApplyPostProcessShaders(this->SceneCaptureComponent2D->TextureTarget, &CorruptionParams);
+
 	verify(FImageUtils::GetRenderTargetImage(this->SceneCaptureComponent2D->TextureTarget, Image));
 
 	// Take modified image data from Image and copy to ImageData as PNG
 	verify(FImageUtils::CompressImage(ImageData, TEXT("PNG"), Image));
+}
+
+TOptional<FVector2d> ACameraModel::GetCenterOfBrightness(UTextureRenderTarget2D *RenderTarget)
+{
+	TOptional<FVector2D> Coordinates; // Equals default if image has no center of brightness
+
+	if (!RenderTarget)
+		return Coordinates;
+
+	FTextureRenderTargetResource *RTResource = RenderTarget->GameThread_GetRenderTargetResource();
+	FRHIGPUBufferReadback Readback(TEXT("COB Reduction Calculations Readback"));
+
+	const uint32 Width = RenderTarget->SizeX;
+	const uint32 Height = RenderTarget->SizeY;
+
+	const uint32 GroupCountX = FMath::DivideAndRoundUp(Width, 16u);
+	const uint32 GroupCountY = FMath::DivideAndRoundUp(Height, 16u);
+	const uint32 NumGroups = GroupCountX * GroupCountY;
+
+	FRenderCommandFence Fence;
+
+	ENQUEUE_RENDER_COMMAND(COB_Calculations)
+	(
+		[RTResource, &Readback, Width, Height, GroupCountX, GroupCountY,
+		 NumGroups](FRHICommandListImmediate &RHICmdList)
+		{
+			FRDGBuilder GraphBuilder(RHICmdList);
+
+			const FRDGTextureRef RenderTargetBase =
+				RegisterExternalTexture(GraphBuilder, RTResource->GetRenderTargetTexture(), TEXT("RenderTarget"));
+
+			const FRDGBufferDesc PartialSumsDesc = FRDGBufferDesc::CreateStructuredDesc(sizeof(FVector4f), NumGroups);
+			const FRDGBufferRef PartialSumsBuffer =
+				GraphBuilder.CreateBuffer(PartialSumsDesc, TEXT("PartialSumsBuffer"));
+
+			FCenBrightReduce::FParameters *CobParams = GraphBuilder.AllocParameters<FCenBrightReduce::FParameters>();
+			CobParams->InputTexture = RenderTargetBase;
+			CobParams->TextureSize = FIntPoint(Width, Height);
+			CobParams->PartialSumBuffer = GraphBuilder.CreateUAV(PartialSumsBuffer, PF_A32B32G32R32F);
+
+			const TShaderMapRef<FCenBrightReduce> CenBrightReduceShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+
+			const FIntVector GroupCount = FIntVector(GroupCountX, GroupCountY, 1);
+			FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("ComputeCOB"), CenBrightReduceShader, CobParams,
+										 GroupCount);
+
+			AddEnqueueCopyPass(GraphBuilder, &Readback, PartialSumsBuffer, sizeof(FVector4f) * NumGroups);
+
+			GraphBuilder.Execute();
+			RHICmdList.SubmitCommandsAndFlushGPU(); // Metals refuses to auto-flush unless forced
+		});
+
+	Fence.BeginFence();
+	Fence.Wait();
+
+	ENQUEUE_RENDER_COMMAND(COB_Readback)
+	(
+		[&Readback, &Coordinates, NumGroups](FRHICommandListImmediate &RHICmdList)
+		{
+			const double StartTime = FPlatformTime::Seconds();
+
+			while (!Readback.IsReady())
+			{
+				FPlatformProcess::Sleep(0.001f);
+
+				if (FPlatformTime::Seconds() - StartTime > 5.0f)
+				{
+					UE_LOG(LogCielim, Warning, TEXT("Readback polling has timed out; skipping readback..."));
+					break;
+				}
+			}
+
+			if (Readback.IsReady())
+			{
+				const FVector4f *RawData = static_cast<FVector4f *>(Readback.Lock(sizeof(FVector4f) * NumGroups));
+
+				float LuminanceSum = 0;
+				float XLuminanceSum = 0;
+				float YLuminanceSum = 0;
+
+				for (uint32 i = 0; i < NumGroups; i++)
+				{
+					const FVector4f Temp = RawData[i];
+					LuminanceSum += Temp.X;
+					XLuminanceSum += Temp.Y;
+					YLuminanceSum += Temp.Z;
+				}
+
+				if (LuminanceSum > 0.0f)
+				{
+					const double CenterX = XLuminanceSum / LuminanceSum;
+					const double CenterY = YLuminanceSum / LuminanceSum;
+					Coordinates = FVector2D(CenterX, CenterY);
+				}
+
+				Readback.Unlock();
+			}
+		});
+
+	Fence.BeginFence();
+	Fence.Wait();
+
+	if (Coordinates.IsSet())
+		UE_LOG(LogCielim, Display, TEXT("Center of Brightness: %f, %f"), Coordinates->X, Coordinates->Y);
+
+	return Coordinates;
 }
 
 void ACameraModel::ApplyPostProcessShaders(UTextureRenderTarget2D *RenderTarget,
@@ -221,114 +332,6 @@ void ACameraModel::ApplyPostProcessShaders(UTextureRenderTarget2D *RenderTarget,
 
 			GraphBuilder.Execute();
 		});
-}
-
-TOptional<FVector2d> ACameraModel::GetCenterOfBrightness() const
-{
-	FImage Image;
-	TOptional<FVector2D> Coordinates; // Equals default if image has no center of brightness
-
-	this->SceneCaptureComponent2D->CaptureScene();
-	verify(FImageUtils::GetRenderTargetImage(this->SceneCaptureComponent2D->TextureTarget, Image));
-
-	FTextureRenderTargetResource *RTResource =
-		this->SceneCaptureComponent2D->TextureTarget->GameThread_GetRenderTargetResource();
-	FRHIGPUBufferReadback Readback(TEXT("COB Reduction Calculations Readback"));
-
-	const uint32 Width = this->SceneCaptureComponent2D->TextureTarget->SizeX;
-	const uint32 Height = this->SceneCaptureComponent2D->TextureTarget->SizeY;
-
-	const uint32 GroupCountX = FMath::DivideAndRoundUp(Width, 16u);
-	const uint32 GroupCountY = FMath::DivideAndRoundUp(Height, 16u);
-	const uint32 NumGroups = GroupCountX * GroupCountY;
-
-	FRenderCommandFence Fence;
-
-	ENQUEUE_RENDER_COMMAND(COB_Calculations)
-	(
-		[RTResource, &Readback, Width, Height, GroupCountX, GroupCountY,
-		 NumGroups](FRHICommandListImmediate &RHICmdList)
-		{
-			FRDGBuilder GraphBuilder(RHICmdList);
-
-			const FRDGTextureRef RenderTarget =
-				RegisterExternalTexture(GraphBuilder, RTResource->GetRenderTargetTexture(), TEXT("RenderTarget"));
-
-			const FRDGBufferDesc PartialSumsDesc = FRDGBufferDesc::CreateStructuredDesc(sizeof(FVector4f), NumGroups);
-			const FRDGBufferRef PartialSumsBuffer =
-				GraphBuilder.CreateBuffer(PartialSumsDesc, TEXT("PartialSumsBuffer"));
-
-			FCenBrightReduce::FParameters *CobParams = GraphBuilder.AllocParameters<FCenBrightReduce::FParameters>();
-			CobParams->InputTexture = RenderTarget;
-			CobParams->TextureSize = FIntPoint(Width, Height);
-			CobParams->PartialSumBuffer = GraphBuilder.CreateUAV(PartialSumsBuffer, PF_A32B32G32R32F);
-
-			const TShaderMapRef<FCenBrightReduce> CenBrightReduceShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-
-			const FIntVector GroupCount = FIntVector(GroupCountX, GroupCountY, 1);
-			FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("ComputeCOB"), CenBrightReduceShader, CobParams,
-										 GroupCount);
-
-			AddEnqueueCopyPass(GraphBuilder, &Readback, PartialSumsBuffer, sizeof(FVector4f) * NumGroups);
-
-			GraphBuilder.Execute();
-			RHICmdList.SubmitCommandsAndFlushGPU(); // Metals refuses to auto-flush unless forced
-		});
-
-	Fence.BeginFence();
-	Fence.Wait();
-
-	ENQUEUE_RENDER_COMMAND(COB_Readback)
-	(
-		[&Readback, &Coordinates, NumGroups](FRHICommandListImmediate &RHICmdList)
-		{
-			const double StartTime = FPlatformTime::Seconds();
-
-			while (!Readback.IsReady())
-			{
-				FPlatformProcess::Sleep(0.001f);
-
-				if (FPlatformTime::Seconds() - StartTime > 5.0f)
-				{
-					UE_LOG(LogCielim, Warning, TEXT("Readback polling has timed out; skipping readback..."));
-					break;
-				}
-			}
-
-			if (Readback.IsReady())
-			{
-				const FVector4f *RawData = static_cast<FVector4f *>(Readback.Lock(sizeof(FVector4f) * NumGroups));
-
-				float LuminanceSum = 0;
-				float XLuminanceSum = 0;
-				float YLuminanceSum = 0;
-
-				for (uint32 i = 0; i < NumGroups; i++)
-				{
-					const FVector4f Temp = RawData[i];
-					LuminanceSum += Temp.X;
-					XLuminanceSum += Temp.Y;
-					YLuminanceSum += Temp.Z;
-				}
-
-				if (LuminanceSum > 0.0f)
-				{
-					const double CenterX = XLuminanceSum / LuminanceSum;
-					const double CenterY = YLuminanceSum / LuminanceSum;
-					Coordinates = FVector2D(CenterX, CenterY);
-				}
-
-				Readback.Unlock();
-			}
-		});
-
-	Fence.BeginFence();
-	Fence.Wait();
-
-	if (Coordinates.IsSet())
-		UE_LOG(LogCielim, Display, TEXT("Center of Brightness: %f, %f"), Coordinates->X, Coordinates->Y);
-
-	return Coordinates;
 }
 
 // Helper Functions

@@ -124,27 +124,28 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 			return;
 		}
 
-		const double PointSpread = this->CielimMessage.GetMessage().camera().pointspreadfunction();
-		const double ReadNoise = this->CielimMessage.GetMessage().camera().readnoise();
-		const double SystemGain = this->CielimMessage.GetMessage().camera().systemgain();
-		const double CosmicRayStdDev =
-			this->CielimMessage.GetMessage().camera().renderparameters().cosmicraystddeviation();
+		const cielimMessage::CameraModel *ProtobufCameraModel = &this->CielimMessage.GetMessage().camera();
+
+		const double PointSpread = ProtobufCameraModel->pointspreadfunction();
+		const double ReadNoise = ProtobufCameraModel->readnoise();
+		const double SystemGain = ProtobufCameraModel->systemgain();
+		const double RayStdDev = ProtobufCameraModel->renderparameters().cosmicraystddeviation();
 
 		TArray64<uint8> PngEncodedData;
+		TOptional<FVector2D> CobCoordinates;
 
 		const auto *TempPayload = CommandData.payload.TryGet<FImagePayload>();
 
 		if (TempPayload != nullptr && TempPayload->shouldReturnImage)
 		{
-			this->Spacecraft->CameraModel->GetCorruptedImage(PngEncodedData, PointSpread, ReadNoise, SystemGain,
-															 CosmicRayStdDev);
+			const ACameraModel *Camera = this->Spacecraft->CameraModel;
+			Camera->GetCorruptedImage(PngEncodedData, CobCoordinates, PointSpread, ReadNoise, SystemGain, RayStdDev);
 		}
 
 		ReturnData.query = CommandType::REQUEST_IMAGE;
 		ReturnData.payload.Emplace<FImagePayload>(FImagePayload());
 		ReturnData.payload.Get<FImagePayload>().image_data = PngEncodedData;
-		ReturnData.payload.Get<FImagePayload>().centerOfBrightness =
-			this->Spacecraft->CameraModel->GetCenterOfBrightness();
+		ReturnData.payload.Get<FImagePayload>().centerOfBrightness = CobCoordinates;
 
 		UE_LOG(LogCielim, Display, TEXT("Put back PNG image: ASimulationDataSourceActor"));
 	}
