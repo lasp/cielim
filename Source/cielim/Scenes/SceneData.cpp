@@ -49,7 +49,7 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 		this->Actors.Reset();
 
 		if (this->Spacecraft != nullptr)
-			this->Spacecraft->SceneCaptureComponent2D->ShowOnlyActors.Reset();
+			this->Spacecraft->CameraModel->SceneCaptureComponent2D->ShowOnlyActors.Reset();
 
 		for (auto const CelestialBody : this->CelestialBodyArray)
 		{
@@ -74,12 +74,6 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 		{
 			this->Spacecraft->Destroy();
 			this->Spacecraft = nullptr;
-		}
-
-		if (this->CaptureManager != nullptr)
-		{
-			this->CaptureManager->Destroy();
-			this->CaptureManager = nullptr;
 		}
 
 		this->bIsCelestialBodiesSpawned = false;
@@ -110,15 +104,12 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 			this->SpawnSpacecraft();
 			this->SpawnSunLight();
 
-			this->Spacecraft->SceneCaptureComponent2D->PrimitiveRenderMode =
+			this->Spacecraft->CameraModel->SceneCaptureComponent2D->PrimitiveRenderMode =
 				ESceneCapturePrimitiveRenderMode::PRM_UseShowOnlyList;
-			this->Spacecraft->SceneCaptureComponent2D->ShowOnlyActors = Actors;
+			this->Spacecraft->CameraModel->SceneCaptureComponent2D->ShowOnlyActors = Actors;
 
 			if (this->CielimMessage.GetMessage().has_camera())
-			{
 				this->bHasCameras = true;
-				this->SpawnCaptureManager();
-			}
 		}
 		else
 		{
@@ -145,14 +136,15 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 
 		if (TempPayload != nullptr && TempPayload->shouldReturnImage)
 		{
-			this->CaptureManager->GetCorruptedImage(PngEncodedData, PointSpread, ReadNoise, SystemGain,
-													CosmicRayStdDev);
+			this->Spacecraft->CameraModel->GetCorruptedImage(PngEncodedData, PointSpread, ReadNoise, SystemGain,
+															 CosmicRayStdDev);
 		}
 
 		ReturnData.query = CommandType::REQUEST_IMAGE;
 		ReturnData.payload.Emplace<FImagePayload>(FImagePayload());
 		ReturnData.payload.Get<FImagePayload>().image_data = PngEncodedData;
-		ReturnData.payload.Get<FImagePayload>().centerOfBrightness = this->CaptureManager->GetCenterOfBrightness(10);
+		ReturnData.payload.Get<FImagePayload>().centerOfBrightness =
+			this->Spacecraft->CameraModel->GetCenterOfBrightness(10);
 
 		UE_LOG(LogCielim, Display, TEXT("Put back PNG image: ASimulationDataSourceActor"));
 	}
@@ -243,10 +235,10 @@ void USceneData::SpawnSpacecraft()
 		TempSpacecraft->SetResolution(Camera.resolution(0), Camera.resolution(1));
 
 		const FVector3d CameraPosition = GetCameraPosition(Camera);
-		TempSpacecraft->SetCameraPosition(CameraPosition);
+		TempSpacecraft->SetCameraRelativePosition(CameraPosition);
 
 		const FRotator CameraRotation = GetCameraRotation(Camera);
-		TempSpacecraft->UpdateCameraOrientation(CameraRotation);
+		TempSpacecraft->SetCameraRelativeOrientation(CameraRotation);
 	}
 
 	this->Spacecraft = TempSpacecraft;
@@ -273,15 +265,6 @@ void USceneData::SpawnSunLight()
 
 	const auto RotationMatrixFromLocation = FRotationMatrix::MakeFromX(Vector);
 	this->SunLight->GetLightComponent()->SetRelativeRotation(RotationMatrixFromLocation.Rotator());
-}
-
-void USceneData::SpawnCaptureManager()
-{
-	this->CaptureManager = GetWorld()->SpawnActor<ACaptureManager>();
-
-	this->CaptureManager->SetSceneCaptureComponent(this->Spacecraft->SceneCaptureComponent2D);
-
-	UE_LOG(LogCielim, Display, TEXT("Set Capture Texture Target"));
 }
 
 void USceneData::UpdateCelestialBodies() const
@@ -316,7 +299,7 @@ void USceneData::UpdateSpacecraft() const
 
 		const FRotator CameraRotation = GetCameraRotation(Camera);
 
-		this->Spacecraft->UpdateCameraOrientation(CameraRotation);
+		this->Spacecraft->SetCameraRelativeOrientation(CameraRotation);
 	}
 }
 
@@ -329,12 +312,6 @@ void USceneData::BeginDestroy()
 	}
 
 	this->Actors.Reset();
-
-	if (this->CaptureManager != nullptr)
-	{
-		this->CaptureManager->Destroy();
-		this->CaptureManager = nullptr;
-	}
 
 	Super::BeginDestroy();
 }
