@@ -17,7 +17,7 @@ if exist "%opencv_lib_full_path%" (
 ) else (
 
     echo OpenCV will be built. Library %opencv_lib_full_path% not found.
-    
+
     @REM Make sure we're in the OpenCV folder
     cd /d "%~1"
 
@@ -35,14 +35,14 @@ if exist "%opencv_lib_full_path%" (
         -D CMAKE_BUILD_TYPE=Release ^
         -D CMAKE_INSTALL_PREFIX=.. ^
         -D INSTALL_CREATE_DISTRIB=ON ^
-        -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules \
+        -D OPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules ^
         -D WITH_CUDA:BOOL=OFF ^
         -D WITH_FFMPEG=OFF ^
         -D WITH_GSTREAMER:BOOL=OFF ^
         -D WITH_IPP=OFF ^
         -D WITH_OPENEXR:BOOL=OFF ^
         -D WITH_TESSERACT:BOOL=OFF ^
-        -D WITH_VTK:BOOL=OFF 
+        -D WITH_VTK:BOOL=OFF
     cmake --build . --parallel 8 --config Release
 
     @REM You need to install here or else headers won't all be in the same place

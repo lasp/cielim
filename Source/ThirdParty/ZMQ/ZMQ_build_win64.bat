@@ -24,23 +24,20 @@ if exist "%zmq_lib_full_path%" (
     cd libzmq
     git submodule update --init --recursive
 
-    @REM CMake Build 
+    @REM CMake Build
     echo Building libzmq...
-    mkdir build
+    IF NOT EXIST "build" (
+        mkdir build
+    )
     cd build
-    cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release
+    cmake .. -G "Visual Studio 17 2022" -A x64 ^
+        -DCMAKE_BUILD_TYPE=Release ^
+        -DWITH_TLS="NO"
     cmake --build . --parallel 8 --config Release
 
     cd "..\.."
 
-    @REM Do all of that for cppZMQ
+    @REM Check cppZMQ
     cd cppzmq
     git submodule update --init --recursive
-
-    @REM CMake Build 
-    echo Building cppzmq...
-    mkdir build
-    cd build
-    cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="../../libzmq"
-    cmake --build . --parallel 8 --config Release
 )
