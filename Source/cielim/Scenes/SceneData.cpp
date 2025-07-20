@@ -247,6 +247,9 @@ void USceneData::SpawnSunLight()
 {
 	this->SunLight = GetWorld()->SpawnActor<ADirectionalLight>(FVector3d::ZeroVector, FRotator::ZeroRotator);
 
+	// Light should spawn as disabled so SceneManager can manage which scene's light is enabled
+	ToggleSunLight(false);
+
 	this->Actors.Add(SunLight);
 
 	const double ExposureTime = this->CielimMessage.GetMessage().camera().exposuretime();
@@ -299,6 +302,12 @@ void USceneData::UpdateSpacecraft() const
 		this->Spacecraft->SetCameraRelativeOrientation(CameraRotation);
 	}
 }
+
+bool USceneData::IsSceneEstablished() const { return this->bIsSceneEstablished; }
+
+bool USceneData::IsSunLightOn() const { return this->SunLight->GetLightComponent()->IsVisible(); }
+
+void USceneData::ToggleSunLight(const bool Toggle) const { this->SunLight->GetLightComponent()->SetVisibility(Toggle); }
 
 void USceneData::BeginDestroy()
 {

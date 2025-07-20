@@ -44,4 +44,7 @@ private:
 
 	UPROPERTY()
 	TMap<uint8, USceneData *> Scenes;
+
+	UPROPERTY()
+	USceneData *ActiveScene;
 };

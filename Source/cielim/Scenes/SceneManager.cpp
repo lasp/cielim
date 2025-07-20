@@ -44,6 +44,9 @@ void USceneManager::Tick(float DeltaTime)
 	{
 		if (USceneData *Scene = *Scenes.Find(SceneID); Scene != nullptr)
 		{
+			if (ActiveScene == Scene)
+				ActiveScene = nullptr;
+
 			Scene->MarkAsGarbage();
 			Scenes.Remove(SceneID);
 
@@ -57,6 +60,17 @@ void USceneManager::Tick(float DeltaTime)
 	}
 	else if (USceneData *Scene = *Scenes.Find(SceneID); Scene != nullptr)
 	{
+		if (Scene->IsSceneEstablished() && !Scene->IsSunLightOn())
+			Scene->ToggleSunLight(true);
+
+		if (ActiveScene != Scene)
+		{
+			if (ActiveScene != nullptr && ActiveScene->IsSceneEstablished())
+				ActiveScene->ToggleSunLight(false);
+
+			ActiveScene = Scene;
+		}
+
 		FCircularQueueData ReturnData;
 
 		ReturnData.ID = QueueData.GetValue().ID;

@@ -37,6 +37,21 @@ public:
 	 */
 	void UpdateScene() const;
 	/**
+	 * @brief Gets the status of the scene.
+	 * @return Returns whether the scene and its constituents have been created.
+	 */
+	bool IsSceneEstablished() const;
+	/**
+	 * @brief Gets the visibility status of the sunlight.
+	 * @return Returns whether the sunlight is on or not.
+	 */
+	bool IsSunLightOn() const;
+	/**
+	 * @brief Toggles the sunlight for this scene on/off affecting whether it is used in lighting or not.
+	 * @param Toggle Whether the light should be on (true) or off (false).
+	 */
+	void ToggleSunLight(const bool Toggle) const;
+	/**
 	 * @brief Called when instance is destroyed by GC system, should not be called directly.
 	 */
 	virtual void BeginDestroy() override;
