@@ -8,16 +8,27 @@
 
 #include "CameraModel.h"
 
+#include <random>
+
 #include "Components/SceneCaptureComponent2D.h"
 #include "ImageUtils.h"
 #include "Kismet/KismetRenderingLibrary.h"
-// clang-format off
-#include "OpenCV/PreOpenCVHeaders.h"
-#include "opencv2/imgproc.hpp"
-#include "OpenCV/PostOpenCVHeaders.h"
-// clang-format on
+#include "RHIGPUReadback.h"
+#include "ScreenPass.h"
 
-#include "RenderingFunctionsLibrary.h"
+#include "cielim/Shaders/CenBrightReduce.h"
+#include "cielim/Shaders/CosmicRays.h"
+#include "cielim/Shaders/GaussianPSF.h"
+#include "cielim/Shaders/ReadNoise.h"
+#include "cielim/Shaders/SignalGain.h"
+#include "cielim/Utilities/Logging/CielimLoggingMacros.h"
+
+DECLARE_GPU_STAT_NAMED(CielimCobReductionCalculations, TEXT("Cielim Center of Brightness Reduction Calculations Stat"));
+DECLARE_GPU_STAT_NAMED(CielimPostProcessCorruptionPasses, TEXT("Cielim Post-Process Corruption Passes Stat"));
+DECLARE_GPU_STAT_NAMED(GaussianPSF, TEXT("Gaussian PSF Pass Stat"));
+DECLARE_GPU_STAT_NAMED(CosmicRays, TEXT("Cosmic Rays Pass Stat"));
+DECLARE_GPU_STAT_NAMED(ReadNoise, TEXT("Read Noise Pass Stat"));
+DECLARE_GPU_STAT_NAMED(SignalGain, TEXT("Signal Gain Pass Stat"));
 
 ACameraModel::ACameraModel()
 {
@@ -52,153 +63,374 @@ void ACameraModel::SaveImageToDisk(const FString &FilePath, const FString &Filen
 	UKismetRenderingLibrary::ExportRenderTarget(this, this->SceneCaptureComponent2D->TextureTarget, FilePath, Filename);
 }
 
-FImage ACameraModel::GetUncorruptedImage() const
+void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, TOptional<FVector2D> &CobCoordinates,
+									 const double PointSpread, const double ReadNoise, const double SystemGain,
+									 const double CosmicRaysStdDev) const
 {
 	FImage Image;
 
+	auto CosmicRays = GetCosmicRays(CosmicRaysStdDev);
+
+	uint32 NumCosmicRays = CosmicRays.Get<0>();
+	TResourceArray<FVector2f> StartPoints = CosmicRays.Get<1>();
+	TResourceArray<FVector2f> EndPoints = CosmicRays.Get<2>();
+	TResourceArray<float> LineWidths = CosmicRays.Get<3>();
+
+	FImageCorruptionParams CorruptionParams = {7,
+											   PointSpread,
+											   NumCosmicRays,
+											   StartPoints,
+											   EndPoints,
+											   LineWidths,
+											   static_cast<float>(ReadNoise),
+											   static_cast<float>(SystemGain)};
+
 	this->SceneCaptureComponent2D->CaptureScene();
+
+	CobCoordinates = this->GetCenterOfBrightness(this->SceneCaptureComponent2D->TextureTarget);
+
+	this->ApplyPostProcessShaders(this->SceneCaptureComponent2D->TextureTarget, &CorruptionParams);
+
 	verify(FImageUtils::GetRenderTargetImage(this->SceneCaptureComponent2D->TextureTarget, Image));
 
-	return Image;
-}
-
-cv::Mat ACameraModel::FImageToOpenCVMat(const FImage &Image) const
-{
-	// Access color data of Image and create 4 channel matrix
-	const TArrayView64<const FColor> &PixelData = Image.AsBGRA8();
-	cv::Mat OpenCVMat(Image.GetHeight(), Image.GetWidth(), CV_8UC4, (void *)PixelData.GetData());
-	return OpenCVMat;
-}
-
-void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, double pointSpread, double readNoise,
-									 double systemGain, double cosmicRaysStdDev) const
-{
-	FImage Image = GetUncorruptedImage();
-	cv::Mat CvImage = FImageToOpenCVMat(Image);
-
-	// Apply corruptions to image data matrix
-	URenderingFunctionsLibrary::ApplyPSF_Gaussian(CvImage, 9, 9, pointSpread, pointSpread);
-	URenderingFunctionsLibrary::ApplyCosmicRays(CvImage, cosmicRaysStdDev, 50.0f, 50.0f);
-	URenderingFunctionsLibrary::ApplyReadNoise(CvImage, readNoise, 1.0f);
-	URenderingFunctionsLibrary::ApplySignalGain(CvImage, 1.0f, systemGain);
-	// URenderingFunctionsLibrary::ApplyQE(PNGImageDataSerialized, 5.0f, 5.0f, 5.0f);
-
-	FImage corruptImage(Image);
-	FMemory::Memcpy(corruptImage.RawData.GetData(), CvImage.data, corruptImage.RawData.Num());
-
 	// Take modified image data from Image and copy to ImageData as PNG
-	verify(FImageUtils::CompressImage(ImageData, TEXT("PNG"), corruptImage));
+	verify(FImageUtils::CompressImage(ImageData, TEXT("PNG"), Image));
 }
 
-TOptional<FVector2d> ACameraModel::GetCenterOfBrightness(double Threshold) const
+TOptional<FVector2d> ACameraModel::GetCenterOfBrightness(UTextureRenderTarget2D *RenderTarget)
 {
-	uint32_t WeightSum = 0;
-	TOptional<FVector2D> Coordinates; // Default the case where the image has no brightness
+	TOptional<FVector2D> Coordinates; // Equals default if image has no center of brightness
 
-	cv::Mat GrayImage;
-	const FImage Image = GetUncorruptedImage();
-	cv::cvtColor(FImageToOpenCVMat(Image), GrayImage, cv::COLOR_BGR2GRAY);
-	cv::threshold(GrayImage, GrayImage, Threshold, 255, cv::THRESH_BINARY);
+	if (!RenderTarget)
+		return Coordinates;
 
-	// Compute the center of brightness
-	if (const cv::Moments Moments = cv::moments(GrayImage, true); Moments.m00 != 0)
-	{
-		Coordinates.Emplace(Moments.m10 / Moments.m00, Moments.m01 / Moments.m00);
-	}
+	FTextureRenderTargetResource *RTResource = RenderTarget->GameThread_GetRenderTargetResource();
+	FRHIGPUBufferReadback Readback(TEXT("COB Reduction Calculations Readback"));
+
+	const uint32 Width = RenderTarget->SizeX;
+	const uint32 Height = RenderTarget->SizeY;
+
+	const uint32 GroupCountX = FMath::DivideAndRoundUp(Width, 16u);
+	const uint32 GroupCountY = FMath::DivideAndRoundUp(Height, 16u);
+	const uint32 NumGroups = GroupCountX * GroupCountY;
+
+	FRenderCommandFence Fence;
+
+	ENQUEUE_RENDER_COMMAND(COB_Calculations)
+	(
+		[RTResource, &Readback, Width, Height, GroupCountX, GroupCountY,
+		 NumGroups](FRHICommandListImmediate &RHICmdList)
+		{
+			FRDGBuilder GraphBuilder(RHICmdList);
+
+			const FRDGTextureRef RenderTargetBase =
+				RegisterExternalTexture(GraphBuilder, RTResource->GetRenderTargetTexture(), TEXT("RenderTarget"));
+
+			const FRDGBufferDesc PartialSumsDesc = FRDGBufferDesc::CreateStructuredDesc(sizeof(FVector4f), NumGroups);
+			const FRDGBufferRef PartialSumsBuffer =
+				GraphBuilder.CreateBuffer(PartialSumsDesc, TEXT("PartialSumsBuffer"));
+
+			FCenBrightReduce::FParameters *CobParams = GraphBuilder.AllocParameters<FCenBrightReduce::FParameters>();
+			CobParams->InputTexture = RenderTargetBase;
+			CobParams->TextureSize = FIntPoint(Width, Height);
+			CobParams->PartialSumBuffer = GraphBuilder.CreateUAV(PartialSumsBuffer, PF_A32B32G32R32F);
+
+			{
+				RDG_GPU_STAT_SCOPE(GraphBuilder, CielimCobReductionCalculations);
+				RDG_EVENT_SCOPE(GraphBuilder, "Cielim Center of Brightness GPU Reduction Calculations");
+
+				const TShaderMapRef<FCenBrightReduce> CenBrightReduceShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+
+				const FIntVector GroupCount = FIntVector(GroupCountX, GroupCountY, 1);
+				FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("ComputeCOB"), CenBrightReduceShader,
+											 CobParams, GroupCount);
+
+				AddEnqueueCopyPass(GraphBuilder, &Readback, PartialSumsBuffer, sizeof(FVector4f) * NumGroups);
+			}
+
+			GraphBuilder.Execute();
+			RHICmdList.SubmitCommandsAndFlushGPU(); // Metals refuses to auto-flush unless forced
+		});
+
+	Fence.BeginFence();
+	Fence.Wait();
+
+	ENQUEUE_RENDER_COMMAND(COB_Readback)
+	(
+		[&Readback, &Coordinates, NumGroups](FRHICommandListImmediate &RHICmdList)
+		{
+			const double StartTime = FPlatformTime::Seconds();
+
+			while (!Readback.IsReady())
+			{
+				FPlatformProcess::Sleep(0.001f);
+
+				if (FPlatformTime::Seconds() - StartTime > 5.0f)
+				{
+					UE_LOG(LogCielim, Warning, TEXT("Readback polling has timed out; skipping readback..."));
+					break;
+				}
+			}
+
+			if (Readback.IsReady())
+			{
+				const FVector4f *RawData = static_cast<FVector4f *>(Readback.Lock(sizeof(FVector4f) * NumGroups));
+
+				float LuminanceSum = 0;
+				float XLuminanceSum = 0;
+				float YLuminanceSum = 0;
+
+				for (uint32 i = 0; i < NumGroups; i++)
+				{
+					const FVector4f Temp = RawData[i];
+					LuminanceSum += Temp.X;
+					XLuminanceSum += Temp.Y;
+					YLuminanceSum += Temp.Z;
+				}
+
+				if (LuminanceSum > 0.0f)
+				{
+					const double CenterX = XLuminanceSum / LuminanceSum;
+					const double CenterY = YLuminanceSum / LuminanceSum;
+					Coordinates = FVector2D(CenterX, CenterY);
+				}
+
+				Readback.Unlock();
+			}
+		});
+
+	Fence.BeginFence();
+	Fence.Wait();
+
+	if (Coordinates.IsSet())
+		UE_LOG(LogCielim, Display, TEXT("Center of Brightness: %f, %f"), Coordinates->X, Coordinates->Y);
 
 	return Coordinates;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCOBTest_Center, "CaptureManager.CenterOfBrightnessTest.Center",
-								 EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
-
-bool FCOBTest_Center::RunTest(const FString &Parameters)
+void ACameraModel::ApplyPostProcessShaders(UTextureRenderTarget2D *RenderTarget,
+										   FImageCorruptionParams *CorruptionParams)
 {
-	// Create blank image with white square in center
+	if (!RenderTarget)
+		return;
 
-	// Create a 500x500 black single-channel image
-	cv::Mat Image = cv::Mat::zeros(500, 500, CV_8UC1);
+	FTextureRenderTargetResource *RTResource = RenderTarget->GameThread_GetRenderTargetResource();
 
-	// Define the size of the white square
-	int SquareSize = 10;
+	ENQUEUE_RENDER_COMMAND(ApplyPostProcess)
+	(
+		[RTResource, CorruptionParams](FRHICommandListImmediate &RHICmdList)
+		{
+			FRDGBuilder GraphBuilder(RHICmdList);
 
-	// Calculate starting pixel values
-	int StartX = 250 - SquareSize / 2;
-	int StartY = 250 - SquareSize / 2;
+			{
+				RDG_GPU_STAT_SCOPE(GraphBuilder, CielimPostProcessCorruptionPasses);
+				RDG_EVENT_SCOPE(GraphBuilder, "Cielim Post-Process Corruption Passes");
 
-	// Draw the white square
-	cv::rectangle(Image, cv::Point(StartX, StartY), cv::Point(StartX + SquareSize, StartY + SquareSize),
-				  cv::Scalar(255), cv::FILLED);
+				const FRDGTextureRef RenderTargetBase = RegisterExternalTexture(
+					GraphBuilder, RTResource->GetRenderTargetTexture(), TEXT("RenderTargetBase"));
 
-	FVector2D Coordinates;
+				// Intermediates used for texture ping-pong
+				FRDGTextureRef TempTextureIn =
+					GraphBuilder.CreateTexture(RenderTargetBase->Desc, TEXT("Temp Input Texture"));
+				FRDGTextureRef TempTextureOut =
+					GraphBuilder.CreateTexture(RenderTargetBase->Desc, TEXT("Temp Output Texture"));
 
-	// Compute the center of brightness
-	cv::Moments Moments = cv::moments(Image, true);
-	if (Moments.m00 != 0)
-	{
-		Coordinates = FVector2D(Moments.m10 / Moments.m00, Moments.m01 / Moments.m00);
-	}
+				AddCopyTexturePass(GraphBuilder, RenderTargetBase, TempTextureIn);
 
-	// Expected center should be directly in the middle of the image
-	return Coordinates.Equals(FVector2D(250, 250), 1);
+				const FScreenPassTextureViewport Viewport(RenderTargetBase);
+
+				if (CorruptionParams->Sigma != 0.0f)
+				{
+					RDG_GPU_STAT_SCOPE(GraphBuilder, GaussianPSF);
+					RDG_EVENT_SCOPE(GraphBuilder, "GaussianPSF Pass");
+
+					// GaussianPSF Horizontal
+
+					FGaussianPSF::FPermutationDomain PermutationDomain;
+					PermutationDomain.Set<FGaussianPSF::FHorizontal>(true);
+
+					FGaussianPSF::FParameters *PSFParamsH = GraphBuilder.AllocParameters<FGaussianPSF::FParameters>();
+					PSFParamsH->InputTexture = TempTextureIn;
+					PSFParamsH->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
+					PSFParamsH->TexelSize = FVector2f(1.0f / Viewport.Rect.Width(), 1.0f / Viewport.Rect.Height());
+					PSFParamsH->KernelRadius = (CorruptionParams->KernelWidth - 1.0f) / 2.0f;
+					PSFParamsH->Sigma = CorruptionParams->Sigma;
+					PSFParamsH->RenderTargets[0] =
+						FRenderTargetBinding(TempTextureOut, ERenderTargetLoadAction::ENoAction);
+
+					const TShaderMapRef<FGaussianPSF> GaussianPSFShaderH(GetGlobalShaderMap(GMaxRHIFeatureLevel),
+																		 PermutationDomain);
+
+					AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply GaussianPSF H"), GMaxRHIFeatureLevel,
+									  Viewport, Viewport, GaussianPSFShaderH, PSFParamsH);
+
+					Swap(TempTextureIn, TempTextureOut);
+
+					// GaussianPSF Vertical
+
+					PermutationDomain.Set<FGaussianPSF::FHorizontal>(false);
+
+					const TShaderMapRef<FGaussianPSF> GaussianPSFShaderV(GetGlobalShaderMap(GMaxRHIFeatureLevel),
+																		 PermutationDomain);
+
+					FGaussianPSF::FParameters *PSFParamsV = GraphBuilder.AllocParameters<FGaussianPSF::FParameters>();
+					PSFParamsV->InputTexture = TempTextureIn;
+					PSFParamsV->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
+					PSFParamsV->TexelSize = FVector2f(1.0f / Viewport.Rect.Width(), 1.0f / Viewport.Rect.Height());
+					PSFParamsV->KernelRadius = (CorruptionParams->KernelWidth - 1.0f) / 2.0f;
+					PSFParamsV->Sigma = CorruptionParams->Sigma;
+					PSFParamsV->RenderTargets[0] =
+						FRenderTargetBinding(TempTextureOut, ERenderTargetLoadAction::ENoAction);
+
+					AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply GaussianPSF V"), GMaxRHIFeatureLevel,
+									  Viewport, Viewport, GaussianPSFShaderV, PSFParamsV);
+
+					Swap(TempTextureIn, TempTextureOut);
+				}
+
+				if (CorruptionParams->NumCosmicRays != 0.0f)
+				{
+					// Cosmic Rays
+
+					RDG_GPU_STAT_SCOPE(GraphBuilder, CosmicRays);
+					RDG_EVENT_SCOPE(GraphBuilder, "Cosmic Rays Pass");
+
+					const FRDGBufferRef StartBuffer = CreateStructuredBuffer<FVector2f>(
+						GraphBuilder, TEXT("StartPoints"), CorruptionParams->StartPoints);
+					const FRDGBufferRef EndBuffer =
+						CreateStructuredBuffer<FVector2f>(GraphBuilder, TEXT("EndPoints"), CorruptionParams->EndPoints);
+					const FRDGBufferRef WidthBuffer =
+						CreateStructuredBuffer<float>(GraphBuilder, TEXT("LineWidths"), CorruptionParams->LineWidths);
+
+					FCosmicRays::FParameters *RayParams = GraphBuilder.AllocParameters<FCosmicRays::FParameters>();
+					RayParams->InputTexture = TempTextureIn;
+					RayParams->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
+					RayParams->NumRays = CorruptionParams->NumCosmicRays;
+					RayParams->StartPoints = GraphBuilder.CreateSRV(StartBuffer, PF_G32R32F);
+					RayParams->EndPoints = GraphBuilder.CreateSRV(EndBuffer, PF_G32R32F);
+					RayParams->LineWidths = GraphBuilder.CreateSRV(WidthBuffer, PF_R32_FLOAT);
+					RayParams->RenderTargets[0] =
+						FRenderTargetBinding(TempTextureOut, ERenderTargetLoadAction::ENoAction);
+
+					const TShaderMapRef<FCosmicRays> CosmicRayShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+
+					AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply Cosmic Rays"), GMaxRHIFeatureLevel, Viewport,
+									  Viewport, CosmicRayShader, RayParams);
+
+					Swap(TempTextureIn, TempTextureOut);
+				}
+
+				if (CorruptionParams->ReadNoiseSigma != 0.0f)
+				{
+					RDG_GPU_STAT_SCOPE(GraphBuilder, ReadNoise);
+					RDG_EVENT_SCOPE(GraphBuilder, "Read Noise Pass");
+
+					FReadNoise::FParameters *RnParams = GraphBuilder.AllocParameters<FReadNoise::FParameters>();
+					RnParams->InputTexture = TempTextureIn;
+					RnParams->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
+					RnParams->CurrentTime = static_cast<uint32>(FDateTime::UtcNow().ToUnixTimestamp());
+					RnParams->ReadNoiseSigma = CorruptionParams->ReadNoiseSigma;
+					RnParams->RenderTargets[0] =
+						FRenderTargetBinding(TempTextureOut, ERenderTargetLoadAction::ENoAction);
+
+					const TShaderMapRef<FReadNoise> ReadNoiseShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+
+					AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply Read Noise"), GMaxRHIFeatureLevel, Viewport,
+									  Viewport, ReadNoiseShader, RnParams);
+
+					Swap(TempTextureIn, TempTextureOut);
+				}
+
+				if (CorruptionParams->SignalGain != 0.0f)
+				{
+					RDG_GPU_STAT_SCOPE(GraphBuilder, SignalGain);
+					RDG_EVENT_SCOPE(GraphBuilder, "Signal Gain Pass");
+
+					FSignalGain::FParameters *GainParams = GraphBuilder.AllocParameters<FSignalGain::FParameters>();
+					GainParams->InputTexture = TempTextureIn;
+					GainParams->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
+					GainParams->SignalGain = CorruptionParams->SignalGain;
+					GainParams->RenderTargets[0] =
+						FRenderTargetBinding(TempTextureOut, ERenderTargetLoadAction::ENoAction);
+
+					const TShaderMapRef<FSignalGain> SignalGainShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+
+					AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply Signal Gain"), GMaxRHIFeatureLevel, Viewport,
+									  Viewport, SignalGainShader, GainParams);
+
+					Swap(TempTextureIn, TempTextureOut);
+				}
+
+				AddCopyTexturePass(GraphBuilder, TempTextureIn, RenderTargetBase);
+			}
+
+			GraphBuilder.Execute();
+		});
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCOBTest_TopRight, "CaptureManager.CenterOfBrightnessTest.TopRight",
-								 EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+// Helper Functions
 
-bool FCOBTest_TopRight::RunTest(const FString &Parameters)
+TTuple<float, TResourceArray<FVector2f>, TResourceArray<FVector2f>, TResourceArray<float>>
+ACameraModel::GetCosmicRays(const float Sigma) const
 {
-	// Create blank image with white square in top-right quadrant
+	std::default_random_engine Generator;
 
-	// Create a 500x500 black single-channel image
-	cv::Mat Image = cv::Mat::zeros(500, 500, CV_8UC1);
+	std::poisson_distribution CosmicRayDistribution(Sigma);
+	const uint32 NumCosmicRays = CosmicRayDistribution(Generator);
 
-	// Define the size of the white square
-	int SquareSize = 10;
+	TResourceArray<FVector2f> StartPoints;
+	TResourceArray<FVector2f> EndPoints;
+	TResourceArray<float> LineWidths;
 
-	// Calculate starting pixel values
-	int StartX = 375 - SquareSize / 2;
-	int StartY = 375 - SquareSize / 2;
-
-	// Draw the white square
-	cv::rectangle(Image, cv::Point(StartX, StartY), cv::Point(StartX + SquareSize, StartY + SquareSize),
-				  cv::Scalar(255), cv::FILLED);
-
-	FVector2D Coordinates;
-
-	// Compute the center of brightness
-	cv::Moments Moments = cv::moments(Image, true);
-	if (Moments.m00 != 0)
+	if (NumCosmicRays != 0)
 	{
-		Coordinates = FVector2D(Moments.m10 / Moments.m00, Moments.m01 / Moments.m00);
+		StartPoints.Reserve(NumCosmicRays);
+		EndPoints.Reserve(NumCosmicRays);
+		LineWidths.Reserve(NumCosmicRays);
+
+		for (uint32 i = 0; i < NumCosmicRays; i++)
+		{
+			auto TempParams = GetCosmicRayParams();
+			StartPoints.Add(TempParams.Get<0>());
+			EndPoints.Add(TempParams.Get<1>());
+			LineWidths.Add(TempParams.Get<2>());
+		}
 	}
 
-	// Expected center should be center of top right quadrant
-	return Coordinates.Equals(FVector2D(375, 375), 1);
+	return TTuple<float, TResourceArray<FVector2f>, TResourceArray<FVector2f>, TResourceArray<float>>(
+		NumCosmicRays, StartPoints, EndPoints, LineWidths);
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCOBTest_CenterRight, "CaptureManager.CenterOfBrightnessTest.CenterRight",
-								 EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
-
-bool FCOBTest_CenterRight::RunTest(const FString &Parameters)
+TTuple<FVector2f, FVector2f, float> ACameraModel::GetCosmicRayParams() const
 {
-	// Create blank image with right half filled in
+	const uint32 SizeX = this->SceneCaptureComponent2D->TextureTarget->SizeX;
+	const uint32 SizeY = this->SceneCaptureComponent2D->TextureTarget->SizeY;
 
-	// Create a 500x500 black single-channel image
-	cv::Mat Image = cv::Mat::zeros(500, 500, CV_8UC1);
+	// Calculate starting point
+	const float XStartCoord = FMath::RandRange(0, SizeX);
+	const float YStartCoord = FMath::RandRange(0, SizeY);
 
-	// Draw the white square
-	cv::rectangle(Image, cv::Point(250, 0), cv::Point(500, 500), cv::Scalar(255), cv::FILLED);
+	FVector2f StartPoint(XStartCoord, YStartCoord);
 
-	FVector2D Coordinates;
+	// Calculate angle
+	const float Angle = FMath::FRandRange(0.0f, 2 * PI);
 
-	// Compute the center of brightness
-	cv::Moments Moments = cv::moments(Image, true);
-	if (Moments.m00 != 0)
-	{
-		Coordinates = FVector2D(Moments.m10 / Moments.m00, Moments.m01 / Moments.m00);
-	}
+	// Calculate length (Exponential)
+	const float Uniform0 = FMath::FRandRange(0.0, 1.0);
+	const float Length = -1 * 50 * FMath::Loge(Uniform0);
 
-	// Expected center should be in the middle of the right half of the image
-	return Coordinates.Equals(FVector2D(375, 250), 1);
+	// Calculate ending point
+	float XStopCoord = XStartCoord + Length * FMath::Cos(Angle);
+	float YStopCoord = YStartCoord + Length * FMath::Sin(Angle);
+
+	XStopCoord = FMath::Clamp(XStopCoord, 0.0f, static_cast<float>(SizeX));
+	YStopCoord = FMath::Clamp(YStopCoord, 0.0f, static_cast<float>(SizeY));
+
+	FVector2f EndPoint(XStopCoord, YStopCoord);
+
+	// calculate width (Exponential)
+	const float Uniform1 = FMath::FRandRange(0.0, 1.0);
+	float Width = -1 * 0.5f * FMath::Loge(Uniform1);
+
+	return TTuple<FVector2f, FVector2f, float>(StartPoint, EndPoint, Width);
 }

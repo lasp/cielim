@@ -1,0 +1,69 @@
+//=================== Copyright (c) 2025 Laboratory for Atmospheric and Space Physics ===================//
+//
+// Purpose: Compute shader used to reduce summation calculations for calculating the center of brightness
+//          of an image on the GPU. Outputs array containing reduced values which must be summed together
+//          on the CPU to obtain the final center of brightness values.
+//
+// License: MIT License. See LICENSE file.
+//
+//=======================================================================================================//
+
+#include "/Engine/Public/Platform.ush"
+
+Texture2D InputTexture;
+
+uint2 TextureSize;
+
+RWStructuredBuffer<float4> PartialSumBuffer;	// This is float4 because float3 is not 16 byte aligned
+
+groupshared float SharedLuminanceSum[256];
+groupshared float SharedXLuminanceSum[256];
+groupshared float SharedYLuminanceSum[256];
+
+[numthreads(16, 16, 1)]
+void MainCS(uint3 GlobalThreadID : SV_DispatchThreadID, uint GI : SV_GroupIndex)
+{
+	// Don't check for contributions from out of bounds threads
+	if (GlobalThreadID.x >= TextureSize.x || GlobalThreadID.y >= TextureSize.y)
+	{
+		SharedLuminanceSum[GI] = 0;
+		SharedXLuminanceSum[GI] = 0;
+		SharedYLuminanceSum[GI] = 0;
+	}
+	else
+	{
+		float4 Color = InputTexture.Load(int3(GlobalThreadID.xy, 0));
+
+		// https://en.wikipedia.org/wiki/Relative_luminance
+		float Luminance = dot(Color.rgb, float3(0.2126, 0.7152, 0.0722));
+
+		SharedLuminanceSum[GI]  = Luminance;
+		SharedXLuminanceSum[GI] = Luminance * GlobalThreadID.x;
+		SharedYLuminanceSum[GI] = Luminance * GlobalThreadID.y;
+	}
+
+	// Wait for group to finish
+	GroupMemoryBarrierWithGroupSync();
+
+	// Binary tree parallel reduction to 0th index thread
+	for (uint Offset = 128; Offset > 0; Offset >>= 1)
+	{
+		if (GI < Offset)
+		{
+			SharedLuminanceSum[GI]  += SharedLuminanceSum[GI + Offset];
+			SharedXLuminanceSum[GI] += SharedXLuminanceSum[GI + Offset];
+			SharedYLuminanceSum[GI] += SharedYLuminanceSum[GI + Offset];
+		}
+
+		GroupMemoryBarrierWithGroupSync();
+	}
+
+	if (GI == 0)
+	{
+		uint XTile = GlobalThreadID.x / 16;
+		uint YTile = GlobalThreadID.y / 16;
+		uint TileFlatIndex = XTile + YTile * ceil(TextureSize.x / 16.0f);
+
+		PartialSumBuffer[TileFlatIndex] = float4(SharedLuminanceSum[0], SharedXLuminanceSum[0], SharedYLuminanceSum[0], 0.0f);
+	}
+}

@@ -1,0 +1,44 @@
+//=================== Copyright (c) 2025 Laboratory for Atmospheric and Space Physics ===================//
+//
+// Purpose: Pixel shader that adds Gaussian blur to the image to simulate camera point spreading.
+//
+// License: MIT License. See LICENSE file.
+//
+//=======================================================================================================//
+
+#include "/Engine/Public/Platform.ush"
+
+Texture2D InputTexture;
+SamplerState InputSampler;
+
+float2 TexelSize;
+int KernelRadius;
+float Sigma;
+
+float CalculateGaussian(float X)
+{
+	return exp(-0.5 * (X * X) / (Sigma * Sigma));
+}
+
+float4 MainPS(float4 UV : TEXCOORD0) : SV_Target0
+{
+	float4 Color = float4(0, 0, 0, 0);
+	float WeightSum = 0;
+
+	for (int i = -KernelRadius; i <= KernelRadius; i++)
+	{
+#if BLUR_HORIZONTAL
+		float2 Offset = float2(i, 0) * TexelSize;
+#else
+		float2 Offset = float2(0, i) * TexelSize;
+#endif
+
+		float Weight = CalculateGaussian(i);
+
+		Color += InputTexture.Sample(InputSampler, UV.xy + Offset) * Weight;
+
+		WeightSum += Weight;
+	}
+
+	return Color / WeightSum;
+}

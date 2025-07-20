@@ -1,9 +1,3 @@
-[submodule "Source/ThirdParty/OpenCV/opencv"]
-	path = Source/ThirdParty/OpenCV/opencv
-	url = https://github.com/opencv/opencv.git
-[submodule "Source/ThirdParty/OpenCV/opencv_contrib"]
-	path = Source/ThirdParty/OpenCV/opencv_contrib
-	url = https://github.com/opencv/opencv_contrib.git
 [submodule "Source/ThirdParty/ProtobufLibrary/protobuf"]
 	path = Source/ThirdParty/ProtobufLibrary/protobuf
 	url = https://github.com/protocolbuffers/protobuf.git

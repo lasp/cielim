@@ -7,15 +7,12 @@ public class cielim : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-                bEnableExceptions = true;
+		bEnableExceptions = true;	// Allow c++ exception handling
 
 		// Add module dependencies
 
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "ImageWrapper"});
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "RenderCore", "Renderer", "RHI" });
 
-		PrivateDependencyModuleNames.AddRange(new string[] { "OpenCV", "ProtobufLibrary", "ZMQ"});
-
-		// This is necessary for Pre/PostOpenCVHeaders
-		PublicIncludePaths.Add("$(ProjectDir)/Source/ThirdParty");
+		PrivateDependencyModuleNames.AddRange(new string[] { "ProtobufLibrary", "ZMQ" });
 	}
 }
