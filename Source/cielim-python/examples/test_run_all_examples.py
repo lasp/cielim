@@ -35,5 +35,5 @@ def test_run_send_protobuffer_file():
     subprocess.run(
         ["python3", current_file_path + "/send_protobuffer_file.py", "--filename", "bennu_image.bin", "--hide_image"]
     )
-    assert os.path.exists(current_file_path + "/received_image_0.png")
-    os.remove(current_file_path + "/received_image_0.png")
+    assert os.path.exists(current_file_path + "/bennu_image_images/received_image_0.png")
+    os.remove(current_file_path + "/bennu_image_images/received_image_0.png")
