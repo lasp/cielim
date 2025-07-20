@@ -42,8 +42,6 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 	{
 		UE_LOG(LogCielim, Display, TEXT("Initiating new scene: ASimulationDataSourceActor"));
 
-		this->bIsSceneEstablished = false;
-
 		// Clear existing objects
 
 		this->Actors.Reset();
@@ -56,13 +54,8 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 			if (CelestialBody != nullptr)
 				CelestialBody->Destroy();
 		}
-		this->CelestialBodyArray.Reset();
 
-		if (this->SunCelestialBody != nullptr)
-		{
-			this->SunCelestialBody->Destroy();
-			this->SunCelestialBody = nullptr;
-		}
+		this->CelestialBodyArray.Reset();
 
 		if (this->SunLight != nullptr)
 		{
@@ -95,17 +88,13 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 
 			UE_LOG(LogCielim, Display, TEXT("Initialize scene..."));
 
-			if (const auto *TempPayload = CommandData.payload.TryGet<FUpdatePayload>())
-			{
-				this->CielimMessage = TempPayload->message;
-			}
-
 			this->SpawnCelestialBodies();
 			this->SpawnSpacecraft();
 			this->SpawnSunLight();
 
-			this->Spacecraft->CameraModel->SceneCaptureComponent2D->PrimitiveRenderMode =
-				ESceneCapturePrimitiveRenderMode::PRM_UseShowOnlyList;
+			constexpr auto RenderMode = ESceneCapturePrimitiveRenderMode::PRM_UseShowOnlyList;
+
+			this->Spacecraft->CameraModel->SceneCaptureComponent2D->PrimitiveRenderMode = RenderMode;
 			this->Spacecraft->CameraModel->SceneCaptureComponent2D->ShowOnlyActors = Actors;
 
 			if (this->CielimMessage.GetMessage().has_camera())
@@ -319,7 +308,7 @@ void USceneData::BeginDestroy()
 			Actor->Destroy();
 	}
 
-	this->Actors.Reset();
+	this->Actors.Empty();
 
 	Super::BeginDestroy();
 }

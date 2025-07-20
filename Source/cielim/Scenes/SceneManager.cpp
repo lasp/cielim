@@ -51,28 +51,31 @@ void USceneManager::Tick(float DeltaTime)
 		}
 		else
 		{
-			UE_LOG(LogCielim, Warning, TEXT("SceneManager : Scene for ID %d didn't exist."), SceneID);
+			UE_LOG(LogCielim, Warning, TEXT("SceneManager : Scene with ID %d couldn't be found for deletion."),
+				   SceneID);
 		}
 	}
-	else
+	else if (USceneData *Scene = *Scenes.Find(SceneID); Scene != nullptr)
 	{
 		FCircularQueueData ReturnData;
 
 		ReturnData.ID = QueueData.GetValue().ID;
 		ReturnData.bUseDelim = QueueData.GetValue().bUseDelim;
 
-		if (USceneData *Scene = *Scenes.Find(SceneID); Scene != nullptr)
-		{
-			Scene->ParseCommand(QueueData.GetValue(), ReturnData);
-			Scene->UpdateScene();
+		Scene->ParseCommand(QueueData.GetValue(), ReturnData);
+		Scene->UpdateScene();
 
-			// Request Image is the only command that currently requests return data
-			// instead of an instant "OK" message currently.
-			if (ReturnData.query == CommandType::REQUEST_IMAGE)
-			{
-				this->QueueBridge->PutQueueData(ReturnData);
-			}
+		// Request Image is the only command that currently requests return data
+		// instead of an instant "OK" message currently.
+		if (ReturnData.query == CommandType::REQUEST_IMAGE)
+		{
+			this->QueueBridge->PutQueueData(ReturnData);
 		}
+	}
+	else
+	{
+		UE_LOG(LogCielim, Warning,
+			   TEXT("SceneManager : Scene with ID %d couldn't be found for non-registration command."), SceneID);
 	}
 }
 
