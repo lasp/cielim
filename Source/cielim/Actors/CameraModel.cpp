@@ -43,6 +43,7 @@ ACameraModel::ACameraModel()
 	this->SceneCaptureComponent2D->TextureTarget->InitAutoFormat(2560, 1440);
 	this->SceneCaptureComponent2D->TextureTarget->UpdateResourceImmediate();
 	this->SceneCaptureComponent2D->bCaptureEveryFrame = false;
+	this->SceneCaptureComponent2D->bCaptureOnMovement = false;
 	this->SceneCaptureComponent2D->bUseCustomProjectionMatrix = true;
 	this->SceneCaptureComponent2D->CustomProjectionMatrix = ProjectionMatrix;
 
@@ -84,8 +85,6 @@ void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, TOptional<FVect
 											   LineWidths,
 											   static_cast<float>(ReadNoise),
 											   static_cast<float>(SystemGain)};
-
-	this->SceneCaptureComponent2D->CaptureScene();
 
 	CobCoordinates = this->GetCenterOfBrightness(this->SceneCaptureComponent2D->TextureTarget);
 
