@@ -1,7 +1,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Actor.h"
 
 #include "CelestialBodyMeshModel.h"
 
@@ -50,15 +49,15 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	FString Name;
 
-	void LoadMesh(CelestialBodyMeshModel Mesh);
+	void LoadMesh(const CelestialBodyMeshModel &Mesh);
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	class UStaticMeshComponent *BodyStaticMeshComponent;
-
 private:
 	CelestialBodyMeshModel MeshModel;
+
+	UPROPERTY(VisibleAnywhere)
+	UMeshComponent *MeshComponent;
 };
