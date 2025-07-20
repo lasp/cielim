@@ -131,21 +131,28 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 		const double SystemGain = ProtobufCameraModel->systemgain();
 		const double RayStdDev = ProtobufCameraModel->renderparameters().cosmicraystddeviation();
 
-		TArray64<uint8> PngEncodedData;
-		TOptional<FVector2D> CobCoordinates;
+		TArray64<uint8> ImageDataPng;
+		TOptional<FVector2D> CobCoords;
 
-		const auto *TempPayload = CommandData.payload.TryGet<FImagePayload>();
+		const ACameraModel *Camera = this->Spacecraft->CameraModel;
 
-		if (TempPayload != nullptr && TempPayload->shouldReturnImage)
+		Camera->SceneCaptureComponent2D->CaptureScene();
+
+		if (const auto *TempPayload = CommandData.payload.TryGet<FImagePayload>();
+			TempPayload != nullptr && TempPayload->shouldReturnImage)
 		{
-			const ACameraModel *Camera = this->Spacecraft->CameraModel;
-			Camera->GetCorruptedImage(PngEncodedData, CobCoordinates, PointSpread, ReadNoise, SystemGain, RayStdDev);
+			Camera->GetCorruptedImage(ImageDataPng, CobCoords, PointSpread, ReadNoise, SystemGain, RayStdDev);
+		}
+		else
+		{
+			UTextureRenderTarget2D *RenderTarget = Camera->SceneCaptureComponent2D->TextureTarget;
+			CobCoords = Camera->GetCenterOfBrightness(RenderTarget);
 		}
 
 		ReturnData.query = CommandType::REQUEST_IMAGE;
 		ReturnData.payload.Emplace<FImagePayload>(FImagePayload());
-		ReturnData.payload.Get<FImagePayload>().image_data = PngEncodedData;
-		ReturnData.payload.Get<FImagePayload>().centerOfBrightness = CobCoordinates;
+		ReturnData.payload.Get<FImagePayload>().image_data = ImageDataPng;
+		ReturnData.payload.Get<FImagePayload>().centerOfBrightness = CobCoords;
 
 		UE_LOG(LogCielim, Display, TEXT("Put back PNG image: ASimulationDataSourceActor"));
 	}
