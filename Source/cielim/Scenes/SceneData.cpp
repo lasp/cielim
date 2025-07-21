@@ -12,6 +12,8 @@
 #include "Components/SceneCaptureComponent2D.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/World.h"
+#include "Materials/MaterialParameterCollection.h"
+#include "Materials/MaterialParameterCollectionInstance.h"
 #include "Math/UnrealMathUtility.h"
 
 #include "../Actors/CelestialBodyMeshModel.h"
@@ -31,6 +33,17 @@ static FRotator GetCameraRotation(const cielimMessage::CameraModel &Camera);
 static FVector3d GetCelestialBodyPosition(const cielimMessage::CelestialBody &CelestialBody);
 static FRotator GetCelestialBodyRotation(const cielimMessage::CelestialBody &CelestialBody);
 
+void USceneData::Init()
+{
+	ActiveSunLightMPC = Cast<UMaterialParameterCollection>(
+		StaticLoadObject(UMaterialParameterCollection::StaticClass(), nullptr,
+						 TEXT("/Game/AsteroidMeshes/MPC_ActiveSunLight.MPC_ActiveSunLight")));
+
+	if (!ActiveSunLightMPC)
+		UE_LOG(LogCielim, Error, TEXT("Sunlight parameter collection could not be located."));
+}
+
+
 // This is a mad hack and needs to be changed
 void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQueueData &ReturnData)
 {
@@ -41,8 +54,6 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 	if (CommandData.query == CommandType::INIT_SCENE)
 	{
 		UE_LOG(LogCielim, Display, TEXT("Initiating new scene: ASimulationDataSourceActor"));
-
-		this->bIsSceneEstablished = false;
 
 		// Clear existing objects
 
@@ -56,13 +67,8 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 			if (CelestialBody != nullptr)
 				CelestialBody->Destroy();
 		}
-		this->CelestialBodyArray.Reset();
 
-		if (this->SunCelestialBody != nullptr)
-		{
-			this->SunCelestialBody->Destroy();
-			this->SunCelestialBody = nullptr;
-		}
+		this->CelestialBodyArray.Reset();
 
 		if (this->SunLight != nullptr)
 		{
@@ -95,17 +101,13 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 
 			UE_LOG(LogCielim, Display, TEXT("Initialize scene..."));
 
-			if (const auto *TempPayload = CommandData.payload.TryGet<FUpdatePayload>())
-			{
-				this->CielimMessage = TempPayload->message;
-			}
-
 			this->SpawnCelestialBodies();
 			this->SpawnSpacecraft();
 			this->SpawnSunLight();
 
-			this->Spacecraft->CameraModel->SceneCaptureComponent2D->PrimitiveRenderMode =
-				ESceneCapturePrimitiveRenderMode::PRM_UseShowOnlyList;
+			constexpr auto RenderMode = ESceneCapturePrimitiveRenderMode::PRM_UseShowOnlyList;
+
+			this->Spacecraft->CameraModel->SceneCaptureComponent2D->PrimitiveRenderMode = RenderMode;
 			this->Spacecraft->CameraModel->SceneCaptureComponent2D->ShowOnlyActors = Actors;
 
 			if (this->CielimMessage.GetMessage().has_camera())
@@ -122,6 +124,12 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 		{
 			UE_LOG(LogCielim, Warning, TEXT("Scene not initialized: ASimulationDataSourceActor"));
 			return;
+		}
+
+		if (auto *Instance = GetWorld()->GetParameterCollectionInstance(ActiveSunLightMPC); Instance != nullptr)
+		{
+			const FName ParamName = FName("SunDirection");
+			Instance->SetVectorParameterValue(ParamName, this->SunLight->GetActorForwardVector().GetSafeNormal());
 		}
 
 		const cielimMessage::CameraModel *ProtobufCameraModel = &this->CielimMessage.GetMessage().camera();
@@ -258,6 +266,9 @@ void USceneData::SpawnSunLight()
 {
 	this->SunLight = GetWorld()->SpawnActor<ADirectionalLight>(FVector3d::ZeroVector, FRotator::ZeroRotator);
 
+	// Light should spawn as disabled so SceneManager can manage which scene's light is enabled
+	ToggleSunLight(false);
+
 	this->Actors.Add(SunLight);
 
 	const double ExposureTime = this->CielimMessage.GetMessage().camera().exposuretime();
@@ -311,6 +322,12 @@ void USceneData::UpdateSpacecraft() const
 	}
 }
 
+bool USceneData::IsSceneEstablished() const { return this->bIsSceneEstablished; }
+
+bool USceneData::IsSunLightOn() const { return this->SunLight->GetLightComponent()->IsVisible(); }
+
+void USceneData::ToggleSunLight(const bool Toggle) const { this->SunLight->GetLightComponent()->SetVisibility(Toggle); }
+
 void USceneData::BeginDestroy()
 {
 	for (auto const Actor : this->Actors)
@@ -319,7 +336,7 @@ void USceneData::BeginDestroy()
 			Actor->Destroy();
 	}
 
-	this->Actors.Reset();
+	this->Actors.Empty();
 
 	Super::BeginDestroy();
 }

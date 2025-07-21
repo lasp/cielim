@@ -36,6 +36,14 @@ void ACelestialBody::LoadMesh(CelestialBodyMeshModel Mesh)
 	}
 
 	BodyStaticMeshComponent->SetStaticMesh(MeshAsset);
+
+	if (this->MeshModel.BrdfModel.Equals("Regolith"))
+	{
+		UMaterialInterface *RegolithMaterial = Cast<UMaterialInterface>(StaticLoadObject(
+			UMaterialInterface::StaticClass(), nullptr, TEXT("Material'/Game/AsteroidMeshes/M_Regolith.M_Regolith'")));
+
+		BodyStaticMeshComponent->SetMaterial(0, RegolithMaterial);
+	}
 }
 
 // Called when the game starts or when spawned
