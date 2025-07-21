@@ -107,4 +107,8 @@ class MessageFileHandler:
         return self._read_simulation_frame_at_time(sim_time)
 
     def get_next_simulation_frame(self):
-        return delimited_protobuf.read(self.file_handle, cielimMessage.CielimMessage)
+        try:
+            return delimited_protobuf.read(self.file_handle, cielimMessage.CielimMessage)
+        except:
+            print("Protobuf failed to decode.")
+            return None
