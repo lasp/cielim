@@ -27,6 +27,10 @@ class CIELIM_API USceneData : public UObject
 
 public:
 	/**
+	 * @brief Initializes necessary parameters.
+	 */
+	void Init();
+	/**
 	 * @brief Parses incoming queue data and acts accordingly to the query received.
 	 * @param CommandData Inbound queue data to be parsed.
 	 * @param ReturnData Outbound queue data (is modified).
@@ -78,6 +82,9 @@ private:
 	ASpacecraft *Spacecraft;
 	UPROPERTY()
 	ADirectionalLight *SunLight;
+
+	UPROPERTY()
+	UMaterialParameterCollection *ActiveSunLightMPC;
 
 	bool bHasCameras = false;
 	bool bIsCelestialBodiesSpawned = false;

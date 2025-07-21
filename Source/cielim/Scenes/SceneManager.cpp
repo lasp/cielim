@@ -36,7 +36,10 @@ void USceneManager::Tick(float DeltaTime)
 
 	if (QueueData.GetValue().query == CommandType::NEW_SCENE)
 	{
-		Scenes.Add(SceneID, NewObject<USceneData>(this, USceneData::StaticClass()));
+		USceneData *NewScene = NewObject<USceneData>(this, USceneData::StaticClass());
+		NewScene->Init();
+
+		Scenes.Add(SceneID, NewScene);
 
 		UE_LOG(LogCielim, Display, TEXT("SceneManager : New Scene created with ID %d"), SceneID);
 	}

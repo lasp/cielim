@@ -12,6 +12,8 @@
 #include "Components/SceneCaptureComponent2D.h"
 #include "Engine/DirectionalLight.h"
 #include "Engine/World.h"
+#include "Materials/MaterialParameterCollection.h"
+#include "Materials/MaterialParameterCollectionInstance.h"
 #include "Math/UnrealMathUtility.h"
 
 #include "../Actors/CelestialBodyMeshModel.h"
@@ -30,6 +32,17 @@ static FVector3d GetCameraPosition(const cielimMessage::CameraModel &Camera);
 static FRotator GetCameraRotation(const cielimMessage::CameraModel &Camera);
 static FVector3d GetCelestialBodyPosition(const cielimMessage::CelestialBody &CelestialBody);
 static FRotator GetCelestialBodyRotation(const cielimMessage::CelestialBody &CelestialBody);
+
+void USceneData::Init()
+{
+	ActiveSunLightMPC = Cast<UMaterialParameterCollection>(
+		StaticLoadObject(UMaterialParameterCollection::StaticClass(), nullptr,
+						 TEXT("/Game/AsteroidMeshes/MPC_ActiveSunLight.MPC_ActiveSunLight")));
+
+	if (!ActiveSunLightMPC)
+		UE_LOG(LogCielim, Error, TEXT("Sunlight parameter collection could not be located."));
+}
+
 
 // This is a mad hack and needs to be changed
 void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQueueData &ReturnData)
@@ -111,6 +124,12 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 		{
 			UE_LOG(LogCielim, Warning, TEXT("Scene not initialized: ASimulationDataSourceActor"));
 			return;
+		}
+
+		if (auto *Instance = GetWorld()->GetParameterCollectionInstance(ActiveSunLightMPC); Instance != nullptr)
+		{
+			const FName ParamName = FName("SunDirection");
+			Instance->SetVectorParameterValue(ParamName, this->SunLight->GetActorForwardVector().GetSafeNormal());
 		}
 
 		const cielimMessage::CameraModel *ProtobufCameraModel = &this->CielimMessage.GetMessage().camera();
