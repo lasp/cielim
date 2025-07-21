@@ -130,7 +130,7 @@ def saved_monte_carlo_scenario():
     reader.add_variable_mapping("sNavTransMsg.r_BN_N.data", "position")
     reader.read_simulation_data()
     # prep file for saving
-    directory_path = current_file_path + "/saved_monte_carlo_images"
+    directory_path = current_file_path + "/images-saved-monte-carlo"
     os.makedirs(directory_path, exist_ok=True)
 
     connector = Connector()

@@ -34,7 +34,7 @@ def analysis_function(img: np.ndarray, top_left: list, size: list) -> float:
 
 def data_analysis(show_plots=True):
     """Example script to read and process images from a directory"""
-    folder = current_file_path + "/saved_monte_carlo_images"
+    folder = current_file_path + "/images-saved-monte-carlo"
 
     # Define some image parameters for the analysis
     image_resolution = [2000, 1500]
