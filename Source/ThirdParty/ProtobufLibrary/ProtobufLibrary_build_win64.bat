@@ -25,10 +25,10 @@ if exist "%protobuf_lib_full_path%" (
     cd protobuf
     git submodule update --init --recursive
 
-    @REM Apply patch for v3.17.1 which was fixed at the below URL
+    @REM Apply patch for v3.18.0 which was fixed at the below URL
     @REM but didn't get in to protobufs until 3.20.0. Unfortunately,
-    @REM the most recent version we can used is tied to BSK's 
-    @REM currently or 3.17.1
+    @REM the most recent version we can used is tied to BSK's
+    @REM currently or 3.18.0
     git apply ../Protobuf_patch1.patch
     git apply ../Protobuf_patch2.patch
 
