@@ -1,13 +1,22 @@
+//=================== Copyright (c) 2025 Laboratory for Atmospheric and Space Physics ===================//
+//
+// Purpose: Implements the definition of FCelestialBodyMeshModel.
+//
+// License: MIT License. See LICENSE file.
+//
+//=======================================================================================================//
+
 #include "CelestialBodyMeshModel.h"
+
 #include "../Utilities/Math/KinematicsUtilities.h"
 
-CelestialBodyMeshModel CelestialBodyMeshModel::FromProtobuf(const cielimMessage::MeshModel &Model)
+FCelestialBodyMeshModel FCelestialBodyMeshModel::FromProtobuf(const cielimMessage::MeshModel &Model)
 {
-	CelestialBodyMeshModel MeshModel = {};
+	FCelestialBodyMeshModel MeshModel = {};
+
 	MeshModel.ShapeModel = FString(Model.shapemodel().c_str());
-	MeshModel.PerlinNoiseStdDeviation = Model.perlinnoisestddeviation();
-	MeshModel.ProceduralRocks = Model.proceduralrocks();
 	MeshModel.BrdfModel = FString(Model.brdfmodel().c_str());
+
 	if (Model.reflectanceparameters().size() == 12)
 	{
 		MeshModel.ReflectanceParameters = {
@@ -16,7 +25,11 @@ CelestialBodyMeshModel CelestialBodyMeshModel::FromProtobuf(const cielimMessage:
 			Model.reflectanceparameters()[6], Model.reflectanceparameters()[7],	 Model.reflectanceparameters()[8],
 			Model.reflectanceparameters()[9], Model.reflectanceparameters()[10], Model.reflectanceparameters()[11]};
 	}
+
+	MeshModel.PerlinNoiseStdDeviation = Model.perlinnoisestddeviation();
+	MeshModel.ProceduralRocks = Model.proceduralrocks();
 	MeshModel.MeanRadius = Model.meanradius();
+
 	if (Model.principalaxisdistortion().size() == 3)
 	{
 		MeshModel.PrincipalAxisDistortion = {Model.principalaxisdistortion()[0], Model.principalaxisdistortion()[1],
@@ -27,8 +40,8 @@ CelestialBodyMeshModel CelestialBodyMeshModel::FromProtobuf(const cielimMessage:
 	{
 		const FVector3d SigmaBN =
 			FVector3d(Model.inertialtobodymrp()[0], Model.inertialtobodymrp()[1], Model.inertialtobodymrp()[2]);
-		const FQuat Quat_BN = MRPtoQuaternion(SigmaBN);
-		MeshModel.InertialToBody = FRotator(RightQuat2LeftQuat(Quat_BN));
+		const FQuat QuatBN = MRPtoQuaternion(SigmaBN);
+		MeshModel.InertialToBody = FRotator(RightQuat2LeftQuat(QuatBN));
 	}
 
 	return MeshModel;

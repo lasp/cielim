@@ -1,3 +1,11 @@
+//=================== Copyright (c) 2025 Laboratory for Atmospheric and Space Physics ===================//
+//
+// Purpose: Implements the definition of ACelestialBody.
+//
+// License: MIT License. See LICENSE file.
+//
+//=======================================================================================================//
+
 #include "CelestialBody.h"
 
 #include "KismetProceduralMeshLibrary.h"
@@ -13,9 +21,9 @@ ACelestialBody::ACelestialBody()
 	this->RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 }
 
-void ACelestialBody::LoadMesh(const CelestialBodyMeshModel &Mesh)
+void ACelestialBody::LoadMesh(const FCelestialBodyMeshModel &Model)
 {
-	this->MeshModel = Mesh;
+	this->MeshModel = Model;
 
 	// Load asteroid mesh asset from disk
 
@@ -117,15 +125,15 @@ void ACelestialBody::LoadMesh(const CelestialBodyMeshModel &Mesh)
 	}
 }
 
-// Called when the game starts or when spawned
-void ACelestialBody::BeginPlay() { Super::BeginPlay(); }
-
-// Called every frame
-void ACelestialBody::Tick(float DeltaTime) { Super::Tick(DeltaTime); }
-
-void ACelestialBody::SetMeshModel(CelestialBodyMeshModel Model) { this->MeshModel = Model; }
+void ACelestialBody::Update(const FVector3d &NewPosition, const FRotator &NewRotation)
+{
+	SetActorLocation(NewPosition);
+	SetActorRotation(NewRotation);
+}
 
 FString ACelestialBody::GetMeshModelName() const { return this->MeshModel.ShapeModel; }
+
+FRotator ACelestialBody::GetInertialToBodyRotator() const { return this->MeshModel.InertialToBody; }
 
 FVector3d ACelestialBody::GetPrincipleAxisDistortions() const
 {
@@ -133,16 +141,8 @@ FVector3d ACelestialBody::GetPrincipleAxisDistortions() const
 					 this->MeshModel.PrincipalAxisDistortion.Z};
 }
 
-FRotator ACelestialBody::GetInertialToBodyRotator() const { return this->MeshModel.InertialToBody; }
+// Called when the game starts or when spawned
+void ACelestialBody::BeginPlay() { Super::BeginPlay(); }
 
-/**
- * @brief Update(NewPosition, NewRotation) Updates celestial body's position and rotation
- *
- * @param NewPosition The new position
- * @param NewRotation The new rotation
- */
-void ACelestialBody::Update(const FVector3d &NewPosition, const FRotator &NewRotation)
-{
-	SetActorLocation(NewPosition);
-	SetActorRotation(NewRotation);
-}
+// Called every frame
+void ACelestialBody::Tick(float DeltaTime) { Super::Tick(DeltaTime); }

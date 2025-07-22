@@ -202,12 +202,12 @@ void USceneData::SpawnCelestialBodies()
 		TempCelestialBody->SetActorLabel(TempCelestialBody->Name);
 #endif
 
-		CelestialBodyMeshModel MeshModel{};
+		FCelestialBodyMeshModel MeshModel{};
 		if (CelestialBody.has_model())
 		{
 			UE_LOG(LogCielim, Display, TEXT("Loading mesh model for %s"), *TempCelestialBody->Name);
 
-			MeshModel = CelestialBodyMeshModel::FromProtobuf(CelestialBody.model());
+			MeshModel = FCelestialBodyMeshModel::FromProtobuf(CelestialBody.model());
 			TempCelestialBody->LoadMesh(MeshModel);
 		}
 
