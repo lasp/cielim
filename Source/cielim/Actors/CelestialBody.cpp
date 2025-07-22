@@ -34,7 +34,7 @@ void ACelestialBody::LoadMesh(const FCelestialBodyMeshModel &Model)
 
 	if (MeshAsset == nullptr)
 	{
-		MeshPath = "/Game/AsteroidMeshes/sphere_normalized.sphere_normalized";
+		MeshPath = "/Game/AsteroidMeshes/Sphere.Sphere";
 		MeshAsset = Cast<UStaticMesh>(MeshPath.TryLoad());
 	}
 
