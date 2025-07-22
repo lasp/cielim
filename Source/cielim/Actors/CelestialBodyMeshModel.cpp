@@ -26,7 +26,15 @@ FCelestialBodyMeshModel FCelestialBodyMeshModel::FromProtobuf(const cielimMessag
 			Model.reflectanceparameters()[9], Model.reflectanceparameters()[10], Model.reflectanceparameters()[11]};
 	}
 
-	MeshModel.PerlinNoiseStdDeviation = Model.perlinnoisestddeviation();
+	if (Model.has_perlinnoise())
+	{
+		MeshModel.HasPerlinNoise = true;
+		MeshModel.Octaves = Model.perlinnoise().octavecount();
+		MeshModel.BaseAmplitude = Model.perlinnoise().baseamplitude();
+		MeshModel.BaseFrequency = Model.perlinnoise().basefrequency();
+		MeshModel.Persistence = Model.perlinnoise().persistence();
+	}
+
 	MeshModel.ProceduralRocks = Model.proceduralrocks();
 	MeshModel.MeanRadius = Model.meanradius();
 

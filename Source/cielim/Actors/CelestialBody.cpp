@@ -38,20 +38,13 @@ void ACelestialBody::LoadMesh(const FCelestialBodyMeshModel &Model)
 		MeshAsset = Cast<UStaticMesh>(MeshPath.TryLoad());
 	}
 
-	// Extract geometry data (LOD 0, section 0)
+	const uint32 NumTriangles = MeshAsset->GetNumTriangles(0);
 
-	TArray<FVector> Vertices;
-	TArray<int32> Triangles;
-	TArray<FVector> Normals;
-	TArray<FVector2D> UV0;
-	TArray<FProcMeshTangent> Tangents;
-
-	UKismetProceduralMeshLibrary::GetSectionFromStaticMesh(MeshAsset, 0, 0, Vertices, Triangles, Normals, UV0,
-														   Tangents);
-
-	if (Vertices.Num() > 15000)
+	if (!this->MeshModel.HasPerlinNoise || NumTriangles > 15000)
 	{
-		UE_LOG(LogCielim, Warning, TEXT("Mesh has %d vertices, cannot do procedural deformations."), Vertices.Num());
+		if (this->MeshModel.HasPerlinNoise && NumTriangles > 15000)
+			UE_LOG(LogCielim, Warning, TEXT("Mesh has too many triangles (%d), cannot do procedural deformations."),
+				   NumTriangles);
 
 		UE_LOG(LogCielim, Display, TEXT("Loading static mesh..."));
 
@@ -66,12 +59,23 @@ void ACelestialBody::LoadMesh(const FCelestialBodyMeshModel &Model)
 	{
 		UE_LOG(LogCielim, Display, TEXT("Loading procedural mesh and applying deformations..."));
 
+		// Extract geometry data (LOD 0, section 0)
+
+		TArray<FVector> Vertices;
+		TArray<int32> Triangles;
+		TArray<FVector> Normals;
+		TArray<FVector2D> UV0;
+		TArray<FProcMeshTangent> Tangents;
+
+		UKismetProceduralMeshLibrary::GetSectionFromStaticMesh(MeshAsset, 0, 0, Vertices, Triangles, Normals, UV0,
+															   Tangents);
+
 		// Apply fractal perlin noise
 
-		constexpr int Octaves = 4;
-		constexpr float BaseFrequency = 0.03f;
-		constexpr float BaseAmplitude = 25.0f;
-		constexpr float Persistence = 0.5f;
+		const int Octaves = this->MeshModel.Octaves;
+		const float BaseFrequency = this->MeshModel.BaseFrequency;
+		const float BaseAmplitude = this->MeshModel.BaseAmplitude;
+		const float Persistence = this->MeshModel.Persistence;
 
 		const FVector RandomSeedOffset = FMath::VRand() * 100.0f;
 
@@ -98,6 +102,7 @@ void ACelestialBody::LoadMesh(const FCelestialBodyMeshModel &Model)
 
 		UProceduralMeshComponent *ProceduralMesh =
 			NewObject<UProceduralMeshComponent>(this, UProceduralMeshComponent::StaticClass());
+
 		ProceduralMesh->SetupAttachment(this->RootComponent);
 		ProceduralMesh->RegisterComponent();
 
