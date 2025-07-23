@@ -2,6 +2,7 @@ import saved_monte_carlo_scenario
 import image_analysis
 import spice_scenario
 import random_asteroid_generation
+import asteroid_departure
 import com_cob_analysis
 import print_protobuffer_content
 import os, shutil
@@ -18,6 +19,13 @@ def test_run_random_asteroid_generation():
     assert os.path.exists(current_file_path + "/images-com-cob-analysis" + "/cob-com-correction-errors.png")
     assert os.path.exists(current_file_path + "/images-com-cob-analysis" + "/error-by-phase.png")
     shutil.rmtree(current_file_path + "/images-com-cob")
+
+
+def test_asteroid_departure():
+    asteroid_departure.departure_scene(5)
+    assert os.path.exists(current_file_path + "/images-departure")
+    assert os.path.exists(current_file_path + "/images-departure" + "/departure.bin")
+    shutil.rmtree(current_file_path + "/images-departure")
 
 
 def test_run_saved_monte_carlo_scenario():
