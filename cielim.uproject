@@ -22,10 +22,6 @@
 			]
 		},
 		{
-			"Name": "GeometryScripting",
-			"Enabled": true
-		},
-		{
 			"Name": "WmfMedia",
 			"Enabled": false
 		},

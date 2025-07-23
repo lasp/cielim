@@ -196,22 +196,24 @@ void USceneData::SpawnCelestialBodies()
 		const FTransform SpawnLocAndRotation = FTransform(CelestialBodyRotation, PositionCelestialBody);
 
 		ACelestialBody *TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>();
-		TempCelestialBody->SetActorTransform(SpawnLocAndRotation);
+		TempCelestialBody->Name = FString(CelestialBody.bodyname().c_str());
 
 #if WITH_EDITOR
-		TempCelestialBody->SetActorLabel(CelestialBody.bodyname().c_str());
+		TempCelestialBody->SetActorLabel(TempCelestialBody->Name);
 #endif
 
-		CelestialBodyMeshModel MeshModel{};
+		FCelestialBodyMeshModel MeshModel{};
 		if (CelestialBody.has_model())
 		{
-			MeshModel = CelestialBodyMeshModel::FromProtobuf(CelestialBody.model());
+			UE_LOG(LogCielim, Display, TEXT("Loading mesh model for %s"), *TempCelestialBody->Name);
+
+			MeshModel = FCelestialBodyMeshModel::FromProtobuf(CelestialBody.model());
+			TempCelestialBody->LoadMesh(MeshModel);
 		}
 
-		TempCelestialBody->LoadMesh(MeshModel);
+		TempCelestialBody->SetActorTransform(SpawnLocAndRotation);
 		TempCelestialBody->SetActorRotation(MeshModel.InertialToBody);
 		TempCelestialBody->SetActorLocation(PositionCelestialBody);
-		TempCelestialBody->Name = FString(CelestialBody.bodyname().c_str());
 		// meshes are in 10m scale, bring to uu/
 		const FVector ActorScale =
 			TempCelestialBody->GetPrincipleAxisDistortions() * CelestialBody.model().meanradius() / 1000;
