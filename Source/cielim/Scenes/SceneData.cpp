@@ -110,8 +110,9 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 			this->Spacecraft->CameraModel->SceneCaptureComponent2D->PrimitiveRenderMode = RenderMode;
 			this->Spacecraft->CameraModel->SceneCaptureComponent2D->ShowOnlyActors = Actors;
 
-			if (this->CielimMessage.GetMessage().has_camera())
-				this->bHasCameras = true;
+			// Do a flush to the render target to ensure actual first capture has correct data
+			this->Spacecraft->CameraModel->SceneCaptureComponent2D->CaptureScene();
+			FlushRenderingCommands();
 		}
 		else
 		{
@@ -257,6 +258,8 @@ void USceneData::SpawnSpacecraft()
 
 		const FRotator CameraRotation = GetCameraRotation(Camera);
 		TempSpacecraft->SetCameraRelativeOrientation(CameraRotation);
+
+		this->bHasCameras = true;
 	}
 
 	this->Spacecraft = TempSpacecraft;

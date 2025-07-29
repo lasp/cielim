@@ -39,13 +39,17 @@ ACameraModel::ACameraModel()
 	// Set up the SceneCaptureComponent2D and its default settings
 	this->SceneCaptureComponent2D = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCaptureComponent2D"));
 	this->SceneCaptureComponent2D->TextureTarget = NewObject<UTextureRenderTarget2D>(this, TEXT("RT_Spacecraft"));
-	this->SceneCaptureComponent2D->TextureTarget->RenderTargetFormat = RTF_RGBA8;
-	this->SceneCaptureComponent2D->TextureTarget->InitAutoFormat(2560, 1440);
+	this->SceneCaptureComponent2D->TextureTarget->InitCustomFormat(2560, 1440, PF_FloatRGBA, true);
 	this->SceneCaptureComponent2D->TextureTarget->UpdateResourceImmediate();
 	this->SceneCaptureComponent2D->bCaptureEveryFrame = false;
 	this->SceneCaptureComponent2D->bCaptureOnMovement = false;
 	this->SceneCaptureComponent2D->bUseCustomProjectionMatrix = true;
 	this->SceneCaptureComponent2D->CustomProjectionMatrix = ProjectionMatrix;
+
+	// Disable exposure and ensure we're getting the raw linear HDR color
+	this->SceneCaptureComponent2D->CaptureSource = SCS_FinalColorHDR;
+	this->SceneCaptureComponent2D->PostProcessBlendWeight = 0.0f;
+	this->SceneCaptureComponent2D->ShowFlags.SetTonemapper(false);
 
 	this->RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 
