@@ -18,7 +18,7 @@ def default_scene():
 
     sun = protobuf_message.celestialBodies.add()
     sun.bodyName = "sun"
-    [sun.position.append(item) for item in [0, 0, 2000000]]
+    [sun.position.append(item) for item in [0, 0, 0.5 * 1.496e11]]
     [sun.attitude.append(item) for item in [0, 0, 0]]
 
     protobuf_message.camera.cameraId = 1

@@ -18,12 +18,9 @@
 
 #include "../Actors/CelestialBodyMeshModel.h"
 #include "../CielimGameInstance.h"
-#include "../Utilities/Constants/AstronomicalConstants.h"
 #include "../Utilities/Logging/CielimLoggingMacros.h"
 #include "../Utilities/Math/KinematicsUtilities.h"
 
-#define m2cm 100.0
-#define km2m 1000.0
 const FString SunNaifBodyName("sun");
 
 static FVector3d GetSpacecraftPosition(const cielimMessage::Spacecraft &Craft);
@@ -271,26 +268,48 @@ void USceneData::SpawnSpacecraft()
 
 void USceneData::SpawnSunLight()
 {
-	this->SunLight = GetWorld()->SpawnActor<ADirectionalLight>(FVector3d::ZeroVector, FRotator::ZeroRotator);
+	const FVector3d SunLocation = this->SunCelestialBody->GetActorLocation();
+
+	const FVector SunDirection = -SunLocation.GetSafeNormal();
+	const FRotator SunRotation = FRotationMatrix::MakeFromX(SunDirection).Rotator();
+
+	this->SunLight = GetWorld()->SpawnActor<ADirectionalLight>();
+
+	this->SunLight->GetLightComponent()->SetMobility(EComponentMobility::Movable);
+	this->SunLight->GetLightComponent()->SetWorldLocation(SunLocation);
+	this->SunLight->GetLightComponent()->SetWorldRotation(SunRotation);
+
+	// Spectral irradiance in W/m^2/nm and data from: https://lasp.colorado.edu/tsis/data/ssi-data/#summary_table
+
+	constexpr float RedIrradianceAtOneAU = 1.55f; // 650 nm wavelength
+	constexpr float GreenIrradianceAtOneAU = 1.89f; // 550 nm wavelength
+	constexpr float BlueIrradianceAtOneAU = 2.06f; // 450 nm wavelength
+
+	/* We need to scale down the irradiance values so they can fit in [0,1] color and not be clamped. This will get
+	 * cancelled out when the color is multiplied with the intensity which has the inverse of the factor. */
+	constexpr float IntensityScaleFactor = 2.2f;
+
+	constexpr float RedIntensity = RedIrradianceAtOneAU / IntensityScaleFactor;
+	constexpr float GreenIntensity = GreenIrradianceAtOneAU / IntensityScaleFactor;
+	constexpr float BlueIntensity = BlueIrradianceAtOneAU / IntensityScaleFactor;
+
+	// Length of 1 AU in meters
+	constexpr float OneAU = 1.496e11;
+
+	/* The calculations determining the irradiance of the sun for each wavelength assumes all lit objects are
+	 * near the origin. Anything further than ~0.1 AU from the origin will have irradiance too high/low from expected.
+	 * This is because directional light intensity is constant regardless of position. We also multiply by 100 to
+	 * account for the fact that unreal uses cm instead of meters. */
+	const float SunDistanceRatio = 100.0f * OneAU / SunLocation.Length();
+	const float SunIntensity = SunDistanceRatio * SunDistanceRatio * IntensityScaleFactor;
+
+	this->SunLight->GetLightComponent()->SetIntensity(SunIntensity);
+	this->SunLight->GetLightComponent()->SetLightColor(FLinearColor(RedIntensity, GreenIntensity, BlueIntensity));
 
 	// Light should spawn as disabled so SceneManager can manage which scene's light is enabled
 	ToggleSunLight(false);
 
 	this->Actors.Add(SunLight);
-
-	const double ExposureTime = this->CielimMessage.GetMessage().camera().exposuretime();
-	const double LuxAt1AU = ExposureTime != 0 ? 1280 * ExposureTime : 1280;
-
-	const float SunIntensity =
-		LuxAt1AU * (AU * km2m * AU * km2m) / FMath::Square(this->SunCelestialBody->GetActorLocation().Length() / 100.0f);
-	this->SunLight->GetLightComponent()->SetIntensity(SunIntensity);
-	this->SunLight->GetLightComponent()->SetMobility(EComponentMobility::Movable);
-
-	auto Vector = -this->SunCelestialBody->GetActorLocation();
-	Vector.Normalize();
-
-	const auto RotationMatrixFromLocation = FRotationMatrix::MakeFromX(Vector);
-	this->SunLight->GetLightComponent()->SetRelativeRotation(RotationMatrixFromLocation.Rotator());
 }
 
 void USceneData::UpdateCelestialBodies() const
