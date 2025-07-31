@@ -191,33 +191,31 @@ void USceneData::SpawnCelestialBodies()
 {
 	for (const auto &CelestialBody : CielimMessage.GetMessage().celestialbodies())
 	{
-		FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
-		FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
+		const FVector3d CelestialBodyPosition = GetCelestialBodyPosition(CelestialBody);
+		const FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
 
-		const FTransform SpawnLocAndRotation = FTransform(CelestialBodyRotation, PositionCelestialBody);
-
-		ACelestialBody *TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>();
+		ACelestialBody *TempCelestialBody =
+			GetWorld()->SpawnActor<ACelestialBody>(CelestialBodyPosition, CelestialBodyRotation);
 		TempCelestialBody->Name = FString(CelestialBody.bodyname().c_str());
 
 #if WITH_EDITOR
 		TempCelestialBody->SetActorLabel(TempCelestialBody->Name);
 #endif
 
-		FCelestialBodyMeshModel MeshModel{};
 		if (CelestialBody.has_model())
 		{
 			UE_LOG(LogCielim, Display, TEXT("Loading mesh model for %s"), *TempCelestialBody->Name);
+
+			FCelestialBodyMeshModel MeshModel;
 
 			MeshModel = FCelestialBodyMeshModel::FromProtobuf(CelestialBody.model());
 			TempCelestialBody->LoadMesh(MeshModel);
 		}
 
-		TempCelestialBody->SetActorTransform(SpawnLocAndRotation);
-		TempCelestialBody->SetActorRotation(MeshModel.InertialToBody);
-		TempCelestialBody->SetActorLocation(PositionCelestialBody);
-		// meshes are in 10m scale, bring to uu/
-		const FVector ActorScale =
-			TempCelestialBody->GetPrincipleAxisDistortions() * CelestialBody.model().meanradius() / 1000;
+		constexpr float MeshRadiusInMeters = 10.0f;
+		const float RadiusScale = CelestialBody.model().meanradius() / MeshRadiusInMeters;
+		const FVector ActorScale = TempCelestialBody->GetPrincipleAxisDistortions() * RadiusScale;
+
 		TempCelestialBody->SetActorScale3D(ActorScale);
 
 		this->CelestialBodyArray.Add(TempCelestialBody);
@@ -237,8 +235,12 @@ void USceneData::SpawnSpacecraft()
 	const cielimMessage::Spacecraft &SpacecraftMessage = this->CielimMessage.GetMessage().spacecraft();
 
 	const FVector3d PositionSpacecraft = GetSpacecraftPosition(SpacecraftMessage);
-	const FVector3d AttitudeVector =
-		FVector3d(SpacecraftMessage.attitude(0), SpacecraftMessage.attitude(1), SpacecraftMessage.attitude(2));
+
+	const double AttitudeX = SpacecraftMessage.attitude(0);
+	const double AttitudeY = SpacecraftMessage.attitude(1);
+	const double AttitudeZ = SpacecraftMessage.attitude(2);
+
+	const FVector3d AttitudeVector = FVector3d(AttitudeX, AttitudeY, AttitudeZ);
 	const FRotator SpacecraftRotation = GetRotatorFromMrp(AttitudeVector);
 
 	ASpacecraft *TempSpacecraft = GetWorld()->SpawnActor<ASpacecraft>(PositionSpacecraft, SpacecraftRotation);
@@ -280,7 +282,7 @@ void USceneData::SpawnSunLight()
 	const double LuxAt1AU = ExposureTime != 0 ? 1280 * ExposureTime : 1280;
 
 	const float SunIntensity =
-		LuxAt1AU * (AU * km2m * AU * km2m) / FMath::Square(this->SunCelestialBody->GetActorLocation().Length());
+		LuxAt1AU * (AU * km2m * AU * km2m) / FMath::Square(this->SunCelestialBody->GetActorLocation().Length() / 100.0f);
 	this->SunLight->GetLightComponent()->SetIntensity(SunIntensity);
 	this->SunLight->GetLightComponent()->SetMobility(EComponentMobility::Movable);
 
@@ -351,7 +353,7 @@ void USceneData::BeginDestroy()
 // Gets the positions of a Spacecraft Object
 static FVector3d GetSpacecraftPosition(const cielimMessage::Spacecraft &Craft)
 {
-	const FVector3d PositionSpacecraft = FVector3d(Craft.position(0), Craft.position(1), Craft.position(2));
+	const FVector3d PositionSpacecraft = 100.0f * FVector3d(Craft.position(0), Craft.position(1), Craft.position(2));
 	return Right2LeftVector(PositionSpacecraft);
 }
 
@@ -366,7 +368,7 @@ static FRotator GetRotatorFromMrp(const FVector3d &Sigma)
 // Gets the position of a Camera Object
 static FVector3d GetCameraPosition(const cielimMessage::CameraModel &Camera)
 {
-	const FVector3d SigmaCamera =
+	const FVector3d SigmaCamera = 100.0f *
 		FVector3d(Camera.camerapositioninbody(0), Camera.camerapositioninbody(1), Camera.camerapositioninbody(2));
 	return Right2LeftVector(SigmaCamera);
 }
@@ -387,7 +389,7 @@ static FRotator GetCameraRotation(const cielimMessage::CameraModel &Camera)
 static FVector3d GetCelestialBodyPosition(const cielimMessage::CelestialBody &CelestialBody)
 {
 	const FVector3d PositionCelestialBody =
-		FVector3d(CelestialBody.position(0), CelestialBody.position(1), CelestialBody.position(2));
+		100.0f * FVector3d(CelestialBody.position(0), CelestialBody.position(1), CelestialBody.position(2));
 	return Right2LeftVector(PositionCelestialBody);
 }
 
