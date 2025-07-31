@@ -130,13 +130,6 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 			Instance->SetVectorParameterValue(ParamName, this->SunLight->GetActorForwardVector().GetSafeNormal());
 		}
 
-		const cielimMessage::CameraModel *ProtobufCameraModel = &this->CielimMessage.GetMessage().camera();
-
-		const double PointSpread = ProtobufCameraModel->pointspreadfunction();
-		const double ReadNoise = ProtobufCameraModel->readnoise();
-		const double SystemGain = ProtobufCameraModel->systemgain();
-		const double RayStdDev = ProtobufCameraModel->renderparameters().cosmicraystddeviation();
-
 		TArray64<uint8> ImageDataPng;
 		TOptional<FVector2D> CobCoords;
 
@@ -147,12 +140,12 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 		if (const auto *TempPayload = CommandData.payload.TryGet<FImagePayload>();
 			TempPayload != nullptr && TempPayload->shouldReturnImage)
 		{
-			Camera->GetCorruptedImage(ImageDataPng, CobCoords, PointSpread, ReadNoise, SystemGain, RayStdDev);
+			const cielimMessage::CameraModel &ProtobufCameraModel = this->CielimMessage.GetMessage().camera();
+			Camera->GetCorruptedImage(ImageDataPng, CobCoords, ProtobufCameraModel);
 		}
 		else
 		{
-			UTextureRenderTarget2D *RenderTarget = Camera->SceneCaptureComponent2D->TextureTarget;
-			CobCoords = Camera->GetCenterOfBrightness(RenderTarget);
+			Camera->GetCenterOfBrightness(CobCoords);
 		}
 
 		ReturnData.query = CommandType::REQUEST_IMAGE;
