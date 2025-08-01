@@ -19,10 +19,12 @@
 #include "cielim/Shaders/CenBrightReduce.h"
 #include "cielim/Shaders/CosmicRays.h"
 #include "cielim/Shaders/GaussianPSF.h"
+#include "cielim/Shaders/QuETonemap.h"
 #include "cielim/Shaders/ReadNoise.h"
 #include "cielim/Shaders/SignalGain.h"
 #include "cielim/Utilities/Logging/CielimLoggingMacros.h"
 
+DECLARE_GPU_STAT_NAMED(CielimQuETonemapping, TEXT("Cielim Quantum Efficiency Tonemapping Pass Stat"));
 DECLARE_GPU_STAT_NAMED(CielimCobReductionCalculations, TEXT("Cielim Center of Brightness Reduction Calculations Stat"));
 DECLARE_GPU_STAT_NAMED(CielimPostProcessCorruptionPasses, TEXT("Cielim Post-Process Corruption Passes Stat"));
 DECLARE_GPU_STAT_NAMED(GaussianPSF, TEXT("Gaussian PSF Pass Stat"));
@@ -92,6 +94,8 @@ void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, TOptional<FVect
 											   static_cast<float>(CameraModel.readnoise()),
 											   static_cast<float>(CameraModel.systemgain())};
 
+	this->ApplyQuETonemapping(CameraModel);
+
 	this->GetCenterOfBrightness(CobCoordinates);
 
 	this->ApplyPostProcessShaders(CorruptionParams);
@@ -100,6 +104,101 @@ void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, TOptional<FVect
 
 	// Take modified image data from Image and copy to ImageData as PNG
 	verify(FImageUtils::CompressImage(ImageData, TEXT("PNG"), Image));
+}
+
+void ACameraModel::ApplyQuETonemapping(const cielimMessage::CameraModel &CameraModel) const
+{
+	UTextureRenderTarget2D *RenderTarget = this->SceneCaptureComponent2D->TextureTarget;
+
+	if (!RenderTarget)
+		return;
+
+	FTextureRenderTargetResource *RTResource = RenderTarget->GameThread_GetRenderTargetResource();
+
+	const float ApertureRadius = CameraModel.apertureradius() == 0.0f ? 0.005f : CameraModel.apertureradius();
+	const float FocalLength = CameraModel.focallength() == 0.0f ? 0.16f : CameraModel.focallength();
+	const float SensorWidth = CameraModel.sensorwidth() == 0.0f ? 0.036f : CameraModel.sensorwidth();
+	const float SensorHeight = CameraModel.sensorheight() == 0.0f ? 0.024f : CameraModel.sensorheight();
+	const float ExposureTime = CameraModel.exposuretime() == 0.0f ? 1e-3f : CameraModel.exposuretime();
+	const float CorrectionFactor =
+		CameraModel.integrationweightfactor() == 0.0f ? 1.0f : CameraModel.integrationweightfactor();
+	const float FullWellCapacity = CameraModel.fullwellcapacity() == 0.0f ? 50000.0f : CameraModel.fullwellcapacity();
+	const float Gamma = CameraModel.gamma() == 0.0f ? 2.2f : CameraModel.gamma();
+
+	FVector3f QuECurveR = FVector3f::One();
+	FVector3f QuECurveG = FVector3f::One();
+	FVector3f QuECurveB = FVector3f::One();
+
+	if (CameraModel.has_qecurve())
+	{
+		const auto QuECurve = CameraModel.qecurve();
+		QuECurveR = FVector3f(QuECurve.redvalue650nm(), QuECurve.redvalue550nm(), QuECurve.redvalue450nm());
+		QuECurveG = FVector3f(QuECurve.greenvalue650nm(), QuECurve.greenvalue550nm(), QuECurve.greenvalue450nm());
+		QuECurveB = FVector3f(QuECurve.bluevalue650nm(), QuECurve.bluevalue550nm(), QuECurve.bluevalue450nm());
+	}
+
+	FCameraParams CameraParams = {ApertureRadius,	FocalLength,	  SensorWidth, SensorHeight,
+								  ExposureTime,		QuECurveR,		  QuECurveG,   QuECurveB,
+								  CorrectionFactor, FullWellCapacity, Gamma};
+
+	FRenderCommandFence Fence;
+
+	ENQUEUE_RENDER_COMMAND(ApplyQuETonemapping)
+	(
+		[RTResource, &CameraParams](FRHICommandListImmediate &RHICmdList)
+		{
+			FRDGBuilder GraphBuilder(RHICmdList);
+
+			{
+				RDG_GPU_STAT_SCOPE(GraphBuilder, CielimQuETonemapping);
+				RDG_EVENT_SCOPE(GraphBuilder, "Cielim Quantum Efficiency Tonemapping Pass");
+
+				const FRDGTextureRef RenderTargetBase = RegisterExternalTexture(
+					GraphBuilder, RTResource->GetRenderTargetTexture(), TEXT("RenderTargetBase"));
+
+				const FRDGTextureRef TempTextureIn =
+					GraphBuilder.CreateTexture(RenderTargetBase->Desc, TEXT("Temp Input Texture"));
+
+				AddCopyTexturePass(GraphBuilder, RenderTargetBase, TempTextureIn);
+
+				const FScreenPassTextureViewport Viewport(RenderTargetBase);
+
+				// Pre-calculate camera constants
+
+				const float ApertureArea = 3.1415f * CameraParams.ApertureRadius * CameraParams.ApertureRadius;
+				const float SolidAngle =
+					ApertureArea / FMath::Max(CameraParams.FocalLength * CameraParams.FocalLength, 1e-6);
+
+				const float PixelWidth = CameraParams.SensorWidth / Viewport.Rect.Width();
+				const float PixelHeight = CameraParams.SensorHeight / Viewport.Rect.Height();
+
+				FQuETonemap::FParameters *QuEParams = GraphBuilder.AllocParameters<FQuETonemap::FParameters>();
+				QuEParams->InputTexture = TempTextureIn;
+				QuEParams->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
+				QuEParams->SolidAngle = SolidAngle;
+				QuEParams->PixelArea = PixelWidth * PixelHeight;
+				QuEParams->ExposureTime = CameraParams.ExposureTime;
+				QuEParams->QuECurveR = CameraParams.QuECurveR;
+				QuEParams->QuECurveG = CameraParams.QuECurveG;
+				QuEParams->QuECurveB = CameraParams.QuECurveB;
+				QuEParams->CorrectionFactor = CameraParams.CorrectionFactor;
+				QuEParams->InvFullWellCapacity = FMath::Max(1.0f / CameraParams.FullWellCapacity, 1e-6);
+				QuEParams->InvGamma = FMath::Max(1.0f / CameraParams.Gamma, 1e-6);
+				QuEParams->RenderTargets[0] =
+					FRenderTargetBinding(RenderTargetBase, ERenderTargetLoadAction::ENoAction);
+
+				const TShaderMapRef<FQuETonemap> QuETonemapShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+
+				AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply QuE Tonemapping"), GMaxRHIFeatureLevel, Viewport,
+								  Viewport, QuETonemapShader, QuEParams);
+			}
+
+			GraphBuilder.Execute();
+			RHICmdList.SubmitCommandsAndFlushGPU(); // Metals refuses to auto-flush unless forced
+		});
+
+	Fence.BeginFence();
+	Fence.Wait();
 }
 
 void ACameraModel::GetCenterOfBrightness(TOptional<FVector2D> &CobCoordinates) const

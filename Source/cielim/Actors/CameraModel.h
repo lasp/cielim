@@ -15,6 +15,22 @@
 
 #include "CameraModel.generated.h"
 
+struct FCameraParams
+{
+	// Camera + QE
+	float ApertureRadius;
+	float FocalLength;
+	float SensorWidth;
+	float SensorHeight;
+	float ExposureTime;
+	FVector3f QuECurveR;
+	FVector3f QuECurveG;
+	FVector3f QuECurveB;
+	float CorrectionFactor;
+	float FullWellCapacity;
+	float Gamma;
+};
+
 struct FImageCorruptionParams
 {
 	// Gaussian PSF
@@ -61,6 +77,12 @@ public:
 	 */
 	void GetCorruptedImage(TArray64<uint8> &ImageData, TOptional<FVector2D> &CobCoordinates,
 						   const cielimMessage::CameraModel &CameraModel) const;
+
+	/**
+	 * @brief Tonemaps incoming HDR data into viewable LDR image using Quantum Efficiency.
+	 * @param CameraModel Protobuf camera model containing camera parameters.
+	 */
+	void ApplyQuETonemapping(const cielimMessage::CameraModel &CameraModel) const;
 
 	/**
 	 * @brief Calculates center of brightness for an image.

@@ -1,0 +1,68 @@
+//=================== Copyright (c) 2025 Laboratory for Atmospheric and Space Physics ===================//
+//
+// Purpose: Pixel shader that uses quantum efficiency to tone-map the HDR input values to LDR.
+//
+// License: MIT License. See LICENSE file.
+//
+//=======================================================================================================//
+
+#include "/Engine/Public/Platform.ush"
+
+Texture2D InputTexture;
+SamplerState InputSampler;
+
+float SolidAngle; // This is in steradians
+float PixelArea; // This is in m^2
+float ExposureTime; // This is in seconds
+float3 QuECurveR;
+float3 QuECurveG;
+float3 QuECurveB;
+float CorrectionFactor;
+float InvFullWellCapacity; // This is in # of electrons (inverse)
+float InvGamma;
+
+float4 MainPS(float4 UV : TEXCOORD0, float4 Position : SV_Position) : SV_Target0
+{
+	// This is in W/m^2/nm/str
+	float4 TotalRadiance = InputTexture.Sample(InputSampler, UV.xy);
+
+	float RedPower = SolidAngle * PixelArea * TotalRadiance.r;		// Power values are in W/nm
+	float GreenPower = SolidAngle * PixelArea * TotalRadiance.g;
+	float BluePower = SolidAngle * PixelArea * TotalRadiance.b;
+
+	const float RedEnergyInverse = 3.272e18f;
+	const float GreenEnergyInverse = 2.769e18f;
+	const float BlueEnergyInverse = 2.265e18f;
+
+	float NumRedElectronsR = RedPower * RedEnergyInverse * ExposureTime * QuECurveR.r;
+	float NumGreenElectronsR = GreenPower * GreenEnergyInverse * ExposureTime * QuECurveR.g;
+	float NumBlueElectronsR = BluePower * BlueEnergyInverse * ExposureTime * QuECurveR.b;
+
+	float NumRedElectronsG = RedPower * RedEnergyInverse * ExposureTime * QuECurveG.r;
+	float NumGreenElectronsG = GreenPower * GreenEnergyInverse * ExposureTime * QuECurveG.g;
+	float NumBlueElectronsG = BluePower * BlueEnergyInverse * ExposureTime * QuECurveG.b;
+
+	float NumRedElectronsB = RedPower * RedEnergyInverse * ExposureTime * QuECurveB.r;
+	float NumGreenElectronsB = GreenPower * GreenEnergyInverse * ExposureTime * QuECurveB.g;
+	float NumBlueElectronsB = BluePower * BlueEnergyInverse * ExposureTime * QuECurveB.b;
+
+	/* Approximate integration over visible spectrum using R, G, and B channels and Simpson's 1/3 rule.
+	 * This is a close approximation given the QE curve shape is roughly parabolic. */
+	float NumElectronsR = 200.0f * 0.1667f * (NumRedElectronsR + 4.0f * NumGreenElectronsR + NumBlueElectronsR);
+	float NumElectronsG = 200.0f * 0.1667f * (NumRedElectronsG + 4.0f * NumGreenElectronsG + NumBlueElectronsG);
+	float NumElectronsB = 200.0f * 0.1667f * (NumRedElectronsB + 4.0f * NumGreenElectronsB + NumBlueElectronsB);
+
+	NumElectronsR *= CorrectionFactor;
+	NumElectronsG *= CorrectionFactor;
+	NumElectronsB *= CorrectionFactor;
+
+	float LinearColorR = saturate(NumElectronsR * InvFullWellCapacity);
+	float LinearColorG = saturate(NumElectronsG * InvFullWellCapacity);
+	float LinearColorB = saturate(NumElectronsB * InvFullWellCapacity);
+
+	float GammaCorrectedColorR = pow(LinearColorR, InvGamma);
+	float GammaCorrectedColorG = pow(LinearColorG, InvGamma);
+	float GammaCorrectedColorB = pow(LinearColorB, InvGamma);
+
+	return float4(GammaCorrectedColorR, GammaCorrectedColorG, GammaCorrectedColorB, TotalRadiance.a);
+}

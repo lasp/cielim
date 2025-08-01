@@ -47,7 +47,7 @@ struct TableStruct_cielimMessage_2eproto {
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
   static const ::PROTOBUF_NAMESPACE_ID::internal::AuxiliaryParseTableField aux[]
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
-  static const ::PROTOBUF_NAMESPACE_ID::internal::ParseTable schema[9]
+  static const ::PROTOBUF_NAMESPACE_ID::internal::ParseTable schema[10]
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
   static const ::PROTOBUF_NAMESPACE_ID::internal::FieldMetadata field_metadata[];
   static const ::PROTOBUF_NAMESPACE_ID::internal::SerializationTable serialization_table[];
@@ -72,6 +72,9 @@ extern MeshModelDefaultTypeInternal _MeshModel_default_instance_;
 class PerlinNoise;
 struct PerlinNoiseDefaultTypeInternal;
 extern PerlinNoiseDefaultTypeInternal _PerlinNoise_default_instance_;
+class QuantumEfficiency;
+struct QuantumEfficiencyDefaultTypeInternal;
+extern QuantumEfficiencyDefaultTypeInternal _QuantumEfficiency_default_instance_;
 class RenderingModel;
 struct RenderingModelDefaultTypeInternal;
 extern RenderingModelDefaultTypeInternal _RenderingModel_default_instance_;
@@ -89,6 +92,7 @@ template<> ::cielimMessage::CielimMessage* Arena::CreateMaybeMessage<::cielimMes
 template<> ::cielimMessage::EpochDateTime* Arena::CreateMaybeMessage<::cielimMessage::EpochDateTime>(Arena*);
 template<> ::cielimMessage::MeshModel* Arena::CreateMaybeMessage<::cielimMessage::MeshModel>(Arena*);
 template<> ::cielimMessage::PerlinNoise* Arena::CreateMaybeMessage<::cielimMessage::PerlinNoise>(Arena*);
+template<> ::cielimMessage::QuantumEfficiency* Arena::CreateMaybeMessage<::cielimMessage::QuantumEfficiency>(Arena*);
 template<> ::cielimMessage::RenderingModel* Arena::CreateMaybeMessage<::cielimMessage::RenderingModel>(Arena*);
 template<> ::cielimMessage::Spacecraft* Arena::CreateMaybeMessage<::cielimMessage::Spacecraft>(Arena*);
 template<> ::cielimMessage::TimeStamp* Arena::CreateMaybeMessage<::cielimMessage::TimeStamp>(Arena*);
@@ -1461,6 +1465,222 @@ class RenderingModel final :
 };
 // -------------------------------------------------------------------
 
+class QuantumEfficiency final :
+    public ::PROTOBUF_NAMESPACE_ID::MessageLite /* @@protoc_insertion_point(class_definition:cielimMessage.QuantumEfficiency) */ {
+ public:
+  inline QuantumEfficiency() : QuantumEfficiency(nullptr) {}
+  ~QuantumEfficiency() override;
+  explicit constexpr QuantumEfficiency(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  QuantumEfficiency(const QuantumEfficiency& from);
+  QuantumEfficiency(QuantumEfficiency&& from) noexcept
+    : QuantumEfficiency() {
+    *this = ::std::move(from);
+  }
+
+  inline QuantumEfficiency& operator=(const QuantumEfficiency& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline QuantumEfficiency& operator=(QuantumEfficiency&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const QuantumEfficiency& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const QuantumEfficiency* internal_default_instance() {
+    return reinterpret_cast<const QuantumEfficiency*>(
+               &_QuantumEfficiency_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    7;
+
+  friend void swap(QuantumEfficiency& a, QuantumEfficiency& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(QuantumEfficiency* other) {
+    if (other == this) return;
+    if (GetOwningArena() == other->GetOwningArena()) {
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(QuantumEfficiency* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  inline QuantumEfficiency* New() const final {
+    return new QuantumEfficiency();
+  }
+
+  QuantumEfficiency* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<QuantumEfficiency>(arena);
+  }
+  void CheckTypeAndMergeFrom(const ::PROTOBUF_NAMESPACE_ID::MessageLite& from)  final;
+  void CopyFrom(const QuantumEfficiency& from);
+  void MergeFrom(const QuantumEfficiency& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  ::PROTOBUF_NAMESPACE_ID::uint8* _InternalSerialize(
+      ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  void DiscardUnknownFields();
+  int GetCachedSize() const final { return _cached_size_.Get(); }
+
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  void InternalSwap(QuantumEfficiency* other);
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "cielimMessage.QuantumEfficiency";
+  }
+  protected:
+  explicit QuantumEfficiency(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  private:
+  static void ArenaDtor(void* object);
+  inline void RegisterArenaDtor(::PROTOBUF_NAMESPACE_ID::Arena* arena);
+  public:
+
+  std::string GetTypeName() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kRedValue450NmFieldNumber = 1,
+    kRedValue550NmFieldNumber = 2,
+    kRedValue650NmFieldNumber = 3,
+    kGreenValue450NmFieldNumber = 4,
+    kGreenValue550NmFieldNumber = 5,
+    kGreenValue650NmFieldNumber = 6,
+    kBlueValue450NmFieldNumber = 7,
+    kBlueValue550NmFieldNumber = 8,
+    kBlueValue650NmFieldNumber = 9,
+  };
+  // double redValue450nm = 1;
+  void clear_redvalue450nm();
+  double redvalue450nm() const;
+  void set_redvalue450nm(double value);
+  private:
+  double _internal_redvalue450nm() const;
+  void _internal_set_redvalue450nm(double value);
+  public:
+
+  // double redValue550nm = 2;
+  void clear_redvalue550nm();
+  double redvalue550nm() const;
+  void set_redvalue550nm(double value);
+  private:
+  double _internal_redvalue550nm() const;
+  void _internal_set_redvalue550nm(double value);
+  public:
+
+  // double redValue650nm = 3;
+  void clear_redvalue650nm();
+  double redvalue650nm() const;
+  void set_redvalue650nm(double value);
+  private:
+  double _internal_redvalue650nm() const;
+  void _internal_set_redvalue650nm(double value);
+  public:
+
+  // double greenValue450nm = 4;
+  void clear_greenvalue450nm();
+  double greenvalue450nm() const;
+  void set_greenvalue450nm(double value);
+  private:
+  double _internal_greenvalue450nm() const;
+  void _internal_set_greenvalue450nm(double value);
+  public:
+
+  // double greenValue550nm = 5;
+  void clear_greenvalue550nm();
+  double greenvalue550nm() const;
+  void set_greenvalue550nm(double value);
+  private:
+  double _internal_greenvalue550nm() const;
+  void _internal_set_greenvalue550nm(double value);
+  public:
+
+  // double greenValue650nm = 6;
+  void clear_greenvalue650nm();
+  double greenvalue650nm() const;
+  void set_greenvalue650nm(double value);
+  private:
+  double _internal_greenvalue650nm() const;
+  void _internal_set_greenvalue650nm(double value);
+  public:
+
+  // double blueValue450nm = 7;
+  void clear_bluevalue450nm();
+  double bluevalue450nm() const;
+  void set_bluevalue450nm(double value);
+  private:
+  double _internal_bluevalue450nm() const;
+  void _internal_set_bluevalue450nm(double value);
+  public:
+
+  // double blueValue550nm = 8;
+  void clear_bluevalue550nm();
+  double bluevalue550nm() const;
+  void set_bluevalue550nm(double value);
+  private:
+  double _internal_bluevalue550nm() const;
+  void _internal_set_bluevalue550nm(double value);
+  public:
+
+  // double blueValue650nm = 9;
+  void clear_bluevalue650nm();
+  double bluevalue650nm() const;
+  void set_bluevalue650nm(double value);
+  private:
+  double _internal_bluevalue650nm() const;
+  void _internal_set_bluevalue650nm(double value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:cielimMessage.QuantumEfficiency)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  double redvalue450nm_;
+  double redvalue550nm_;
+  double redvalue650nm_;
+  double greenvalue450nm_;
+  double greenvalue550nm_;
+  double greenvalue650nm_;
+  double bluevalue450nm_;
+  double bluevalue550nm_;
+  double bluevalue650nm_;
+  mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  friend struct ::TableStruct_cielimMessage_2eproto;
+};
+// -------------------------------------------------------------------
+
 class CameraModel final :
     public ::PROTOBUF_NAMESPACE_ID::MessageLite /* @@protoc_insertion_point(class_definition:cielimMessage.CameraModel) */ {
  public:
@@ -1500,7 +1720,7 @@ class CameraModel final :
                &_CameraModel_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    7;
+    8;
 
   friend void swap(CameraModel& a, CameraModel& b) {
     a.Swap(&b);
@@ -1571,6 +1791,7 @@ class CameraModel final :
     kBodyFrameToCameraMrpFieldNumber = 6,
     kParentNameFieldNumber = 2,
     kRenderParametersFieldNumber = 13,
+    kQeCurveFieldNumber = 20,
     kCameraIdFieldNumber = 1,
     kRenderRateFieldNumber = 7,
     kFocalLengthFieldNumber = 8,
@@ -1578,6 +1799,12 @@ class CameraModel final :
     kPointSpreadFunctionFieldNumber = 10,
     kReadNoiseFieldNumber = 11,
     kSystemGainFieldNumber = 12,
+    kApertureRadiusFieldNumber = 14,
+    kSensorWidthFieldNumber = 15,
+    kSensorHeightFieldNumber = 16,
+    kIntegrationWeightFactorFieldNumber = 17,
+    kFullWellCapacityFieldNumber = 18,
+    kGammaFieldNumber = 19,
   };
   // repeated double fieldOfView = 3;
   int fieldofview_size() const;
@@ -1699,6 +1926,24 @@ class CameraModel final :
       ::cielimMessage::RenderingModel* renderparameters);
   ::cielimMessage::RenderingModel* unsafe_arena_release_renderparameters();
 
+  // .cielimMessage.QuantumEfficiency qeCurve = 20;
+  bool has_qecurve() const;
+  private:
+  bool _internal_has_qecurve() const;
+  public:
+  void clear_qecurve();
+  const ::cielimMessage::QuantumEfficiency& qecurve() const;
+  PROTOBUF_MUST_USE_RESULT ::cielimMessage::QuantumEfficiency* release_qecurve();
+  ::cielimMessage::QuantumEfficiency* mutable_qecurve();
+  void set_allocated_qecurve(::cielimMessage::QuantumEfficiency* qecurve);
+  private:
+  const ::cielimMessage::QuantumEfficiency& _internal_qecurve() const;
+  ::cielimMessage::QuantumEfficiency* _internal_mutable_qecurve();
+  public:
+  void unsafe_arena_set_allocated_qecurve(
+      ::cielimMessage::QuantumEfficiency* qecurve);
+  ::cielimMessage::QuantumEfficiency* unsafe_arena_release_qecurve();
+
   // int64 cameraId = 1;
   void clear_cameraid();
   ::PROTOBUF_NAMESPACE_ID::int64 cameraid() const;
@@ -1762,6 +2007,60 @@ class CameraModel final :
   void _internal_set_systemgain(double value);
   public:
 
+  // double apertureRadius = 14;
+  void clear_apertureradius();
+  double apertureradius() const;
+  void set_apertureradius(double value);
+  private:
+  double _internal_apertureradius() const;
+  void _internal_set_apertureradius(double value);
+  public:
+
+  // double sensorWidth = 15;
+  void clear_sensorwidth();
+  double sensorwidth() const;
+  void set_sensorwidth(double value);
+  private:
+  double _internal_sensorwidth() const;
+  void _internal_set_sensorwidth(double value);
+  public:
+
+  // double sensorHeight = 16;
+  void clear_sensorheight();
+  double sensorheight() const;
+  void set_sensorheight(double value);
+  private:
+  double _internal_sensorheight() const;
+  void _internal_set_sensorheight(double value);
+  public:
+
+  // double integrationWeightFactor = 17;
+  void clear_integrationweightfactor();
+  double integrationweightfactor() const;
+  void set_integrationweightfactor(double value);
+  private:
+  double _internal_integrationweightfactor() const;
+  void _internal_set_integrationweightfactor(double value);
+  public:
+
+  // double fullWellCapacity = 18;
+  void clear_fullwellcapacity();
+  double fullwellcapacity() const;
+  void set_fullwellcapacity(double value);
+  private:
+  double _internal_fullwellcapacity() const;
+  void _internal_set_fullwellcapacity(double value);
+  public:
+
+  // double gamma = 19;
+  void clear_gamma();
+  double gamma() const;
+  void set_gamma(double value);
+  private:
+  double _internal_gamma() const;
+  void _internal_set_gamma(double value);
+  public:
+
   // @@protoc_insertion_point(class_scope:cielimMessage.CameraModel)
  private:
   class _Internal;
@@ -1776,6 +2075,7 @@ class CameraModel final :
   ::PROTOBUF_NAMESPACE_ID::RepeatedField< double > bodyframetocameramrp_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr parentname_;
   ::cielimMessage::RenderingModel* renderparameters_;
+  ::cielimMessage::QuantumEfficiency* qecurve_;
   ::PROTOBUF_NAMESPACE_ID::int64 cameraid_;
   ::PROTOBUF_NAMESPACE_ID::uint64 renderrate_;
   double focallength_;
@@ -1783,6 +2083,12 @@ class CameraModel final :
   double pointspreadfunction_;
   double readnoise_;
   double systemgain_;
+  double apertureradius_;
+  double sensorwidth_;
+  double sensorheight_;
+  double integrationweightfactor_;
+  double fullwellcapacity_;
+  double gamma_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_cielimMessage_2eproto;
 };
@@ -1827,7 +2133,7 @@ class CielimMessage final :
                &_CielimMessage_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    8;
+    9;
 
   friend void swap(CielimMessage& a, CielimMessage& b) {
     a.Swap(&b);
@@ -3253,6 +3559,190 @@ inline void RenderingModel::set_enablesmear(bool value) {
 
 // -------------------------------------------------------------------
 
+// QuantumEfficiency
+
+// double redValue450nm = 1;
+inline void QuantumEfficiency::clear_redvalue450nm() {
+  redvalue450nm_ = 0;
+}
+inline double QuantumEfficiency::_internal_redvalue450nm() const {
+  return redvalue450nm_;
+}
+inline double QuantumEfficiency::redvalue450nm() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.QuantumEfficiency.redValue450nm)
+  return _internal_redvalue450nm();
+}
+inline void QuantumEfficiency::_internal_set_redvalue450nm(double value) {
+  
+  redvalue450nm_ = value;
+}
+inline void QuantumEfficiency::set_redvalue450nm(double value) {
+  _internal_set_redvalue450nm(value);
+  // @@protoc_insertion_point(field_set:cielimMessage.QuantumEfficiency.redValue450nm)
+}
+
+// double redValue550nm = 2;
+inline void QuantumEfficiency::clear_redvalue550nm() {
+  redvalue550nm_ = 0;
+}
+inline double QuantumEfficiency::_internal_redvalue550nm() const {
+  return redvalue550nm_;
+}
+inline double QuantumEfficiency::redvalue550nm() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.QuantumEfficiency.redValue550nm)
+  return _internal_redvalue550nm();
+}
+inline void QuantumEfficiency::_internal_set_redvalue550nm(double value) {
+  
+  redvalue550nm_ = value;
+}
+inline void QuantumEfficiency::set_redvalue550nm(double value) {
+  _internal_set_redvalue550nm(value);
+  // @@protoc_insertion_point(field_set:cielimMessage.QuantumEfficiency.redValue550nm)
+}
+
+// double redValue650nm = 3;
+inline void QuantumEfficiency::clear_redvalue650nm() {
+  redvalue650nm_ = 0;
+}
+inline double QuantumEfficiency::_internal_redvalue650nm() const {
+  return redvalue650nm_;
+}
+inline double QuantumEfficiency::redvalue650nm() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.QuantumEfficiency.redValue650nm)
+  return _internal_redvalue650nm();
+}
+inline void QuantumEfficiency::_internal_set_redvalue650nm(double value) {
+  
+  redvalue650nm_ = value;
+}
+inline void QuantumEfficiency::set_redvalue650nm(double value) {
+  _internal_set_redvalue650nm(value);
+  // @@protoc_insertion_point(field_set:cielimMessage.QuantumEfficiency.redValue650nm)
+}
+
+// double greenValue450nm = 4;
+inline void QuantumEfficiency::clear_greenvalue450nm() {
+  greenvalue450nm_ = 0;
+}
+inline double QuantumEfficiency::_internal_greenvalue450nm() const {
+  return greenvalue450nm_;
+}
+inline double QuantumEfficiency::greenvalue450nm() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.QuantumEfficiency.greenValue450nm)
+  return _internal_greenvalue450nm();
+}
+inline void QuantumEfficiency::_internal_set_greenvalue450nm(double value) {
+  
+  greenvalue450nm_ = value;
+}
+inline void QuantumEfficiency::set_greenvalue450nm(double value) {
+  _internal_set_greenvalue450nm(value);
+  // @@protoc_insertion_point(field_set:cielimMessage.QuantumEfficiency.greenValue450nm)
+}
+
+// double greenValue550nm = 5;
+inline void QuantumEfficiency::clear_greenvalue550nm() {
+  greenvalue550nm_ = 0;
+}
+inline double QuantumEfficiency::_internal_greenvalue550nm() const {
+  return greenvalue550nm_;
+}
+inline double QuantumEfficiency::greenvalue550nm() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.QuantumEfficiency.greenValue550nm)
+  return _internal_greenvalue550nm();
+}
+inline void QuantumEfficiency::_internal_set_greenvalue550nm(double value) {
+  
+  greenvalue550nm_ = value;
+}
+inline void QuantumEfficiency::set_greenvalue550nm(double value) {
+  _internal_set_greenvalue550nm(value);
+  // @@protoc_insertion_point(field_set:cielimMessage.QuantumEfficiency.greenValue550nm)
+}
+
+// double greenValue650nm = 6;
+inline void QuantumEfficiency::clear_greenvalue650nm() {
+  greenvalue650nm_ = 0;
+}
+inline double QuantumEfficiency::_internal_greenvalue650nm() const {
+  return greenvalue650nm_;
+}
+inline double QuantumEfficiency::greenvalue650nm() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.QuantumEfficiency.greenValue650nm)
+  return _internal_greenvalue650nm();
+}
+inline void QuantumEfficiency::_internal_set_greenvalue650nm(double value) {
+  
+  greenvalue650nm_ = value;
+}
+inline void QuantumEfficiency::set_greenvalue650nm(double value) {
+  _internal_set_greenvalue650nm(value);
+  // @@protoc_insertion_point(field_set:cielimMessage.QuantumEfficiency.greenValue650nm)
+}
+
+// double blueValue450nm = 7;
+inline void QuantumEfficiency::clear_bluevalue450nm() {
+  bluevalue450nm_ = 0;
+}
+inline double QuantumEfficiency::_internal_bluevalue450nm() const {
+  return bluevalue450nm_;
+}
+inline double QuantumEfficiency::bluevalue450nm() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.QuantumEfficiency.blueValue450nm)
+  return _internal_bluevalue450nm();
+}
+inline void QuantumEfficiency::_internal_set_bluevalue450nm(double value) {
+  
+  bluevalue450nm_ = value;
+}
+inline void QuantumEfficiency::set_bluevalue450nm(double value) {
+  _internal_set_bluevalue450nm(value);
+  // @@protoc_insertion_point(field_set:cielimMessage.QuantumEfficiency.blueValue450nm)
+}
+
+// double blueValue550nm = 8;
+inline void QuantumEfficiency::clear_bluevalue550nm() {
+  bluevalue550nm_ = 0;
+}
+inline double QuantumEfficiency::_internal_bluevalue550nm() const {
+  return bluevalue550nm_;
+}
+inline double QuantumEfficiency::bluevalue550nm() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.QuantumEfficiency.blueValue550nm)
+  return _internal_bluevalue550nm();
+}
+inline void QuantumEfficiency::_internal_set_bluevalue550nm(double value) {
+  
+  bluevalue550nm_ = value;
+}
+inline void QuantumEfficiency::set_bluevalue550nm(double value) {
+  _internal_set_bluevalue550nm(value);
+  // @@protoc_insertion_point(field_set:cielimMessage.QuantumEfficiency.blueValue550nm)
+}
+
+// double blueValue650nm = 9;
+inline void QuantumEfficiency::clear_bluevalue650nm() {
+  bluevalue650nm_ = 0;
+}
+inline double QuantumEfficiency::_internal_bluevalue650nm() const {
+  return bluevalue650nm_;
+}
+inline double QuantumEfficiency::bluevalue650nm() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.QuantumEfficiency.blueValue650nm)
+  return _internal_bluevalue650nm();
+}
+inline void QuantumEfficiency::_internal_set_bluevalue650nm(double value) {
+  
+  bluevalue650nm_ = value;
+}
+inline void QuantumEfficiency::set_bluevalue650nm(double value) {
+  _internal_set_bluevalue650nm(value);
+  // @@protoc_insertion_point(field_set:cielimMessage.QuantumEfficiency.blueValue650nm)
+}
+
+// -------------------------------------------------------------------
+
 // CameraModel
 
 // int64 cameraId = 1;
@@ -3719,6 +4209,216 @@ inline void CameraModel::set_allocated_renderparameters(::cielimMessage::Renderi
   // @@protoc_insertion_point(field_set_allocated:cielimMessage.CameraModel.renderParameters)
 }
 
+// double apertureRadius = 14;
+inline void CameraModel::clear_apertureradius() {
+  apertureradius_ = 0;
+}
+inline double CameraModel::_internal_apertureradius() const {
+  return apertureradius_;
+}
+inline double CameraModel::apertureradius() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.CameraModel.apertureRadius)
+  return _internal_apertureradius();
+}
+inline void CameraModel::_internal_set_apertureradius(double value) {
+  
+  apertureradius_ = value;
+}
+inline void CameraModel::set_apertureradius(double value) {
+  _internal_set_apertureradius(value);
+  // @@protoc_insertion_point(field_set:cielimMessage.CameraModel.apertureRadius)
+}
+
+// double sensorWidth = 15;
+inline void CameraModel::clear_sensorwidth() {
+  sensorwidth_ = 0;
+}
+inline double CameraModel::_internal_sensorwidth() const {
+  return sensorwidth_;
+}
+inline double CameraModel::sensorwidth() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.CameraModel.sensorWidth)
+  return _internal_sensorwidth();
+}
+inline void CameraModel::_internal_set_sensorwidth(double value) {
+  
+  sensorwidth_ = value;
+}
+inline void CameraModel::set_sensorwidth(double value) {
+  _internal_set_sensorwidth(value);
+  // @@protoc_insertion_point(field_set:cielimMessage.CameraModel.sensorWidth)
+}
+
+// double sensorHeight = 16;
+inline void CameraModel::clear_sensorheight() {
+  sensorheight_ = 0;
+}
+inline double CameraModel::_internal_sensorheight() const {
+  return sensorheight_;
+}
+inline double CameraModel::sensorheight() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.CameraModel.sensorHeight)
+  return _internal_sensorheight();
+}
+inline void CameraModel::_internal_set_sensorheight(double value) {
+  
+  sensorheight_ = value;
+}
+inline void CameraModel::set_sensorheight(double value) {
+  _internal_set_sensorheight(value);
+  // @@protoc_insertion_point(field_set:cielimMessage.CameraModel.sensorHeight)
+}
+
+// double integrationWeightFactor = 17;
+inline void CameraModel::clear_integrationweightfactor() {
+  integrationweightfactor_ = 0;
+}
+inline double CameraModel::_internal_integrationweightfactor() const {
+  return integrationweightfactor_;
+}
+inline double CameraModel::integrationweightfactor() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.CameraModel.integrationWeightFactor)
+  return _internal_integrationweightfactor();
+}
+inline void CameraModel::_internal_set_integrationweightfactor(double value) {
+  
+  integrationweightfactor_ = value;
+}
+inline void CameraModel::set_integrationweightfactor(double value) {
+  _internal_set_integrationweightfactor(value);
+  // @@protoc_insertion_point(field_set:cielimMessage.CameraModel.integrationWeightFactor)
+}
+
+// double fullWellCapacity = 18;
+inline void CameraModel::clear_fullwellcapacity() {
+  fullwellcapacity_ = 0;
+}
+inline double CameraModel::_internal_fullwellcapacity() const {
+  return fullwellcapacity_;
+}
+inline double CameraModel::fullwellcapacity() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.CameraModel.fullWellCapacity)
+  return _internal_fullwellcapacity();
+}
+inline void CameraModel::_internal_set_fullwellcapacity(double value) {
+  
+  fullwellcapacity_ = value;
+}
+inline void CameraModel::set_fullwellcapacity(double value) {
+  _internal_set_fullwellcapacity(value);
+  // @@protoc_insertion_point(field_set:cielimMessage.CameraModel.fullWellCapacity)
+}
+
+// double gamma = 19;
+inline void CameraModel::clear_gamma() {
+  gamma_ = 0;
+}
+inline double CameraModel::_internal_gamma() const {
+  return gamma_;
+}
+inline double CameraModel::gamma() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.CameraModel.gamma)
+  return _internal_gamma();
+}
+inline void CameraModel::_internal_set_gamma(double value) {
+  
+  gamma_ = value;
+}
+inline void CameraModel::set_gamma(double value) {
+  _internal_set_gamma(value);
+  // @@protoc_insertion_point(field_set:cielimMessage.CameraModel.gamma)
+}
+
+// .cielimMessage.QuantumEfficiency qeCurve = 20;
+inline bool CameraModel::_internal_has_qecurve() const {
+  return this != internal_default_instance() && qecurve_ != nullptr;
+}
+inline bool CameraModel::has_qecurve() const {
+  return _internal_has_qecurve();
+}
+inline void CameraModel::clear_qecurve() {
+  if (GetArenaForAllocation() == nullptr && qecurve_ != nullptr) {
+    delete qecurve_;
+  }
+  qecurve_ = nullptr;
+}
+inline const ::cielimMessage::QuantumEfficiency& CameraModel::_internal_qecurve() const {
+  const ::cielimMessage::QuantumEfficiency* p = qecurve_;
+  return p != nullptr ? *p : reinterpret_cast<const ::cielimMessage::QuantumEfficiency&>(
+      ::cielimMessage::_QuantumEfficiency_default_instance_);
+}
+inline const ::cielimMessage::QuantumEfficiency& CameraModel::qecurve() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.CameraModel.qeCurve)
+  return _internal_qecurve();
+}
+inline void CameraModel::unsafe_arena_set_allocated_qecurve(
+    ::cielimMessage::QuantumEfficiency* qecurve) {
+  if (GetArenaForAllocation() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(qecurve_);
+  }
+  qecurve_ = qecurve;
+  if (qecurve) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:cielimMessage.CameraModel.qeCurve)
+}
+inline ::cielimMessage::QuantumEfficiency* CameraModel::release_qecurve() {
+  
+  ::cielimMessage::QuantumEfficiency* temp = qecurve_;
+  qecurve_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
+  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  if (GetArenaForAllocation() == nullptr) { delete old; }
+#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArenaForAllocation() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return temp;
+}
+inline ::cielimMessage::QuantumEfficiency* CameraModel::unsafe_arena_release_qecurve() {
+  // @@protoc_insertion_point(field_release:cielimMessage.CameraModel.qeCurve)
+  
+  ::cielimMessage::QuantumEfficiency* temp = qecurve_;
+  qecurve_ = nullptr;
+  return temp;
+}
+inline ::cielimMessage::QuantumEfficiency* CameraModel::_internal_mutable_qecurve() {
+  
+  if (qecurve_ == nullptr) {
+    auto* p = CreateMaybeMessage<::cielimMessage::QuantumEfficiency>(GetArenaForAllocation());
+    qecurve_ = p;
+  }
+  return qecurve_;
+}
+inline ::cielimMessage::QuantumEfficiency* CameraModel::mutable_qecurve() {
+  ::cielimMessage::QuantumEfficiency* _msg = _internal_mutable_qecurve();
+  // @@protoc_insertion_point(field_mutable:cielimMessage.CameraModel.qeCurve)
+  return _msg;
+}
+inline void CameraModel::set_allocated_qecurve(::cielimMessage::QuantumEfficiency* qecurve) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  if (message_arena == nullptr) {
+    delete qecurve_;
+  }
+  if (qecurve) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper<::cielimMessage::QuantumEfficiency>::GetOwningArena(qecurve);
+    if (message_arena != submessage_arena) {
+      qecurve = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, qecurve, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  qecurve_ = qecurve;
+  // @@protoc_insertion_point(field_set_allocated:cielimMessage.CameraModel.qeCurve)
+}
+
 // -------------------------------------------------------------------
 
 // CielimMessage
@@ -4126,6 +4826,8 @@ inline void CielimMessage::set_allocated_camera(::cielimMessage::CameraModel* ca
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------

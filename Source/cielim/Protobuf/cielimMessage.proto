@@ -60,6 +60,18 @@ message RenderingModel{
     bool enableSmear = 5;  //[-] Enable effects of long exposure times
 }
 
+message QuantumEfficiency{
+    double redValue450nm = 1; // [-] value of QE curve at 450 nm (red channel)
+    double redValue550nm = 2; // [-] value of QE curve at 550 nm (red channel)
+    double redValue650nm = 3; // [-] value of QE curve at 650 nm (red channel)
+    double greenValue450nm = 4; // [-] value of QE curve at 450 nm (green channel)
+    double greenValue550nm = 5; // [-] value of QE curve at 550 nm (green channel)
+    double greenValue650nm = 6; // [-] value of QE curve at 650 nm (green channel)
+    double blueValue450nm = 7; // [-] value of QE curve at 450 nm (blue channel)
+    double blueValue550nm = 8; // [-] value of QE curve at 550 nm (blue channel)
+    double blueValue650nm = 9; // [-] value of QE curve at 650 nm (blue channel)
+}
+
 //Camera parameters
 message CameraModel{
     int64 cameraId = 1;  //[-] ID of the camera
@@ -69,12 +81,19 @@ message CameraModel{
     repeated double cameraPositionInBody = 5;  //[m] Camera position in body frame
     repeated double bodyFrameToCameraMrp = 6;  //[-] Rotation to the camera frame MRP
     uint64 renderRate = 7;  //[ns] Sim elapsed time between saved camera images
-    double focalLength = 8; // [mm] Camera focal length
-    double exposureTime = 9; // [ns] Time with open shutter
+    double focalLength = 8; // [m] Camera focal length
+    double exposureTime = 9; // [s] Time with open shutter
     double pointSpreadFunction = 10; // [pix] Kernel size of gaussian psf
     double readNoise = 11; // [ns] Time with open shutter
     double systemGain = 12; // [-] System gain between sensor current and pixel intensity
     RenderingModel renderParameters = 13; // [-] Rendering information attached to the camera
+    double apertureRadius = 14; // [m] Aperture radius of lens
+    double sensorWidth = 15; // [m] Width of sensor
+    double sensorHeight = 16; // [m] Height of sensor
+    double integrationWeightFactor = 17; // [-] Weight factor for integration over wavelength to obtain photo-electrons
+    double fullWellCapacity = 18; // [electrons] Amount of charge that can be stored within an individual pixel
+    double gamma = 19; // [-] Gamma correction factor
+    QuantumEfficiency qeCurve = 20; // [-] Quantum Efficiency curve information
 }
 
 /*! Cielim Message containing relevant data for image generation*/

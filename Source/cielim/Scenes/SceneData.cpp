@@ -137,14 +137,16 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 
 		Camera->SceneCaptureComponent2D->CaptureScene();
 
+		const cielimMessage::CameraModel &ProtobufCameraModel = this->CielimMessage.GetMessage().camera();
+
 		if (const auto *TempPayload = CommandData.payload.TryGet<FImagePayload>();
 			TempPayload != nullptr && TempPayload->shouldReturnImage)
 		{
-			const cielimMessage::CameraModel &ProtobufCameraModel = this->CielimMessage.GetMessage().camera();
 			Camera->GetCorruptedImage(ImageDataPng, CobCoords, ProtobufCameraModel);
 		}
 		else
 		{
+			Camera->ApplyQuETonemapping(ProtobufCameraModel);
 			Camera->GetCenterOfBrightness(CobCoords);
 		}
 
