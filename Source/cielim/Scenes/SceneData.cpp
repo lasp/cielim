@@ -144,7 +144,6 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 		}
 		else
 		{
-			Camera->ApplyQuETonemapping();
 			Camera->GetCenterOfBrightness(CobCoords);
 		}
 

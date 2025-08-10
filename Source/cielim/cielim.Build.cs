@@ -14,5 +14,7 @@ public class cielim : ModuleRules
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "RenderCore", "Renderer", "RHI", "ProceduralMeshComponent" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] { "ProtobufLibrary", "ZMQ" });
+		
+		PrivateIncludePaths.AddRange(new string[] {  Path.Combine(GetModuleDirectory("Renderer"), "Internal") });
 	}
 }

@@ -18,12 +18,10 @@
 #include "cielim/Shaders/CenBrightReduce.h"
 #include "cielim/Shaders/CosmicRays.h"
 #include "cielim/Shaders/GaussianPSF.h"
-#include "cielim/Shaders/QuETonemap.h"
 #include "cielim/Shaders/ReadNoise.h"
 #include "cielim/Shaders/SignalGain.h"
 #include "cielim/Utilities/Logging/CielimLoggingMacros.h"
 
-DECLARE_GPU_STAT_NAMED(CielimQuETonemapping, TEXT("Cielim Quantum Efficiency Tonemapping Pass Stat"));
 DECLARE_GPU_STAT_NAMED(CielimCobReductionCalculations, TEXT("Cielim Center of Brightness Reduction Calculations Stat"));
 DECLARE_GPU_STAT_NAMED(CielimPostProcessCorruptionPasses, TEXT("Cielim Post-Process Corruption Passes Stat"));
 DECLARE_GPU_STAT_NAMED(GaussianPSF, TEXT("Gaussian PSF Pass Stat"));
@@ -140,8 +138,6 @@ void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, TOptional<FVect
 {
 	FImage Image;
 
-	this->ApplyQuETonemapping();
-
 	this->GetCenterOfBrightness(CobCoordinates);
 
 	this->ApplyPostProcessShaders();
@@ -150,77 +146,6 @@ void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, TOptional<FVect
 
 	// Take modified image data from Image and copy to ImageData as PNG
 	verify(FImageUtils::CompressImage(ImageData, TEXT("PNG"), Image));
-}
-
-void ACameraModel::ApplyQuETonemapping() const
-{
-	UTextureRenderTarget2D *RenderTarget = this->SceneCaptureComponent2D->TextureTarget;
-
-	if (!RenderTarget)
-		return;
-
-	FTextureRenderTargetResource *RTResource = RenderTarget->GameThread_GetRenderTargetResource();
-
-	FRenderCommandFence Fence;
-
-	const FCameraParams &CameraParamsRef = this->CameraParams;
-
-	ENQUEUE_RENDER_COMMAND(ApplyQuETonemapping)
-	(
-		[RTResource, CameraParamsRef](FRHICommandListImmediate &RHICmdList)
-		{
-			FRDGBuilder GraphBuilder(RHICmdList);
-
-			{
-				RDG_GPU_STAT_SCOPE(GraphBuilder, CielimQuETonemapping);
-				RDG_EVENT_SCOPE(GraphBuilder, "Cielim Quantum Efficiency Tonemapping Pass");
-
-				const FRDGTextureRef RenderTargetBase = RegisterExternalTexture(
-					GraphBuilder, RTResource->GetRenderTargetTexture(), TEXT("RenderTargetBase"));
-
-				const FRDGTextureRef TempTextureIn =
-					GraphBuilder.CreateTexture(RenderTargetBase->Desc, TEXT("Temp Input Texture"));
-
-				AddCopyTexturePass(GraphBuilder, RenderTargetBase, TempTextureIn);
-
-				const FScreenPassTextureViewport Viewport(RenderTargetBase);
-
-				// Pre-calculate camera constants
-
-				const float ApertureArea = 3.1415f * CameraParamsRef.ApertureRadius * CameraParamsRef.ApertureRadius;
-				const float SolidAngle =
-					ApertureArea / FMath::Max(CameraParamsRef.FocalLength * CameraParamsRef.FocalLength, 1e-6);
-
-				const float PixelWidth = CameraParamsRef.SensorWidth / Viewport.Rect.Width();
-				const float PixelHeight = CameraParamsRef.SensorHeight / Viewport.Rect.Height();
-
-				FQuETonemap::FParameters *QuEParams = GraphBuilder.AllocParameters<FQuETonemap::FParameters>();
-				QuEParams->InputTexture = TempTextureIn;
-				QuEParams->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
-				QuEParams->SolidAngle = SolidAngle;
-				QuEParams->PixelArea = PixelWidth * PixelHeight;
-				QuEParams->ExposureTime = CameraParamsRef.ExposureTime;
-				QuEParams->QuECurveR = CameraParamsRef.QuECurveR;
-				QuEParams->QuECurveG = CameraParamsRef.QuECurveG;
-				QuEParams->QuECurveB = CameraParamsRef.QuECurveB;
-				QuEParams->CorrectionFactor = CameraParamsRef.CorrectionFactor;
-				QuEParams->InvFullWellCapacity = FMath::Max(1.0f / CameraParamsRef.FullWellCapacity, 1e-6);
-				QuEParams->InvGamma = FMath::Max(1.0f / CameraParamsRef.Gamma, 1e-6);
-				QuEParams->RenderTargets[0] =
-					FRenderTargetBinding(RenderTargetBase, ERenderTargetLoadAction::ENoAction);
-
-				const TShaderMapRef<FQuETonemap> QuETonemapShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-
-				AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply QuE Tonemapping"), GMaxRHIFeatureLevel, Viewport,
-								  Viewport, QuETonemapShader, QuEParams);
-			}
-
-			GraphBuilder.Execute();
-			RHICmdList.SubmitCommandsAndFlushGPU(); // Metals refuses to auto-flush unless forced
-		});
-
-	Fence.BeginFence();
-	Fence.Wait();
 }
 
 void ACameraModel::GetCenterOfBrightness(TOptional<FVector2D> &CobCoordinates) const

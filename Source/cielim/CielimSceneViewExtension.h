@@ -12,7 +12,9 @@
 #include "CoreMinimal.h"
 #include "SceneViewExtension.h"
 
-class CIELIM_API FCielimSceneViewExtension : public FSceneViewExtensionBase
+#include "Actors/CameraModel.h"
+
+class CIELIM_API FCielimSceneViewExtension final : public FSceneViewExtensionBase
 {
 public:
 	explicit FCielimSceneViewExtension(const FAutoRegister &AutoRegister) : FSceneViewExtensionBase(AutoRegister) {}
@@ -29,6 +31,11 @@ public:
 	virtual void PreRenderView_RenderThread(FRDGBuilder &GraphBuilder, FSceneView &InView) override {}
 	virtual void PreRenderViewFamily_RenderThread(FRDGBuilder &GraphBuilder, FSceneViewFamily &InViewFamily) override {}
 
-	// virtual void PrePostProcessPass_RenderThread(FRDGBuilder &GraphBuilder, const FSceneView &View, const
-	// FPostProcessingInputs &Inputs) override;
+	// This runs after the base pass and lighting and right before the post-processing pass begins
+	virtual void PrePostProcessPass_RenderThread(FRDGBuilder &GraphBuilder, const FSceneView &View,
+												 const FPostProcessingInputs &Inputs) override;
+
+private:
+	static void QuETonemapPass(FRDGBuilder &GraphBuilder, const FCameraParams &CameraParams,
+							   const FRDGTextureRef &TextureIn, const FRDGTextureRef &TextureOut);
 };

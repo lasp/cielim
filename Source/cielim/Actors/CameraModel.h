@@ -85,11 +85,6 @@ public:
 	void GetCorruptedImage(TArray64<uint8> &ImageData, TOptional<FVector2D> &CobCoordinates) const;
 
 	/**
-	 * @brief Tonemaps incoming HDR data into viewable LDR image using Quantum Efficiency.
-	 */
-	void ApplyQuETonemapping() const;
-
-	/**
 	 * @brief Calculates center of brightness for an image.
 	 * @param CobCoordinates Reference to optional FVector2D used to contain center of brightness coordinates (mutable).
 	 */
