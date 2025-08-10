@@ -137,16 +137,14 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 
 		Camera->SceneCaptureComponent2D->CaptureScene();
 
-		const cielimMessage::CameraModel &ProtobufCameraModel = this->CielimMessage.GetMessage().camera();
-
 		if (const auto *TempPayload = CommandData.payload.TryGet<FImagePayload>();
 			TempPayload != nullptr && TempPayload->shouldReturnImage)
 		{
-			Camera->GetCorruptedImage(ImageDataPng, CobCoords, ProtobufCameraModel);
+			Camera->GetCorruptedImage(ImageDataPng, CobCoords);
 		}
 		else
 		{
-			Camera->ApplyQuETonemapping(ProtobufCameraModel);
+			Camera->ApplyQuETonemapping();
 			Camera->GetCenterOfBrightness(CobCoords);
 		}
 
@@ -243,6 +241,7 @@ void USceneData::SpawnSpacecraft()
 	if (this->CielimMessage.GetMessage().has_camera())
 	{
 		const cielimMessage::CameraModel &Camera = CielimMessage.GetMessage().camera();
+
 		TempSpacecraft->SetFOV(FMath::RadiansToDegrees(Camera.fieldofview(0)),
 							   FMath::RadiansToDegrees(Camera.fieldofview(1)));
 		TempSpacecraft->SetResolution(Camera.resolution(0), Camera.resolution(1));
@@ -252,6 +251,8 @@ void USceneData::SpawnSpacecraft()
 
 		const FRotator CameraRotation = GetCameraRotation(Camera);
 		TempSpacecraft->SetCameraRelativeOrientation(CameraRotation);
+
+		TempSpacecraft->CameraModel->SetCameraParameters(Camera);
 
 		this->bHasCameras = true;
 	}
@@ -340,6 +341,8 @@ void USceneData::UpdateSpacecraft() const
 		const FRotator CameraRotation = GetCameraRotation(Camera);
 
 		this->Spacecraft->SetCameraRelativeOrientation(CameraRotation);
+
+		this->Spacecraft->CameraModel->SetCameraParameters(Camera);
 	}
 }
 

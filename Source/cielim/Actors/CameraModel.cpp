@@ -60,6 +60,70 @@ ACameraModel::ACameraModel()
 	this->Body = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Body"));
 	this->Body->SetupAttachment(RootComponent);
 	this->SceneCaptureComponent2D->SetupAttachment(Body);
+
+	// Choose default camera parameters
+
+	this->CameraParams.ApertureRadius = 0.005f;
+	this->CameraParams.FocalLength = 0.16f;
+	this->CameraParams.SensorWidth = 0.036f;
+	this->CameraParams.SensorHeight = 0.024f;
+	this->CameraParams.ExposureTime = 1e-3f;
+	this->CameraParams.QuECurveR = FVector3f::One();
+	this->CameraParams.QuECurveG = FVector3f::One();
+	this->CameraParams.QuECurveB = FVector3f::One();
+	this->CameraParams.CorrectionFactor = 1.0f;
+	this->CameraParams.FullWellCapacity = 50000.0f;
+	this->CameraParams.Gamma = 2.2f;
+}
+
+void ACameraModel::SetCameraParameters(const cielimMessage::CameraModel &CameraModel)
+{
+	// Set camera parameters
+
+	if (CameraModel.apertureradius() > 0.0f)
+		this->CameraParams.ApertureRadius = CameraModel.apertureradius();
+
+	if (CameraModel.focallength() > 0.0f)
+		this->CameraParams.FocalLength = CameraModel.focallength();
+
+	if (CameraModel.sensorwidth() > 0.0f)
+		this->CameraParams.SensorWidth = CameraModel.sensorwidth();
+
+	if (CameraModel.sensorheight() > 0.0f)
+		this->CameraParams.SensorHeight = CameraModel.sensorheight();
+
+	if (CameraModel.exposuretime() > 0.0f)
+		this->CameraParams.ExposureTime = CameraModel.exposuretime();
+
+	if (CameraModel.integrationweightfactor() > 0.0f)
+		this->CameraParams.CorrectionFactor = CameraModel.integrationweightfactor();
+
+	if (CameraModel.fullwellcapacity() > 0.0f)
+		this->CameraParams.FullWellCapacity = CameraModel.fullwellcapacity();
+
+	if (CameraModel.gamma() > 0.0f)
+		this->CameraParams.Gamma = CameraModel.gamma();
+
+	if (CameraModel.has_qecurve())
+	{
+		const auto QuECurve = CameraModel.qecurve();
+		CameraParams.QuECurveR.Set(QuECurve.redvalue650nm(), QuECurve.redvalue550nm(), QuECurve.redvalue450nm());
+		CameraParams.QuECurveG.Set(QuECurve.greenvalue650nm(), QuECurve.greenvalue550nm(), QuECurve.greenvalue450nm());
+		CameraParams.QuECurveB.Set(QuECurve.bluevalue650nm(), QuECurve.bluevalue550nm(), QuECurve.bluevalue450nm());
+	}
+
+	// Set image corruption parameters
+
+	auto CosmicRays = GetCosmicRays(CameraModel.renderparameters().cosmicraystddeviation());
+
+	this->CorruptionParams.KernelWidth = 7;
+	this->CorruptionParams.Sigma = CameraModel.pointspreadfunction();
+	this->CorruptionParams.NumCosmicRays = CosmicRays.Get<0>();
+	this->CorruptionParams.StartPoints = CosmicRays.Get<1>();
+	this->CorruptionParams.EndPoints = CosmicRays.Get<2>();
+	this->CorruptionParams.LineWidths = CosmicRays.Get<3>();
+	this->CorruptionParams.ReadNoiseSigma = CameraModel.readnoise();
+	this->CorruptionParams.SignalGain = CameraModel.systemgain();
 }
 
 void ACameraModel::BeginPlay() { Super::BeginPlay(); }
@@ -72,32 +136,15 @@ void ACameraModel::SaveImageToDisk(const FString &FilePath, const FString &Filen
 	UKismetRenderingLibrary::ExportRenderTarget(this, this->SceneCaptureComponent2D->TextureTarget, FilePath, Filename);
 }
 
-void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, TOptional<FVector2D> &CobCoordinates,
-									 const cielimMessage::CameraModel &CameraModel) const
+void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, TOptional<FVector2D> &CobCoordinates) const
 {
 	FImage Image;
 
-	auto CosmicRays = GetCosmicRays(CameraModel.renderparameters().cosmicraystddeviation());
-
-	uint32 NumCosmicRays = CosmicRays.Get<0>();
-	TResourceArray<FVector2f> StartPoints = CosmicRays.Get<1>();
-	TResourceArray<FVector2f> EndPoints = CosmicRays.Get<2>();
-	TResourceArray<float> LineWidths = CosmicRays.Get<3>();
-
-	FImageCorruptionParams CorruptionParams = {7,
-											   CameraModel.pointspreadfunction(),
-											   NumCosmicRays,
-											   StartPoints,
-											   EndPoints,
-											   LineWidths,
-											   static_cast<float>(CameraModel.readnoise()),
-											   static_cast<float>(CameraModel.systemgain())};
-
-	this->ApplyQuETonemapping(CameraModel);
+	this->ApplyQuETonemapping();
 
 	this->GetCenterOfBrightness(CobCoordinates);
 
-	this->ApplyPostProcessShaders(CorruptionParams);
+	this->ApplyPostProcessShaders();
 
 	verify(FImageUtils::GetRenderTargetImage(this->SceneCaptureComponent2D->TextureTarget, Image));
 
@@ -105,7 +152,7 @@ void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, TOptional<FVect
 	verify(FImageUtils::CompressImage(ImageData, TEXT("PNG"), Image));
 }
 
-void ACameraModel::ApplyQuETonemapping(const cielimMessage::CameraModel &CameraModel) const
+void ACameraModel::ApplyQuETonemapping() const
 {
 	UTextureRenderTarget2D *RenderTarget = this->SceneCaptureComponent2D->TextureTarget;
 
@@ -114,37 +161,13 @@ void ACameraModel::ApplyQuETonemapping(const cielimMessage::CameraModel &CameraM
 
 	FTextureRenderTargetResource *RTResource = RenderTarget->GameThread_GetRenderTargetResource();
 
-	const float ApertureRadius = CameraModel.apertureradius() == 0.0f ? 0.005f : CameraModel.apertureradius();
-	const float FocalLength = CameraModel.focallength() == 0.0f ? 0.16f : CameraModel.focallength();
-	const float SensorWidth = CameraModel.sensorwidth() == 0.0f ? 0.036f : CameraModel.sensorwidth();
-	const float SensorHeight = CameraModel.sensorheight() == 0.0f ? 0.024f : CameraModel.sensorheight();
-	const float ExposureTime = CameraModel.exposuretime() == 0.0f ? 1e-3f : CameraModel.exposuretime();
-	const float CorrectionFactor =
-		CameraModel.integrationweightfactor() == 0.0f ? 1.0f : CameraModel.integrationweightfactor();
-	const float FullWellCapacity = CameraModel.fullwellcapacity() == 0.0f ? 50000.0f : CameraModel.fullwellcapacity();
-	const float Gamma = CameraModel.gamma() == 0.0f ? 2.2f : CameraModel.gamma();
-
-	FVector3f QuECurveR = FVector3f::One();
-	FVector3f QuECurveG = FVector3f::One();
-	FVector3f QuECurveB = FVector3f::One();
-
-	if (CameraModel.has_qecurve())
-	{
-		const auto QuECurve = CameraModel.qecurve();
-		QuECurveR = FVector3f(QuECurve.redvalue650nm(), QuECurve.redvalue550nm(), QuECurve.redvalue450nm());
-		QuECurveG = FVector3f(QuECurve.greenvalue650nm(), QuECurve.greenvalue550nm(), QuECurve.greenvalue450nm());
-		QuECurveB = FVector3f(QuECurve.bluevalue650nm(), QuECurve.bluevalue550nm(), QuECurve.bluevalue450nm());
-	}
-
-	FCameraParams CameraParams = {ApertureRadius,	FocalLength,	  SensorWidth, SensorHeight,
-								  ExposureTime,		QuECurveR,		  QuECurveG,   QuECurveB,
-								  CorrectionFactor, FullWellCapacity, Gamma};
-
 	FRenderCommandFence Fence;
+
+	const FCameraParams &CameraParamsRef = this->CameraParams;
 
 	ENQUEUE_RENDER_COMMAND(ApplyQuETonemapping)
 	(
-		[RTResource, &CameraParams](FRHICommandListImmediate &RHICmdList)
+		[RTResource, CameraParamsRef](FRHICommandListImmediate &RHICmdList)
 		{
 			FRDGBuilder GraphBuilder(RHICmdList);
 
@@ -164,25 +187,25 @@ void ACameraModel::ApplyQuETonemapping(const cielimMessage::CameraModel &CameraM
 
 				// Pre-calculate camera constants
 
-				const float ApertureArea = 3.1415f * CameraParams.ApertureRadius * CameraParams.ApertureRadius;
+				const float ApertureArea = 3.1415f * CameraParamsRef.ApertureRadius * CameraParamsRef.ApertureRadius;
 				const float SolidAngle =
-					ApertureArea / FMath::Max(CameraParams.FocalLength * CameraParams.FocalLength, 1e-6);
+					ApertureArea / FMath::Max(CameraParamsRef.FocalLength * CameraParamsRef.FocalLength, 1e-6);
 
-				const float PixelWidth = CameraParams.SensorWidth / Viewport.Rect.Width();
-				const float PixelHeight = CameraParams.SensorHeight / Viewport.Rect.Height();
+				const float PixelWidth = CameraParamsRef.SensorWidth / Viewport.Rect.Width();
+				const float PixelHeight = CameraParamsRef.SensorHeight / Viewport.Rect.Height();
 
 				FQuETonemap::FParameters *QuEParams = GraphBuilder.AllocParameters<FQuETonemap::FParameters>();
 				QuEParams->InputTexture = TempTextureIn;
 				QuEParams->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
 				QuEParams->SolidAngle = SolidAngle;
 				QuEParams->PixelArea = PixelWidth * PixelHeight;
-				QuEParams->ExposureTime = CameraParams.ExposureTime;
-				QuEParams->QuECurveR = CameraParams.QuECurveR;
-				QuEParams->QuECurveG = CameraParams.QuECurveG;
-				QuEParams->QuECurveB = CameraParams.QuECurveB;
-				QuEParams->CorrectionFactor = CameraParams.CorrectionFactor;
-				QuEParams->InvFullWellCapacity = FMath::Max(1.0f / CameraParams.FullWellCapacity, 1e-6);
-				QuEParams->InvGamma = FMath::Max(1.0f / CameraParams.Gamma, 1e-6);
+				QuEParams->ExposureTime = CameraParamsRef.ExposureTime;
+				QuEParams->QuECurveR = CameraParamsRef.QuECurveR;
+				QuEParams->QuECurveG = CameraParamsRef.QuECurveG;
+				QuEParams->QuECurveB = CameraParamsRef.QuECurveB;
+				QuEParams->CorrectionFactor = CameraParamsRef.CorrectionFactor;
+				QuEParams->InvFullWellCapacity = FMath::Max(1.0f / CameraParamsRef.FullWellCapacity, 1e-6);
+				QuEParams->InvGamma = FMath::Max(1.0f / CameraParamsRef.Gamma, 1e-6);
 				QuEParams->RenderTargets[0] =
 					FRenderTargetBinding(RenderTargetBase, ERenderTargetLoadAction::ENoAction);
 
@@ -309,7 +332,7 @@ void ACameraModel::GetCenterOfBrightness(TOptional<FVector2D> &CobCoordinates) c
 		UE_LOG(LogCielim, Display, TEXT("Center of Brightness: %f, %f"), CobCoordinates->X, CobCoordinates->Y);
 }
 
-void ACameraModel::ApplyPostProcessShaders(const FImageCorruptionParams &CorruptionParams) const
+void ACameraModel::ApplyPostProcessShaders() const
 {
 	UTextureRenderTarget2D *RenderTarget = this->SceneCaptureComponent2D->TextureTarget;
 
@@ -318,9 +341,11 @@ void ACameraModel::ApplyPostProcessShaders(const FImageCorruptionParams &Corrupt
 
 	FTextureRenderTargetResource *RTResource = RenderTarget->GameThread_GetRenderTargetResource();
 
+	const FImageCorruptionParams &CorruptionParamsRef = this->CorruptionParams;
+
 	ENQUEUE_RENDER_COMMAND(ApplyPostProcess)
 	(
-		[RTResource, &CorruptionParams](FRHICommandListImmediate &RHICmdList)
+		[RTResource, CorruptionParamsRef](FRHICommandListImmediate &RHICmdList)
 		{
 			FRDGBuilder GraphBuilder(RHICmdList);
 
@@ -341,7 +366,7 @@ void ACameraModel::ApplyPostProcessShaders(const FImageCorruptionParams &Corrupt
 
 				const FScreenPassTextureViewport Viewport(RenderTargetBase);
 
-				if (CorruptionParams.Sigma != 0.0f)
+				if (CorruptionParamsRef.Sigma != 0.0f)
 				{
 					RDG_GPU_STAT_SCOPE(GraphBuilder, GaussianPSF);
 					RDG_EVENT_SCOPE(GraphBuilder, "GaussianPSF Pass");
@@ -355,8 +380,8 @@ void ACameraModel::ApplyPostProcessShaders(const FImageCorruptionParams &Corrupt
 					PSFParamsH->InputTexture = TempTextureIn;
 					PSFParamsH->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
 					PSFParamsH->TexelSize = FVector2f(1.0f / Viewport.Rect.Width(), 1.0f / Viewport.Rect.Height());
-					PSFParamsH->KernelRadius = (CorruptionParams.KernelWidth - 1.0f) / 2.0f;
-					PSFParamsH->Sigma = CorruptionParams.Sigma;
+					PSFParamsH->KernelRadius = (CorruptionParamsRef.KernelWidth - 1.0f) / 2.0f;
+					PSFParamsH->Sigma = CorruptionParamsRef.Sigma;
 					PSFParamsH->RenderTargets[0] =
 						FRenderTargetBinding(TempTextureOut, ERenderTargetLoadAction::ENoAction);
 
@@ -379,8 +404,8 @@ void ACameraModel::ApplyPostProcessShaders(const FImageCorruptionParams &Corrupt
 					PSFParamsV->InputTexture = TempTextureIn;
 					PSFParamsV->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
 					PSFParamsV->TexelSize = FVector2f(1.0f / Viewport.Rect.Width(), 1.0f / Viewport.Rect.Height());
-					PSFParamsV->KernelRadius = (CorruptionParams.KernelWidth - 1.0f) / 2.0f;
-					PSFParamsV->Sigma = CorruptionParams.Sigma;
+					PSFParamsV->KernelRadius = (CorruptionParamsRef.KernelWidth - 1.0f) / 2.0f;
+					PSFParamsV->Sigma = CorruptionParamsRef.Sigma;
 					PSFParamsV->RenderTargets[0] =
 						FRenderTargetBinding(TempTextureOut, ERenderTargetLoadAction::ENoAction);
 
@@ -390,7 +415,7 @@ void ACameraModel::ApplyPostProcessShaders(const FImageCorruptionParams &Corrupt
 					Swap(TempTextureIn, TempTextureOut);
 				}
 
-				if (CorruptionParams.NumCosmicRays != 0.0f)
+				if (CorruptionParamsRef.NumCosmicRays != 0.0f)
 				{
 					// Cosmic Rays
 
@@ -398,16 +423,16 @@ void ACameraModel::ApplyPostProcessShaders(const FImageCorruptionParams &Corrupt
 					RDG_EVENT_SCOPE(GraphBuilder, "Cosmic Rays Pass");
 
 					const FRDGBufferRef StartBuffer = CreateStructuredBuffer<FVector2f>(
-						GraphBuilder, TEXT("StartPoints"), CorruptionParams.StartPoints);
-					const FRDGBufferRef EndBuffer =
-						CreateStructuredBuffer<FVector2f>(GraphBuilder, TEXT("EndPoints"), CorruptionParams.EndPoints);
+						GraphBuilder, TEXT("StartPoints"), CorruptionParamsRef.StartPoints);
+					const FRDGBufferRef EndBuffer = CreateStructuredBuffer<FVector2f>(GraphBuilder, TEXT("EndPoints"),
+																					  CorruptionParamsRef.EndPoints);
 					const FRDGBufferRef WidthBuffer =
-						CreateStructuredBuffer<float>(GraphBuilder, TEXT("LineWidths"), CorruptionParams.LineWidths);
+						CreateStructuredBuffer<float>(GraphBuilder, TEXT("LineWidths"), CorruptionParamsRef.LineWidths);
 
 					FCosmicRays::FParameters *RayParams = GraphBuilder.AllocParameters<FCosmicRays::FParameters>();
 					RayParams->InputTexture = TempTextureIn;
 					RayParams->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
-					RayParams->NumRays = CorruptionParams.NumCosmicRays;
+					RayParams->NumRays = CorruptionParamsRef.NumCosmicRays;
 					RayParams->StartPoints = GraphBuilder.CreateSRV(StartBuffer, PF_G32R32F);
 					RayParams->EndPoints = GraphBuilder.CreateSRV(EndBuffer, PF_G32R32F);
 					RayParams->LineWidths = GraphBuilder.CreateSRV(WidthBuffer, PF_R32_FLOAT);
@@ -422,7 +447,7 @@ void ACameraModel::ApplyPostProcessShaders(const FImageCorruptionParams &Corrupt
 					Swap(TempTextureIn, TempTextureOut);
 				}
 
-				if (CorruptionParams.ReadNoiseSigma != 0.0f)
+				if (CorruptionParamsRef.ReadNoiseSigma != 0.0f)
 				{
 					RDG_GPU_STAT_SCOPE(GraphBuilder, ReadNoise);
 					RDG_EVENT_SCOPE(GraphBuilder, "Read Noise Pass");
@@ -431,7 +456,7 @@ void ACameraModel::ApplyPostProcessShaders(const FImageCorruptionParams &Corrupt
 					RnParams->InputTexture = TempTextureIn;
 					RnParams->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
 					RnParams->CurrentTime = static_cast<uint32>(FDateTime::UtcNow().ToUnixTimestamp());
-					RnParams->ReadNoiseSigma = CorruptionParams.ReadNoiseSigma;
+					RnParams->ReadNoiseSigma = CorruptionParamsRef.ReadNoiseSigma;
 					RnParams->RenderTargets[0] =
 						FRenderTargetBinding(TempTextureOut, ERenderTargetLoadAction::ENoAction);
 
@@ -443,7 +468,7 @@ void ACameraModel::ApplyPostProcessShaders(const FImageCorruptionParams &Corrupt
 					Swap(TempTextureIn, TempTextureOut);
 				}
 
-				if (CorruptionParams.SignalGain != 0.0f)
+				if (CorruptionParamsRef.SignalGain != 0.0f)
 				{
 					RDG_GPU_STAT_SCOPE(GraphBuilder, SignalGain);
 					RDG_EVENT_SCOPE(GraphBuilder, "Signal Gain Pass");
@@ -451,7 +476,7 @@ void ACameraModel::ApplyPostProcessShaders(const FImageCorruptionParams &Corrupt
 					FSignalGain::FParameters *GainParams = GraphBuilder.AllocParameters<FSignalGain::FParameters>();
 					GainParams->InputTexture = TempTextureIn;
 					GainParams->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
-					GainParams->SignalGain = CorruptionParams.SignalGain;
+					GainParams->SignalGain = CorruptionParamsRef.SignalGain;
 					GainParams->RenderTargets[0] =
 						FRenderTargetBinding(TempTextureOut, ERenderTargetLoadAction::ENoAction);
 

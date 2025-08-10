@@ -60,6 +60,12 @@ class CIELIM_API ACameraModel : public AActor
 public:
 	ACameraModel();
 
+	/**
+	 * @brief Sets the parameters for the camera from protobuf camera model.
+	 * @param CameraModel Protobuf camera model containing camera parameters.
+	 */
+	void SetCameraParameters(const cielimMessage::CameraModel &CameraModel);
+
 	// Called every tick; should not be manually called
 	virtual void Tick(float DeltaTime) override;
 
@@ -75,16 +81,13 @@ public:
 	 * @brief Gets image data after applying corruption effects for the current render target.
 	 * @param ImageData Reference to TArray64 used to contain serialized image data in PNG format (mutable).
 	 * @param CobCoordinates Reference to optional FVector2D used to contain center of brightness coordinates (mutable).
-	 * @param CameraModel Protobuf camera model containing camera parameters
 	 */
-	void GetCorruptedImage(TArray64<uint8> &ImageData, TOptional<FVector2D> &CobCoordinates,
-						   const cielimMessage::CameraModel &CameraModel) const;
+	void GetCorruptedImage(TArray64<uint8> &ImageData, TOptional<FVector2D> &CobCoordinates) const;
 
 	/**
 	 * @brief Tonemaps incoming HDR data into viewable LDR image using Quantum Efficiency.
-	 * @param CameraModel Protobuf camera model containing camera parameters.
 	 */
-	void ApplyQuETonemapping(const cielimMessage::CameraModel &CameraModel) const;
+	void ApplyQuETonemapping() const;
 
 	/**
 	 * @brief Calculates center of brightness for an image.
@@ -94,15 +97,17 @@ public:
 
 	/**
 	 * @brief Queues image corruption post-processing effects on the GPU through RenderGraph.
-	 * @param CorruptionParams Struct containing all necessary parameters for corruption effects.
 	 */
-	void ApplyPostProcessShaders(const FImageCorruptionParams &CorruptionParams) const;
+	void ApplyPostProcessShaders() const;
 
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent *Body;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	UCameraViewCaptureComponent2D *SceneCaptureComponent2D;
+
+	FCameraParams CameraParams;
+	FImageCorruptionParams CorruptionParams;
 
 protected:
 	// Called when the game starts or when spawned
