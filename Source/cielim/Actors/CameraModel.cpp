@@ -10,7 +10,6 @@
 
 #include <random>
 
-#include "Components/SceneCaptureComponent2D.h"
 #include "ImageUtils.h"
 #include "Kismet/KismetRenderingLibrary.h"
 #include "RHIGPUReadback.h"
@@ -39,7 +38,7 @@ ACameraModel::ACameraModel()
 		FMatrix(FPlane(1.0f, 0, 0, 0), FPlane(0, 1.0f, 0, 0), FPlane(0, 0, 0, 1), FPlane(0, 0, 10.0f, 0));
 
 	// Set up the SceneCaptureComponent2D and its default settings
-	this->SceneCaptureComponent2D = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCaptureComponent2D"));
+	this->SceneCaptureComponent2D = CreateDefaultSubobject<UCameraViewCaptureComponent2D>(TEXT("CaptureComponent"));
 	this->SceneCaptureComponent2D->TextureTarget = NewObject<UTextureRenderTarget2D>(this, TEXT("RT_Spacecraft"));
 	this->SceneCaptureComponent2D->TextureTarget->InitCustomFormat(2560, 1440, PF_FloatRGBA, true);
 	this->SceneCaptureComponent2D->TextureTarget->UpdateResourceImmediate();

@@ -14,6 +14,7 @@
 #include "Engine/GameInstance.h"
 #include "zmq.hpp"
 
+#include "CielimSceneViewExtension.h"
 #include "Network/Router.h"
 #include "Scenes/SceneManager.h"
 
@@ -35,6 +36,8 @@ protected:
 private:
 	UPROPERTY()
 	USceneManager *SceneManager;
+
+	TSharedPtr<FCielimSceneViewExtension, ESPMode::ThreadSafe> SceneViewExtension;
 
 	CielimCircularQueue MultiThreadQueue;
 

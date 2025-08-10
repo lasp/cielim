@@ -11,6 +11,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+
+#include "CameraViewCaptureComponent2D.h"
 #include "cielim/Protobuf/cielimMessage.pb.h"
 
 #include "CameraModel.generated.h"
@@ -100,7 +102,7 @@ public:
 	UStaticMeshComponent *Body;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	USceneCaptureComponent2D *SceneCaptureComponent2D;
+	UCameraViewCaptureComponent2D *SceneCaptureComponent2D;
 
 protected:
 	// Called when the game starts or when spawned
