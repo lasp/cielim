@@ -16,9 +16,11 @@
 #include "ScreenPass.h"
 
 #include "cielim/Shaders/CenBrightReduce.h"
+#include "cielim/Shaders/GammaCorrect.h"
 #include "cielim/Utilities/Logging/CielimLoggingMacros.h"
 
-DECLARE_GPU_STAT_NAMED(CielimCobReductionCalculations, TEXT("Cielim Center of Brightness Reduction Calculations"));
+DECLARE_GPU_STAT_NAMED(CobReductionCalculations, TEXT("Center of Brightness Reduction Calculations"));
+DECLARE_GPU_STAT_NAMED(GammaCorrection, TEXT("Gamma Correction"));
 
 ACameraModel::ACameraModel()
 {
@@ -129,12 +131,65 @@ void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, TOptional<FVect
 {
 	FImage Image;
 
+	this->SceneCaptureComponent2D->CaptureScene();
+
+	this->ApplyGammaCorrection();
+
 	this->GetCenterOfBrightness(CobCoordinates);
 
 	verify(FImageUtils::GetRenderTargetImage(this->SceneCaptureComponent2D->TextureTarget, Image));
 
 	// Take modified image data from Image and copy to ImageData as PNG
 	verify(FImageUtils::CompressImage(ImageData, TEXT("PNG"), Image));
+}
+
+void ACameraModel::ApplyGammaCorrection() const
+{
+	UTextureRenderTarget2D *RenderTarget = this->SceneCaptureComponent2D->TextureTarget;
+
+	if (!RenderTarget)
+		return;
+
+	FTextureRenderTargetResource *RTResource = RenderTarget->GameThread_GetRenderTargetResource();
+
+	float InvGamma = 1.0f / FMath::Max(this->CameraParams.Gamma, 1e-2f);
+
+	ENQUEUE_RENDER_COMMAND(GammaCorrection)
+	(
+		[RTResource, InvGamma](FRHICommandListImmediate &RHICmdList)
+		{
+			FRDGBuilder GraphBuilder(RHICmdList);
+
+			const FRDGTextureRef RenderTargetBase =
+				RegisterExternalTexture(GraphBuilder, RTResource->GetRenderTargetTexture(), TEXT("RenderTarget"));
+
+			// Temp input texture
+			const FRDGTextureRef TextureIn =
+				GraphBuilder.CreateTexture(RenderTargetBase->Desc, TEXT("Temp Input Texture"));
+
+			// Init input texture as current scene color
+			AddCopyTexturePass(GraphBuilder, RenderTargetBase, TextureIn);
+
+			const FScreenPassTextureViewport Viewport(TextureIn);
+
+			FGammaCorrect::FParameters *GammaParams = GraphBuilder.AllocParameters<FGammaCorrect::FParameters>();
+			GammaParams->InputTexture = TextureIn;
+			GammaParams->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
+			GammaParams->InvGamma = InvGamma;
+			GammaParams->RenderTargets[0] = FRenderTargetBinding(RenderTargetBase, ERenderTargetLoadAction::EClear);
+
+			{
+				RDG_GPU_STAT_SCOPE(GraphBuilder, GammaCorrection);
+				RDG_EVENT_SCOPE(GraphBuilder, "Gamma Correction");
+
+				const TShaderMapRef<FGammaCorrect> GammaCorrectShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+
+				AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply Gamma Correction"), GMaxRHIFeatureLevel, Viewport,
+								  Viewport, GammaCorrectShader, GammaParams);
+			}
+
+			GraphBuilder.Execute();
+		});
 }
 
 void ACameraModel::GetCenterOfBrightness(TOptional<FVector2D> &CobCoordinates) const
@@ -176,8 +231,8 @@ void ACameraModel::GetCenterOfBrightness(TOptional<FVector2D> &CobCoordinates) c
 			CobParams->PartialSumBuffer = GraphBuilder.CreateUAV(PartialSumsBuffer, PF_A32B32G32R32F);
 
 			{
-				RDG_GPU_STAT_SCOPE(GraphBuilder, CielimCobReductionCalculations);
-				RDG_EVENT_SCOPE(GraphBuilder, "Cielim Center of Brightness GPU Reduction Calculations");
+				RDG_GPU_STAT_SCOPE(GraphBuilder, CobReductionCalculations);
+				RDG_EVENT_SCOPE(GraphBuilder, "Center of Brightness GPU Reduction Calculations");
 
 				const TShaderMapRef<FCenBrightReduce> CenBrightReduceShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 

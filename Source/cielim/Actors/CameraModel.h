@@ -104,6 +104,10 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
+	/* Apply gamma correction to the render target; this is done separate from the main post-process pipeline to
+	 * allow for the retrieval of a diagnostic image in linear color space. */
+	void ApplyGammaCorrection() const;
+
 	// Returns the list of all parameters for all cosmic rays
 	TTuple<float, TResourceArray<FVector2f>, TResourceArray<FVector2f>, TResourceArray<float>>
 	GetCosmicRays(const float Sigma) const;

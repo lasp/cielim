@@ -156,7 +156,6 @@ void FCielimSceneViewExtension::QuETonemapPass(FRDGBuilder &GraphBuilder, const 
 	QuEParams->QuECurveB = FVector4f(CameraParams.QuECurveB, 1.0f);
 	QuEParams->CorrectionFactor = CameraParams.CorrectionFactor;
 	QuEParams->InvFullWellCapacity = 1.0f / FMath::Max(CameraParams.FullWellCapacity, 1e-6);
-	QuEParams->InvGamma = 1.0f / FMath::Max(CameraParams.Gamma, 1e-6);
 	QuEParams->RenderTargets[0] = FRenderTargetBinding(TextureOut, ERenderTargetLoadAction::EClear);
 
 	const TShaderMapRef<FQuETonemap> QuETonemapShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));

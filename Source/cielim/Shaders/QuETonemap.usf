@@ -19,7 +19,6 @@ float4 QuECurveG;
 float4 QuECurveB;
 float CorrectionFactor;
 float InvFullWellCapacity; // This is in # of electrons (inverse)
-float InvGamma;
 
 float4 MainPS(float4 UV : TEXCOORD0, float4 Position : SV_Position) : SV_Target0
 {
@@ -56,13 +55,9 @@ float4 MainPS(float4 UV : TEXCOORD0, float4 Position : SV_Position) : SV_Target0
 	NumElectronsG *= CorrectionFactor;
 	NumElectronsB *= CorrectionFactor;
 
-	float LinearColorR = saturate(NumElectronsR * InvFullWellCapacity);
-	float LinearColorG = saturate(NumElectronsG * InvFullWellCapacity);
-	float LinearColorB = saturate(NumElectronsB * InvFullWellCapacity);
+	float ColorR = saturate(NumElectronsR * InvFullWellCapacity);
+	float ColorG = saturate(NumElectronsG * InvFullWellCapacity);
+	float ColorB = saturate(NumElectronsB * InvFullWellCapacity);
 
-	float GammaCorrectedColorR = pow(LinearColorR, InvGamma);
-	float GammaCorrectedColorG = pow(LinearColorG, InvGamma);
-	float GammaCorrectedColorB = pow(LinearColorB, InvGamma);
-
-	return float4(GammaCorrectedColorR, GammaCorrectedColorG, GammaCorrectedColorB, TotalRadiance.a);
+	return float4(ColorR, ColorG, ColorB, TotalRadiance.a);
 }

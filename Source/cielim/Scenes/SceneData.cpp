@@ -135,8 +135,6 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 
 		const ACameraModel *Camera = this->Spacecraft->CameraModel;
 
-		Camera->SceneCaptureComponent2D->CaptureScene();
-
 		if (const auto *TempPayload = CommandData.payload.TryGet<FImagePayload>();
 			TempPayload != nullptr && TempPayload->shouldReturnImage)
 		{
