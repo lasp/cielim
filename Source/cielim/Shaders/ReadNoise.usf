@@ -66,10 +66,10 @@ float4 MainPS(float4 UV : TEXCOORD0, float4 Position : SV_Position) : SV_Target0
 	float U3 = UniformRNG(Z4, Z3, Z1, Z2);
 	float U4 = UniformRNG(Z3, Z4, Z2, Z1);
 
-	float2 RandGaussian1 = BoxMuller(U1, U2) * ReadNoiseSigma / 255.0f;
-	float2 RandGaussian2 = BoxMuller(U3, U4) * ReadNoiseSigma / 255.0f;
+	float2 RandGaussian1 = BoxMuller(U1, U2) * ReadNoiseSigma;
+	float2 RandGaussian2 = BoxMuller(U3, U4) * ReadNoiseSigma;
 
-	float4 Noise = float4(RandGaussian1.x, RandGaussian1.y, RandGaussian2.x, 0.0f);
+	float4 Noise = float4(saturate(RandGaussian1.x), saturate(RandGaussian1.y), saturate(RandGaussian2.x), 0.0f);
 
 	return Color + Noise;
 }

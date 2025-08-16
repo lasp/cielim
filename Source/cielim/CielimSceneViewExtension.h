@@ -42,8 +42,9 @@ private:
 	static void GaussianPSFPass(FRDGBuilder &GraphBuilder, const FImageCorruptionParams &CorruptionParams,
 								FRDGTextureRef &TextureIn, FRDGTextureRef &TextureOut);
 
-	static void ReadNoisePass(FRDGBuilder &GraphBuilder, const FImageCorruptionParams &CorruptionParams,
-							  const FRDGTextureRef &TextureIn, const FRDGTextureRef &TextureOut);
+	static void ReadNoisePass(FRDGBuilder &GraphBuilder, const FCameraParams &CameraParams,
+							  const FImageCorruptionParams &CorruptionParams, const FRDGTextureRef &TextureIn,
+							  const FRDGTextureRef &TextureOut);
 
 	static void SignalGainPass(FRDGBuilder &GraphBuilder, const FImageCorruptionParams &CorruptionParams,
 							   const FRDGTextureRef &TextureIn, const FRDGTextureRef &TextureOut);

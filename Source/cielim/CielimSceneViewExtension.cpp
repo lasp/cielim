@@ -107,7 +107,7 @@ void FCielimSceneViewExtension::PrePostProcessPass_RenderThread(FRDGBuilder &Gra
 
 	if (CorruptionParams.ReadNoiseSigma > 0.0f)
 	{
-		ReadNoisePass(GraphBuilder, CorruptionParams, TextureIn, TextureOut);
+		ReadNoisePass(GraphBuilder, CameraParams, CorruptionParams, TextureIn, TextureOut);
 		Swap(TextureIn, TextureOut);
 	}
 
@@ -212,7 +212,8 @@ void FCielimSceneViewExtension::GaussianPSFPass(FRDGBuilder &GraphBuilder,
 					  GaussianPSFShaderV, PSFParamsV);
 }
 
-void FCielimSceneViewExtension::ReadNoisePass(FRDGBuilder &GraphBuilder, const FImageCorruptionParams &CorruptionParams,
+void FCielimSceneViewExtension::ReadNoisePass(FRDGBuilder &GraphBuilder, const FCameraParams &CameraParams,
+											  const FImageCorruptionParams &CorruptionParams,
 											  const FRDGTextureRef &TextureIn, const FRDGTextureRef &TextureOut)
 {
 	RDG_GPU_STAT_SCOPE(GraphBuilder, ReadNoise);
@@ -224,7 +225,7 @@ void FCielimSceneViewExtension::ReadNoisePass(FRDGBuilder &GraphBuilder, const F
 	RnParams->InputTexture = TextureIn;
 	RnParams->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
 	RnParams->CurrentTime = static_cast<uint32>(FDateTime::UtcNow().ToUnixTimestamp());
-	RnParams->ReadNoiseSigma = CorruptionParams.ReadNoiseSigma;
+	RnParams->ReadNoiseSigma = CorruptionParams.ReadNoiseSigma / FMath::Max(CameraParams.FullWellCapacity, 1e-6);
 	RnParams->RenderTargets[0] = FRenderTargetBinding(TextureOut, ERenderTargetLoadAction::EClear);
 
 	const TShaderMapRef<FReadNoise> ReadNoiseShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
