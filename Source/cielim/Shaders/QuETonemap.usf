@@ -14,9 +14,9 @@ SamplerState InputSampler;
 float SolidAngle; // This is in steradians
 float PixelArea; // This is in m^2
 float ExposureTime; // This is in seconds
-float3 QuECurveR;
-float3 QuECurveG;
-float3 QuECurveB;
+float4 QuECurveR;
+float4 QuECurveG;
+float4 QuECurveB;
 float CorrectionFactor;
 float InvFullWellCapacity; // This is in # of electrons (inverse)
 float InvGamma;

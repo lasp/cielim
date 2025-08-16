@@ -151,9 +151,9 @@ void FCielimSceneViewExtension::QuETonemapPass(FRDGBuilder &GraphBuilder, const 
 	QuEParams->SolidAngle = SolidAngle;
 	QuEParams->PixelArea = PixelWidth * PixelHeight;
 	QuEParams->ExposureTime = CameraParams.ExposureTime;
-	QuEParams->QuECurveR = CameraParams.QuECurveR;
-	QuEParams->QuECurveG = CameraParams.QuECurveG;
-	QuEParams->QuECurveB = CameraParams.QuECurveB;
+	QuEParams->QuECurveR = FVector4f(CameraParams.QuECurveR, 1.0f);
+	QuEParams->QuECurveG = FVector4f(CameraParams.QuECurveG, 1.0f);
+	QuEParams->QuECurveB = FVector4f(CameraParams.QuECurveB, 1.0f);
 	QuEParams->CorrectionFactor = CameraParams.CorrectionFactor;
 	QuEParams->InvFullWellCapacity = 1.0f / FMath::Max(CameraParams.FullWellCapacity, 1e-6);
 	QuEParams->InvGamma = 1.0f / FMath::Max(CameraParams.Gamma, 1e-6);
