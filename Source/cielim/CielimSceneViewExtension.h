@@ -38,4 +38,16 @@ public:
 private:
 	static void QuETonemapPass(FRDGBuilder &GraphBuilder, const FCameraParams &CameraParams,
 							   const FRDGTextureRef &TextureIn, const FRDGTextureRef &TextureOut);
+
+	static void GaussianPSFPass(FRDGBuilder &GraphBuilder, const FImageCorruptionParams &CorruptionParams,
+								FRDGTextureRef &TextureIn, FRDGTextureRef &TextureOut);
+
+	static void ReadNoisePass(FRDGBuilder &GraphBuilder, const FImageCorruptionParams &CorruptionParams,
+							  const FRDGTextureRef &TextureIn, const FRDGTextureRef &TextureOut);
+
+	static void SignalGainPass(FRDGBuilder &GraphBuilder, const FImageCorruptionParams &CorruptionParams,
+							   const FRDGTextureRef &TextureIn, const FRDGTextureRef &TextureOut);
+
+	static void CosmicRaysPass(FRDGBuilder &GraphBuilder, const FImageCorruptionParams &CorruptionParams,
+							   const FRDGTextureRef &TextureIn, const FRDGTextureRef &TextureOut);
 };

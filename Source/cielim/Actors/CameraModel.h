@@ -36,8 +36,8 @@ struct FCameraParams
 struct FImageCorruptionParams
 {
 	// Gaussian PSF
-	int KernelWidth;
-	double Sigma;
+	uint32 KernelWidth;
+	float Sigma;
 
 	// Cosmic Rays
 	uint32 NumCosmicRays;
@@ -90,19 +90,14 @@ public:
 	 */
 	void GetCenterOfBrightness(TOptional<FVector2D> &CobCoordinates) const;
 
-	/**
-	 * @brief Queues image corruption post-processing effects on the GPU through RenderGraph.
-	 */
-	void ApplyPostProcessShaders() const;
-
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent *Body;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	UCameraViewCaptureComponent2D *SceneCaptureComponent2D;
 
-	FCameraParams CameraParams;
-	FImageCorruptionParams CorruptionParams;
+	FCameraParams CameraParams{};
+	FImageCorruptionParams CorruptionParams{};
 
 protected:
 	// Called when the game starts or when spawned

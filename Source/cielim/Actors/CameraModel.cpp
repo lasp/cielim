@@ -16,18 +16,9 @@
 #include "ScreenPass.h"
 
 #include "cielim/Shaders/CenBrightReduce.h"
-#include "cielim/Shaders/CosmicRays.h"
-#include "cielim/Shaders/GaussianPSF.h"
-#include "cielim/Shaders/ReadNoise.h"
-#include "cielim/Shaders/SignalGain.h"
 #include "cielim/Utilities/Logging/CielimLoggingMacros.h"
 
-DECLARE_GPU_STAT_NAMED(CielimCobReductionCalculations, TEXT("Cielim Center of Brightness Reduction Calculations Stat"));
-DECLARE_GPU_STAT_NAMED(CielimPostProcessCorruptionPasses, TEXT("Cielim Post-Process Corruption Passes Stat"));
-DECLARE_GPU_STAT_NAMED(GaussianPSF, TEXT("Gaussian PSF Pass Stat"));
-DECLARE_GPU_STAT_NAMED(CosmicRays, TEXT("Cosmic Rays Pass Stat"));
-DECLARE_GPU_STAT_NAMED(ReadNoise, TEXT("Read Noise Pass Stat"));
-DECLARE_GPU_STAT_NAMED(SignalGain, TEXT("Signal Gain Pass Stat"));
+DECLARE_GPU_STAT_NAMED(CielimCobReductionCalculations, TEXT("Cielim Center of Brightness Reduction Calculations"));
 
 ACameraModel::ACameraModel()
 {
@@ -139,8 +130,6 @@ void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, TOptional<FVect
 	FImage Image;
 
 	this->GetCenterOfBrightness(CobCoordinates);
-
-	this->ApplyPostProcessShaders();
 
 	verify(FImageUtils::GetRenderTargetImage(this->SceneCaptureComponent2D->TextureTarget, Image));
 
@@ -255,169 +244,6 @@ void ACameraModel::GetCenterOfBrightness(TOptional<FVector2D> &CobCoordinates) c
 
 	if (CobCoordinates.IsSet())
 		UE_LOG(LogCielim, Display, TEXT("Center of Brightness: %f, %f"), CobCoordinates->X, CobCoordinates->Y);
-}
-
-void ACameraModel::ApplyPostProcessShaders() const
-{
-	UTextureRenderTarget2D *RenderTarget = this->SceneCaptureComponent2D->TextureTarget;
-
-	if (!RenderTarget)
-		return;
-
-	FTextureRenderTargetResource *RTResource = RenderTarget->GameThread_GetRenderTargetResource();
-
-	const FImageCorruptionParams &CorruptionParamsRef = this->CorruptionParams;
-
-	ENQUEUE_RENDER_COMMAND(ApplyPostProcess)
-	(
-		[RTResource, CorruptionParamsRef](FRHICommandListImmediate &RHICmdList)
-		{
-			FRDGBuilder GraphBuilder(RHICmdList);
-
-			{
-				RDG_GPU_STAT_SCOPE(GraphBuilder, CielimPostProcessCorruptionPasses);
-				RDG_EVENT_SCOPE(GraphBuilder, "Cielim Post-Process Corruption Passes");
-
-				const FRDGTextureRef RenderTargetBase = RegisterExternalTexture(
-					GraphBuilder, RTResource->GetRenderTargetTexture(), TEXT("RenderTargetBase"));
-
-				// Intermediates used for texture ping-pong
-				FRDGTextureRef TempTextureIn =
-					GraphBuilder.CreateTexture(RenderTargetBase->Desc, TEXT("Temp Input Texture"));
-				FRDGTextureRef TempTextureOut =
-					GraphBuilder.CreateTexture(RenderTargetBase->Desc, TEXT("Temp Output Texture"));
-
-				AddCopyTexturePass(GraphBuilder, RenderTargetBase, TempTextureIn);
-
-				const FScreenPassTextureViewport Viewport(RenderTargetBase);
-
-				if (CorruptionParamsRef.Sigma != 0.0f)
-				{
-					RDG_GPU_STAT_SCOPE(GraphBuilder, GaussianPSF);
-					RDG_EVENT_SCOPE(GraphBuilder, "GaussianPSF Pass");
-
-					// GaussianPSF Horizontal
-
-					FGaussianPSF::FPermutationDomain PermutationDomain;
-					PermutationDomain.Set<FGaussianPSF::FHorizontal>(true);
-
-					FGaussianPSF::FParameters *PSFParamsH = GraphBuilder.AllocParameters<FGaussianPSF::FParameters>();
-					PSFParamsH->InputTexture = TempTextureIn;
-					PSFParamsH->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
-					PSFParamsH->TexelSize = FVector2f(1.0f / Viewport.Rect.Width(), 1.0f / Viewport.Rect.Height());
-					PSFParamsH->KernelRadius = (CorruptionParamsRef.KernelWidth - 1.0f) / 2.0f;
-					PSFParamsH->Sigma = CorruptionParamsRef.Sigma;
-					PSFParamsH->RenderTargets[0] =
-						FRenderTargetBinding(TempTextureOut, ERenderTargetLoadAction::ENoAction);
-
-					const TShaderMapRef<FGaussianPSF> GaussianPSFShaderH(GetGlobalShaderMap(GMaxRHIFeatureLevel),
-																		 PermutationDomain);
-
-					AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply GaussianPSF H"), GMaxRHIFeatureLevel,
-									  Viewport, Viewport, GaussianPSFShaderH, PSFParamsH);
-
-					Swap(TempTextureIn, TempTextureOut);
-
-					// GaussianPSF Vertical
-
-					PermutationDomain.Set<FGaussianPSF::FHorizontal>(false);
-
-					const TShaderMapRef<FGaussianPSF> GaussianPSFShaderV(GetGlobalShaderMap(GMaxRHIFeatureLevel),
-																		 PermutationDomain);
-
-					FGaussianPSF::FParameters *PSFParamsV = GraphBuilder.AllocParameters<FGaussianPSF::FParameters>();
-					PSFParamsV->InputTexture = TempTextureIn;
-					PSFParamsV->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
-					PSFParamsV->TexelSize = FVector2f(1.0f / Viewport.Rect.Width(), 1.0f / Viewport.Rect.Height());
-					PSFParamsV->KernelRadius = (CorruptionParamsRef.KernelWidth - 1.0f) / 2.0f;
-					PSFParamsV->Sigma = CorruptionParamsRef.Sigma;
-					PSFParamsV->RenderTargets[0] =
-						FRenderTargetBinding(TempTextureOut, ERenderTargetLoadAction::ENoAction);
-
-					AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply GaussianPSF V"), GMaxRHIFeatureLevel,
-									  Viewport, Viewport, GaussianPSFShaderV, PSFParamsV);
-
-					Swap(TempTextureIn, TempTextureOut);
-				}
-
-				if (CorruptionParamsRef.NumCosmicRays != 0.0f)
-				{
-					// Cosmic Rays
-
-					RDG_GPU_STAT_SCOPE(GraphBuilder, CosmicRays);
-					RDG_EVENT_SCOPE(GraphBuilder, "Cosmic Rays Pass");
-
-					const FRDGBufferRef StartBuffer = CreateStructuredBuffer<FVector2f>(
-						GraphBuilder, TEXT("StartPoints"), CorruptionParamsRef.StartPoints);
-					const FRDGBufferRef EndBuffer = CreateStructuredBuffer<FVector2f>(GraphBuilder, TEXT("EndPoints"),
-																					  CorruptionParamsRef.EndPoints);
-					const FRDGBufferRef WidthBuffer =
-						CreateStructuredBuffer<float>(GraphBuilder, TEXT("LineWidths"), CorruptionParamsRef.LineWidths);
-
-					FCosmicRays::FParameters *RayParams = GraphBuilder.AllocParameters<FCosmicRays::FParameters>();
-					RayParams->InputTexture = TempTextureIn;
-					RayParams->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
-					RayParams->NumRays = CorruptionParamsRef.NumCosmicRays;
-					RayParams->StartPoints = GraphBuilder.CreateSRV(StartBuffer, PF_G32R32F);
-					RayParams->EndPoints = GraphBuilder.CreateSRV(EndBuffer, PF_G32R32F);
-					RayParams->LineWidths = GraphBuilder.CreateSRV(WidthBuffer, PF_R32_FLOAT);
-					RayParams->RenderTargets[0] =
-						FRenderTargetBinding(TempTextureOut, ERenderTargetLoadAction::ENoAction);
-
-					const TShaderMapRef<FCosmicRays> CosmicRayShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-
-					AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply Cosmic Rays"), GMaxRHIFeatureLevel, Viewport,
-									  Viewport, CosmicRayShader, RayParams);
-
-					Swap(TempTextureIn, TempTextureOut);
-				}
-
-				if (CorruptionParamsRef.ReadNoiseSigma != 0.0f)
-				{
-					RDG_GPU_STAT_SCOPE(GraphBuilder, ReadNoise);
-					RDG_EVENT_SCOPE(GraphBuilder, "Read Noise Pass");
-
-					FReadNoise::FParameters *RnParams = GraphBuilder.AllocParameters<FReadNoise::FParameters>();
-					RnParams->InputTexture = TempTextureIn;
-					RnParams->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
-					RnParams->CurrentTime = static_cast<uint32>(FDateTime::UtcNow().ToUnixTimestamp());
-					RnParams->ReadNoiseSigma = CorruptionParamsRef.ReadNoiseSigma;
-					RnParams->RenderTargets[0] =
-						FRenderTargetBinding(TempTextureOut, ERenderTargetLoadAction::ENoAction);
-
-					const TShaderMapRef<FReadNoise> ReadNoiseShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-
-					AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply Read Noise"), GMaxRHIFeatureLevel, Viewport,
-									  Viewport, ReadNoiseShader, RnParams);
-
-					Swap(TempTextureIn, TempTextureOut);
-				}
-
-				if (CorruptionParamsRef.SignalGain != 0.0f)
-				{
-					RDG_GPU_STAT_SCOPE(GraphBuilder, SignalGain);
-					RDG_EVENT_SCOPE(GraphBuilder, "Signal Gain Pass");
-
-					FSignalGain::FParameters *GainParams = GraphBuilder.AllocParameters<FSignalGain::FParameters>();
-					GainParams->InputTexture = TempTextureIn;
-					GainParams->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
-					GainParams->SignalGain = CorruptionParamsRef.SignalGain;
-					GainParams->RenderTargets[0] =
-						FRenderTargetBinding(TempTextureOut, ERenderTargetLoadAction::ENoAction);
-
-					const TShaderMapRef<FSignalGain> SignalGainShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-
-					AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply Signal Gain"), GMaxRHIFeatureLevel, Viewport,
-									  Viewport, SignalGainShader, GainParams);
-
-					Swap(TempTextureIn, TempTextureOut);
-				}
-
-				AddCopyTexturePass(GraphBuilder, TempTextureIn, RenderTargetBase);
-			}
-
-			GraphBuilder.Execute();
-		});
 }
 
 // Helper Functions
