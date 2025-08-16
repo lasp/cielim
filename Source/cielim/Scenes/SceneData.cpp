@@ -133,16 +133,16 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 		TArray64<uint8> ImageDataPng;
 		TOptional<FVector2D> CobCoords;
 
-		const ACameraModel *Camera = this->Spacecraft->CameraModel;
+		ACameraModel *Camera = this->Spacecraft->CameraModel;
 
 		if (const auto *TempPayload = CommandData.payload.TryGet<FImagePayload>();
 			TempPayload != nullptr && TempPayload->shouldReturnImage)
 		{
-			Camera->GetCorruptedImage(ImageDataPng, CobCoords);
+			Camera->GetImageData(ImageDataPng, CobCoords);
 		}
 		else
 		{
-			Camera->GetCenterOfBrightness(CobCoords);
+			Camera->GetImageData(CobCoords);
 		}
 
 		ReturnData.query = CommandType::REQUEST_IMAGE;

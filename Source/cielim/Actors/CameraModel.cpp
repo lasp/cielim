@@ -127,20 +127,38 @@ void ACameraModel::SaveImageToDisk(const FString &FilePath, const FString &Filen
 	UKismetRenderingLibrary::ExportRenderTarget(this, this->SceneCaptureComponent2D->TextureTarget, FilePath, Filename);
 }
 
-void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, TOptional<FVector2D> &CobCoordinates) const
+void ACameraModel::GetImageData(TArray64<uint8> &ImageData, TOptional<FVector2D> &CobCoordinates)
+{
+	// Get initial diagnostic data
+	this->GetImageData(CobCoordinates);
+
+	// Get final render
+	this->GetImageData(ImageData);
+}
+
+void ACameraModel::GetImageData(TArray64<uint8> &ImageData)
 {
 	FImage Image;
 
-	this->SceneCaptureComponent2D->CaptureScene();
+	this->CameraParams.bIsDiagnosticRun = false;
 
+	this->SceneCaptureComponent2D->CaptureScene();
 	this->ApplyGammaCorrection();
 
-	this->GetCenterOfBrightness(CobCoordinates);
-
+	// Copy the final render from the render target to Image
 	verify(FImageUtils::GetRenderTargetImage(this->SceneCaptureComponent2D->TextureTarget, Image));
 
-	// Take modified image data from Image and copy to ImageData as PNG
+	// Take modified image data from Image and convert to PNG and copy to ImageData
 	verify(FImageUtils::CompressImage(ImageData, TEXT("PNG"), Image));
+}
+
+void ACameraModel::GetImageData(TOptional<FVector2D> &CobCoordinates)
+{
+	this->CameraParams.bIsDiagnosticRun = true;
+
+	this->SceneCaptureComponent2D->CaptureScene();
+
+	CobCoordinates = this->GetCenterOfBrightness();
 }
 
 void ACameraModel::ApplyGammaCorrection() const
@@ -192,12 +210,14 @@ void ACameraModel::ApplyGammaCorrection() const
 		});
 }
 
-void ACameraModel::GetCenterOfBrightness(TOptional<FVector2D> &CobCoordinates) const
+TOptional<FVector2D> ACameraModel::GetCenterOfBrightness() const
 {
+	TOptional<FVector2D> CobCoords;
+
 	UTextureRenderTarget2D *RenderTarget = this->SceneCaptureComponent2D->TextureTarget;
 
 	if (!RenderTarget)
-		return;
+		return CobCoords;
 
 	FTextureRenderTargetResource *RTResource = RenderTarget->GameThread_GetRenderTargetResource();
 	FRHIGPUBufferReadback Readback(TEXT("COB Reduction Calculations Readback"));
@@ -252,7 +272,7 @@ void ACameraModel::GetCenterOfBrightness(TOptional<FVector2D> &CobCoordinates) c
 
 	ENQUEUE_RENDER_COMMAND(COB_Readback)
 	(
-		[&Readback, &CobCoordinates, NumGroups](FRHICommandListImmediate &RHICmdList)
+		[&Readback, &CobCoords, NumGroups](FRHICommandListImmediate &RHICmdList)
 		{
 			const double StartTime = FPlatformTime::Seconds();
 
@@ -287,7 +307,7 @@ void ACameraModel::GetCenterOfBrightness(TOptional<FVector2D> &CobCoordinates) c
 				{
 					const double CenterX = XLuminanceSum / LuminanceSum;
 					const double CenterY = YLuminanceSum / LuminanceSum;
-					CobCoordinates = FVector2D(CenterX, CenterY);
+					CobCoords = FVector2D(CenterX, CenterY);
 				}
 
 				Readback.Unlock();
@@ -297,8 +317,10 @@ void ACameraModel::GetCenterOfBrightness(TOptional<FVector2D> &CobCoordinates) c
 	Fence.BeginFence();
 	Fence.Wait();
 
-	if (CobCoordinates.IsSet())
-		UE_LOG(LogCielim, Display, TEXT("Center of Brightness: %f, %f"), CobCoordinates->X, CobCoordinates->Y);
+	if (CobCoords.IsSet())
+		UE_LOG(LogCielim, Display, TEXT("Center of Brightness: %f, %f"), CobCoords->X, CobCoords->Y);
+
+	return CobCoords;
 }
 
 // Helper Functions

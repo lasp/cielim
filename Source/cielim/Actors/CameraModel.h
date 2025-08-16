@@ -19,6 +19,9 @@
 
 struct FCameraParams
 {
+	// Diagnostic indicator
+	bool bIsDiagnosticRun;
+
 	// Camera + QE
 	float ApertureRadius;
 	float FocalLength;
@@ -78,17 +81,24 @@ public:
 	void SaveImageToDisk(const FString &FilePath, const FString &Filename);
 
 	/**
-	 * @brief Gets image data after applying corruption effects for the current render target.
+	 * @brief Gets image data including pre-post-processing diagnostic data and image data for final render.
 	 * @param ImageData Reference to TArray64 used to contain serialized image data in PNG format (mutable).
 	 * @param CobCoordinates Reference to optional FVector2D used to contain center of brightness coordinates (mutable).
 	 */
-	void GetCorruptedImage(TArray64<uint8> &ImageData, TOptional<FVector2D> &CobCoordinates) const;
+	void GetImageData(TArray64<uint8> &ImageData, TOptional<FVector2D> &CobCoordinates);
 
 	/**
-	 * @brief Calculates center of brightness for an image.
+	 * @brief Gets only image data for final render with corruption effects applied.
+	 * @param ImageData Reference to TArray64 used to contain serialized image data in PNG format (mutable).
+	 */
+	void GetImageData(TArray64<uint8> &ImageData);
+
+	/**
+	 * @brief Gets only pre-post-processing diagnostic data.
 	 * @param CobCoordinates Reference to optional FVector2D used to contain center of brightness coordinates (mutable).
 	 */
-	void GetCenterOfBrightness(TOptional<FVector2D> &CobCoordinates) const;
+	void GetImageData(TOptional<FVector2D> &CobCoordinates);
+
 
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent *Body;
@@ -107,6 +117,10 @@ private:
 	/* Apply gamma correction to the render target; this is done separate from the main post-process pipeline to
 	 * allow for the retrieval of a diagnostic image in linear color space. */
 	void ApplyGammaCorrection() const;
+
+	/* Enqueues CoB calculation pass on the GPU and synchronously writes resulting buffer back to the CPU and does
+	 * final reduction to a 2-vector coordinate which is then returned as the final result. */
+	TOptional<FVector2D> GetCenterOfBrightness() const;
 
 	// Returns the list of all parameters for all cosmic rays
 	TTuple<float, TResourceArray<FVector2f>, TResourceArray<FVector2f>, TResourceArray<float>>

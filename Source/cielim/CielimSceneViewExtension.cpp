@@ -105,22 +105,25 @@ void FCielimSceneViewExtension::PrePostProcessPass_RenderThread(FRDGBuilder &Gra
 
 	// These passes operate on the signal from the sensor
 
-	if (CorruptionParams.ReadNoiseSigma > 0.0f)
+	if (!CameraParams.bIsDiagnosticRun)
 	{
-		ReadNoisePass(GraphBuilder, CameraParams, CorruptionParams, TextureIn, TextureOut);
-		Swap(TextureIn, TextureOut);
-	}
+		if (CorruptionParams.ReadNoiseSigma > 0.0f)
+		{
+			ReadNoisePass(GraphBuilder, CameraParams, CorruptionParams, TextureIn, TextureOut);
+			Swap(TextureIn, TextureOut);
+		}
 
-	if (CorruptionParams.SignalGain > 0.0f)
-	{
-		SignalGainPass(GraphBuilder, CorruptionParams, TextureIn, TextureOut);
-		Swap(TextureIn, TextureOut);
-	}
+		if (CorruptionParams.SignalGain > 0.0f)
+		{
+			SignalGainPass(GraphBuilder, CorruptionParams, TextureIn, TextureOut);
+			Swap(TextureIn, TextureOut);
+		}
 
-	if (CorruptionParams.NumCosmicRays > 0)
-	{
-		CosmicRaysPass(GraphBuilder, CorruptionParams, TextureIn, TextureOut);
-		Swap(TextureIn, TextureOut);
+		if (CorruptionParams.NumCosmicRays > 0)
+		{
+			CosmicRaysPass(GraphBuilder, CorruptionParams, TextureIn, TextureOut);
+			Swap(TextureIn, TextureOut);
+		}
 	}
 
 	// Copy modified end result back into SceneColor texture
