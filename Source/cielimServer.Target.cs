@@ -12,10 +12,10 @@ public class cielimServerTarget : TargetRules
 		
 		// Project settings
 		DefaultBuildSettings = BuildSettingsVersion.V5;
-		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_4;
+		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_6;
 		
         WindowsPlatform.bStripUnreferencedSymbols = false;
-        CppStandard = CppStandardVersion.Cpp17;
+        CppStandard = CppStandardVersion.Cpp20;
         
         bUseFastPDBLinking = false;
         bPublicSymbolsByDefault = true;  // Forced to true on Windows anyways

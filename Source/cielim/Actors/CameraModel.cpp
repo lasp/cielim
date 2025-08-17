@@ -19,8 +19,8 @@
 #include "cielim/Shaders/GammaCorrect.h"
 #include "cielim/Utilities/Logging/CielimLoggingMacros.h"
 
-DECLARE_GPU_STAT_NAMED(CobReductionCalculations, TEXT("Center of Brightness Reduction Calculations"));
-DECLARE_GPU_STAT_NAMED(GammaCorrection, TEXT("Gamma Correction"));
+DECLARE_GPU_STAT_NAMED(CobReductionCalculations, TEXT("CoBReductionCalculations"));
+DECLARE_GPU_STAT_NAMED(GammaCorrection, TEXT("GammaCorrection"));
 
 ACameraModel::ACameraModel()
 {
@@ -198,7 +198,7 @@ void ACameraModel::ApplyGammaCorrection() const
 
 			{
 				RDG_GPU_STAT_SCOPE(GraphBuilder, GammaCorrection);
-				RDG_EVENT_SCOPE(GraphBuilder, "Gamma Correction");
+				RDG_EVENT_SCOPE(GraphBuilder, "GammaCorrection");
 
 				const TShaderMapRef<FGammaCorrect> GammaCorrectShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 
@@ -252,7 +252,7 @@ TOptional<FVector2D> ACameraModel::GetCenterOfBrightness() const
 
 			{
 				RDG_GPU_STAT_SCOPE(GraphBuilder, CobReductionCalculations);
-				RDG_EVENT_SCOPE(GraphBuilder, "Center of Brightness GPU Reduction Calculations");
+				RDG_EVENT_SCOPE(GraphBuilder, "CoBReductionCalculations");
 
 				const TShaderMapRef<FCenBrightReduce> CenBrightReduceShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 

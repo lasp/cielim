@@ -12,7 +12,7 @@ properly, add the `--recurse-submodules` argument when doing git clone. For exam
 
 ### Dependencies
 
-To build this project install Unreal Engine (Currently version 5.4). Additionally, the following tools need to be installed and added to your PATH environment variable:
+To build this project install Unreal Engine (Currently version 5.6). Additionally, the following tools need to be installed and added to your PATH environment variable:
 
 #### Linux
   - Automake

@@ -44,9 +44,9 @@ struct FImageCorruptionParams
 
 	// Cosmic Rays
 	uint32 NumCosmicRays;
-	TResourceArray<FVector2f> StartPoints;
-	TResourceArray<FVector2f> EndPoints;
-	TResourceArray<float> LineWidths;
+	TResourceArray<FVector2f> StartPoints = TResourceArray<FVector2f>();
+	TResourceArray<FVector2f> EndPoints = TResourceArray<FVector2f>();
+	TResourceArray<float> LineWidths = TResourceArray<float>();
 
 	// Read Noise
 	float ReadNoiseSigma;
