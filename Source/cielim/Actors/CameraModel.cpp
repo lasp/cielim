@@ -51,6 +51,9 @@ ACameraModel::ACameraModel()
 	this->SceneCaptureComponent2D->PostProcessBlendWeight = 0.0f;
 	this->SceneCaptureComponent2D->ShowFlags.SetTonemapper(false);
 
+	// Disable SSAO to improve performance given deep space doesn't have ambient light sources
+	this->SceneCaptureComponent2D->ShowFlags.SetAmbientOcclusion(false);
+
 	this->RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 
 	this->Body = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Body"));
