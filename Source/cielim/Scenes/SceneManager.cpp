@@ -51,6 +51,8 @@ void USceneManager::Tick(float DeltaTime)
 				ActiveScene = nullptr;
 
 			Scene->MarkAsGarbage();
+			Scene->ConditionalBeginDestroy();
+
 			Scenes.Remove(SceneID);
 
 			UE_LOG(LogCielim, Display, TEXT("SceneManager : Scene removed for ID %d"), SceneID);
