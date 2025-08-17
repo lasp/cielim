@@ -8,6 +8,7 @@
 
 #include "SceneData.h"
 
+#include "Components/DirectionalLightComponent.h"
 #include "Components/LightComponent.h"
 #include "Components/SceneCaptureComponent2D.h"
 #include "Engine/DirectionalLight.h"
@@ -195,9 +196,10 @@ void USceneData::SpawnCelestialBodies()
 			TempCelestialBody->LoadMesh(MeshModel);
 		}
 
-		constexpr float MeshRadiusInMeters = 10.0f;
-		const float RadiusScale = CelestialBody.model().meanradius() / MeshRadiusInMeters;
-		const FVector ActorScale = TempCelestialBody->GetPrincipleAxisDistortions() * RadiusScale;
+		// Meshes are ~1,000 units in radius so we need to scale down to normalize to 1-meter radius (1 unit = 1 meter)
+		constexpr float MeshNormFactor = 1.0f / 1000.0f;
+		const float RadiusScale = CelestialBody.model().meanradius();
+		const FVector ActorScale = TempCelestialBody->GetPrincipleAxisDistortions() * RadiusScale * MeshNormFactor;
 
 		TempCelestialBody->SetActorScale3D(ActorScale);
 
@@ -264,9 +266,11 @@ void USceneData::SpawnSunLight()
 
 	this->SunLight = GetWorld()->SpawnActor<ADirectionalLight>();
 
-	this->SunLight->GetLightComponent()->SetMobility(EComponentMobility::Movable);
-	this->SunLight->GetLightComponent()->SetWorldLocation(SunLocation);
-	this->SunLight->GetLightComponent()->SetWorldRotation(SunRotation);
+	ULightComponent *LightComp = this->SunLight->GetLightComponent();
+
+	LightComp->SetMobility(EComponentMobility::Movable);
+	LightComp->SetWorldLocation(SunLocation);
+	LightComp->SetWorldRotation(SunRotation);
 
 	// Spectral irradiance in W/m^2/nm and data from: https://lasp.colorado.edu/tsis/data/ssi-data/#summary_table
 
@@ -287,13 +291,20 @@ void USceneData::SpawnSunLight()
 
 	/* The calculations determining the irradiance of the sun for each wavelength assumes all lit objects are
 	 * near the origin. Anything further than ~0.1 AU from the origin will have irradiance too high/low from expected.
-	 * This is because directional light intensity is constant regardless of position. We also multiply by 100 to
-	 * account for the fact that unreal uses cm instead of meters. */
-	const float SunDistanceRatio = 100.0f * OneAU / SunLocation.Length();
+	 * This is because directional light intensity is constant regardless of position. */
+	const float SunDistanceRatio = OneAU / SunLocation.Length();
 	const float SunIntensity = SunDistanceRatio * SunDistanceRatio * IntensityScaleFactor;
 
-	this->SunLight->GetLightComponent()->SetIntensity(SunIntensity);
-	this->SunLight->GetLightComponent()->SetLightColor(FLinearColor(RedIntensity, GreenIntensity, BlueIntensity));
+	LightComp->SetIntensity(SunIntensity);
+	LightComp->SetLightColor(FLinearColor(RedIntensity, GreenIntensity, BlueIntensity));
+
+	if (UDirectionalLightComponent *DirectionalLightComp = Cast<UDirectionalLightComponent>(LightComp))
+	{
+		// Allow shadow maps to be seen from much further away
+		DirectionalLightComp->DynamicShadowDistanceMovableLight = 10000000.0f;
+		DirectionalLightComp->DistanceFieldShadowDistance = 100000000.0f;
+		DirectionalLightComp->TraceDistance = 20000.0f;
+	}
 
 	// Light should spawn as disabled so SceneManager can manage which scene's light is enabled
 	ToggleSunLight(false);
@@ -363,7 +374,7 @@ void USceneData::BeginDestroy()
 // Gets the positions of a Spacecraft Object
 static FVector3d GetSpacecraftPosition(const cielimMessage::Spacecraft &Craft)
 {
-	const FVector3d PositionSpacecraft = 100.0f * FVector3d(Craft.position(0), Craft.position(1), Craft.position(2));
+	const FVector3d PositionSpacecraft = FVector3d(Craft.position(0), Craft.position(1), Craft.position(2));
 	return Right2LeftVector(PositionSpacecraft);
 }
 
@@ -378,7 +389,7 @@ static FRotator GetRotatorFromMrp(const FVector3d &Sigma)
 // Gets the position of a Camera Object
 static FVector3d GetCameraPosition(const cielimMessage::CameraModel &Camera)
 {
-	const FVector3d SigmaCamera = 100.0f *
+	const FVector3d SigmaCamera =
 		FVector3d(Camera.camerapositioninbody(0), Camera.camerapositioninbody(1), Camera.camerapositioninbody(2));
 	return Right2LeftVector(SigmaCamera);
 }
@@ -399,7 +410,7 @@ static FRotator GetCameraRotation(const cielimMessage::CameraModel &Camera)
 static FVector3d GetCelestialBodyPosition(const cielimMessage::CelestialBody &CelestialBody)
 {
 	const FVector3d PositionCelestialBody =
-		100.0f * FVector3d(CelestialBody.position(0), CelestialBody.position(1), CelestialBody.position(2));
+		FVector3d(CelestialBody.position(0), CelestialBody.position(1), CelestialBody.position(2));
 	return Right2LeftVector(PositionCelestialBody);
 }
 
