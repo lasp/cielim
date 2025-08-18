@@ -99,7 +99,6 @@ public:
 	 */
 	void GetImageData(TOptional<FVector2D> &CobCoordinates);
 
-
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent *Body;
 
@@ -110,7 +109,7 @@ public:
 	FImageCorruptionParams CorruptionParams{};
 
 protected:
-	// Called when the game starts or when spawned
+	// Called when spawned
 	virtual void BeginPlay() override;
 
 private:

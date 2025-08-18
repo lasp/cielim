@@ -117,7 +117,23 @@ void ACameraModel::SetCameraParameters(const cielimMessage::CameraModel &CameraM
 	this->CorruptionParams.SignalGain = CameraModel.systemgain();
 }
 
-void ACameraModel::BeginPlay() { Super::BeginPlay(); }
+// Called when spawned
+void ACameraModel::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// Do a flush to the render target to ensure actual first capture has correct data
+	this->SceneCaptureComponent2D->CaptureScene();
+
+	ENQUEUE_RENDER_COMMAND(FlushGPU)
+	(
+		[](FRHICommandListImmediate &RHICmdList)
+		{
+			RHICmdList.SubmitCommandsAndFlushGPU(); // Metals refuses to auto-flush unless forced
+		});
+
+	FlushRenderingCommands(); // Wait for GPU flush to finish
+}
 
 // Called every frame
 void ACameraModel::Tick(float DeltaTime) { Super::Tick(DeltaTime); }

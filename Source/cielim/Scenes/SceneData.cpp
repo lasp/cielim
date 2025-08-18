@@ -106,17 +106,6 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 
 			this->Spacecraft->CameraModel->SceneCaptureComponent2D->PrimitiveRenderMode = RenderMode;
 			this->Spacecraft->CameraModel->SceneCaptureComponent2D->ShowOnlyActors = Actors;
-
-			// Do a flush to the render target to ensure actual first capture has correct data
-			this->Spacecraft->CameraModel->SceneCaptureComponent2D->CaptureScene();
-
-			ENQUEUE_RENDER_COMMAND(FlushGPU)(
-				[](FRHICommandListImmediate &RHICmdList)
-				{
-					RHICmdList.SubmitCommandsAndFlushGPU(); // Metals refuses to auto-flush unless forced
-				});
-
-			FlushRenderingCommands(); // Wait for GPU flush to finish
 		}
 		else
 		{
