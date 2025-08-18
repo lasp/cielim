@@ -48,24 +48,23 @@ def scene_setup() -> cielimMessage_pb2:
     body.bodyName = "2000269"
     [body.position.append(item) for item in [0, 0, 0]]
     [body.velocity.append(item) for item in [0, 0, 0]]
-    [body.attitude.append(item) for item in [0, 0, 0]]
+    [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
 
     body.model.shapeModel = "bennu_normalized"
     body.model.meanRadius = 58232 * 1e3
 
     sun = protobuf_message.celestialBodies.add()
     sun.bodyName = "sun"
-    [sun.position.append(item) for item in [0, 0, -1e10]]
+    [sun.position.append(item) for item in [0, 0, 0]]  # This gets randomized
     [sun.attitude.append(item) for item in [0, 0, 0]]
 
     protobuf_message.camera.cameraId = 1
     protobuf_message.camera.parentName = "cielim_sat"
-    protobuf_message.camera.exposureTime = 1
+    protobuf_message.camera.exposureTime = 5e-4
     [protobuf_message.camera.fieldOfView.append(item) for item in [20 * np.pi / 180, 15 * np.pi / 180]]
     [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
     [protobuf_message.camera.cameraPositionInBody.append(item) for item in [1, 1, 1]]
     [protobuf_message.camera.resolution.append(item) for item in [2000, 1500]]
-    protobuf_message.camera.focalLength = 0.025
 
     protobuf_message.spacecraft.spacecraftName = "cielim_sat"
     [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -1000000]]
@@ -124,7 +123,7 @@ def random_asteroid_generation(number_of_images: int):
         sun_position = np.random.uniform(-1, 1, size=3)
         sun_heading = sun_position / np.linalg.norm(sun_position)
         message.celestialBodies[1].ClearField("position")
-        [message.celestialBodies[1].position.append(item) for item in sun_heading * 1e10]
+        [message.celestialBodies[1].position.append(item) for item in sun_heading * 1.496e11]
 
         scene_frame.set_existing_message(message)
 
