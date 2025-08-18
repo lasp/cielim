@@ -14,6 +14,16 @@ void UCielimGameInstance::Init()
 {
 	Super::Init();
 
+	// Check for command line parameter to disable virtual shadow maps
+
+	if (FParse::Param(FCommandLine::Get(), TEXT("NoVirtualShadows")))
+	{
+		if (IConsoleVariable *VsmCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.Shadow.Virtual.Enable")))
+		{
+			VsmCVar->Set(0, ECVF_SetByCode);
+		}
+	}
+
 	this->Context = zmq::context_t(1);
 
 	FString CommAddress;
