@@ -8,8 +8,6 @@ public class ZMQ : ModuleRules
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;	
 	    bAddDefaultIncludePaths = false;
 
-        PublicDefinitions.Add("_ALLOW_MSC_VER_MISMATCH");
-        PublicDefinitions.Add("ZMQ_BUILD_DRAFT_API=1");
         Type = ModuleRules.ModuleType.External;
         PrecompileForTargets = PrecompileTargetsType.Any;
 
