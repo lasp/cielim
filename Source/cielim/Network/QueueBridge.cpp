@@ -30,18 +30,17 @@ void UQueueBridge::Connect(zmq::context_t &ContextPtr, CielimCircularQueue &Circ
 	this->QueueSocket.connect("inproc://OutboundQueueReady");
 }
 
-TOptional<FCircularQueueData> UQueueBridge::GetQueueData() const
+TSharedPtr<FCircularQueueData> UQueueBridge::GetQueueData() const
 {
-	TOptional<FCircularQueueData> QueueData;
+	TSharedPtr<FCircularQueueData> QueueData;
 
 	if (!this->MultiThreadDataQueue || this->MultiThreadDataQueue->Requests.IsEmpty())
 	{
 		// Do nothing for now
 	}
-	else if (FCircularQueueData NextCommand{}; this->MultiThreadDataQueue->Requests.Dequeue(NextCommand))
+	else if (this->MultiThreadDataQueue->Requests.Dequeue(QueueData))
 	{
 		UE_LOG(LogCielim, Display, TEXT("Dequeue command: UQueueBridge"));
-		QueueData = NextCommand;
 	}
 	else
 	{
@@ -51,7 +50,7 @@ TOptional<FCircularQueueData> UQueueBridge::GetQueueData() const
 	return QueueData;
 }
 
-void UQueueBridge::PutQueueData(const FCircularQueueData &Data)
+void UQueueBridge::PutQueueData(const TSharedPtr<FCircularQueueData> &Data)
 {
 	this->MultiThreadDataQueue->Responses.Enqueue(Data);
 

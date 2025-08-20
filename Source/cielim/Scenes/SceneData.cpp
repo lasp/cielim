@@ -33,6 +33,8 @@ static FRotator GetCelestialBodyRotation(const cielimMessage::CelestialBody &Cel
 
 void USceneData::Init()
 {
+	this->CielimMessage = MakeShared<cielimMessage::CielimMessage>();
+
 	ActiveSunLightMPC = Cast<UMaterialParameterCollection>(
 		StaticLoadObject(UMaterialParameterCollection::StaticClass(), nullptr,
 						 TEXT("/Game/AsteroidMeshes/MPC_ActiveSunLight.MPC_ActiveSunLight")));
@@ -43,13 +45,14 @@ void USceneData::Init()
 
 
 // This is a mad hack and needs to be changed
-void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQueueData &ReturnData)
+void USceneData::ParseCommand(const TSharedPtr<FCircularQueueData> &CommandData,
+							  const TSharedPtr<FCircularQueueData> &ReturnData)
 {
 	this->bShouldUpdateScene = false;
 
 	// This code should be turned into some kind of handler function registration
 	// a bit like an RPC or http server
-	if (CommandData.query == CommandType::INIT_SCENE)
+	if (CommandData->query == CommandType::INIT_SCENE)
 	{
 		UE_LOG(LogCielim, Display, TEXT("Initiating new scene: ASimulationDataSourceActor"));
 
@@ -84,13 +87,14 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 		this->bIsSpacecraftSpawned = false;
 		this->bIsSceneEstablished = false;
 	}
-	else if (CommandData.query == CommandType::SIM_UPDATE)
+	else if (CommandData->query == CommandType::SIM_UPDATE)
 	{
 		UE_LOG(LogCielim, Display, TEXT("Reading sim update data: ASimulationDataSourceActor"));
 
-		if (const auto *TempPayload = CommandData.payload.TryGet<FUpdatePayload>())
+		if (const auto *TempPayload = CommandData->payload.TryGet<FUpdatePayload>())
 		{
-			this->CielimMessage = TempPayload->message;
+			const auto LocalMessage = TempPayload->message;
+			this->CielimMessage = LocalMessage;
 		}
 
 		if (!this->bIsSceneEstablished)
@@ -113,7 +117,7 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 			this->bShouldUpdateScene = true;
 		}
 	}
-	else if (CommandData.query == CommandType::REQUEST_IMAGE)
+	else if (CommandData->query == CommandType::REQUEST_IMAGE)
 	{
 		if (!this->bIsSceneEstablished)
 		{
@@ -132,7 +136,7 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 
 		ACameraModel *Camera = this->Spacecraft->CameraModel;
 
-		if (const auto *TempPayload = CommandData.payload.TryGet<FImagePayload>();
+		if (const auto *TempPayload = CommandData->payload.TryGet<FImagePayload>();
 			TempPayload != nullptr && TempPayload->shouldReturnImage)
 		{
 			Camera->GetImageData(ImageDataPng, CobCoords);
@@ -142,10 +146,10 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 			Camera->GetImageData(CobCoords);
 		}
 
-		ReturnData.query = CommandType::REQUEST_IMAGE;
-		ReturnData.payload.Emplace<FImagePayload>(FImagePayload());
-		ReturnData.payload.Get<FImagePayload>().image_data = ImageDataPng;
-		ReturnData.payload.Get<FImagePayload>().centerOfBrightness = CobCoords;
+		ReturnData->query = CommandType::REQUEST_IMAGE;
+		ReturnData->payload.Emplace<FImagePayload>(FImagePayload());
+		ReturnData->payload.Get<FImagePayload>().image_data = ImageDataPng;
+		ReturnData->payload.Get<FImagePayload>().centerOfBrightness = CobCoords;
 
 		UE_LOG(LogCielim, Display, TEXT("Put back PNG image: ASimulationDataSourceActor"));
 	}
@@ -160,12 +164,12 @@ void USceneData::UpdateScene() const
 	if (!this->bShouldUpdateScene)
 		return;
 
-	if (this->CielimMessage.GetMessage().has_spacecraft() && this->bIsSpacecraftSpawned)
+	if (this->CielimMessage->has_spacecraft() && this->bIsSpacecraftSpawned)
 	{
 		this->UpdateSpacecraft();
 	}
 
-	if (!this->CielimMessage.GetMessage().celestialbodies().empty() && this->bIsCelestialBodiesSpawned)
+	if (!this->CielimMessage->celestialbodies().empty() && this->bIsCelestialBodiesSpawned)
 	{
 		this->UpdateCelestialBodies();
 	}
@@ -173,7 +177,7 @@ void USceneData::UpdateScene() const
 
 void USceneData::SpawnCelestialBodies()
 {
-	for (const auto &CelestialBody : CielimMessage.GetMessage().celestialbodies())
+	for (const auto &CelestialBody : CielimMessage->celestialbodies())
 	{
 		const FVector3d CelestialBodyPosition = GetCelestialBodyPosition(CelestialBody);
 		const FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
@@ -217,7 +221,7 @@ void USceneData::SpawnCelestialBodies()
 
 void USceneData::SpawnSpacecraft()
 {
-	const cielimMessage::Spacecraft &SpacecraftMessage = this->CielimMessage.GetMessage().spacecraft();
+	const cielimMessage::Spacecraft &SpacecraftMessage = this->CielimMessage->spacecraft();
 
 	const FVector3d PositionSpacecraft = GetSpacecraftPosition(SpacecraftMessage);
 
@@ -233,9 +237,9 @@ void USceneData::SpawnSpacecraft()
 	TempSpacecraft->Name = FString(SpacecraftMessage.spacecraftname().c_str());
 
 	// Set camera
-	if (this->CielimMessage.GetMessage().has_camera())
+	if (this->CielimMessage->has_camera())
 	{
-		const cielimMessage::CameraModel &Camera = CielimMessage.GetMessage().camera();
+		const cielimMessage::CameraModel &Camera = CielimMessage->camera();
 
 		TempSpacecraft->SetFOV(FMath::RadiansToDegrees(Camera.fieldofview(0)),
 							   FMath::RadiansToDegrees(Camera.fieldofview(1)));
@@ -315,7 +319,7 @@ void USceneData::SpawnSunLight()
 void USceneData::UpdateCelestialBodies() const
 {
 	int Index = 0;
-	for (const auto &CelestialBody : CielimMessage.GetMessage().celestialbodies())
+	for (const auto &CelestialBody : CielimMessage->celestialbodies())
 	{
 		FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
 		FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
@@ -328,7 +332,7 @@ void USceneData::UpdateCelestialBodies() const
 
 void USceneData::UpdateSpacecraft() const
 {
-	const cielimMessage::Spacecraft &SpacecraftMessage = CielimMessage.GetMessage().spacecraft();
+	const cielimMessage::Spacecraft &SpacecraftMessage = CielimMessage->spacecraft();
 
 	const FVector3d PositionSpacecraft = GetSpacecraftPosition(SpacecraftMessage);
 	const FVector3d AttitudeVector =
@@ -338,9 +342,9 @@ void USceneData::UpdateSpacecraft() const
 	this->Spacecraft->Update(PositionSpacecraft, SpacecraftRotation);
 
 	// Update camera
-	if (this->CielimMessage.GetMessage().has_camera())
+	if (this->CielimMessage->has_camera())
 	{
-		const cielimMessage::CameraModel &Camera = CielimMessage.GetMessage().camera();
+		const cielimMessage::CameraModel &Camera = CielimMessage->camera();
 
 		const FRotator CameraRotation = GetCameraRotation(Camera);
 

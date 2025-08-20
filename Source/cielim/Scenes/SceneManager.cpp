@@ -27,14 +27,14 @@ bool USceneManager::IsTickable() const
 
 void USceneManager::Tick(float DeltaTime)
 {
-	const TOptional<FCircularQueueData> QueueData = this->QueueBridge->GetQueueData();
+	const TSharedPtr<FCircularQueueData> QueueData = this->QueueBridge->GetQueueData();
 
-	if (!QueueData.IsSet())
+	if (!QueueData.IsValid())
 		return;
 
-	const uint8 SceneID = QueueData.GetValue().SceneID;
+	const uint8 SceneID = QueueData->SceneID;
 
-	if (QueueData.GetValue().query == CommandType::NEW_SCENE)
+	if (QueueData->query == CommandType::NEW_SCENE)
 	{
 		USceneData *NewScene = NewObject<USceneData>(this, USceneData::StaticClass());
 		NewScene->Init();
@@ -43,7 +43,7 @@ void USceneManager::Tick(float DeltaTime)
 
 		UE_LOG(LogCielim, Display, TEXT("SceneManager : New Scene created with ID %d"), SceneID);
 	}
-	else if (QueueData.GetValue().query == CommandType::REMOVE_SCENE)
+	else if (QueueData->query == CommandType::REMOVE_SCENE)
 	{
 		if (USceneData *Scene = *Scenes.Find(SceneID); Scene != nullptr)
 		{
@@ -76,17 +76,17 @@ void USceneManager::Tick(float DeltaTime)
 			ActiveScene = Scene;
 		}
 
-		FCircularQueueData ReturnData;
+		const auto ReturnData = MakeShared<FCircularQueueData>();
 
-		ReturnData.ID = QueueData.GetValue().ID;
-		ReturnData.bUseDelim = QueueData.GetValue().bUseDelim;
+		ReturnData->ID = QueueData->ID;
+		ReturnData->bUseDelim = QueueData->bUseDelim;
 
-		Scene->ParseCommand(QueueData.GetValue(), ReturnData);
+		Scene->ParseCommand(QueueData, ReturnData);
 		Scene->UpdateScene();
 
 		// Request Image is the only command that currently requests return data
 		// instead of an instant "OK" message currently.
-		if (ReturnData.query == CommandType::REQUEST_IMAGE)
+		if (ReturnData->query == CommandType::REQUEST_IMAGE)
 		{
 			this->QueueBridge->PutQueueData(ReturnData);
 		}

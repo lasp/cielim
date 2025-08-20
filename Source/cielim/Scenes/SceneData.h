@@ -16,7 +16,7 @@
 #include "../Actors/CelestialBody.h"
 #include "../Actors/Spacecraft.h"
 #include "../Network/QueueBridge.h"
-#include "../Protobuf/CielimMessage.h"
+#include "../Protobuf/cielimMessage.pb.h"
 
 #include "SceneData.generated.h"
 
@@ -35,7 +35,8 @@ public:
 	 * @param CommandData Inbound queue data to be parsed.
 	 * @param ReturnData Outbound queue data (is modified).
 	 */
-	void ParseCommand(const FCircularQueueData &CommandData, FCircularQueueData &ReturnData);
+	void ParseCommand(const TSharedPtr<FCircularQueueData> &CommandData,
+					  const TSharedPtr<FCircularQueueData> &ReturnData);
 	/**
 	 * @brief Updates the entities according to the Protobuf Message.
 	 */
@@ -70,7 +71,7 @@ private:
 	void UpdateCelestialBodies() const;
 	void UpdateSpacecraft() const;
 
-	FCielimMessage CielimMessage;
+	TSharedPtr<cielimMessage::CielimMessage> CielimMessage;
 
 	UPROPERTY()
 	TArray<AActor *> Actors;

@@ -60,11 +60,11 @@ private:
 	// Will also enqueue command to inbound queue
 	// ReturnMessage and ReturnData are modified
 	void ParseMessageAndSend(zmq::multipart_t &Message, zmq::multipart_t &ReturnMessage,
-							 FCircularQueueData &ReturnData);
+							 const TSharedPtr<FCircularQueueData> &ReturnData);
 
 	// Send outgoing Message to client
 	// ReturnMessage is modified
-	void ParseCircularQueueDataAndSend(FCircularQueueData &Data, zmq::multipart_t &ReturnMessage);
+	void ParseCircularQueueDataAndSend(const TSharedPtr<FCircularQueueData> &Data, zmq::multipart_t &ReturnMessage);
 
 	static FString IDConvertToString(const TArray<uint8> &ID);
 

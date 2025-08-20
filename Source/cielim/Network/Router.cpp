@@ -177,7 +177,8 @@ uint32 FRouter::Run()
 						bool EnqueueResult = false;
 						while (!EnqueueResult)
 						{
-							EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(NewSceneSignal);
+							const auto Data = MakeShared<FCircularQueueData>(NewSceneSignal);
+							EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(Data);
 						}
 
 						UE_LOG(LogCielim, Display, TEXT("Router : Client %hs has been added to active connections."),
@@ -203,11 +204,11 @@ uint32 FRouter::Run()
 				if (bUseDelim)
 					ReturnMessage.addstr("");
 
-				FCircularQueueData ReturnData;
+				const auto ReturnData = MakeShared<FCircularQueueData>();
 
-				ReturnData.SceneID = Client->SceneID;
-				ReturnData.ID = ID;
-				ReturnData.bUseDelim = bUseDelim;
+				ReturnData->SceneID = Client->SceneID;
+				ReturnData->ID = ID;
+				ReturnData->bUseDelim = bUseDelim;
 
 				ParseMessageAndSend(ReceiveMessage, ReturnMessage, ReturnData);
 
@@ -224,10 +225,10 @@ uint32 FRouter::Run()
 
 				if (!MultiThreadQueue->Responses.IsEmpty())
 				{
-					FCircularQueueData Data;
+					TSharedPtr<FCircularQueueData> Data;
 					MultiThreadQueue->Responses.Dequeue(Data);
 
-					FString IDStr = IDConvertToString(Data.ID);
+					FString IDStr = IDConvertToString(Data->ID);
 
 					UE_LOG(LogCielim, Display, TEXT("Router : Dequeued data for client %hs."), TCHAR_TO_UTF8(*IDStr));
 
@@ -235,10 +236,10 @@ uint32 FRouter::Run()
 
 					zmq::multipart_t ReturnMessage;
 
-					zmq::message_t IDByteBlob(Data.ID.GetData(), Data.ID.Num());
+					zmq::message_t IDByteBlob(Data->ID.GetData(), Data->ID.Num());
 
 					ReturnMessage.add(std::move(IDByteBlob));
-					if (Data.bUseDelim)
+					if (Data->bUseDelim)
 						ReturnMessage.addstr("");
 
 					ParseCircularQueueDataAndSend(Data, ReturnMessage);
@@ -269,7 +270,8 @@ uint32 FRouter::Run()
 					bool EnqueueResult = false;
 					while (!EnqueueResult)
 					{
-						EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(RemoveSceneSignal);
+						const auto Data = MakeShared<FCircularQueueData>(RemoveSceneSignal);
+						EnqueueResult = this->MultiThreadQueue->Requests.Enqueue(Data);
 					}
 
 					UE_LOG(LogCielim, Display, TEXT("Router : Client %hs has been removed from active connections."),
@@ -347,7 +349,7 @@ FString FRouter::IDConvertToString(const TArray<uint8> &ID)
 }
 
 void FRouter::ParseMessageAndSend(zmq::multipart_t &Message, zmq::multipart_t &ReturnMessage,
-								  FCircularQueueData &ReturnData)
+								  const TSharedPtr<FCircularQueueData> &ReturnData)
 {
 	UE_LOG(LogCielim, Display, TEXT("Router::ParseMessage"));
 
@@ -366,7 +368,7 @@ void FRouter::ParseMessageAndSend(zmq::multipart_t &Message, zmq::multipart_t &R
 	}
 	else if (Command == "INIT_SCENE")
 	{
-		ReturnData.query = CommandType::INIT_SCENE;
+		ReturnData->query = CommandType::INIT_SCENE;
 
 		UE_LOG(LogCielim, Display, TEXT("Router : Waiting to enqueue INIT_SCENE..."));
 
@@ -391,14 +393,13 @@ void FRouter::ParseMessageAndSend(zmq::multipart_t &Message, zmq::multipart_t &R
 			ReturnMessage.send(RouterSocket);
 			return;
 		}
-		ReturnData.query = CommandType::SIM_UPDATE;
 
-		ReturnData.payload.Emplace<FUpdatePayload>(FUpdatePayload());
-		ReturnData.payload.Get<FUpdatePayload>().message = FCielimMessage();
+		ReturnData->query = CommandType::SIM_UPDATE;
+		ReturnData->payload.Emplace<FUpdatePayload>();
 
 		// @TODO: fix this message parsing. It's a mad hack!
-		if (!ReturnData.payload.Get<FUpdatePayload>().message.GetMessageModifiable().ParseFromArray(
-				Message[0].data(), Message[0].size() * sizeof(char)))
+		if (!ReturnData->payload.Get<FUpdatePayload>().message->ParseFromArray(Message[0].data(),
+																			   Message[0].size() * sizeof(char)))
 		{
 			UE_LOG(LogCielim, Warning, TEXT("Router : Protobuf data failed to be parsed for SIM_UPDATE."));
 
@@ -422,15 +423,15 @@ void FRouter::ParseMessageAndSend(zmq::multipart_t &Message, zmq::multipart_t &R
 	}
 	else if (Command == "REQUEST_IMAGE")
 	{
-		ReturnData.query = CommandType::REQUEST_IMAGE;
+		ReturnData->query = CommandType::REQUEST_IMAGE;
 
 		uint32_t CameraID = -1;
 		CameraID = std::stoi(Message.popstr());
 
 		UE_LOG(LogCielim, Display, TEXT("Router : Camera ID: %d"), CameraID);
 
-		ReturnData.payload.Emplace<FImagePayload>(FImagePayload());
-		ReturnData.payload.Get<FImagePayload>().shouldReturnImage = static_cast<bool>(std::stoi(Message.popstr()));
+		ReturnData->payload.Emplace<FImagePayload>(FImagePayload());
+		ReturnData->payload.Get<FImagePayload>().shouldReturnImage = static_cast<bool>(std::stoi(Message.popstr()));
 
 		UE_LOG(LogCielim, Display, TEXT("Router : Waiting to enqueue REQUEST_IMAGE..."));
 
@@ -451,11 +452,11 @@ void FRouter::ParseMessageAndSend(zmq::multipart_t &Message, zmq::multipart_t &R
 	}
 }
 
-void FRouter::ParseCircularQueueDataAndSend(FCircularQueueData &Data, zmq::multipart_t &ReturnMessage)
+void FRouter::ParseCircularQueueDataAndSend(const TSharedPtr<FCircularQueueData> &Data, zmq::multipart_t &ReturnMessage)
 {
 	UE_LOG(LogCielim, Display, TEXT("Router::ParseCircularQueue"));
 
-	const CommandType Command = Data.query;
+	const CommandType Command = Data->query;
 
 	if (Command == CommandType::REQUEST_IMAGE)
 	{
@@ -463,7 +464,7 @@ void FRouter::ParseCircularQueueDataAndSend(FCircularQueueData &Data, zmq::multi
 
 		TArray64<uint8> ResponseImage;
 
-		auto *TempPayload = Data.payload.TryGet<FImagePayload>();
+		auto *TempPayload = Data->payload.TryGet<FImagePayload>();
 
 		if (TempPayload != nullptr)
 		{
