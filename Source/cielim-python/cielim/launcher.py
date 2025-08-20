@@ -10,7 +10,7 @@ from sys import platform
 if platform == "darwin":
     appPath = os.path.dirname(__file__) + "/../../../Binaries/Mac/cielim.app/Contents/MacOS/cielim"  # If on Mac
 elif platform == "win32":
-    appPath = os.path.dirname(__file__) + "/../../../Binaries/Win64/cielim"  # If on Mac
+    appPath = os.path.dirname(__file__) + "/../../../Binaries/Win64/cielim.exe"  # If on Windows
 
 
 class ZmqNetworkProtocol(object):
@@ -108,6 +108,7 @@ class Launcher:
                     "-directComm",
                     end_point.as_connect_address(),
                 ],
+                cwd=os.path.dirname(appPath),
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
