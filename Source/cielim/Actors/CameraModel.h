@@ -28,6 +28,9 @@ struct FCameraParams
 	float SensorWidth;
 	float SensorHeight;
 	float ExposureTime;
+	float Wavelength1; // This is assumed to be the longest wavelength (650 nm by default)
+	float Wavelength2; // This is assumed to be the middle wavelength (550 nm by default)
+	float Wavelength3; // This is assumed to be the shortest wavelength (450 nm by default)
 	FVector3f QuECurveR;
 	FVector3f QuECurveG;
 	FVector3f QuECurveB;
@@ -65,9 +68,9 @@ public:
 
 	/**
 	 * @brief Sets the parameters for the camera from protobuf camera model.
-	 * @param CameraModel Protobuf camera model containing camera parameters.
+	 * @param CielimMessage Protobuf containing camera model and other parameters.
 	 */
-	void SetCameraParameters(const cielimMessage::CameraModel &CameraModel);
+	void SetCameraParameters(const cielimMessage::CielimMessage &CielimMessage);
 
 	// Called every tick; should not be manually called
 	virtual void Tick(float DeltaTime) override;

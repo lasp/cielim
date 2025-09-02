@@ -241,9 +241,21 @@ void USceneData::SpawnSpacecraft()
 	{
 		const cielimMessage::CameraModel &Camera = CielimMessage->camera();
 
-		TempSpacecraft->SetFOV(FMath::RadiansToDegrees(Camera.fieldofview(0)),
-							   FMath::RadiansToDegrees(Camera.fieldofview(1)));
-		TempSpacecraft->SetResolution(Camera.resolution(0), Camera.resolution(1));
+		if (Camera.has_lensmodel())
+		{
+			const cielimMessage::LensModel &LensModel = Camera.lensmodel();
+
+			TempSpacecraft->SetFOV(FMath::RadiansToDegrees(LensModel.fieldofview(0)),
+								   FMath::RadiansToDegrees(LensModel.fieldofview(1)));
+		}
+
+		if (Camera.has_sensormodel())
+		{
+			const cielimMessage::SensorModel &SensorModel = Camera.sensormodel();
+
+			TempSpacecraft->SetResolution(SensorModel.resolution(0), SensorModel.resolution(1));
+		}
+
 
 		const FVector3d CameraPosition = GetCameraPosition(Camera);
 		TempSpacecraft->SetCameraRelativePosition(CameraPosition);
@@ -251,7 +263,7 @@ void USceneData::SpawnSpacecraft()
 		const FRotator CameraRotation = GetCameraRotation(Camera);
 		TempSpacecraft->SetCameraRelativeOrientation(CameraRotation);
 
-		TempSpacecraft->CameraModel->SetCameraParameters(Camera);
+		TempSpacecraft->CameraModel->SetCameraParameters(*this->CielimMessage);
 
 		this->bHasCameras = true;
 	}
@@ -276,28 +288,58 @@ void USceneData::SpawnSunLight()
 	LightComp->SetWorldLocation(SunLocation);
 	LightComp->SetWorldRotation(SunRotation);
 
-	// Spectral irradiance in W/m^2/nm and data from: https://lasp.colorado.edu/tsis/data/ssi-data/#summary_table
+	float Wavelength1 = 650 * 1e-9f;
+	float Wavelength2 = 550 * 1e-9f;
+	float Wavelength3 = 450 * 1e-9f;
 
-	constexpr float RedIrradianceAtOneAU = 1.55f; // 650 nm wavelength
-	constexpr float GreenIrradianceAtOneAU = 1.89f; // 550 nm wavelength
-	constexpr float BlueIrradianceAtOneAU = 2.06f; // 450 nm wavelength
+	// Check if custom wavelengths are specified in the camera model, else use visible spectrum defaults
+
+	if (this->CielimMessage->has_renderparameters())
+	{
+		const auto RenderParams = this->CielimMessage->renderparameters();
+
+		Wavelength1 = RenderParams.wavelength1() * 1e-9f;
+		Wavelength2 = RenderParams.wavelength2() * 1e-9f;
+		Wavelength3 = RenderParams.wavelength3() * 1e-9f;
+
+		if (Wavelength2 != (Wavelength1 + Wavelength3) / 2.0f)
+			UE_LOG(LogCielim, Warning, TEXT("W2 is not equal to (W1 + W3) / 2; QE approximation will be inaccurate."));
+	}
+
+	// Use Planck's law to calculate solar irradiance at specified wavelengths (assuming sun is ideal blackbody)
+
+	constexpr float SunRadius = 6.957e8f; // Meters
+	constexpr float SunTemperature = 5778.0f; // Kelvin
+	constexpr float RadiationConstant1 = 1.191e-16f; // W * Meters^2
+	constexpr float RadiationConstant2 = 1.439e-2f; // Meters * K
+
+	const float Wavelength1Radiance = 1e-9 * RadiationConstant1 /
+		(FMath::Pow(Wavelength1, 5) * (FMath::Exp(RadiationConstant2 / (Wavelength1 * SunTemperature)) - 1.0f));
+
+	const float Wavelength2Radiance = 1e-9 * RadiationConstant1 /
+		(FMath::Pow(Wavelength2, 5) * (FMath::Exp(RadiationConstant2 / (Wavelength2 * SunTemperature)) - 1.0f));
+
+	const float Wavelength3Radiance = 1e-9 * RadiationConstant1 /
+		(FMath::Pow(Wavelength3, 5) * (FMath::Exp(RadiationConstant2 / (Wavelength3 * SunTemperature)) - 1.0f));
+
+	const float Distance = SunLocation.Length(); // Meters
+	const float SunSolidAngle = 3.1415f * SunRadius * SunRadius / (Distance * Distance); // Steradians
+
+	const float Wavelength1Irradiance = Wavelength1Radiance * SunSolidAngle; // W * Meters^-2 * Nanometer^-1
+	const float Wavelength2Irradiance = Wavelength2Radiance * SunSolidAngle; // W * Meters^-2 * Nanometer^-1
+	const float Wavelength3Irradiance = Wavelength3Radiance * SunSolidAngle; // W * Meters^-2 * Nanometer^-1
 
 	/* We need to scale down the irradiance values so they can fit in [0,1] color and not be clamped. This will get
-	 * cancelled out when the color is multiplied with the intensity which has the inverse of the factor. */
-	constexpr float IntensityScaleFactor = 2.2f;
+	 * cancelled out when the color is multiplied with the intensity which is the inverse of the factor. */
+	const float SunIntensity = FMath::Max(Wavelength1Irradiance, Wavelength2Irradiance, Wavelength3Irradiance) * 1.1f;
 
-	constexpr float RedIntensity = RedIrradianceAtOneAU / IntensityScaleFactor;
-	constexpr float GreenIntensity = GreenIrradianceAtOneAU / IntensityScaleFactor;
-	constexpr float BlueIntensity = BlueIrradianceAtOneAU / IntensityScaleFactor;
-
-	// Length of 1 AU in meters
-	constexpr float OneAU = 1.496e11;
+	const float RedIntensity = Wavelength1Irradiance / SunIntensity;
+	const float GreenIntensity = Wavelength2Irradiance / SunIntensity;
+	const float BlueIntensity = Wavelength3Irradiance / SunIntensity;
 
 	/* The calculations determining the irradiance of the sun for each wavelength assumes all lit objects are
 	 * near the origin. Anything further than ~0.1 AU from the origin will have irradiance too high/low from expected.
 	 * This is because directional light intensity is constant regardless of position. */
-	const float SunDistanceRatio = OneAU / SunLocation.Length();
-	const float SunIntensity = SunDistanceRatio * SunDistanceRatio * IntensityScaleFactor;
 
 	LightComp->SetIntensity(SunIntensity);
 	LightComp->SetLightColor(FLinearColor(RedIntensity, GreenIntensity, BlueIntensity));
@@ -350,7 +392,7 @@ void USceneData::UpdateSpacecraft() const
 
 		this->Spacecraft->SetCameraRelativeOrientation(CameraRotation);
 
-		this->Spacecraft->CameraModel->SetCameraParameters(Camera);
+		this->Spacecraft->CameraModel->SetCameraParameters(*this->CielimMessage);
 	}
 }
 

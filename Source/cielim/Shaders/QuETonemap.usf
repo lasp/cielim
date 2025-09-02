@@ -14,9 +14,13 @@ SamplerState InputSampler;
 float SolidAngle; // This is in steradians
 float PixelArea; // This is in m^2
 float ExposureTime; // This is in seconds
+float W1EnergyInverse; // These are in 1/J
+float W2EnergyInverse;
+float W3EnergyInverse;
 float4 QuECurveR;
 float4 QuECurveG;
 float4 QuECurveB;
+float SimpsonFactor;
 float CorrectionFactor;
 float InvFullWellCapacity; // This is in # of electrons (inverse)
 
@@ -25,31 +29,27 @@ float4 MainPS(float4 UV : TEXCOORD0, float4 Position : SV_Position) : SV_Target0
 	// This is in W/m^2/nm/str
 	float4 TotalRadiance = InputTexture.Sample(InputSampler, UV.xy);
 
-	float RedPower = SolidAngle * PixelArea * TotalRadiance.r;		// Power values are in W/nm
-	float GreenPower = SolidAngle * PixelArea * TotalRadiance.g;
-	float BluePower = SolidAngle * PixelArea * TotalRadiance.b;
+	float W1Power	= SolidAngle * PixelArea * TotalRadiance.r;		// Power values are in W/nm
+	float W2Power	= SolidAngle * PixelArea * TotalRadiance.g;
+	float W3Power	= SolidAngle * PixelArea * TotalRadiance.b;
 
-	const float RedEnergyInverse = 3.272e18f;
-	const float GreenEnergyInverse = 2.769e18f;
-	const float BlueEnergyInverse = 2.265e18f;
+	float NumW1ElectronsR = W1Power * W1EnergyInverse * ExposureTime * QuECurveR.r;
+	float NumW2ElectronsR = W2Power * W2EnergyInverse * ExposureTime * QuECurveR.g;
+	float NumW3ElectronsR = W3Power * W3EnergyInverse * ExposureTime * QuECurveR.b;
 
-	float NumRedElectronsR = RedPower * RedEnergyInverse * ExposureTime * QuECurveR.r;
-	float NumGreenElectronsR = GreenPower * GreenEnergyInverse * ExposureTime * QuECurveR.g;
-	float NumBlueElectronsR = BluePower * BlueEnergyInverse * ExposureTime * QuECurveR.b;
+	float NumW1ElectronsG = W1Power * W1EnergyInverse * ExposureTime * QuECurveG.r;
+	float NumW2ElectronsG = W2Power * W2EnergyInverse * ExposureTime * QuECurveG.g;
+	float NumW3ElectronsG = W3Power * W3EnergyInverse * ExposureTime * QuECurveG.b;
 
-	float NumRedElectronsG = RedPower * RedEnergyInverse * ExposureTime * QuECurveG.r;
-	float NumGreenElectronsG = GreenPower * GreenEnergyInverse * ExposureTime * QuECurveG.g;
-	float NumBlueElectronsG = BluePower * BlueEnergyInverse * ExposureTime * QuECurveG.b;
-
-	float NumRedElectronsB = RedPower * RedEnergyInverse * ExposureTime * QuECurveB.r;
-	float NumGreenElectronsB = GreenPower * GreenEnergyInverse * ExposureTime * QuECurveB.g;
-	float NumBlueElectronsB = BluePower * BlueEnergyInverse * ExposureTime * QuECurveB.b;
+	float NumW1ElectronsB = W1Power * W1EnergyInverse * ExposureTime * QuECurveB.r;
+	float NumW2ElectronsB = W2Power * W2EnergyInverse * ExposureTime * QuECurveB.g;
+	float NumW3ElectronsB = W3Power * W3EnergyInverse * ExposureTime * QuECurveB.b;
 
 	/* Approximate integration over visible spectrum using R, G, and B channels and Simpson's 1/3 rule.
 	 * This is a close approximation given the QE curve shape is roughly parabolic. */
-	float NumElectronsR = 200.0f * 0.1667f * (NumRedElectronsR + 4.0f * NumGreenElectronsR + NumBlueElectronsR);
-	float NumElectronsG = 200.0f * 0.1667f * (NumRedElectronsG + 4.0f * NumGreenElectronsG + NumBlueElectronsG);
-	float NumElectronsB = 200.0f * 0.1667f * (NumRedElectronsB + 4.0f * NumGreenElectronsB + NumBlueElectronsB);
+	float NumElectronsR = SimpsonFactor * (NumW1ElectronsR + 4.0f * NumW2ElectronsR + NumW3ElectronsR);
+	float NumElectronsG = SimpsonFactor * (NumW1ElectronsG + 4.0f * NumW2ElectronsG + NumW3ElectronsG);
+	float NumElectronsB = SimpsonFactor * (NumW1ElectronsB + 4.0f * NumW2ElectronsB + NumW3ElectronsB);
 
 	NumElectronsR *= CorrectionFactor;
 	NumElectronsG *= CorrectionFactor;
