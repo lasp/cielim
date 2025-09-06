@@ -38,6 +38,8 @@ void UCielimGameInstance::Init()
 
 	this->SceneManager->Init(Context, MultiThreadQueue);
 
+	this->SceneViewExtension = FSceneViewExtensions::NewExtension<FCielimSceneViewExtension>();
+
 	int Major;
 	int Minor;
 	int Patch;

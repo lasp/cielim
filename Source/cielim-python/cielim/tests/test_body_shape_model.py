@@ -13,14 +13,14 @@ def default_scene():
     body = protobuf_message.celestialBodies.add()
     body.bodyName = "2000269"
     [body.position.append(item) for item in [0, 0, 0]]
-    [body.attitude.append(item) for item in [0, 0, 0]]
+    [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
 
     body.model.shapeModel = "sphere_normalized"
     body.model.meanRadius = 10000
 
     sun = protobuf_message.celestialBodies.add()
     sun.bodyName = "sun"
-    [sun.position.append(item) for item in [-2000000, 100000, -1000000]]
+    [sun.position.append(item) for item in [-0.5 * 1.496e11, 0.5 * 1.496e11, -0.5 * 1.496e11]]
     [sun.attitude.append(item) for item in [0, 0, 0]]
 
     protobuf_message.camera.cameraId = 1
@@ -31,7 +31,7 @@ def default_scene():
     [protobuf_message.camera.resolution.append(item) for item in [4000, 3000]]
 
     protobuf_message.spacecraft.spacecraftName = "cielim_sat"
-    [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -1000000]]
+    [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -100000]]
     [protobuf_message.spacecraft.attitude.append(item) for item in [0, 0, 0]]
     return protobuf_message
 

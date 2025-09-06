@@ -12,13 +12,35 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 
+#include "CameraViewCaptureComponent2D.h"
+#include "cielim/Protobuf/cielimMessage.pb.h"
+
 #include "CameraModel.generated.h"
+
+struct FCameraParams
+{
+	// Diagnostic indicator
+	bool bIsDiagnosticRun;
+
+	// Camera + QE
+	float ApertureRadius;
+	float FocalLength;
+	float SensorWidth;
+	float SensorHeight;
+	float ExposureTime;
+	FVector3f QuECurveR;
+	FVector3f QuECurveG;
+	FVector3f QuECurveB;
+	float CorrectionFactor;
+	float FullWellCapacity;
+	float Gamma;
+};
 
 struct FImageCorruptionParams
 {
 	// Gaussian PSF
-	int KernelWidth;
-	double Sigma;
+	uint32 KernelWidth;
+	float Sigma;
 
 	// Cosmic Rays
 	uint32 NumCosmicRays;
@@ -41,6 +63,12 @@ class CIELIM_API ACameraModel : public AActor
 public:
 	ACameraModel();
 
+	/**
+	 * @brief Sets the parameters for the camera from protobuf camera model.
+	 * @param CameraModel Protobuf camera model containing camera parameters.
+	 */
+	void SetCameraParameters(const cielimMessage::CameraModel &CameraModel);
+
 	// Called every tick; should not be manually called
 	virtual void Tick(float DeltaTime) override;
 
@@ -53,41 +81,47 @@ public:
 	void SaveImageToDisk(const FString &FilePath, const FString &Filename);
 
 	/**
-	 * @brief Gets image data after applying corruption effects for the current render target.
+	 * @brief Gets image data including pre-post-processing diagnostic data and image data for final render.
 	 * @param ImageData Reference to TArray64 used to contain serialized image data in PNG format (mutable).
 	 * @param CobCoordinates Reference to optional FVector2D used to contain center of brightness coordinates (mutable).
-	 * @param PointSpread Standard deviation value used in Gaussian PSF.
-	 * @param ReadNoise Standard deviation value used in read noise.
-	 * @param SystemGain Gain that will be applied to the overall image.
-	 * @param CosmicRaysStdDev Standard deviation used to determine the number of cosmic rays from a poisson.
 	 */
-	void GetCorruptedImage(TArray64<uint8> &ImageData, TOptional<FVector2D> &CobCoordinates, const double PointSpread,
-						   const double ReadNoise, const double SystemGain, const double CosmicRaysStdDev) const;
+	void GetImageData(TArray64<uint8> &ImageData, TOptional<FVector2D> &CobCoordinates);
 
 	/**
-	 * @brief Calculates center of brightness for an image.
-	 * @param RenderTarget Pointer to render target used in center of brightness calculations.
+	 * @brief Gets only image data for final render with corruption effects applied.
+	 * @param ImageData Reference to TArray64 used to contain serialized image data in PNG format (mutable).
 	 */
-	static TOptional<FVector2d> GetCenterOfBrightness(UTextureRenderTarget2D *RenderTarget);
+	void GetImageData(TArray64<uint8> &ImageData);
 
 	/**
-	 * @brief Queues image corruption post-processing effects on the GPU through RenderGraph.
-	 * @param RenderTarget Pointer to render target that the corruption effects will be applied to.
-	 * @param CorruptionParams Struct containing all necessary parameters for corruption effects.
+	 * @brief Gets only pre-post-processing diagnostic data.
+	 * @param CobCoordinates Reference to optional FVector2D used to contain center of brightness coordinates (mutable).
 	 */
-	static void ApplyPostProcessShaders(UTextureRenderTarget2D *RenderTarget, FImageCorruptionParams *CorruptionParams);
+	void GetImageData(TOptional<FVector2D> &CobCoordinates);
+
 
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent *Body;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
-	USceneCaptureComponent2D *SceneCaptureComponent2D;
+	UCameraViewCaptureComponent2D *SceneCaptureComponent2D;
+
+	FCameraParams CameraParams{};
+	FImageCorruptionParams CorruptionParams{};
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
 private:
+	/* Apply gamma correction to the render target; this is done separate from the main post-process pipeline to
+	 * allow for the retrieval of a diagnostic image in linear color space. */
+	void ApplyGammaCorrection() const;
+
+	/* Enqueues CoB calculation pass on the GPU and synchronously writes resulting buffer back to the CPU and does
+	 * final reduction to a 2-vector coordinate which is then returned as the final result. */
+	TOptional<FVector2D> GetCenterOfBrightness() const;
+
 	// Returns the list of all parameters for all cosmic rays
 	TTuple<float, TResourceArray<FVector2f>, TResourceArray<FVector2f>, TResourceArray<float>>
 	GetCosmicRays(const float Sigma) const;

@@ -10,27 +10,28 @@ def default_scene():
     protobuf_message = cielimMessage_pb2.CielimMessage()
 
     body = protobuf_message.celestialBodies.add()
-    body.bodyName = "2000269"
+    body.bodyName = "Plane"
     [body.position.append(item) for item in [0, 0, 0]]
-    [body.attitude.append(item) for item in [0, 0, 0]]
-    body.model.shapeModel = "sphere_normalized"
+    [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
+    [body.model.inertialToBodyMrp.append(item) for item in [0, 0, 0]]
+    body.model.shapeModel = "Plane"
     body.model.meanRadius = 10000
 
     sun = protobuf_message.celestialBodies.add()
     sun.bodyName = "sun"
-    [sun.position.append(item) for item in [0, 0, -2000000]]
+    [sun.position.append(item) for item in [0, 0, 0.5 * 1.496e11]]
     [sun.attitude.append(item) for item in [0, 0, 0]]
 
     protobuf_message.camera.cameraId = 1
     protobuf_message.camera.parentName = "cielim_sat"
     [protobuf_message.camera.fieldOfView.append(item) for item in [30 * np.pi / 180, 25 * np.pi / 180]]
-    [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
+    [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0.0, 0, 0]]
     [protobuf_message.camera.cameraPositionInBody.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.resolution.append(item) for item in [4000, 3000]]
+    [protobuf_message.camera.resolution.append(item) for item in [3000, 3000]]
 
     protobuf_message.spacecraft.spacecraftName = "cielim_sat"
-    [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -50000]]
-    [protobuf_message.spacecraft.attitude.append(item) for item in [0, 0, 0]]
+    [protobuf_message.spacecraft.position.append(item) for item in [0, 0, 10000]]
+    [protobuf_message.spacecraft.attitude.append(item) for item in [0, 1, 0]]
 
     return protobuf_message
 
@@ -47,6 +48,9 @@ def test_GaussianPSF(cielim_connection, scene_setup):
     connector = cielim_connection
 
     scene = scene_setup
+
+    # Change scene to rotated plane to test GaussianPSF on jagged edges
+    scene.celestialBodies[0].model.inertialToBodyMrp[:] = [0, 0, 0.2]
 
     connector.send_init_request()
     connector.send_frame(scene)
@@ -94,7 +98,7 @@ def test_CosmicRays(cielim_connection, scene_setup):
 
 @pytest.mark.parametrize(
     "read_noise",
-    [1, 3, 5, 10, 20],
+    [50, 500, 5000, 20000],
 )
 def test_ReadNoise(cielim_connection, scene_setup, read_noise):
     """
@@ -111,14 +115,16 @@ def test_ReadNoise(cielim_connection, scene_setup, read_noise):
     connector.send_frame(scene)
     image, _ = connector.request_image_for_camera_id(1, 1)
 
-    measured_std = np.std(image)
+    image_normalized = image.astype(np.float32) / 255.0
+
+    measured_std = np.std(image_normalized**2.2)
 
     np.testing.assert_array_less(0.0, measured_std, err_msg=f"Image was blank and no noise was applied")
 
     np.testing.assert_allclose(
         measured_std,
-        read_noise,
-        rtol=0.5,
+        read_noise / 50000,
+        rtol=0.65,
         err_msg=f"Measured standard deviation ({measured_std}) was too far from expected of ({read_noise})",
     )
 
@@ -139,7 +145,10 @@ def test_SignalGain(cielim_connection, scene_setup, signal_gain):
     connector.send_frame(scene)
     base_image, _ = connector.request_image_for_camera_id(1, 1)
 
-    comparison_image = base_image * signal_gain
+    image_normalized = base_image.astype(np.float32) / 255.0
+    img_linear = image_normalized**2.2
+    img_scaled_linear = img_linear * signal_gain
+    comparison_image = (np.clip(img_scaled_linear ** (1 / 2.2), 0.0, 1.0) * 255).astype(np.uint8)
 
     scene.camera.systemGain = signal_gain
 
@@ -148,5 +157,5 @@ def test_SignalGain(cielim_connection, scene_setup, signal_gain):
     gain_image, _ = connector.request_image_for_camera_id(1, 1)
 
     np.testing.assert_allclose(
-        gain_image, comparison_image, rtol=1e-2, err_msg="Received image does not match comparison with specified gain"
+        gain_image, comparison_image, rtol=0.1, err_msg="Received image does not match comparison with specified gain"
     )

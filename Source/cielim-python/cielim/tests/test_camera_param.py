@@ -14,24 +14,24 @@ def default_scene():
     body = protobuf_message.celestialBodies.add()
     body.bodyName = "2000269"
     [body.position.append(item) for item in [0, 0, 0]]
-    [body.attitude.append(item) for item in [0, 0, 0]]
+    [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
     body.model.shapeModel = "sphere_normalized"
     body.model.meanRadius = 10000
 
     sun = protobuf_message.celestialBodies.add()
     sun.bodyName = "sun"
-    [sun.position.append(item) for item in [0, 0, -2000000]]
+    [sun.position.append(item) for item in [0, 0, -0.5 * 1.496e11]]
     [sun.attitude.append(item) for item in [0, 0, 0]]
 
     protobuf_message.camera.cameraId = 1
     protobuf_message.camera.parentName = "cielim_sat"
-    [protobuf_message.camera.fieldOfView.append(item) for item in [30 * np.pi / 180, 25 * np.pi / 180]]
+    [protobuf_message.camera.fieldOfView.append(item) for item in [20 * np.pi / 180, 15 * np.pi / 180]]
     [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
     [protobuf_message.camera.cameraPositionInBody.append(item) for item in [0, 0, 0]]
     [protobuf_message.camera.resolution.append(item) for item in [4000, 3000]]
 
     protobuf_message.spacecraft.spacecraftName = "cielim_sat"
-    [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -1000000]]
+    [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -100000]]
     [protobuf_message.spacecraft.attitude.append(item) for item in [0, 0, 0]]
 
     return protobuf_message
@@ -40,6 +40,56 @@ def default_scene():
 @pytest.fixture
 def scene_setup():
     return default_scene()
+
+
+def test_image_brightness(cielim_connection, scene_setup):
+    """
+    Tests that reducing exposure time and QE reduces image brightness.
+    """
+    connector = cielim_connection
+
+    scene = scene_setup
+
+    connector.send_init_request()
+    connector.send_frame(scene)
+    image, _ = connector.request_image_for_camera_id(1, 1)
+
+    image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    base_mean = np.mean(image_gray)
+
+    # Reduce the exposure
+    scene.camera.exposureTime = 2e-4
+
+    # connector.send_init_request()
+    connector.send_frame(scene)
+    low_exposure_image, _ = connector.request_image_for_camera_id(1, 1)
+
+    low_exposure_image_gray = cv2.cvtColor(low_exposure_image, cv2.COLOR_BGR2GRAY)
+    low_exposure_mean = np.mean(low_exposure_image_gray)
+
+    np.testing.assert_array_less(
+        low_exposure_mean, base_mean, err_msg="Brightness did not decrease with lower exposure."
+    )
+
+    # Reduce the quantum efficiency
+    scene.camera.qeCurve.redValue450nm = 0.35
+    scene.camera.qeCurve.redValue550nm = 0.35
+    scene.camera.qeCurve.redValue650nm = 0.35
+    scene.camera.qeCurve.greenValue450nm = 0.35
+    scene.camera.qeCurve.greenValue550nm = 0.35
+    scene.camera.qeCurve.greenValue650nm = 0.35
+    scene.camera.qeCurve.blueValue450nm = 0.35
+    scene.camera.qeCurve.blueValue550nm = 0.35
+    scene.camera.qeCurve.blueValue650nm = 0.35
+
+    # connector.send_init_request()
+    connector.send_frame(scene)
+    low_qe_image, _ = connector.request_image_for_camera_id(1, 1)
+
+    low_qe_image_gray = cv2.cvtColor(low_qe_image, cv2.COLOR_BGR2GRAY)
+    low_qe_mean = np.mean(low_qe_image_gray)
+
+    np.testing.assert_array_less(low_qe_mean, low_exposure_mean, err_msg="Brightness did not decrease with lower QE.")
 
 
 @pytest.mark.parametrize(
@@ -62,6 +112,10 @@ def test_camera_fov(cielim_connection, scene_setup, test_name, fov_x_deg, fov_y_
     scene = scene_setup
     del scene.camera.fieldOfView[:]
     [scene.camera.fieldOfView.append(val) for val in [fov_x_deg, fov_y_deg]]
+
+    # Move sphere back so it doesn't overflow screen
+    del scene.spacecraft.position[:]
+    [scene.spacecraft.position.append(val) for val in [0, 0, -1000000]]
 
     connector.send_init_request()
     connector.send_frame(scene)

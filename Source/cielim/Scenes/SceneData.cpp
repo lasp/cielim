@@ -18,12 +18,9 @@
 
 #include "../Actors/CelestialBodyMeshModel.h"
 #include "../CielimGameInstance.h"
-#include "../Utilities/Constants/AstronomicalConstants.h"
 #include "../Utilities/Logging/CielimLoggingMacros.h"
 #include "../Utilities/Math/KinematicsUtilities.h"
 
-#define m2cm 100.0
-#define km2m 1000.0
 const FString SunNaifBodyName("sun");
 
 static FVector3d GetSpacecraftPosition(const cielimMessage::Spacecraft &Craft);
@@ -110,8 +107,9 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 			this->Spacecraft->CameraModel->SceneCaptureComponent2D->PrimitiveRenderMode = RenderMode;
 			this->Spacecraft->CameraModel->SceneCaptureComponent2D->ShowOnlyActors = Actors;
 
-			if (this->CielimMessage.GetMessage().has_camera())
-				this->bHasCameras = true;
+			// Do a flush to the render target to ensure actual first capture has correct data
+			this->Spacecraft->CameraModel->SceneCaptureComponent2D->CaptureScene();
+			FlushRenderingCommands();
 		}
 		else
 		{
@@ -132,29 +130,19 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 			Instance->SetVectorParameterValue(ParamName, this->SunLight->GetActorForwardVector().GetSafeNormal());
 		}
 
-		const cielimMessage::CameraModel *ProtobufCameraModel = &this->CielimMessage.GetMessage().camera();
-
-		const double PointSpread = ProtobufCameraModel->pointspreadfunction();
-		const double ReadNoise = ProtobufCameraModel->readnoise();
-		const double SystemGain = ProtobufCameraModel->systemgain();
-		const double RayStdDev = ProtobufCameraModel->renderparameters().cosmicraystddeviation();
-
 		TArray64<uint8> ImageDataPng;
 		TOptional<FVector2D> CobCoords;
 
-		const ACameraModel *Camera = this->Spacecraft->CameraModel;
-
-		Camera->SceneCaptureComponent2D->CaptureScene();
+		ACameraModel *Camera = this->Spacecraft->CameraModel;
 
 		if (const auto *TempPayload = CommandData.payload.TryGet<FImagePayload>();
 			TempPayload != nullptr && TempPayload->shouldReturnImage)
 		{
-			Camera->GetCorruptedImage(ImageDataPng, CobCoords, PointSpread, ReadNoise, SystemGain, RayStdDev);
+			Camera->GetImageData(ImageDataPng, CobCoords);
 		}
 		else
 		{
-			UTextureRenderTarget2D *RenderTarget = Camera->SceneCaptureComponent2D->TextureTarget;
-			CobCoords = Camera->GetCenterOfBrightness(RenderTarget);
+			Camera->GetImageData(CobCoords);
 		}
 
 		ReturnData.query = CommandType::REQUEST_IMAGE;
@@ -190,33 +178,31 @@ void USceneData::SpawnCelestialBodies()
 {
 	for (const auto &CelestialBody : CielimMessage.GetMessage().celestialbodies())
 	{
-		FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
-		FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
+		const FVector3d CelestialBodyPosition = GetCelestialBodyPosition(CelestialBody);
+		const FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
 
-		const FTransform SpawnLocAndRotation = FTransform(CelestialBodyRotation, PositionCelestialBody);
-
-		ACelestialBody *TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>();
+		ACelestialBody *TempCelestialBody =
+			GetWorld()->SpawnActor<ACelestialBody>(CelestialBodyPosition, CelestialBodyRotation);
 		TempCelestialBody->Name = FString(CelestialBody.bodyname().c_str());
 
 #if WITH_EDITOR
 		TempCelestialBody->SetActorLabel(TempCelestialBody->Name);
 #endif
 
-		FCelestialBodyMeshModel MeshModel{};
 		if (CelestialBody.has_model())
 		{
 			UE_LOG(LogCielim, Display, TEXT("Loading mesh model for %s"), *TempCelestialBody->Name);
+
+			FCelestialBodyMeshModel MeshModel;
 
 			MeshModel = FCelestialBodyMeshModel::FromProtobuf(CelestialBody.model());
 			TempCelestialBody->LoadMesh(MeshModel);
 		}
 
-		TempCelestialBody->SetActorTransform(SpawnLocAndRotation);
-		TempCelestialBody->SetActorRotation(MeshModel.InertialToBody);
-		TempCelestialBody->SetActorLocation(PositionCelestialBody);
-		// meshes are in 10m scale, bring to uu/
-		const FVector ActorScale =
-			TempCelestialBody->GetPrincipleAxisDistortions() * CelestialBody.model().meanradius() / 1000;
+		constexpr float MeshRadiusInMeters = 10.0f;
+		const float RadiusScale = CelestialBody.model().meanradius() / MeshRadiusInMeters;
+		const FVector ActorScale = TempCelestialBody->GetPrincipleAxisDistortions() * RadiusScale;
+
 		TempCelestialBody->SetActorScale3D(ActorScale);
 
 		this->CelestialBodyArray.Add(TempCelestialBody);
@@ -236,8 +222,12 @@ void USceneData::SpawnSpacecraft()
 	const cielimMessage::Spacecraft &SpacecraftMessage = this->CielimMessage.GetMessage().spacecraft();
 
 	const FVector3d PositionSpacecraft = GetSpacecraftPosition(SpacecraftMessage);
-	const FVector3d AttitudeVector =
-		FVector3d(SpacecraftMessage.attitude(0), SpacecraftMessage.attitude(1), SpacecraftMessage.attitude(2));
+
+	const double AttitudeX = SpacecraftMessage.attitude(0);
+	const double AttitudeY = SpacecraftMessage.attitude(1);
+	const double AttitudeZ = SpacecraftMessage.attitude(2);
+
+	const FVector3d AttitudeVector = FVector3d(AttitudeX, AttitudeY, AttitudeZ);
 	const FRotator SpacecraftRotation = GetRotatorFromMrp(AttitudeVector);
 
 	ASpacecraft *TempSpacecraft = GetWorld()->SpawnActor<ASpacecraft>(PositionSpacecraft, SpacecraftRotation);
@@ -248,6 +238,7 @@ void USceneData::SpawnSpacecraft()
 	if (this->CielimMessage.GetMessage().has_camera())
 	{
 		const cielimMessage::CameraModel &Camera = CielimMessage.GetMessage().camera();
+
 		TempSpacecraft->SetFOV(FMath::RadiansToDegrees(Camera.fieldofview(0)),
 							   FMath::RadiansToDegrees(Camera.fieldofview(1)));
 		TempSpacecraft->SetResolution(Camera.resolution(0), Camera.resolution(1));
@@ -257,6 +248,10 @@ void USceneData::SpawnSpacecraft()
 
 		const FRotator CameraRotation = GetCameraRotation(Camera);
 		TempSpacecraft->SetCameraRelativeOrientation(CameraRotation);
+
+		TempSpacecraft->CameraModel->SetCameraParameters(Camera);
+
+		this->bHasCameras = true;
 	}
 
 	this->Spacecraft = TempSpacecraft;
@@ -266,26 +261,48 @@ void USceneData::SpawnSpacecraft()
 
 void USceneData::SpawnSunLight()
 {
-	this->SunLight = GetWorld()->SpawnActor<ADirectionalLight>(FVector3d::ZeroVector, FRotator::ZeroRotator);
+	const FVector3d SunLocation = this->SunCelestialBody->GetActorLocation();
+
+	const FVector SunDirection = -SunLocation.GetSafeNormal();
+	const FRotator SunRotation = FRotationMatrix::MakeFromX(SunDirection).Rotator();
+
+	this->SunLight = GetWorld()->SpawnActor<ADirectionalLight>();
+
+	this->SunLight->GetLightComponent()->SetMobility(EComponentMobility::Movable);
+	this->SunLight->GetLightComponent()->SetWorldLocation(SunLocation);
+	this->SunLight->GetLightComponent()->SetWorldRotation(SunRotation);
+
+	// Spectral irradiance in W/m^2/nm and data from: https://lasp.colorado.edu/tsis/data/ssi-data/#summary_table
+
+	constexpr float RedIrradianceAtOneAU = 1.55f; // 650 nm wavelength
+	constexpr float GreenIrradianceAtOneAU = 1.89f; // 550 nm wavelength
+	constexpr float BlueIrradianceAtOneAU = 2.06f; // 450 nm wavelength
+
+	/* We need to scale down the irradiance values so they can fit in [0,1] color and not be clamped. This will get
+	 * cancelled out when the color is multiplied with the intensity which has the inverse of the factor. */
+	constexpr float IntensityScaleFactor = 2.2f;
+
+	constexpr float RedIntensity = RedIrradianceAtOneAU / IntensityScaleFactor;
+	constexpr float GreenIntensity = GreenIrradianceAtOneAU / IntensityScaleFactor;
+	constexpr float BlueIntensity = BlueIrradianceAtOneAU / IntensityScaleFactor;
+
+	// Length of 1 AU in meters
+	constexpr float OneAU = 1.496e11;
+
+	/* The calculations determining the irradiance of the sun for each wavelength assumes all lit objects are
+	 * near the origin. Anything further than ~0.1 AU from the origin will have irradiance too high/low from expected.
+	 * This is because directional light intensity is constant regardless of position. We also multiply by 100 to
+	 * account for the fact that unreal uses cm instead of meters. */
+	const float SunDistanceRatio = 100.0f * OneAU / SunLocation.Length();
+	const float SunIntensity = SunDistanceRatio * SunDistanceRatio * IntensityScaleFactor;
+
+	this->SunLight->GetLightComponent()->SetIntensity(SunIntensity);
+	this->SunLight->GetLightComponent()->SetLightColor(FLinearColor(RedIntensity, GreenIntensity, BlueIntensity));
 
 	// Light should spawn as disabled so SceneManager can manage which scene's light is enabled
 	ToggleSunLight(false);
 
 	this->Actors.Add(SunLight);
-
-	const double ExposureTime = this->CielimMessage.GetMessage().camera().exposuretime();
-	const double LuxAt1AU = ExposureTime != 0 ? 1280 * ExposureTime : 1280;
-
-	const float SunIntensity =
-		LuxAt1AU * (AU * km2m * AU * km2m) / FMath::Square(this->SunCelestialBody->GetActorLocation().Length());
-	this->SunLight->GetLightComponent()->SetIntensity(SunIntensity);
-	this->SunLight->GetLightComponent()->SetMobility(EComponentMobility::Movable);
-
-	auto Vector = -this->SunCelestialBody->GetActorLocation();
-	Vector.Normalize();
-
-	const auto RotationMatrixFromLocation = FRotationMatrix::MakeFromX(Vector);
-	this->SunLight->GetLightComponent()->SetRelativeRotation(RotationMatrixFromLocation.Rotator());
 }
 
 void USceneData::UpdateCelestialBodies() const
@@ -321,6 +338,8 @@ void USceneData::UpdateSpacecraft() const
 		const FRotator CameraRotation = GetCameraRotation(Camera);
 
 		this->Spacecraft->SetCameraRelativeOrientation(CameraRotation);
+
+		this->Spacecraft->CameraModel->SetCameraParameters(Camera);
 	}
 }
 
@@ -348,7 +367,7 @@ void USceneData::BeginDestroy()
 // Gets the positions of a Spacecraft Object
 static FVector3d GetSpacecraftPosition(const cielimMessage::Spacecraft &Craft)
 {
-	const FVector3d PositionSpacecraft = FVector3d(Craft.position(0), Craft.position(1), Craft.position(2));
+	const FVector3d PositionSpacecraft = 100.0f * FVector3d(Craft.position(0), Craft.position(1), Craft.position(2));
 	return Right2LeftVector(PositionSpacecraft);
 }
 
@@ -363,7 +382,7 @@ static FRotator GetRotatorFromMrp(const FVector3d &Sigma)
 // Gets the position of a Camera Object
 static FVector3d GetCameraPosition(const cielimMessage::CameraModel &Camera)
 {
-	const FVector3d SigmaCamera =
+	const FVector3d SigmaCamera = 100.0f *
 		FVector3d(Camera.camerapositioninbody(0), Camera.camerapositioninbody(1), Camera.camerapositioninbody(2));
 	return Right2LeftVector(SigmaCamera);
 }
@@ -384,7 +403,7 @@ static FRotator GetCameraRotation(const cielimMessage::CameraModel &Camera)
 static FVector3d GetCelestialBodyPosition(const cielimMessage::CelestialBody &CelestialBody)
 {
 	const FVector3d PositionCelestialBody =
-		FVector3d(CelestialBody.position(0), CelestialBody.position(1), CelestialBody.position(2));
+		100.0f * FVector3d(CelestialBody.position(0), CelestialBody.position(1), CelestialBody.position(2));
 	return Right2LeftVector(PositionCelestialBody);
 }
 

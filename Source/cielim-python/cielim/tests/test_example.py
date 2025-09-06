@@ -15,7 +15,7 @@ def scene_setup():
     body.bodyName = "2000269"
     [body.position.append(item) for item in [0, 0, 0]]
     [body.velocity.append(item) for item in [0, 0, 0]]
-    [body.attitude.append(item) for item in [0, 0, 0]]
+    [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
 
     body.model.shapeModel = "bennu_normalized"
     body.model.meanRadius = 10000

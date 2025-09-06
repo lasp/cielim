@@ -135,6 +135,26 @@ struct RenderingModelDefaultTypeInternal {
   };
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT RenderingModelDefaultTypeInternal _RenderingModel_default_instance_;
+constexpr QuantumEfficiency::QuantumEfficiency(
+  ::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized)
+  : redvalue450nm_(0)
+  , redvalue550nm_(0)
+  , redvalue650nm_(0)
+  , greenvalue450nm_(0)
+  , greenvalue550nm_(0)
+  , greenvalue650nm_(0)
+  , bluevalue450nm_(0)
+  , bluevalue550nm_(0)
+  , bluevalue650nm_(0){}
+struct QuantumEfficiencyDefaultTypeInternal {
+  constexpr QuantumEfficiencyDefaultTypeInternal()
+    : _instance(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized{}) {}
+  ~QuantumEfficiencyDefaultTypeInternal() {}
+  union {
+    QuantumEfficiency _instance;
+  };
+};
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT QuantumEfficiencyDefaultTypeInternal _QuantumEfficiency_default_instance_;
 constexpr CameraModel::CameraModel(
   ::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized)
   : fieldofview_()
@@ -144,13 +164,20 @@ constexpr CameraModel::CameraModel(
   , bodyframetocameramrp_()
   , parentname_(&::PROTOBUF_NAMESPACE_ID::internal::fixed_address_empty_string)
   , renderparameters_(nullptr)
+  , qecurve_(nullptr)
   , cameraid_(int64_t{0})
   , renderrate_(uint64_t{0u})
   , focallength_(0)
   , exposuretime_(0)
   , pointspreadfunction_(0)
   , readnoise_(0)
-  , systemgain_(0){}
+  , systemgain_(0)
+  , apertureradius_(0)
+  , sensorwidth_(0)
+  , sensorheight_(0)
+  , integrationweightfactor_(0)
+  , fullwellcapacity_(0)
+  , gamma_(0){}
 struct CameraModelDefaultTypeInternal {
   constexpr CameraModelDefaultTypeInternal()
     : _instance(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized{}) {}
@@ -2336,14 +2363,382 @@ std::string RenderingModel::GetTypeName() const {
 
 // ===================================================================
 
+class QuantumEfficiency::_Internal {
+ public:
+};
+
+QuantumEfficiency::QuantumEfficiency(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                         bool is_message_owned)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
+  SharedCtor();
+  if (!is_message_owned) {
+    RegisterArenaDtor(arena);
+  }
+  // @@protoc_insertion_point(arena_constructor:cielimMessage.QuantumEfficiency)
+}
+QuantumEfficiency::QuantumEfficiency(const QuantumEfficiency& from)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite() {
+  _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+  ::memcpy(&redvalue450nm_, &from.redvalue450nm_,
+    static_cast<size_t>(reinterpret_cast<char*>(&bluevalue650nm_) -
+    reinterpret_cast<char*>(&redvalue450nm_)) + sizeof(bluevalue650nm_));
+  // @@protoc_insertion_point(copy_constructor:cielimMessage.QuantumEfficiency)
+}
+
+void QuantumEfficiency::SharedCtor() {
+::memset(reinterpret_cast<char*>(this) + static_cast<size_t>(
+    reinterpret_cast<char*>(&redvalue450nm_) - reinterpret_cast<char*>(this)),
+    0, static_cast<size_t>(reinterpret_cast<char*>(&bluevalue650nm_) -
+    reinterpret_cast<char*>(&redvalue450nm_)) + sizeof(bluevalue650nm_));
+}
+
+QuantumEfficiency::~QuantumEfficiency() {
+  // @@protoc_insertion_point(destructor:cielimMessage.QuantumEfficiency)
+  if (GetArenaForAllocation() != nullptr) return;
+  SharedDtor();
+  _internal_metadata_.Delete<std::string>();
+}
+
+inline void QuantumEfficiency::SharedDtor() {
+  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+}
+
+void QuantumEfficiency::ArenaDtor(void* object) {
+  QuantumEfficiency* _this = reinterpret_cast< QuantumEfficiency* >(object);
+  (void)_this;
+}
+void QuantumEfficiency::RegisterArenaDtor(::PROTOBUF_NAMESPACE_ID::Arena*) {
+}
+void QuantumEfficiency::SetCachedSize(int size) const {
+  _cached_size_.Set(size);
+}
+
+void QuantumEfficiency::Clear() {
+// @@protoc_insertion_point(message_clear_start:cielimMessage.QuantumEfficiency)
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  ::memset(&redvalue450nm_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&bluevalue650nm_) -
+      reinterpret_cast<char*>(&redvalue450nm_)) + sizeof(bluevalue650nm_));
+  _internal_metadata_.Clear<std::string>();
+}
+
+const char* QuantumEfficiency::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
+    switch (tag >> 3) {
+      // double redValue450nm = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 9)) {
+          redvalue450nm_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
+          ptr += sizeof(double);
+        } else
+          goto handle_unusual;
+        continue;
+      // double redValue550nm = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 17)) {
+          redvalue550nm_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
+          ptr += sizeof(double);
+        } else
+          goto handle_unusual;
+        continue;
+      // double redValue650nm = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 25)) {
+          redvalue650nm_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
+          ptr += sizeof(double);
+        } else
+          goto handle_unusual;
+        continue;
+      // double greenValue450nm = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 33)) {
+          greenvalue450nm_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
+          ptr += sizeof(double);
+        } else
+          goto handle_unusual;
+        continue;
+      // double greenValue550nm = 5;
+      case 5:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 41)) {
+          greenvalue550nm_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
+          ptr += sizeof(double);
+        } else
+          goto handle_unusual;
+        continue;
+      // double greenValue650nm = 6;
+      case 6:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 49)) {
+          greenvalue650nm_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
+          ptr += sizeof(double);
+        } else
+          goto handle_unusual;
+        continue;
+      // double blueValue450nm = 7;
+      case 7:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 57)) {
+          bluevalue450nm_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
+          ptr += sizeof(double);
+        } else
+          goto handle_unusual;
+        continue;
+      // double blueValue550nm = 8;
+      case 8:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 65)) {
+          bluevalue550nm_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
+          ptr += sizeof(double);
+        } else
+          goto handle_unusual;
+        continue;
+      // double blueValue650nm = 9;
+      case 9:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 73)) {
+          bluevalue650nm_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
+          ptr += sizeof(double);
+        } else
+          goto handle_unusual;
+        continue;
+      default:
+        goto handle_unusual;
+    }  // switch
+  handle_unusual:
+    if ((tag == 0) || ((tag & 7) == 4)) {
+      CHK_(ptr);
+      ctx->SetLastTag(tag);
+      goto message_done;
+    }
+    ptr = UnknownFieldParse(
+        tag,
+        _internal_metadata_.mutable_unknown_fields<std::string>(),
+        ptr, ctx);
+    CHK_(ptr != nullptr);
+  }  // while
+message_done:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto message_done;
+#undef CHK_
+}
+
+::PROTOBUF_NAMESPACE_ID::uint8* QuantumEfficiency::_InternalSerialize(
+    ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:cielimMessage.QuantumEfficiency)
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // double redValue450nm = 1;
+  if (!(this->_internal_redvalue450nm() <= 0 && this->_internal_redvalue450nm() >= 0)) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(1, this->_internal_redvalue450nm(), target);
+  }
+
+  // double redValue550nm = 2;
+  if (!(this->_internal_redvalue550nm() <= 0 && this->_internal_redvalue550nm() >= 0)) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(2, this->_internal_redvalue550nm(), target);
+  }
+
+  // double redValue650nm = 3;
+  if (!(this->_internal_redvalue650nm() <= 0 && this->_internal_redvalue650nm() >= 0)) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(3, this->_internal_redvalue650nm(), target);
+  }
+
+  // double greenValue450nm = 4;
+  if (!(this->_internal_greenvalue450nm() <= 0 && this->_internal_greenvalue450nm() >= 0)) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(4, this->_internal_greenvalue450nm(), target);
+  }
+
+  // double greenValue550nm = 5;
+  if (!(this->_internal_greenvalue550nm() <= 0 && this->_internal_greenvalue550nm() >= 0)) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(5, this->_internal_greenvalue550nm(), target);
+  }
+
+  // double greenValue650nm = 6;
+  if (!(this->_internal_greenvalue650nm() <= 0 && this->_internal_greenvalue650nm() >= 0)) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(6, this->_internal_greenvalue650nm(), target);
+  }
+
+  // double blueValue450nm = 7;
+  if (!(this->_internal_bluevalue450nm() <= 0 && this->_internal_bluevalue450nm() >= 0)) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(7, this->_internal_bluevalue450nm(), target);
+  }
+
+  // double blueValue550nm = 8;
+  if (!(this->_internal_bluevalue550nm() <= 0 && this->_internal_bluevalue550nm() >= 0)) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(8, this->_internal_bluevalue550nm(), target);
+  }
+
+  // double blueValue650nm = 9;
+  if (!(this->_internal_bluevalue650nm() <= 0 && this->_internal_bluevalue650nm() >= 0)) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(9, this->_internal_bluevalue650nm(), target);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
+        static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:cielimMessage.QuantumEfficiency)
+  return target;
+}
+
+size_t QuantumEfficiency::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:cielimMessage.QuantumEfficiency)
+  size_t total_size = 0;
+
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // double redValue450nm = 1;
+  if (!(this->_internal_redvalue450nm() <= 0 && this->_internal_redvalue450nm() >= 0)) {
+    total_size += 1 + 8;
+  }
+
+  // double redValue550nm = 2;
+  if (!(this->_internal_redvalue550nm() <= 0 && this->_internal_redvalue550nm() >= 0)) {
+    total_size += 1 + 8;
+  }
+
+  // double redValue650nm = 3;
+  if (!(this->_internal_redvalue650nm() <= 0 && this->_internal_redvalue650nm() >= 0)) {
+    total_size += 1 + 8;
+  }
+
+  // double greenValue450nm = 4;
+  if (!(this->_internal_greenvalue450nm() <= 0 && this->_internal_greenvalue450nm() >= 0)) {
+    total_size += 1 + 8;
+  }
+
+  // double greenValue550nm = 5;
+  if (!(this->_internal_greenvalue550nm() <= 0 && this->_internal_greenvalue550nm() >= 0)) {
+    total_size += 1 + 8;
+  }
+
+  // double greenValue650nm = 6;
+  if (!(this->_internal_greenvalue650nm() <= 0 && this->_internal_greenvalue650nm() >= 0)) {
+    total_size += 1 + 8;
+  }
+
+  // double blueValue450nm = 7;
+  if (!(this->_internal_bluevalue450nm() <= 0 && this->_internal_bluevalue450nm() >= 0)) {
+    total_size += 1 + 8;
+  }
+
+  // double blueValue550nm = 8;
+  if (!(this->_internal_bluevalue550nm() <= 0 && this->_internal_bluevalue550nm() >= 0)) {
+    total_size += 1 + 8;
+  }
+
+  // double blueValue650nm = 9;
+  if (!(this->_internal_bluevalue650nm() <= 0 && this->_internal_bluevalue650nm() >= 0)) {
+    total_size += 1 + 8;
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    total_size += _internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size();
+  }
+  int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
+}
+
+void QuantumEfficiency::CheckTypeAndMergeFrom(
+    const ::PROTOBUF_NAMESPACE_ID::MessageLite& from) {
+  MergeFrom(*::PROTOBUF_NAMESPACE_ID::internal::DownCast<const QuantumEfficiency*>(
+      &from));
+}
+
+void QuantumEfficiency::MergeFrom(const QuantumEfficiency& from) {
+// @@protoc_insertion_point(class_specific_merge_from_start:cielimMessage.QuantumEfficiency)
+  GOOGLE_DCHECK_NE(&from, this);
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  if (!(from._internal_redvalue450nm() <= 0 && from._internal_redvalue450nm() >= 0)) {
+    _internal_set_redvalue450nm(from._internal_redvalue450nm());
+  }
+  if (!(from._internal_redvalue550nm() <= 0 && from._internal_redvalue550nm() >= 0)) {
+    _internal_set_redvalue550nm(from._internal_redvalue550nm());
+  }
+  if (!(from._internal_redvalue650nm() <= 0 && from._internal_redvalue650nm() >= 0)) {
+    _internal_set_redvalue650nm(from._internal_redvalue650nm());
+  }
+  if (!(from._internal_greenvalue450nm() <= 0 && from._internal_greenvalue450nm() >= 0)) {
+    _internal_set_greenvalue450nm(from._internal_greenvalue450nm());
+  }
+  if (!(from._internal_greenvalue550nm() <= 0 && from._internal_greenvalue550nm() >= 0)) {
+    _internal_set_greenvalue550nm(from._internal_greenvalue550nm());
+  }
+  if (!(from._internal_greenvalue650nm() <= 0 && from._internal_greenvalue650nm() >= 0)) {
+    _internal_set_greenvalue650nm(from._internal_greenvalue650nm());
+  }
+  if (!(from._internal_bluevalue450nm() <= 0 && from._internal_bluevalue450nm() >= 0)) {
+    _internal_set_bluevalue450nm(from._internal_bluevalue450nm());
+  }
+  if (!(from._internal_bluevalue550nm() <= 0 && from._internal_bluevalue550nm() >= 0)) {
+    _internal_set_bluevalue550nm(from._internal_bluevalue550nm());
+  }
+  if (!(from._internal_bluevalue650nm() <= 0 && from._internal_bluevalue650nm() >= 0)) {
+    _internal_set_bluevalue650nm(from._internal_bluevalue650nm());
+  }
+  _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+}
+
+void QuantumEfficiency::CopyFrom(const QuantumEfficiency& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:cielimMessage.QuantumEfficiency)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool QuantumEfficiency::IsInitialized() const {
+  return true;
+}
+
+void QuantumEfficiency::InternalSwap(QuantumEfficiency* other) {
+  using std::swap;
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(QuantumEfficiency, bluevalue650nm_)
+      + sizeof(QuantumEfficiency::bluevalue650nm_)
+      - PROTOBUF_FIELD_OFFSET(QuantumEfficiency, redvalue450nm_)>(
+          reinterpret_cast<char*>(&redvalue450nm_),
+          reinterpret_cast<char*>(&other->redvalue450nm_));
+}
+
+std::string QuantumEfficiency::GetTypeName() const {
+  return "cielimMessage.QuantumEfficiency";
+}
+
+
+// ===================================================================
+
 class CameraModel::_Internal {
  public:
   static const ::cielimMessage::RenderingModel& renderparameters(const CameraModel* msg);
+  static const ::cielimMessage::QuantumEfficiency& qecurve(const CameraModel* msg);
 };
 
 const ::cielimMessage::RenderingModel&
 CameraModel::_Internal::renderparameters(const CameraModel* msg) {
   return *msg->renderparameters_;
+}
+const ::cielimMessage::QuantumEfficiency&
+CameraModel::_Internal::qecurve(const CameraModel* msg) {
+  return *msg->qecurve_;
 }
 CameraModel::CameraModel(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
@@ -2375,9 +2770,14 @@ CameraModel::CameraModel(const CameraModel& from)
   } else {
     renderparameters_ = nullptr;
   }
+  if (from._internal_has_qecurve()) {
+    qecurve_ = new ::cielimMessage::QuantumEfficiency(*from.qecurve_);
+  } else {
+    qecurve_ = nullptr;
+  }
   ::memcpy(&cameraid_, &from.cameraid_,
-    static_cast<size_t>(reinterpret_cast<char*>(&systemgain_) -
-    reinterpret_cast<char*>(&cameraid_)) + sizeof(systemgain_));
+    static_cast<size_t>(reinterpret_cast<char*>(&gamma_) -
+    reinterpret_cast<char*>(&cameraid_)) + sizeof(gamma_));
   // @@protoc_insertion_point(copy_constructor:cielimMessage.CameraModel)
 }
 
@@ -2385,8 +2785,8 @@ void CameraModel::SharedCtor() {
 parentname_.UnsafeSetDefault(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
 ::memset(reinterpret_cast<char*>(this) + static_cast<size_t>(
     reinterpret_cast<char*>(&renderparameters_) - reinterpret_cast<char*>(this)),
-    0, static_cast<size_t>(reinterpret_cast<char*>(&systemgain_) -
-    reinterpret_cast<char*>(&renderparameters_)) + sizeof(systemgain_));
+    0, static_cast<size_t>(reinterpret_cast<char*>(&gamma_) -
+    reinterpret_cast<char*>(&renderparameters_)) + sizeof(gamma_));
 }
 
 CameraModel::~CameraModel() {
@@ -2400,6 +2800,7 @@ inline void CameraModel::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
   parentname_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   if (this != internal_default_instance()) delete renderparameters_;
+  if (this != internal_default_instance()) delete qecurve_;
 }
 
 void CameraModel::ArenaDtor(void* object) {
@@ -2427,9 +2828,13 @@ void CameraModel::Clear() {
     delete renderparameters_;
   }
   renderparameters_ = nullptr;
+  if (GetArenaForAllocation() == nullptr && qecurve_ != nullptr) {
+    delete qecurve_;
+  }
+  qecurve_ = nullptr;
   ::memset(&cameraid_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&systemgain_) -
-      reinterpret_cast<char*>(&cameraid_)) + sizeof(systemgain_));
+      reinterpret_cast<char*>(&gamma_) -
+      reinterpret_cast<char*>(&cameraid_)) + sizeof(gamma_));
   _internal_metadata_.Clear<std::string>();
 }
 
@@ -2557,6 +2962,62 @@ const char* CameraModel::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID
         } else
           goto handle_unusual;
         continue;
+      // double apertureRadius = 14;
+      case 14:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 113)) {
+          apertureradius_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
+          ptr += sizeof(double);
+        } else
+          goto handle_unusual;
+        continue;
+      // double sensorWidth = 15;
+      case 15:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 121)) {
+          sensorwidth_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
+          ptr += sizeof(double);
+        } else
+          goto handle_unusual;
+        continue;
+      // double sensorHeight = 16;
+      case 16:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 129)) {
+          sensorheight_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
+          ptr += sizeof(double);
+        } else
+          goto handle_unusual;
+        continue;
+      // double integrationWeightFactor = 17;
+      case 17:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 137)) {
+          integrationweightfactor_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
+          ptr += sizeof(double);
+        } else
+          goto handle_unusual;
+        continue;
+      // double fullWellCapacity = 18;
+      case 18:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 145)) {
+          fullwellcapacity_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
+          ptr += sizeof(double);
+        } else
+          goto handle_unusual;
+        continue;
+      // double gamma = 19;
+      case 19:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 153)) {
+          gamma_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
+          ptr += sizeof(double);
+        } else
+          goto handle_unusual;
+        continue;
+      // .cielimMessage.QuantumEfficiency qeCurve = 20;
+      case 20:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 162)) {
+          ptr = ctx->ParseMessage(_internal_mutable_qecurve(), ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
       default:
         goto handle_unusual;
     }  // switch
@@ -2670,6 +3131,50 @@ failure:
         13, _Internal::renderparameters(this), target, stream);
   }
 
+  // double apertureRadius = 14;
+  if (!(this->_internal_apertureradius() <= 0 && this->_internal_apertureradius() >= 0)) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(14, this->_internal_apertureradius(), target);
+  }
+
+  // double sensorWidth = 15;
+  if (!(this->_internal_sensorwidth() <= 0 && this->_internal_sensorwidth() >= 0)) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(15, this->_internal_sensorwidth(), target);
+  }
+
+  // double sensorHeight = 16;
+  if (!(this->_internal_sensorheight() <= 0 && this->_internal_sensorheight() >= 0)) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(16, this->_internal_sensorheight(), target);
+  }
+
+  // double integrationWeightFactor = 17;
+  if (!(this->_internal_integrationweightfactor() <= 0 && this->_internal_integrationweightfactor() >= 0)) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(17, this->_internal_integrationweightfactor(), target);
+  }
+
+  // double fullWellCapacity = 18;
+  if (!(this->_internal_fullwellcapacity() <= 0 && this->_internal_fullwellcapacity() >= 0)) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(18, this->_internal_fullwellcapacity(), target);
+  }
+
+  // double gamma = 19;
+  if (!(this->_internal_gamma() <= 0 && this->_internal_gamma() >= 0)) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(19, this->_internal_gamma(), target);
+  }
+
+  // .cielimMessage.QuantumEfficiency qeCurve = 20;
+  if (this->_internal_has_qecurve()) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(
+        20, _Internal::qecurve(this), target, stream);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
         static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
@@ -2751,6 +3256,13 @@ size_t CameraModel::ByteSizeLong() const {
         *renderparameters_);
   }
 
+  // .cielimMessage.QuantumEfficiency qeCurve = 20;
+  if (this->_internal_has_qecurve()) {
+    total_size += 2 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+        *qecurve_);
+  }
+
   // int64 cameraId = 1;
   if (this->_internal_cameraid() != 0) {
     total_size += ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int64SizePlusOne(this->_internal_cameraid());
@@ -2786,6 +3298,36 @@ size_t CameraModel::ByteSizeLong() const {
     total_size += 1 + 8;
   }
 
+  // double apertureRadius = 14;
+  if (!(this->_internal_apertureradius() <= 0 && this->_internal_apertureradius() >= 0)) {
+    total_size += 1 + 8;
+  }
+
+  // double sensorWidth = 15;
+  if (!(this->_internal_sensorwidth() <= 0 && this->_internal_sensorwidth() >= 0)) {
+    total_size += 1 + 8;
+  }
+
+  // double sensorHeight = 16;
+  if (!(this->_internal_sensorheight() <= 0 && this->_internal_sensorheight() >= 0)) {
+    total_size += 2 + 8;
+  }
+
+  // double integrationWeightFactor = 17;
+  if (!(this->_internal_integrationweightfactor() <= 0 && this->_internal_integrationweightfactor() >= 0)) {
+    total_size += 2 + 8;
+  }
+
+  // double fullWellCapacity = 18;
+  if (!(this->_internal_fullwellcapacity() <= 0 && this->_internal_fullwellcapacity() >= 0)) {
+    total_size += 2 + 8;
+  }
+
+  // double gamma = 19;
+  if (!(this->_internal_gamma() <= 0 && this->_internal_gamma() >= 0)) {
+    total_size += 2 + 8;
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     total_size += _internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size();
   }
@@ -2816,6 +3358,9 @@ void CameraModel::MergeFrom(const CameraModel& from) {
   if (from._internal_has_renderparameters()) {
     _internal_mutable_renderparameters()->::cielimMessage::RenderingModel::MergeFrom(from._internal_renderparameters());
   }
+  if (from._internal_has_qecurve()) {
+    _internal_mutable_qecurve()->::cielimMessage::QuantumEfficiency::MergeFrom(from._internal_qecurve());
+  }
   if (from._internal_cameraid() != 0) {
     _internal_set_cameraid(from._internal_cameraid());
   }
@@ -2836,6 +3381,24 @@ void CameraModel::MergeFrom(const CameraModel& from) {
   }
   if (!(from._internal_systemgain() <= 0 && from._internal_systemgain() >= 0)) {
     _internal_set_systemgain(from._internal_systemgain());
+  }
+  if (!(from._internal_apertureradius() <= 0 && from._internal_apertureradius() >= 0)) {
+    _internal_set_apertureradius(from._internal_apertureradius());
+  }
+  if (!(from._internal_sensorwidth() <= 0 && from._internal_sensorwidth() >= 0)) {
+    _internal_set_sensorwidth(from._internal_sensorwidth());
+  }
+  if (!(from._internal_sensorheight() <= 0 && from._internal_sensorheight() >= 0)) {
+    _internal_set_sensorheight(from._internal_sensorheight());
+  }
+  if (!(from._internal_integrationweightfactor() <= 0 && from._internal_integrationweightfactor() >= 0)) {
+    _internal_set_integrationweightfactor(from._internal_integrationweightfactor());
+  }
+  if (!(from._internal_fullwellcapacity() <= 0 && from._internal_fullwellcapacity() >= 0)) {
+    _internal_set_fullwellcapacity(from._internal_fullwellcapacity());
+  }
+  if (!(from._internal_gamma() <= 0 && from._internal_gamma() >= 0)) {
+    _internal_set_gamma(from._internal_gamma());
   }
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
 }
@@ -2866,8 +3429,8 @@ void CameraModel::InternalSwap(CameraModel* other) {
       &other->parentname_, rhs_arena
   );
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(CameraModel, systemgain_)
-      + sizeof(CameraModel::systemgain_)
+      PROTOBUF_FIELD_OFFSET(CameraModel, gamma_)
+      + sizeof(CameraModel::gamma_)
       - PROTOBUF_FIELD_OFFSET(CameraModel, renderparameters_)>(
           reinterpret_cast<char*>(&renderparameters_),
           reinterpret_cast<char*>(&other->renderparameters_));
@@ -3257,6 +3820,9 @@ template<> PROTOBUF_NOINLINE ::cielimMessage::Spacecraft* Arena::CreateMaybeMess
 }
 template<> PROTOBUF_NOINLINE ::cielimMessage::RenderingModel* Arena::CreateMaybeMessage< ::cielimMessage::RenderingModel >(Arena* arena) {
   return Arena::CreateMessageInternal< ::cielimMessage::RenderingModel >(arena);
+}
+template<> PROTOBUF_NOINLINE ::cielimMessage::QuantumEfficiency* Arena::CreateMaybeMessage< ::cielimMessage::QuantumEfficiency >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::cielimMessage::QuantumEfficiency >(arena);
 }
 template<> PROTOBUF_NOINLINE ::cielimMessage::CameraModel* Arena::CreateMaybeMessage< ::cielimMessage::CameraModel >(Arena* arena) {
   return Arena::CreateMessageInternal< ::cielimMessage::CameraModel >(arena);

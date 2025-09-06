@@ -10,25 +10,17 @@
 
 #include <random>
 
-#include "Components/SceneCaptureComponent2D.h"
 #include "ImageUtils.h"
 #include "Kismet/KismetRenderingLibrary.h"
 #include "RHIGPUReadback.h"
 #include "ScreenPass.h"
 
 #include "cielim/Shaders/CenBrightReduce.h"
-#include "cielim/Shaders/CosmicRays.h"
-#include "cielim/Shaders/GaussianPSF.h"
-#include "cielim/Shaders/ReadNoise.h"
-#include "cielim/Shaders/SignalGain.h"
+#include "cielim/Shaders/GammaCorrect.h"
 #include "cielim/Utilities/Logging/CielimLoggingMacros.h"
 
-DECLARE_GPU_STAT_NAMED(CielimCobReductionCalculations, TEXT("Cielim Center of Brightness Reduction Calculations Stat"));
-DECLARE_GPU_STAT_NAMED(CielimPostProcessCorruptionPasses, TEXT("Cielim Post-Process Corruption Passes Stat"));
-DECLARE_GPU_STAT_NAMED(GaussianPSF, TEXT("Gaussian PSF Pass Stat"));
-DECLARE_GPU_STAT_NAMED(CosmicRays, TEXT("Cosmic Rays Pass Stat"));
-DECLARE_GPU_STAT_NAMED(ReadNoise, TEXT("Read Noise Pass Stat"));
-DECLARE_GPU_STAT_NAMED(SignalGain, TEXT("Signal Gain Pass Stat"));
+DECLARE_GPU_STAT_NAMED(CobReductionCalculations, TEXT("Center of Brightness Reduction Calculations"));
+DECLARE_GPU_STAT_NAMED(GammaCorrection, TEXT("Gamma Correction"));
 
 ACameraModel::ACameraModel()
 {
@@ -37,21 +29,92 @@ ACameraModel::ACameraModel()
 		FMatrix(FPlane(1.0f, 0, 0, 0), FPlane(0, 1.0f, 0, 0), FPlane(0, 0, 0, 1), FPlane(0, 0, 10.0f, 0));
 
 	// Set up the SceneCaptureComponent2D and its default settings
-	this->SceneCaptureComponent2D = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCaptureComponent2D"));
+	this->SceneCaptureComponent2D = CreateDefaultSubobject<UCameraViewCaptureComponent2D>(TEXT("CaptureComponent"));
 	this->SceneCaptureComponent2D->TextureTarget = NewObject<UTextureRenderTarget2D>(this, TEXT("RT_Spacecraft"));
-	this->SceneCaptureComponent2D->TextureTarget->RenderTargetFormat = RTF_RGBA8;
-	this->SceneCaptureComponent2D->TextureTarget->InitAutoFormat(2560, 1440);
+	this->SceneCaptureComponent2D->TextureTarget->InitCustomFormat(2560, 1440, PF_FloatRGBA, true);
 	this->SceneCaptureComponent2D->TextureTarget->UpdateResourceImmediate();
 	this->SceneCaptureComponent2D->bCaptureEveryFrame = false;
 	this->SceneCaptureComponent2D->bCaptureOnMovement = false;
 	this->SceneCaptureComponent2D->bUseCustomProjectionMatrix = true;
 	this->SceneCaptureComponent2D->CustomProjectionMatrix = ProjectionMatrix;
 
+	// Disable exposure and ensure we're getting the raw linear HDR color
+	this->SceneCaptureComponent2D->CaptureSource = SCS_FinalColorHDR;
+	this->SceneCaptureComponent2D->PostProcessBlendWeight = 0.0f;
+	this->SceneCaptureComponent2D->ShowFlags.SetTonemapper(false);
+
+	// Disable SSAO to improve performance given deep space doesn't have ambient light sources
+	this->SceneCaptureComponent2D->ShowFlags.SetAmbientOcclusion(false);
+
 	this->RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
 
 	this->Body = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Body"));
 	this->Body->SetupAttachment(RootComponent);
 	this->SceneCaptureComponent2D->SetupAttachment(Body);
+
+	// Choose default camera parameters
+
+	this->CameraParams.ApertureRadius = 0.005f;
+	this->CameraParams.FocalLength = 0.16f;
+	this->CameraParams.SensorWidth = 0.036f;
+	this->CameraParams.SensorHeight = 0.024f;
+	this->CameraParams.ExposureTime = 1e-3f;
+	this->CameraParams.QuECurveR = FVector3f::One();
+	this->CameraParams.QuECurveG = FVector3f::One();
+	this->CameraParams.QuECurveB = FVector3f::One();
+	this->CameraParams.CorrectionFactor = 1.0f;
+	this->CameraParams.FullWellCapacity = 50000.0f;
+	this->CameraParams.Gamma = 2.2f;
+}
+
+void ACameraModel::SetCameraParameters(const cielimMessage::CameraModel &CameraModel)
+{
+	// Set camera parameters
+
+	if (CameraModel.apertureradius() > 0.0f)
+		this->CameraParams.ApertureRadius = CameraModel.apertureradius();
+
+	if (CameraModel.focallength() > 0.0f)
+		this->CameraParams.FocalLength = CameraModel.focallength();
+
+	if (CameraModel.sensorwidth() > 0.0f)
+		this->CameraParams.SensorWidth = CameraModel.sensorwidth();
+
+	if (CameraModel.sensorheight() > 0.0f)
+		this->CameraParams.SensorHeight = CameraModel.sensorheight();
+
+	if (CameraModel.exposuretime() > 0.0f)
+		this->CameraParams.ExposureTime = CameraModel.exposuretime();
+
+	if (CameraModel.integrationweightfactor() > 0.0f)
+		this->CameraParams.CorrectionFactor = CameraModel.integrationweightfactor();
+
+	if (CameraModel.fullwellcapacity() > 0.0f)
+		this->CameraParams.FullWellCapacity = CameraModel.fullwellcapacity();
+
+	if (CameraModel.gamma() > 0.0f)
+		this->CameraParams.Gamma = CameraModel.gamma();
+
+	if (CameraModel.has_qecurve())
+	{
+		const auto QuECurve = CameraModel.qecurve();
+		CameraParams.QuECurveR.Set(QuECurve.redvalue650nm(), QuECurve.redvalue550nm(), QuECurve.redvalue450nm());
+		CameraParams.QuECurveG.Set(QuECurve.greenvalue650nm(), QuECurve.greenvalue550nm(), QuECurve.greenvalue450nm());
+		CameraParams.QuECurveB.Set(QuECurve.bluevalue650nm(), QuECurve.bluevalue550nm(), QuECurve.bluevalue450nm());
+	}
+
+	// Set image corruption parameters
+
+	auto CosmicRays = GetCosmicRays(CameraModel.renderparameters().cosmicraystddeviation());
+
+	this->CorruptionParams.KernelWidth = 7;
+	this->CorruptionParams.Sigma = CameraModel.pointspreadfunction();
+	this->CorruptionParams.NumCosmicRays = CosmicRays.Get<0>();
+	this->CorruptionParams.StartPoints = CosmicRays.Get<1>();
+	this->CorruptionParams.EndPoints = CosmicRays.Get<2>();
+	this->CorruptionParams.LineWidths = CosmicRays.Get<3>();
+	this->CorruptionParams.ReadNoiseSigma = CameraModel.readnoise();
+	this->CorruptionParams.SignalGain = CameraModel.systemgain();
 }
 
 void ACameraModel::BeginPlay() { Super::BeginPlay(); }
@@ -64,44 +127,97 @@ void ACameraModel::SaveImageToDisk(const FString &FilePath, const FString &Filen
 	UKismetRenderingLibrary::ExportRenderTarget(this, this->SceneCaptureComponent2D->TextureTarget, FilePath, Filename);
 }
 
-void ACameraModel::GetCorruptedImage(TArray64<uint8> &ImageData, TOptional<FVector2D> &CobCoordinates,
-									 const double PointSpread, const double ReadNoise, const double SystemGain,
-									 const double CosmicRaysStdDev) const
+void ACameraModel::GetImageData(TArray64<uint8> &ImageData, TOptional<FVector2D> &CobCoordinates)
+{
+	// Get initial diagnostic data
+	this->GetImageData(CobCoordinates);
+
+	// Get final render
+	this->GetImageData(ImageData);
+}
+
+void ACameraModel::GetImageData(TArray64<uint8> &ImageData)
 {
 	FImage Image;
 
-	auto CosmicRays = GetCosmicRays(CosmicRaysStdDev);
+	this->CameraParams.bIsDiagnosticRun = false;
 
-	uint32 NumCosmicRays = CosmicRays.Get<0>();
-	TResourceArray<FVector2f> StartPoints = CosmicRays.Get<1>();
-	TResourceArray<FVector2f> EndPoints = CosmicRays.Get<2>();
-	TResourceArray<float> LineWidths = CosmicRays.Get<3>();
+	this->SceneCaptureComponent2D->CaptureScene();
+	this->ApplyGammaCorrection();
 
-	FImageCorruptionParams CorruptionParams = {7,
-											   PointSpread,
-											   NumCosmicRays,
-											   StartPoints,
-											   EndPoints,
-											   LineWidths,
-											   static_cast<float>(ReadNoise),
-											   static_cast<float>(SystemGain)};
-
-	CobCoordinates = this->GetCenterOfBrightness(this->SceneCaptureComponent2D->TextureTarget);
-
-	this->ApplyPostProcessShaders(this->SceneCaptureComponent2D->TextureTarget, &CorruptionParams);
-
+	// Copy the final render from the render target to Image
 	verify(FImageUtils::GetRenderTargetImage(this->SceneCaptureComponent2D->TextureTarget, Image));
 
-	// Take modified image data from Image and copy to ImageData as PNG
+	// Take modified image data from Image and convert to PNG and copy to ImageData
 	verify(FImageUtils::CompressImage(ImageData, TEXT("PNG"), Image));
 }
 
-TOptional<FVector2d> ACameraModel::GetCenterOfBrightness(UTextureRenderTarget2D *RenderTarget)
+void ACameraModel::GetImageData(TOptional<FVector2D> &CobCoordinates)
 {
-	TOptional<FVector2D> Coordinates; // Equals default if image has no center of brightness
+	this->CameraParams.bIsDiagnosticRun = true;
+
+	this->SceneCaptureComponent2D->CaptureScene();
+
+	CobCoordinates = this->GetCenterOfBrightness();
+}
+
+void ACameraModel::ApplyGammaCorrection() const
+{
+	UTextureRenderTarget2D *RenderTarget = this->SceneCaptureComponent2D->TextureTarget;
 
 	if (!RenderTarget)
-		return Coordinates;
+		return;
+
+	FTextureRenderTargetResource *RTResource = RenderTarget->GameThread_GetRenderTargetResource();
+
+	float InvGamma = 1.0f / FMath::Max(this->CameraParams.Gamma, 1e-2f);
+
+	ENQUEUE_RENDER_COMMAND(GammaCorrection)
+	(
+		[RTResource, InvGamma](FRHICommandListImmediate &RHICmdList)
+		{
+			FRDGBuilder GraphBuilder(RHICmdList);
+
+			const FRDGTextureRef RenderTargetBase =
+				RegisterExternalTexture(GraphBuilder, RTResource->GetRenderTargetTexture(), TEXT("RenderTarget"));
+
+			// Temp input texture
+			const FRDGTextureRef TextureIn =
+				GraphBuilder.CreateTexture(RenderTargetBase->Desc, TEXT("Temp Input Texture"));
+
+			// Init input texture as current scene color
+			AddCopyTexturePass(GraphBuilder, RenderTargetBase, TextureIn);
+
+			const FScreenPassTextureViewport Viewport(TextureIn);
+
+			FGammaCorrect::FParameters *GammaParams = GraphBuilder.AllocParameters<FGammaCorrect::FParameters>();
+			GammaParams->InputTexture = TextureIn;
+			GammaParams->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
+			GammaParams->InvGamma = InvGamma;
+			GammaParams->RenderTargets[0] = FRenderTargetBinding(RenderTargetBase, ERenderTargetLoadAction::EClear);
+
+			{
+				RDG_GPU_STAT_SCOPE(GraphBuilder, GammaCorrection);
+				RDG_EVENT_SCOPE(GraphBuilder, "Gamma Correction");
+
+				const TShaderMapRef<FGammaCorrect> GammaCorrectShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+
+				AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply Gamma Correction"), GMaxRHIFeatureLevel, Viewport,
+								  Viewport, GammaCorrectShader, GammaParams);
+			}
+
+			GraphBuilder.Execute();
+		});
+}
+
+TOptional<FVector2D> ACameraModel::GetCenterOfBrightness() const
+{
+	TOptional<FVector2D> CobCoords;
+
+	UTextureRenderTarget2D *RenderTarget = this->SceneCaptureComponent2D->TextureTarget;
+
+	if (!RenderTarget)
+		return CobCoords;
 
 	FTextureRenderTargetResource *RTResource = RenderTarget->GameThread_GetRenderTargetResource();
 	FRHIGPUBufferReadback Readback(TEXT("COB Reduction Calculations Readback"));
@@ -135,8 +251,8 @@ TOptional<FVector2d> ACameraModel::GetCenterOfBrightness(UTextureRenderTarget2D 
 			CobParams->PartialSumBuffer = GraphBuilder.CreateUAV(PartialSumsBuffer, PF_A32B32G32R32F);
 
 			{
-				RDG_GPU_STAT_SCOPE(GraphBuilder, CielimCobReductionCalculations);
-				RDG_EVENT_SCOPE(GraphBuilder, "Cielim Center of Brightness GPU Reduction Calculations");
+				RDG_GPU_STAT_SCOPE(GraphBuilder, CobReductionCalculations);
+				RDG_EVENT_SCOPE(GraphBuilder, "Center of Brightness GPU Reduction Calculations");
 
 				const TShaderMapRef<FCenBrightReduce> CenBrightReduceShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 
@@ -156,7 +272,7 @@ TOptional<FVector2d> ACameraModel::GetCenterOfBrightness(UTextureRenderTarget2D 
 
 	ENQUEUE_RENDER_COMMAND(COB_Readback)
 	(
-		[&Readback, &Coordinates, NumGroups](FRHICommandListImmediate &RHICmdList)
+		[&Readback, &CobCoords, NumGroups](FRHICommandListImmediate &RHICmdList)
 		{
 			const double StartTime = FPlatformTime::Seconds();
 
@@ -191,7 +307,7 @@ TOptional<FVector2d> ACameraModel::GetCenterOfBrightness(UTextureRenderTarget2D 
 				{
 					const double CenterX = XLuminanceSum / LuminanceSum;
 					const double CenterY = YLuminanceSum / LuminanceSum;
-					Coordinates = FVector2D(CenterX, CenterY);
+					CobCoords = FVector2D(CenterX, CenterY);
 				}
 
 				Readback.Unlock();
@@ -201,170 +317,10 @@ TOptional<FVector2d> ACameraModel::GetCenterOfBrightness(UTextureRenderTarget2D 
 	Fence.BeginFence();
 	Fence.Wait();
 
-	if (Coordinates.IsSet())
-		UE_LOG(LogCielim, Display, TEXT("Center of Brightness: %f, %f"), Coordinates->X, Coordinates->Y);
+	if (CobCoords.IsSet())
+		UE_LOG(LogCielim, Display, TEXT("Center of Brightness: %f, %f"), CobCoords->X, CobCoords->Y);
 
-	return Coordinates;
-}
-
-void ACameraModel::ApplyPostProcessShaders(UTextureRenderTarget2D *RenderTarget,
-										   FImageCorruptionParams *CorruptionParams)
-{
-	if (!RenderTarget)
-		return;
-
-	FTextureRenderTargetResource *RTResource = RenderTarget->GameThread_GetRenderTargetResource();
-
-	ENQUEUE_RENDER_COMMAND(ApplyPostProcess)
-	(
-		[RTResource, CorruptionParams](FRHICommandListImmediate &RHICmdList)
-		{
-			FRDGBuilder GraphBuilder(RHICmdList);
-
-			{
-				RDG_GPU_STAT_SCOPE(GraphBuilder, CielimPostProcessCorruptionPasses);
-				RDG_EVENT_SCOPE(GraphBuilder, "Cielim Post-Process Corruption Passes");
-
-				const FRDGTextureRef RenderTargetBase = RegisterExternalTexture(
-					GraphBuilder, RTResource->GetRenderTargetTexture(), TEXT("RenderTargetBase"));
-
-				// Intermediates used for texture ping-pong
-				FRDGTextureRef TempTextureIn =
-					GraphBuilder.CreateTexture(RenderTargetBase->Desc, TEXT("Temp Input Texture"));
-				FRDGTextureRef TempTextureOut =
-					GraphBuilder.CreateTexture(RenderTargetBase->Desc, TEXT("Temp Output Texture"));
-
-				AddCopyTexturePass(GraphBuilder, RenderTargetBase, TempTextureIn);
-
-				const FScreenPassTextureViewport Viewport(RenderTargetBase);
-
-				if (CorruptionParams->Sigma != 0.0f)
-				{
-					RDG_GPU_STAT_SCOPE(GraphBuilder, GaussianPSF);
-					RDG_EVENT_SCOPE(GraphBuilder, "GaussianPSF Pass");
-
-					// GaussianPSF Horizontal
-
-					FGaussianPSF::FPermutationDomain PermutationDomain;
-					PermutationDomain.Set<FGaussianPSF::FHorizontal>(true);
-
-					FGaussianPSF::FParameters *PSFParamsH = GraphBuilder.AllocParameters<FGaussianPSF::FParameters>();
-					PSFParamsH->InputTexture = TempTextureIn;
-					PSFParamsH->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
-					PSFParamsH->TexelSize = FVector2f(1.0f / Viewport.Rect.Width(), 1.0f / Viewport.Rect.Height());
-					PSFParamsH->KernelRadius = (CorruptionParams->KernelWidth - 1.0f) / 2.0f;
-					PSFParamsH->Sigma = CorruptionParams->Sigma;
-					PSFParamsH->RenderTargets[0] =
-						FRenderTargetBinding(TempTextureOut, ERenderTargetLoadAction::ENoAction);
-
-					const TShaderMapRef<FGaussianPSF> GaussianPSFShaderH(GetGlobalShaderMap(GMaxRHIFeatureLevel),
-																		 PermutationDomain);
-
-					AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply GaussianPSF H"), GMaxRHIFeatureLevel,
-									  Viewport, Viewport, GaussianPSFShaderH, PSFParamsH);
-
-					Swap(TempTextureIn, TempTextureOut);
-
-					// GaussianPSF Vertical
-
-					PermutationDomain.Set<FGaussianPSF::FHorizontal>(false);
-
-					const TShaderMapRef<FGaussianPSF> GaussianPSFShaderV(GetGlobalShaderMap(GMaxRHIFeatureLevel),
-																		 PermutationDomain);
-
-					FGaussianPSF::FParameters *PSFParamsV = GraphBuilder.AllocParameters<FGaussianPSF::FParameters>();
-					PSFParamsV->InputTexture = TempTextureIn;
-					PSFParamsV->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
-					PSFParamsV->TexelSize = FVector2f(1.0f / Viewport.Rect.Width(), 1.0f / Viewport.Rect.Height());
-					PSFParamsV->KernelRadius = (CorruptionParams->KernelWidth - 1.0f) / 2.0f;
-					PSFParamsV->Sigma = CorruptionParams->Sigma;
-					PSFParamsV->RenderTargets[0] =
-						FRenderTargetBinding(TempTextureOut, ERenderTargetLoadAction::ENoAction);
-
-					AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply GaussianPSF V"), GMaxRHIFeatureLevel,
-									  Viewport, Viewport, GaussianPSFShaderV, PSFParamsV);
-
-					Swap(TempTextureIn, TempTextureOut);
-				}
-
-				if (CorruptionParams->NumCosmicRays != 0.0f)
-				{
-					// Cosmic Rays
-
-					RDG_GPU_STAT_SCOPE(GraphBuilder, CosmicRays);
-					RDG_EVENT_SCOPE(GraphBuilder, "Cosmic Rays Pass");
-
-					const FRDGBufferRef StartBuffer = CreateStructuredBuffer<FVector2f>(
-						GraphBuilder, TEXT("StartPoints"), CorruptionParams->StartPoints);
-					const FRDGBufferRef EndBuffer =
-						CreateStructuredBuffer<FVector2f>(GraphBuilder, TEXT("EndPoints"), CorruptionParams->EndPoints);
-					const FRDGBufferRef WidthBuffer =
-						CreateStructuredBuffer<float>(GraphBuilder, TEXT("LineWidths"), CorruptionParams->LineWidths);
-
-					FCosmicRays::FParameters *RayParams = GraphBuilder.AllocParameters<FCosmicRays::FParameters>();
-					RayParams->InputTexture = TempTextureIn;
-					RayParams->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
-					RayParams->NumRays = CorruptionParams->NumCosmicRays;
-					RayParams->StartPoints = GraphBuilder.CreateSRV(StartBuffer, PF_G32R32F);
-					RayParams->EndPoints = GraphBuilder.CreateSRV(EndBuffer, PF_G32R32F);
-					RayParams->LineWidths = GraphBuilder.CreateSRV(WidthBuffer, PF_R32_FLOAT);
-					RayParams->RenderTargets[0] =
-						FRenderTargetBinding(TempTextureOut, ERenderTargetLoadAction::ENoAction);
-
-					const TShaderMapRef<FCosmicRays> CosmicRayShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-
-					AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply Cosmic Rays"), GMaxRHIFeatureLevel, Viewport,
-									  Viewport, CosmicRayShader, RayParams);
-
-					Swap(TempTextureIn, TempTextureOut);
-				}
-
-				if (CorruptionParams->ReadNoiseSigma != 0.0f)
-				{
-					RDG_GPU_STAT_SCOPE(GraphBuilder, ReadNoise);
-					RDG_EVENT_SCOPE(GraphBuilder, "Read Noise Pass");
-
-					FReadNoise::FParameters *RnParams = GraphBuilder.AllocParameters<FReadNoise::FParameters>();
-					RnParams->InputTexture = TempTextureIn;
-					RnParams->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
-					RnParams->CurrentTime = static_cast<uint32>(FDateTime::UtcNow().ToUnixTimestamp());
-					RnParams->ReadNoiseSigma = CorruptionParams->ReadNoiseSigma;
-					RnParams->RenderTargets[0] =
-						FRenderTargetBinding(TempTextureOut, ERenderTargetLoadAction::ENoAction);
-
-					const TShaderMapRef<FReadNoise> ReadNoiseShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-
-					AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply Read Noise"), GMaxRHIFeatureLevel, Viewport,
-									  Viewport, ReadNoiseShader, RnParams);
-
-					Swap(TempTextureIn, TempTextureOut);
-				}
-
-				if (CorruptionParams->SignalGain != 0.0f)
-				{
-					RDG_GPU_STAT_SCOPE(GraphBuilder, SignalGain);
-					RDG_EVENT_SCOPE(GraphBuilder, "Signal Gain Pass");
-
-					FSignalGain::FParameters *GainParams = GraphBuilder.AllocParameters<FSignalGain::FParameters>();
-					GainParams->InputTexture = TempTextureIn;
-					GainParams->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
-					GainParams->SignalGain = CorruptionParams->SignalGain;
-					GainParams->RenderTargets[0] =
-						FRenderTargetBinding(TempTextureOut, ERenderTargetLoadAction::ENoAction);
-
-					const TShaderMapRef<FSignalGain> SignalGainShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-
-					AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply Signal Gain"), GMaxRHIFeatureLevel, Viewport,
-									  Viewport, SignalGainShader, GainParams);
-
-					Swap(TempTextureIn, TempTextureOut);
-				}
-
-				AddCopyTexturePass(GraphBuilder, TempTextureIn, RenderTargetBase);
-			}
-
-			GraphBuilder.Execute();
-		});
+	return CobCoords;
 }
 
 // Helper Functions

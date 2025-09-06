@@ -1,6 +1,6 @@
 //=================== Copyright (c) 2025 Laboratory for Atmospheric and Space Physics ===================//
 //
-// Purpose: Pixel shader that applies gain to the entire image.
+// Purpose: Pixel shader that applies gamma correction to the entire image with variable gamma.
 //
 // License: MIT License. See LICENSE file.
 //
@@ -11,11 +11,15 @@
 Texture2D InputTexture;
 SamplerState InputSampler;
 
-float SignalGain;
+float InvGamma;
 
 float4 MainPS(float4 UV : TEXCOORD0) : SV_Target0
 {
-	float4 InputColor = InputTexture.Sample(InputSampler, UV.xy);
+	float4 Color = InputTexture.Sample(InputSampler, UV.xy);
 
-	return float4(InputColor.rgb * SignalGain, InputColor.a);
+	float CorrectedR = pow(Color.r, InvGamma);
+	float CorrectedG = pow(Color.g, InvGamma);
+	float CorrectedB = pow(Color.b, InvGamma);
+
+	return float4(CorrectedR, CorrectedG, CorrectedB, 1.0f);
 }

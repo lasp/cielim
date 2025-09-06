@@ -128,6 +128,8 @@ void ACelestialBody::LoadMesh(const FCelestialBodyMeshModel &Model)
 
 		this->MeshComponent->SetMaterial(0, RegolithMaterial);
 	}
+
+	this->MeshComponent->SetRelativeRotation(this->MeshModel.InertialToBody);
 }
 
 void ACelestialBody::Update(const FVector3d &NewPosition, const FRotator &NewRotation)
