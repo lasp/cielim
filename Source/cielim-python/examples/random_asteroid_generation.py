@@ -1,8 +1,6 @@
 from numpy import ndarray
 
-import context
-from driver import *
-from launcher import *
+from context import driver, launcher
 from context import cielimMessage_pb2
 from context import scene
 from context import rigid_body_kinematics as rbk
@@ -20,12 +18,12 @@ def vector_to_pixel(vector_C: ndarray, camera: cielimMessage_pb2.CameraModel) ->
     """
     Computes the pixel location of a vector in the camera frame on the detector
     """
-    center_pixel = [camera.resolution[0] / 2, camera.resolution[1] / 2]
+    center_pixel = [camera.sensorModel.resolution[0] / 2, camera.sensorModel.resolution[1] / 2]
 
-    p_x = 2 * np.tan(camera.fieldOfView[0] / 2)
-    p_y = 2 * np.tan(camera.fieldOfView[1] / 2)
-    d_x = camera.resolution[0] / p_x
-    d_y = camera.resolution[1] / p_y
+    p_x = 2 * np.tan(camera.lensModel.fieldOfView[0] / 2)
+    p_y = 2 * np.tan(camera.lensModel.fieldOfView[1] / 2)
+    d_x = camera.sensorModel.resolution[0] / p_x
+    d_y = camera.sensorModel.resolution[1] / p_y
     alpha = 0
     calibration_matrix = np.array(
         [
@@ -60,11 +58,11 @@ def scene_setup() -> cielimMessage_pb2:
 
     protobuf_message.camera.cameraId = 1
     protobuf_message.camera.parentName = "cielim_sat"
-    protobuf_message.camera.exposureTime = 5e-4
-    [protobuf_message.camera.fieldOfView.append(item) for item in [20 * np.pi / 180, 15 * np.pi / 180]]
+    protobuf_message.camera.sensorModel.exposureTime = 5e-4
+    [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [20 * np.pi / 180, 15 * np.pi / 180]]
     [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
     [protobuf_message.camera.cameraPositionInBody.append(item) for item in [1, 1, 1]]
-    [protobuf_message.camera.resolution.append(item) for item in [2000, 1500]]
+    [protobuf_message.camera.sensorModel.resolution.append(item) for item in [2000, 1500]]
 
     protobuf_message.spacecraft.spacecraftName = "cielim_sat"
     [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -1000000]]
@@ -85,9 +83,9 @@ def random_asteroid_generation(number_of_images: int):
     directory_path = current_file_path + "/images-com-cob"
     os.makedirs(directory_path, exist_ok=True)
 
-    connector = Connector()
-    launcher = Launcher()
-    connector.connect(launcher.launch())
+    connector = driver.Connector()
+    launch = launcher.Launcher()
+    connector.connect(launch.launch())
     connector.send_init_request()
 
     models = [
@@ -170,7 +168,7 @@ def random_asteroid_generation(number_of_images: int):
             data["center_of_brightness"] = center_of_brightness.tolist()
             data["center_of_mass"] = com_pixel[:2].tolist()
             data["asteroid_mean_radius"] = mean_radius
-            data["camera_ifov"] = message.camera.fieldOfView[0] / message.camera.resolution[0]
+            data["camera_ifov"] = message.camera.lensModel.fieldOfView[0] / message.camera.sensorModel.resolution[0]
             data["asteroid_std_radius"] = std_radius
             data["asteroid_std_streching"] = std_principal_axis_scales
             data["true_position_N"] = true_position.tolist()
@@ -189,7 +187,7 @@ def random_asteroid_generation(number_of_images: int):
     end = time.time()
     print("Generated " + str(number_of_images) + " images in " + str(end - start) + " seconds.")
     connector.disconnect()
-    launcher.terminate()
+    launch.terminate()
 
 
 if __name__ == "__main__":

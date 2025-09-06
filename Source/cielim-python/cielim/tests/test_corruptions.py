@@ -24,10 +24,10 @@ def default_scene():
 
     protobuf_message.camera.cameraId = 1
     protobuf_message.camera.parentName = "cielim_sat"
-    [protobuf_message.camera.fieldOfView.append(item) for item in [30 * np.pi / 180, 25 * np.pi / 180]]
+    [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [30 * np.pi / 180, 25 * np.pi / 180]]
     [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0.0, 0, 0]]
     [protobuf_message.camera.cameraPositionInBody.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.resolution.append(item) for item in [3000, 3000]]
+    [protobuf_message.camera.sensorModel.resolution.append(item) for item in [3000, 3000]]
 
     protobuf_message.spacecraft.spacecraftName = "cielim_sat"
     [protobuf_message.spacecraft.position.append(item) for item in [0, 0, 10000]]
@@ -56,7 +56,7 @@ def test_GaussianPSF(cielim_connection, scene_setup):
     connector.send_frame(scene)
     sharp_image, _ = connector.request_image_for_camera_id(1, 1)
 
-    scene.camera.pointSpreadFunction = 50
+    scene.camera.lensModel.pointSpreadFunction = 50
 
     connector.send_init_request()
     connector.send_frame(scene)
@@ -87,7 +87,7 @@ def test_CosmicRays(cielim_connection, scene_setup):
     scene = scene_setup
 
     del scene.celestialBodies[0]
-    scene.camera.renderParameters.cosmicRayStdDeviation = 100
+    scene.renderParameters.cosmicRayStdDeviation = 100
 
     connector.send_init_request()
     connector.send_frame(scene)
@@ -109,7 +109,7 @@ def test_ReadNoise(cielim_connection, scene_setup, read_noise):
     scene = scene_setup
 
     del scene.celestialBodies[0]
-    scene.camera.readNoise = read_noise
+    scene.camera.sensorModel.readNoise = read_noise
 
     connector.send_init_request()
     connector.send_frame(scene)
@@ -150,7 +150,7 @@ def test_SignalGain(cielim_connection, scene_setup, signal_gain):
     img_scaled_linear = img_linear * signal_gain
     comparison_image = (np.clip(img_scaled_linear ** (1 / 2.2), 0.0, 1.0) * 255).astype(np.uint8)
 
-    scene.camera.systemGain = signal_gain
+    scene.camera.sensorModel.systemGain = signal_gain
 
     connector.send_init_request()
     connector.send_frame(scene)

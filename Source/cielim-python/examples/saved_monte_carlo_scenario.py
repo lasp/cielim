@@ -4,11 +4,8 @@ import pickle
 
 import cv2
 import numpy as np
-import context
-from driver import *
-from launcher import *
-from variable_map import *
 
+from context import driver, launcher, variable_map
 from context import cielimMessage_pb2
 from context import scene
 
@@ -18,7 +15,7 @@ current_file_path = os.path.dirname(__file__)
 """ Populate abstract variables of the VariableMap class in order to instruct it on how to read Basilisk MC data """
 
 
-class BasiliskMCReader(VariableMap):
+class BasiliskMCReader(variable_map.VariableMap):
     def __init__(self):
         super().__init__()
         self.num_runs = 0
@@ -103,11 +100,11 @@ def scene_setup():
 
     protobuf_message.camera.cameraId = 1
     protobuf_message.camera.parentName = "cielim_sat"
-    protobuf_message.camera.exposureTime = 1
-    [protobuf_message.camera.fieldOfView.append(item) for item in [30 * np.pi / 180, 20 * np.pi / 180]]
+    protobuf_message.camera.sensorModel.exposureTime = 1
+    [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [30 * np.pi / 180, 20 * np.pi / 180]]
     [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
     [protobuf_message.camera.cameraPositionInBody.append(item) for item in [1, 1, 1]]
-    [protobuf_message.camera.resolution.append(item) for item in [2000, 1500]]
+    [protobuf_message.camera.sensorModel.resolution.append(item) for item in [2000, 1500]]
 
     protobuf_message.spacecraft.spacecraftName = "cielim_sat"
     [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -1000000]]
@@ -133,9 +130,9 @@ def saved_monte_carlo_scenario():
     directory_path = current_file_path + "/images-saved-monte-carlo"
     os.makedirs(directory_path, exist_ok=True)
 
-    connector = Connector()
-    launcher = Launcher()
-    connector.connect(launcher.launch())
+    connector = driver.Connector()
+    launch = launcher.Launcher()
+    connector.connect(launch.launch())
     connector.send_init_request()
 
     cadence = 60
@@ -159,7 +156,7 @@ def saved_monte_carlo_scenario():
                 )
 
     connector.disconnect()
-    launcher.terminate()
+    launch.terminate()
 
 
 if __name__ == "__main__":
