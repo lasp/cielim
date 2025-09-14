@@ -11,6 +11,7 @@ Goal:
     However, it is expected to rotate the camera frame 90 degree only (in theory) to the image plane.
     Further investigations are required.
 """
+
 import os, contextlib
 from pathlib import Path
 import numpy as np
@@ -25,8 +26,8 @@ from context import rigid_body_kinematics as rbk
 
 # ---- Paths (portable) ----
 HERE = Path(__file__).resolve()
-ROOT = HERE.parents[1]                              # <repo root>
-MK   = ROOT / "support-data" / "deimos-spice" / "deimos-spice.txt"
+ROOT = HERE.parents[1]  # <repo root>
+MK = ROOT / "support-data" / "deimos-spice" / "deimos-spice.txt"
 OUT_DIR = HERE.parent / "images-deimos-spice"
 
 
@@ -49,8 +50,8 @@ def scene_setup():
     [body.velocity.append(item) for item in [0, 0, 0]]
     [body.attitude.append(item) for item in [0, 0, 0]]
 
-    body.model.shapeModel = "bennu_normalized" # we use bennu shape so far, need to replace it with deimos
-    body.model.meanRadius = 6.2 * 1e3 # radius in meter of deimos
+    body.model.shapeModel = "bennu_normalized"  # we use bennu shape so far, need to replace it with deimos
+    body.model.meanRadius = 6.2 * 1e3  # radius in meter of deimos
 
     sun = protobuf_message.celestialBodies.add()
     sun.bodyName = "sun"
@@ -71,6 +72,7 @@ def scene_setup():
     [protobuf_message.spacecraft.attitude.append(item) for item in [0, 0, 0]]
     return protobuf_message
 
+
 def spice_scenario():
     scene_frame = scene.Scene()
     scene_frame.set_existing_message(scene_setup())
@@ -85,7 +87,7 @@ def spice_scenario():
 
     # Time range
     start_et = spice.str2et("2023-11-01T03:42:25")
-    end_et   = spice.str2et("2023-11-01T04:06:54")
+    end_et = spice.str2et("2023-11-01T04:06:54")
     time_step = 150  # sec
     et_range = np.arange(start_et, end_et, time_step)
 
@@ -93,22 +95,20 @@ def spice_scenario():
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     connector = Connector()
-    launcher  = Launcher()
+    launcher = Launcher()
     connector.connect(launcher.launch())
     connector.send_init_request()
 
     # camera frame to image plane transformation
-    C_img_cam = np.array([[0, 1, 0],
-                          [-1, 0, 0],
-                          [0, 0, 1]], dtype=float)
+    C_img_cam = np.array([[0, 1, 0], [-1, 0, 0], [0, 0, 1]], dtype=float)
 
     for time in et_range:
         # DEIMOS-centered states
         position, _ = spice.spkpos("-62", time, "J2000", "NONE", "DEIMOS")
-        sun_pos, _  = spice.spkpos("SUN", time, "J2000", "NONE", "DEIMOS")
+        sun_pos, _ = spice.spkpos("SUN", time, "J2000", "NONE", "DEIMOS")
 
         BN = spice.pxform("J2000", instrument_id, time)  # instrument as body frame
-        BN = C_img_cam @ C_img_cam @ BN 
+        BN = C_img_cam @ C_img_cam @ BN
         # NOTE: we do the transformation "twice" in order to generate images close to the EMM mission
         # However, this should be done "once" in theory. Future work should investigate this.
 
@@ -129,6 +129,7 @@ def spice_scenario():
     connector.disconnect()
     launcher.terminate()
     # Optional: spice.kclear()
+
 
 if __name__ == "__main__":
     spice_scenario()
