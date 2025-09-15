@@ -205,7 +205,10 @@ void USceneData::SpawnCelestialBodies()
 		const float RadiusScale = CelestialBody.model().meanradius();
 		const FVector ActorScale = TempCelestialBody->GetPrincipleAxisDistortions() * RadiusScale * MeshNormFactor;
 
-		TempCelestialBody->SetActorScale3D(ActorScale);
+		if (ActorScale.X > 0.0f && ActorScale.Y > 0.0f && ActorScale.Z > 0.0f)
+			TempCelestialBody->SetActorScale3D(ActorScale);
+		else
+			UE_LOG(LogCielim, Warning, TEXT("Actor scale was invalid (<= 0), default is being used instead."));
 
 		this->CelestialBodyArray.Add(TempCelestialBody);
 		this->Actors.Add(TempCelestialBody);
