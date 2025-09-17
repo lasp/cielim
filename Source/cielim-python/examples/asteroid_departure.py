@@ -1,8 +1,6 @@
 from numpy import ndarray
 
-import context
-from driver import *
-from launcher import *
+from context import driver, launcher, variable_map
 from context import cielimMessage_pb2
 from context import scene
 from context import rigid_body_kinematics as rbk
@@ -35,7 +33,7 @@ def scene_setup() -> cielimMessage_pb2:
     [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
 
     body.model.shapeModel = "bennu_normalized"
-    body.model.brdfModel = "Regolith"
+    body.model.refModel.brdfModel = "Regolith"
     body.model.meanRadius = 58232 * 1e3
 
     sun = protobuf_message.celestialBodies.add()
@@ -45,12 +43,10 @@ def scene_setup() -> cielimMessage_pb2:
 
     protobuf_message.camera.cameraId = 1
     protobuf_message.camera.parentName = "cielim_sat"
-    protobuf_message.camera.exposureTime = 1
-    [protobuf_message.camera.fieldOfView.append(item) for item in [20 * np.pi / 180, 15 * np.pi / 180]]
+    [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [20 * np.pi / 180, 15 * np.pi / 180]]
     [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
     [protobuf_message.camera.cameraPositionInBody.append(item) for item in [1, 1, 1]]
-    [protobuf_message.camera.resolution.append(item) for item in [2000, 1500]]
-    protobuf_message.camera.focalLength = 0.025
+    [protobuf_message.camera.sensorModel.resolution.append(item) for item in [2000, 1500]]
 
     protobuf_message.spacecraft.spacecraftName = "cielim_sat"
     [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -4e8]]
@@ -74,9 +70,9 @@ def departure_scene(number_of_images: int):
 
     position_shift = np.array([0, 0, -1e9])
 
-    connector = Connector()
-    launcher = Launcher()
-    connector.connect(launcher.launch())
+    connector = driver.Connector()
+    launch = launcher.Launcher()
+    connector.connect(launch.launch())
     connector.send_init_request()
     message = scene_frame.get_scene()
     initial_position = np.array(message.spacecraft.position)
@@ -99,7 +95,7 @@ def departure_scene(number_of_images: int):
         append_protobuf_to_file(protobuff_file, message)
 
     connector.disconnect()
-    launcher.terminate()
+    launch.terminate()
 
 
 if __name__ == "__main__":

@@ -38,9 +38,8 @@ void ACelestialBody::LoadMesh(const FCelestialBodyMeshModel &Model)
 		MeshAsset = Cast<UStaticMesh>(MeshPath.TryLoad());
 	}
 
-	const uint32 NumTriangles = MeshAsset->GetNumTriangles(0);
-
-	if (!this->MeshModel.HasPerlinNoise || NumTriangles > 15000)
+	if (const uint32 NumTriangles = MeshAsset->GetNumTriangles(0);
+		!this->MeshModel.HasPerlinNoise || NumTriangles > 15000)
 	{
 		if (this->MeshModel.HasPerlinNoise && NumTriangles > 15000)
 			UE_LOG(LogCielim, Warning, TEXT("Mesh has too many triangles (%d), cannot do procedural deformations."),
@@ -72,10 +71,10 @@ void ACelestialBody::LoadMesh(const FCelestialBodyMeshModel &Model)
 
 		// Apply fractal perlin noise
 
-		const int Octaves = this->MeshModel.Octaves;
-		const float BaseFrequency = this->MeshModel.BaseFrequency;
-		const float BaseAmplitude = this->MeshModel.BaseAmplitude;
-		const float Persistence = this->MeshModel.Persistence;
+		const int Octaves = this->MeshModel.Octaves > 0 ? this->MeshModel.Octaves : 3;
+		const float BaseFrequency = this->MeshModel.BaseFrequency > 0 ? this->MeshModel.BaseFrequency : 0.1;
+		const float BaseAmplitude = this->MeshModel.BaseAmplitude > 0 ? this->MeshModel.BaseAmplitude : 5;
+		const float Persistence = this->MeshModel.Persistence > 0 ? this->MeshModel.Persistence : 0.4;
 
 		const FVector RandomSeedOffset = FMath::VRand() * 100.0f;
 

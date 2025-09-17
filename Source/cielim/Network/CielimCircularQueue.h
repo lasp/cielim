@@ -10,6 +10,6 @@ public:
 	CielimCircularQueue() : Requests(8), Responses(8) {}
 	~CielimCircularQueue() = default;
 
-	TCircularQueue<FCircularQueueData> Requests;
-	TCircularQueue<FCircularQueueData> Responses;
+	TCircularQueue<TSharedPtr<FCircularQueueData>> Requests;
+	TCircularQueue<TSharedPtr<FCircularQueueData>> Responses;
 };

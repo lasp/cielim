@@ -19,11 +19,11 @@
 #include "Shaders/SignalGain.h"
 #include "Utilities/Logging/CielimLoggingMacros.h"
 
-DECLARE_GPU_STAT_NAMED(QuETonemapping, TEXT("Quantum Efficiency Tonemapping Pass"));
-DECLARE_GPU_STAT_NAMED(GaussianPSF, TEXT("Gaussian PSF Pass"));
-DECLARE_GPU_STAT_NAMED(CosmicRays, TEXT("Cosmic Rays Pass"));
-DECLARE_GPU_STAT_NAMED(ReadNoise, TEXT("Read Noise Pass"));
-DECLARE_GPU_STAT_NAMED(SignalGain, TEXT("Signal Gain Pass"));
+DECLARE_GPU_STAT_NAMED(QuETonemapping, TEXT("QuantumEfficiencyTonemapping"));
+DECLARE_GPU_STAT_NAMED(GaussianPSF, TEXT("GaussianPSF"));
+DECLARE_GPU_STAT_NAMED(CosmicRays, TEXT("CosmicRays"));
+DECLARE_GPU_STAT_NAMED(ReadNoise, TEXT("ReadNoise"));
+DECLARE_GPU_STAT_NAMED(SignalGain, TEXT("SignalGain"));
 
 bool FCielimSceneViewExtension::IsActiveThisFrame_Internal(const FSceneViewExtensionContext &Context) const
 {
@@ -62,7 +62,7 @@ void FCielimSceneViewExtension::PrePostProcessPass_RenderThread(FRDGBuilder &Gra
 	// Init input texture as current scene color
 	AddCopyTexturePass(GraphBuilder, SceneColor, TextureIn);
 
-	const ACameraModel *CameraModel = Cast<ACameraModel>(View.ViewActor);
+	const ACameraModel *CameraModel = Cast<ACameraModel>(View.ViewActor.Get());
 
 	FCameraParams CameraParams{};
 	FImageCorruptionParams CorruptionParams{};
@@ -81,6 +81,9 @@ void FCielimSceneViewExtension::PrePostProcessPass_RenderThread(FRDGBuilder &Gra
 		CameraParams.SensorWidth = 0.036f;
 		CameraParams.SensorHeight = 0.024f;
 		CameraParams.ExposureTime = 5e-4f;
+		CameraParams.Wavelength1 = 650.0f;
+		CameraParams.Wavelength2 = 550.0f;
+		CameraParams.Wavelength3 = 450.0f;
 		CameraParams.QuECurveR = FVector3f::One();
 		CameraParams.QuECurveG = FVector3f::One();
 		CameraParams.QuECurveB = FVector3f::One();
@@ -136,7 +139,7 @@ void FCielimSceneViewExtension::QuETonemapPass(FRDGBuilder &GraphBuilder, const 
 											   const FRDGTextureRef &TextureIn, const FRDGTextureRef &TextureOut)
 {
 	RDG_GPU_STAT_SCOPE(GraphBuilder, QuETonemapping);
-	RDG_EVENT_SCOPE(GraphBuilder, "Quantum Efficiency Tonemapping Pass");
+	RDG_EVENT_SCOPE(GraphBuilder, "QuantumEfficiencyTonemapping");
 
 	const FScreenPassTextureViewport Viewport(TextureIn);
 
@@ -154,9 +157,13 @@ void FCielimSceneViewExtension::QuETonemapPass(FRDGBuilder &GraphBuilder, const 
 	QuEParams->SolidAngle = SolidAngle;
 	QuEParams->PixelArea = PixelWidth * PixelHeight;
 	QuEParams->ExposureTime = CameraParams.ExposureTime;
+	QuEParams->W1EnergyInverse = CameraParams.Wavelength1 * 5.034e15f; // Multiply by 1/hc [J^-1 nm^-1]
+	QuEParams->W2EnergyInverse = CameraParams.Wavelength2 * 5.034e15f; // Multiply by 1/hc [J^-1 nm^-1]
+	QuEParams->W3EnergyInverse = CameraParams.Wavelength3 * 5.034e15f; // Multiply by 1/hc [J^-1 nm^-1]
 	QuEParams->QuECurveR = FVector4f(CameraParams.QuECurveR, 1.0f);
 	QuEParams->QuECurveG = FVector4f(CameraParams.QuECurveG, 1.0f);
 	QuEParams->QuECurveB = FVector4f(CameraParams.QuECurveB, 1.0f);
+	QuEParams->SimpsonFactor = FMath::Abs(CameraParams.Wavelength1 - CameraParams.Wavelength3) / 6.0f;
 	QuEParams->CorrectionFactor = CameraParams.CorrectionFactor;
 	QuEParams->InvFullWellCapacity = 1.0f / FMath::Max(CameraParams.FullWellCapacity, 1e-6);
 	QuEParams->RenderTargets[0] = FRenderTargetBinding(TextureOut, ERenderTargetLoadAction::EClear);
@@ -172,7 +179,7 @@ void FCielimSceneViewExtension::GaussianPSFPass(FRDGBuilder &GraphBuilder,
 												FRDGTextureRef &TextureIn, FRDGTextureRef &TextureOut)
 {
 	RDG_GPU_STAT_SCOPE(GraphBuilder, GaussianPSF);
-	RDG_EVENT_SCOPE(GraphBuilder, "GaussianPSF Pass");
+	RDG_EVENT_SCOPE(GraphBuilder, "GaussianPSF");
 
 	const FScreenPassTextureViewport Viewport(TextureIn);
 
@@ -219,7 +226,7 @@ void FCielimSceneViewExtension::ReadNoisePass(FRDGBuilder &GraphBuilder, const F
 											  const FRDGTextureRef &TextureIn, const FRDGTextureRef &TextureOut)
 {
 	RDG_GPU_STAT_SCOPE(GraphBuilder, ReadNoise);
-	RDG_EVENT_SCOPE(GraphBuilder, "Read Noise Pass");
+	RDG_EVENT_SCOPE(GraphBuilder, "ReadNoise");
 
 	const FScreenPassTextureViewport Viewport(TextureIn);
 
@@ -241,7 +248,7 @@ void FCielimSceneViewExtension::SignalGainPass(FRDGBuilder &GraphBuilder,
 											   const FRDGTextureRef &TextureIn, const FRDGTextureRef &TextureOut)
 {
 	RDG_GPU_STAT_SCOPE(GraphBuilder, SignalGain);
-	RDG_EVENT_SCOPE(GraphBuilder, "Signal Gain Pass");
+	RDG_EVENT_SCOPE(GraphBuilder, "SignalGain");
 
 	const FScreenPassTextureViewport Viewport(TextureIn);
 
@@ -262,7 +269,7 @@ void FCielimSceneViewExtension::CosmicRaysPass(FRDGBuilder &GraphBuilder,
 											   const FRDGTextureRef &TextureIn, const FRDGTextureRef &TextureOut)
 {
 	RDG_GPU_STAT_SCOPE(GraphBuilder, CosmicRays);
-	RDG_EVENT_SCOPE(GraphBuilder, "Cosmic Rays Pass");
+	RDG_EVENT_SCOPE(GraphBuilder, "CosmicRays");
 
 	const FScreenPassTextureViewport Viewport(TextureIn);
 

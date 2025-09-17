@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 import random
 import socket
 import subprocess
@@ -113,6 +114,7 @@ class Launcher:
                 stderr=subprocess.DEVNULL,
             )
             print("Cielim spawned with pid: {0} on port: {1}".format(str(cielim_process.pid), end_point.port))
+            time.sleep(3)  # Give Cielim's rendering pipeline time to warm up
             return cielim_process
         except FileNotFoundError:
             print("Cielim application not found")

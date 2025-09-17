@@ -15,15 +15,23 @@ FCelestialBodyMeshModel FCelestialBodyMeshModel::FromProtobuf(const cielimMessag
 	FCelestialBodyMeshModel MeshModel = {};
 
 	MeshModel.ShapeModel = FString(Model.shapemodel().c_str());
-	MeshModel.BrdfModel = FString(Model.brdfmodel().c_str());
 
-	if (Model.reflectanceparameters().size() == 12)
+	if (Model.has_refmodel())
 	{
-		MeshModel.ReflectanceParameters = {
-			Model.reflectanceparameters()[0], Model.reflectanceparameters()[1],	 Model.reflectanceparameters()[2],
-			Model.reflectanceparameters()[3], Model.reflectanceparameters()[4],	 Model.reflectanceparameters()[5],
-			Model.reflectanceparameters()[6], Model.reflectanceparameters()[7],	 Model.reflectanceparameters()[8],
-			Model.reflectanceparameters()[9], Model.reflectanceparameters()[10], Model.reflectanceparameters()[11]};
+		const cielimMessage::ReflectanceModel &RefModel = Model.refmodel();
+
+		MeshModel.BrdfModel = FString(RefModel.brdfmodel().c_str());
+
+		if (Model.refmodel().reflectanceparameters().size() == 12)
+		{
+			MeshModel.ReflectanceParameters = {
+				RefModel.reflectanceparameters()[0],  RefModel.reflectanceparameters()[1],
+				RefModel.reflectanceparameters()[2],  RefModel.reflectanceparameters()[3],
+				RefModel.reflectanceparameters()[4],  RefModel.reflectanceparameters()[5],
+				RefModel.reflectanceparameters()[6],  RefModel.reflectanceparameters()[7],
+				RefModel.reflectanceparameters()[8],  RefModel.reflectanceparameters()[9],
+				RefModel.reflectanceparameters()[10], RefModel.reflectanceparameters()[11]};
+		}
 	}
 
 	if (Model.has_perlinnoise())

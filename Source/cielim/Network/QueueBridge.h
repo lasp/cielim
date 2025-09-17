@@ -33,13 +33,13 @@ public:
 	 * @brief Gets data off of inbound queue and returns it if exists.
 	 * @note Queue could be empty, hence the need for TOptional.
 	 */
-	TOptional<FCircularQueueData> GetQueueData() const;
+	TSharedPtr<FCircularQueueData> GetQueueData() const;
 
 	/**
 	 * @brief Puts data onto outbound queue.
 	 * @param Data FCircularQueueData instance containing data to be put on outbound queue.
 	 */
-	void PutQueueData(const FCircularQueueData &Data);
+	void PutQueueData(const TSharedPtr<FCircularQueueData> &Data);
 
 	/**
 	 * @brief Returns the number of items in the inbound queue.

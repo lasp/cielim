@@ -8,8 +8,6 @@ public class ProtobufLibrary : ModuleRules
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	    bAddDefaultIncludePaths = false;
 
-        PublicDefinitions.Add("_ALLOW_MSC_VER_MISMATCH");
-
         Type = ModuleRules.ModuleType.External;
         PrecompileForTargets = PrecompileTargetsType.Any;
 
@@ -22,10 +20,6 @@ public class ProtobufLibrary : ModuleRules
         }
         else if (Target.Platform == UnrealTargetPlatform.Win64)
         {
-            PublicDefinitions.Add("PROTOBUF_USE_DLLS"); // This is needed for protobuf to compile to dlls
-
-            RuntimeDependencies.Add(Path.Combine(ModuleDirectory, "protobuf/compile/Release/libprotobuf.dll"));
-            
             PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "lib/libprotobuf.lib"));
         }
         else

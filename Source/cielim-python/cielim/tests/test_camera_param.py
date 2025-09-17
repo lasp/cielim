@@ -25,10 +25,10 @@ def default_scene():
 
     protobuf_message.camera.cameraId = 1
     protobuf_message.camera.parentName = "cielim_sat"
-    [protobuf_message.camera.fieldOfView.append(item) for item in [20 * np.pi / 180, 15 * np.pi / 180]]
+    [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [20 * np.pi / 180, 15 * np.pi / 180]]
     [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
     [protobuf_message.camera.cameraPositionInBody.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.resolution.append(item) for item in [4000, 3000]]
+    [protobuf_message.camera.sensorModel.resolution.append(item) for item in [4000, 3000]]
 
     protobuf_message.spacecraft.spacecraftName = "cielim_sat"
     [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -100000]]
@@ -58,7 +58,7 @@ def test_image_brightness(cielim_connection, scene_setup):
     base_mean = np.mean(image_gray)
 
     # Reduce the exposure
-    scene.camera.exposureTime = 2e-4
+    scene.camera.sensorModel.exposureTime = 2e-4
 
     # connector.send_init_request()
     connector.send_frame(scene)
@@ -72,15 +72,15 @@ def test_image_brightness(cielim_connection, scene_setup):
     )
 
     # Reduce the quantum efficiency
-    scene.camera.qeCurve.redValue450nm = 0.35
-    scene.camera.qeCurve.redValue550nm = 0.35
-    scene.camera.qeCurve.redValue650nm = 0.35
-    scene.camera.qeCurve.greenValue450nm = 0.35
-    scene.camera.qeCurve.greenValue550nm = 0.35
-    scene.camera.qeCurve.greenValue650nm = 0.35
-    scene.camera.qeCurve.blueValue450nm = 0.35
-    scene.camera.qeCurve.blueValue550nm = 0.35
-    scene.camera.qeCurve.blueValue650nm = 0.35
+    scene.camera.sensorModel.qeCurve.redValue1 = 0.35
+    scene.camera.sensorModel.qeCurve.redValue2 = 0.35
+    scene.camera.sensorModel.qeCurve.redValue3 = 0.35
+    scene.camera.sensorModel.qeCurve.greenValue1 = 0.35
+    scene.camera.sensorModel.qeCurve.greenValue2 = 0.35
+    scene.camera.sensorModel.qeCurve.greenValue3 = 0.35
+    scene.camera.sensorModel.qeCurve.blueValue1 = 0.35
+    scene.camera.sensorModel.qeCurve.blueValue2 = 0.35
+    scene.camera.sensorModel.qeCurve.blueValue3 = 0.35
 
     # connector.send_init_request()
     connector.send_frame(scene)
@@ -110,8 +110,8 @@ def test_camera_fov(cielim_connection, scene_setup, test_name, fov_x_deg, fov_y_
     connector = cielim_connection
 
     scene = scene_setup
-    del scene.camera.fieldOfView[:]
-    [scene.camera.fieldOfView.append(val) for val in [fov_x_deg, fov_y_deg]]
+    del scene.camera.lensModel.fieldOfView[:]
+    [scene.camera.lensModel.fieldOfView.append(val) for val in [fov_x_deg, fov_y_deg]]
 
     # Move sphere back so it doesn't overflow screen
     del scene.spacecraft.position[:]
@@ -194,8 +194,8 @@ def test_camera_resolution(cielim_connection, scene_setup, test_name, resolution
     connector = cielim_connection
 
     scene = scene_setup
-    del scene.camera.resolution[:]
-    [scene.camera.resolution.append(val) for val in [resolution_w, resolution_h]]
+    del scene.camera.sensorModel.resolution[:]
+    [scene.camera.sensorModel.resolution.append(val) for val in [resolution_w, resolution_h]]
 
     connector.send_init_request()
     connector.send_frame(scene)

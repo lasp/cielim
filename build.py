@@ -214,7 +214,7 @@ if __name__ == "__main__":
             config["unreal_path"] = unreal_path
             json.dump(config, open("build_config.json", "w"))
         else:
-            print('Path provided was incorrect; expected something like ".../UnrealEngine/UE_5.4"')
+            print('Path provided was incorrect; expected something like ".../UnrealEngine/UE_5.6"')
             exit()
 
     # Get platform name and executable location

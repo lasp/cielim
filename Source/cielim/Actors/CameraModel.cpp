@@ -19,8 +19,8 @@
 #include "cielim/Shaders/GammaCorrect.h"
 #include "cielim/Utilities/Logging/CielimLoggingMacros.h"
 
-DECLARE_GPU_STAT_NAMED(CobReductionCalculations, TEXT("Center of Brightness Reduction Calculations"));
-DECLARE_GPU_STAT_NAMED(GammaCorrection, TEXT("Gamma Correction"));
+DECLARE_GPU_STAT_NAMED(CobReductionCalculations, TEXT("CoBReductionCalculations"));
+DECLARE_GPU_STAT_NAMED(GammaCorrection, TEXT("GammaCorrection"));
 
 ACameraModel::ACameraModel()
 {
@@ -59,6 +59,9 @@ ACameraModel::ACameraModel()
 	this->CameraParams.SensorWidth = 0.036f;
 	this->CameraParams.SensorHeight = 0.024f;
 	this->CameraParams.ExposureTime = 1e-3f;
+	this->CameraParams.Wavelength1 = 650.0f;
+	this->CameraParams.Wavelength2 = 550.0f;
+	this->CameraParams.Wavelength3 = 450.0f;
 	this->CameraParams.QuECurveR = FVector3f::One();
 	this->CameraParams.QuECurveG = FVector3f::One();
 	this->CameraParams.QuECurveB = FVector3f::One();
@@ -67,57 +70,122 @@ ACameraModel::ACameraModel()
 	this->CameraParams.Gamma = 2.2f;
 }
 
-void ACameraModel::SetCameraParameters(const cielimMessage::CameraModel &CameraModel)
+void ACameraModel::SetCameraParameters(const cielimMessage::CielimMessage &CielimMessage)
 {
+	if (!CielimMessage.has_camera())
+		return;
+
+	const auto CameraModel = CielimMessage.camera();
 	// Set camera parameters
 
-	if (CameraModel.apertureradius() > 0.0f)
-		this->CameraParams.ApertureRadius = CameraModel.apertureradius();
+	const bool bHasRenderParams = CielimMessage.has_renderparameters();
+	const bool bHasLensModel = CameraModel.has_lensmodel();
+	const bool bHasSensorModel = CameraModel.has_sensormodel();
 
-	if (CameraModel.focallength() > 0.0f)
-		this->CameraParams.FocalLength = CameraModel.focallength();
-
-	if (CameraModel.sensorwidth() > 0.0f)
-		this->CameraParams.SensorWidth = CameraModel.sensorwidth();
-
-	if (CameraModel.sensorheight() > 0.0f)
-		this->CameraParams.SensorHeight = CameraModel.sensorheight();
-
-	if (CameraModel.exposuretime() > 0.0f)
-		this->CameraParams.ExposureTime = CameraModel.exposuretime();
-
-	if (CameraModel.integrationweightfactor() > 0.0f)
-		this->CameraParams.CorrectionFactor = CameraModel.integrationweightfactor();
-
-	if (CameraModel.fullwellcapacity() > 0.0f)
-		this->CameraParams.FullWellCapacity = CameraModel.fullwellcapacity();
-
-	if (CameraModel.gamma() > 0.0f)
-		this->CameraParams.Gamma = CameraModel.gamma();
-
-	if (CameraModel.has_qecurve())
+	if (bHasRenderParams)
 	{
-		const auto QuECurve = CameraModel.qecurve();
-		CameraParams.QuECurveR.Set(QuECurve.redvalue650nm(), QuECurve.redvalue550nm(), QuECurve.redvalue450nm());
-		CameraParams.QuECurveG.Set(QuECurve.greenvalue650nm(), QuECurve.greenvalue550nm(), QuECurve.greenvalue450nm());
-		CameraParams.QuECurveB.Set(QuECurve.bluevalue650nm(), QuECurve.bluevalue550nm(), QuECurve.bluevalue450nm());
+		const auto RenderParams = CielimMessage.renderparameters();
+
+		if (RenderParams.wavelength1() > 0.0f)
+			this->CameraParams.Wavelength1 = RenderParams.wavelength1();
+
+		if (RenderParams.wavelength2() > 0.0f)
+			this->CameraParams.Wavelength2 = RenderParams.wavelength2();
+
+		if (RenderParams.wavelength3() > 0.0f)
+			this->CameraParams.Wavelength3 = RenderParams.wavelength3();
+	}
+
+	if (bHasLensModel)
+	{
+		const auto LensModel = CameraModel.lensmodel();
+
+		if (LensModel.apertureradius() > 0.0f)
+			this->CameraParams.ApertureRadius = CameraModel.lensmodel().apertureradius();
+
+		if (LensModel.focallength() > 0.0f)
+			this->CameraParams.FocalLength = CameraModel.lensmodel().focallength();
+	}
+
+	if (bHasSensorModel)
+	{
+		const auto SensorModel = CameraModel.sensormodel();
+
+		if (SensorModel.sensorwidth() > 0.0f)
+			this->CameraParams.SensorWidth = CameraModel.sensormodel().sensorwidth();
+
+		if (SensorModel.sensorheight() > 0.0f)
+			this->CameraParams.SensorHeight = CameraModel.sensormodel().sensorheight();
+
+		if (SensorModel.exposuretime() > 0.0f)
+			this->CameraParams.ExposureTime = CameraModel.sensormodel().exposuretime();
+
+		if (SensorModel.fullwellcapacity() > 0.0f)
+			this->CameraParams.FullWellCapacity = CameraModel.sensormodel().fullwellcapacity();
+
+		if (SensorModel.gamma() > 0.0f)
+			this->CameraParams.Gamma = CameraModel.sensormodel().gamma();
+
+		if (SensorModel.has_qecurve())
+		{
+			const auto QuECurve = SensorModel.qecurve();
+
+			if (QuECurve.integrationweightfactor() > 0.0f)
+				this->CameraParams.CorrectionFactor = QuECurve.integrationweightfactor();
+
+			CameraParams.QuECurveR.Set(QuECurve.redvalue1(), QuECurve.redvalue2(), QuECurve.redvalue3());
+			CameraParams.QuECurveG.Set(QuECurve.greenvalue1(), QuECurve.greenvalue2(), QuECurve.greenvalue3());
+			CameraParams.QuECurveB.Set(QuECurve.bluevalue1(), QuECurve.bluevalue2(), QuECurve.bluevalue3());
+		}
 	}
 
 	// Set image corruption parameters
 
-	auto CosmicRays = GetCosmicRays(CameraModel.renderparameters().cosmicraystddeviation());
-
 	this->CorruptionParams.KernelWidth = 7;
-	this->CorruptionParams.Sigma = CameraModel.pointspreadfunction();
-	this->CorruptionParams.NumCosmicRays = CosmicRays.Get<0>();
-	this->CorruptionParams.StartPoints = CosmicRays.Get<1>();
-	this->CorruptionParams.EndPoints = CosmicRays.Get<2>();
-	this->CorruptionParams.LineWidths = CosmicRays.Get<3>();
-	this->CorruptionParams.ReadNoiseSigma = CameraModel.readnoise();
-	this->CorruptionParams.SignalGain = CameraModel.systemgain();
+
+	if (bHasRenderParams)
+	{
+		auto CosmicRays = GetCosmicRays(CielimMessage.renderparameters().cosmicraystddeviation());
+
+		this->CorruptionParams.NumCosmicRays = CosmicRays.Get<0>();
+		this->CorruptionParams.StartPoints = CosmicRays.Get<1>();
+		this->CorruptionParams.EndPoints = CosmicRays.Get<2>();
+		this->CorruptionParams.LineWidths = CosmicRays.Get<3>();
+	}
+
+	if (bHasLensModel)
+	{
+		const auto LensModel = CameraModel.lensmodel();
+
+		this->CorruptionParams.Sigma = LensModel.pointspreadfunction();
+	}
+
+	if (bHasSensorModel)
+	{
+		const auto SensorModel = CameraModel.sensormodel();
+
+		this->CorruptionParams.ReadNoiseSigma = SensorModel.readnoise();
+		this->CorruptionParams.SignalGain = SensorModel.systemgain();
+	}
 }
 
-void ACameraModel::BeginPlay() { Super::BeginPlay(); }
+// Called when spawned
+void ACameraModel::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// Do a flush to the render target to ensure actual first capture has correct data
+	this->SceneCaptureComponent2D->CaptureScene();
+
+	ENQUEUE_RENDER_COMMAND(FlushGPU)
+	(
+		[](FRHICommandListImmediate &RHICmdList)
+		{
+			RHICmdList.SubmitCommandsAndFlushGPU(); // Metals refuses to auto-flush unless forced
+		});
+
+	FlushRenderingCommands(); // Wait for GPU flush to finish
+}
 
 // Called every frame
 void ACameraModel::Tick(float DeltaTime) { Super::Tick(DeltaTime); }
@@ -198,7 +266,7 @@ void ACameraModel::ApplyGammaCorrection() const
 
 			{
 				RDG_GPU_STAT_SCOPE(GraphBuilder, GammaCorrection);
-				RDG_EVENT_SCOPE(GraphBuilder, "Gamma Correction");
+				RDG_EVENT_SCOPE(GraphBuilder, "GammaCorrection");
 
 				const TShaderMapRef<FGammaCorrect> GammaCorrectShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 
@@ -252,7 +320,7 @@ TOptional<FVector2D> ACameraModel::GetCenterOfBrightness() const
 
 			{
 				RDG_GPU_STAT_SCOPE(GraphBuilder, CobReductionCalculations);
-				RDG_EVENT_SCOPE(GraphBuilder, "Center of Brightness GPU Reduction Calculations");
+				RDG_EVENT_SCOPE(GraphBuilder, "CoBReductionCalculations");
 
 				const TShaderMapRef<FCenBrightReduce> CenBrightReduceShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 

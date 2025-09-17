@@ -12,7 +12,7 @@ properly, add the `--recurse-submodules` argument when doing git clone. For exam
 
 ### Dependencies
 
-To build this project install Unreal Engine (Currently version 5.4). Additionally, the following tools need to be installed and added to your PATH environment variable:
+To build this project install Unreal Engine (Currently version 5.6). Additionally, the following tools need to be installed and added to your PATH environment variable:
 
 #### Linux
   - Automake
@@ -35,8 +35,7 @@ To build this project install Unreal Engine (Currently version 5.4). Additionall
 
 These tools are necessary to build Cielim and the third party libraries it uses. These third party libraries will be built automatically when building Cielim, but can also be built on their own using the .sh build scripts located in the respective folders in `Source/ThirdParty`.
 
-**Additionally:** If you're working on Windows, you will need to copy and paste the .dll files corresponding to the linked .lib files in your `cielim\Binaries\Win64` directory. These include:
-- libprotobuf.dll
+**Additionally:** If you're working on Windows, you will need to copy and paste the .dll files corresponding to the linked .lib files for the dynamically linked libraries in your `cielim\Binaries\Win64` directory. These include:
 - libzmq-(version).dll
 
 ### Build Process

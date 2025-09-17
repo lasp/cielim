@@ -8,6 +8,7 @@
 
 #include "SceneData.h"
 
+#include "Components/DirectionalLightComponent.h"
 #include "Components/LightComponent.h"
 #include "Components/SceneCaptureComponent2D.h"
 #include "Engine/DirectionalLight.h"
@@ -32,6 +33,8 @@ static FRotator GetCelestialBodyRotation(const cielimMessage::CelestialBody &Cel
 
 void USceneData::Init()
 {
+	this->CielimMessage = MakeShared<cielimMessage::CielimMessage>();
+
 	ActiveSunLightMPC = Cast<UMaterialParameterCollection>(
 		StaticLoadObject(UMaterialParameterCollection::StaticClass(), nullptr,
 						 TEXT("/Game/AsteroidMeshes/MPC_ActiveSunLight.MPC_ActiveSunLight")));
@@ -42,13 +45,14 @@ void USceneData::Init()
 
 
 // This is a mad hack and needs to be changed
-void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQueueData &ReturnData)
+void USceneData::ParseCommand(const TSharedPtr<FCircularQueueData> &CommandData,
+							  const TSharedPtr<FCircularQueueData> &ReturnData)
 {
 	this->bShouldUpdateScene = false;
 
 	// This code should be turned into some kind of handler function registration
 	// a bit like an RPC or http server
-	if (CommandData.query == CommandType::INIT_SCENE)
+	if (CommandData->query == CommandType::INIT_SCENE)
 	{
 		UE_LOG(LogCielim, Display, TEXT("Initiating new scene: ASimulationDataSourceActor"));
 
@@ -83,13 +87,14 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 		this->bIsSpacecraftSpawned = false;
 		this->bIsSceneEstablished = false;
 	}
-	else if (CommandData.query == CommandType::SIM_UPDATE)
+	else if (CommandData->query == CommandType::SIM_UPDATE)
 	{
 		UE_LOG(LogCielim, Display, TEXT("Reading sim update data: ASimulationDataSourceActor"));
 
-		if (const auto *TempPayload = CommandData.payload.TryGet<FUpdatePayload>())
+		if (const auto *TempPayload = CommandData->payload.TryGet<FUpdatePayload>())
 		{
-			this->CielimMessage = TempPayload->message;
+			const auto LocalMessage = TempPayload->message;
+			this->CielimMessage = LocalMessage;
 		}
 
 		if (!this->bIsSceneEstablished)
@@ -106,17 +111,13 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 
 			this->Spacecraft->CameraModel->SceneCaptureComponent2D->PrimitiveRenderMode = RenderMode;
 			this->Spacecraft->CameraModel->SceneCaptureComponent2D->ShowOnlyActors = Actors;
-
-			// Do a flush to the render target to ensure actual first capture has correct data
-			this->Spacecraft->CameraModel->SceneCaptureComponent2D->CaptureScene();
-			FlushRenderingCommands();
 		}
 		else
 		{
 			this->bShouldUpdateScene = true;
 		}
 	}
-	else if (CommandData.query == CommandType::REQUEST_IMAGE)
+	else if (CommandData->query == CommandType::REQUEST_IMAGE)
 	{
 		if (!this->bIsSceneEstablished)
 		{
@@ -135,7 +136,7 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 
 		ACameraModel *Camera = this->Spacecraft->CameraModel;
 
-		if (const auto *TempPayload = CommandData.payload.TryGet<FImagePayload>();
+		if (const auto *TempPayload = CommandData->payload.TryGet<FImagePayload>();
 			TempPayload != nullptr && TempPayload->shouldReturnImage)
 		{
 			Camera->GetImageData(ImageDataPng, CobCoords);
@@ -145,10 +146,10 @@ void USceneData::ParseCommand(const FCircularQueueData &CommandData, FCircularQu
 			Camera->GetImageData(CobCoords);
 		}
 
-		ReturnData.query = CommandType::REQUEST_IMAGE;
-		ReturnData.payload.Emplace<FImagePayload>(FImagePayload());
-		ReturnData.payload.Get<FImagePayload>().image_data = ImageDataPng;
-		ReturnData.payload.Get<FImagePayload>().centerOfBrightness = CobCoords;
+		ReturnData->query = CommandType::REQUEST_IMAGE;
+		ReturnData->payload.Emplace<FImagePayload>(FImagePayload());
+		ReturnData->payload.Get<FImagePayload>().image_data = ImageDataPng;
+		ReturnData->payload.Get<FImagePayload>().centerOfBrightness = CobCoords;
 
 		UE_LOG(LogCielim, Display, TEXT("Put back PNG image: ASimulationDataSourceActor"));
 	}
@@ -163,12 +164,12 @@ void USceneData::UpdateScene() const
 	if (!this->bShouldUpdateScene)
 		return;
 
-	if (this->CielimMessage.GetMessage().has_spacecraft() && this->bIsSpacecraftSpawned)
+	if (this->CielimMessage->has_spacecraft() && this->bIsSpacecraftSpawned)
 	{
 		this->UpdateSpacecraft();
 	}
 
-	if (!this->CielimMessage.GetMessage().celestialbodies().empty() && this->bIsCelestialBodiesSpawned)
+	if (!this->CielimMessage->celestialbodies().empty() && this->bIsCelestialBodiesSpawned)
 	{
 		this->UpdateCelestialBodies();
 	}
@@ -176,7 +177,7 @@ void USceneData::UpdateScene() const
 
 void USceneData::SpawnCelestialBodies()
 {
-	for (const auto &CelestialBody : CielimMessage.GetMessage().celestialbodies())
+	for (const auto &CelestialBody : CielimMessage->celestialbodies())
 	{
 		const FVector3d CelestialBodyPosition = GetCelestialBodyPosition(CelestialBody);
 		const FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
@@ -199,11 +200,15 @@ void USceneData::SpawnCelestialBodies()
 			TempCelestialBody->LoadMesh(MeshModel);
 		}
 
-		constexpr float MeshRadiusInMeters = 10.0f;
-		const float RadiusScale = CelestialBody.model().meanradius() / MeshRadiusInMeters;
-		const FVector ActorScale = TempCelestialBody->GetPrincipleAxisDistortions() * RadiusScale;
+		// Meshes are ~1,000 units in radius so we need to scale down to normalize to 1-meter radius (1 unit = 1 meter)
+		constexpr float MeshNormFactor = 1.0f / 1000.0f;
+		const float RadiusScale = CelestialBody.model().meanradius();
+		const FVector ActorScale = TempCelestialBody->GetPrincipleAxisDistortions() * RadiusScale * MeshNormFactor;
 
-		TempCelestialBody->SetActorScale3D(ActorScale);
+		if (ActorScale.X > 0.0f && ActorScale.Y > 0.0f && ActorScale.Z > 0.0f)
+			TempCelestialBody->SetActorScale3D(ActorScale);
+		else
+			UE_LOG(LogCielim, Warning, TEXT("Actor scale was invalid (<= 0), default is being used instead."));
 
 		this->CelestialBodyArray.Add(TempCelestialBody);
 		this->Actors.Add(TempCelestialBody);
@@ -219,7 +224,7 @@ void USceneData::SpawnCelestialBodies()
 
 void USceneData::SpawnSpacecraft()
 {
-	const cielimMessage::Spacecraft &SpacecraftMessage = this->CielimMessage.GetMessage().spacecraft();
+	const cielimMessage::Spacecraft &SpacecraftMessage = this->CielimMessage->spacecraft();
 
 	const FVector3d PositionSpacecraft = GetSpacecraftPosition(SpacecraftMessage);
 
@@ -235,13 +240,25 @@ void USceneData::SpawnSpacecraft()
 	TempSpacecraft->Name = FString(SpacecraftMessage.spacecraftname().c_str());
 
 	// Set camera
-	if (this->CielimMessage.GetMessage().has_camera())
+	if (this->CielimMessage->has_camera())
 	{
-		const cielimMessage::CameraModel &Camera = CielimMessage.GetMessage().camera();
+		const cielimMessage::CameraModel &Camera = CielimMessage->camera();
 
-		TempSpacecraft->SetFOV(FMath::RadiansToDegrees(Camera.fieldofview(0)),
-							   FMath::RadiansToDegrees(Camera.fieldofview(1)));
-		TempSpacecraft->SetResolution(Camera.resolution(0), Camera.resolution(1));
+		if (Camera.has_lensmodel())
+		{
+			const cielimMessage::LensModel &LensModel = Camera.lensmodel();
+
+			TempSpacecraft->SetFOV(FMath::RadiansToDegrees(LensModel.fieldofview(0)),
+								   FMath::RadiansToDegrees(LensModel.fieldofview(1)));
+		}
+
+		if (Camera.has_sensormodel())
+		{
+			const cielimMessage::SensorModel &SensorModel = Camera.sensormodel();
+
+			TempSpacecraft->SetResolution(SensorModel.resolution(0), SensorModel.resolution(1));
+		}
+
 
 		const FVector3d CameraPosition = GetCameraPosition(Camera);
 		TempSpacecraft->SetCameraRelativePosition(CameraPosition);
@@ -249,7 +266,7 @@ void USceneData::SpawnSpacecraft()
 		const FRotator CameraRotation = GetCameraRotation(Camera);
 		TempSpacecraft->SetCameraRelativeOrientation(CameraRotation);
 
-		TempSpacecraft->CameraModel->SetCameraParameters(Camera);
+		TempSpacecraft->CameraModel->SetCameraParameters(*this->CielimMessage);
 
 		this->bHasCameras = true;
 	}
@@ -268,36 +285,75 @@ void USceneData::SpawnSunLight()
 
 	this->SunLight = GetWorld()->SpawnActor<ADirectionalLight>();
 
-	this->SunLight->GetLightComponent()->SetMobility(EComponentMobility::Movable);
-	this->SunLight->GetLightComponent()->SetWorldLocation(SunLocation);
-	this->SunLight->GetLightComponent()->SetWorldRotation(SunRotation);
+	ULightComponent *LightComp = this->SunLight->GetLightComponent();
 
-	// Spectral irradiance in W/m^2/nm and data from: https://lasp.colorado.edu/tsis/data/ssi-data/#summary_table
+	LightComp->SetMobility(EComponentMobility::Movable);
+	LightComp->SetWorldLocation(SunLocation);
+	LightComp->SetWorldRotation(SunRotation);
 
-	constexpr float RedIrradianceAtOneAU = 1.55f; // 650 nm wavelength
-	constexpr float GreenIrradianceAtOneAU = 1.89f; // 550 nm wavelength
-	constexpr float BlueIrradianceAtOneAU = 2.06f; // 450 nm wavelength
+	float Wavelength1 = 650 * 1e-9f;
+	float Wavelength2 = 550 * 1e-9f;
+	float Wavelength3 = 450 * 1e-9f;
+
+	// Check if custom wavelengths are specified in the camera model, else use visible spectrum defaults
+
+	if (this->CielimMessage->has_renderparameters())
+	{
+		const auto RenderParams = this->CielimMessage->renderparameters();
+
+		Wavelength1 = RenderParams.wavelength1() * 1e-9f;
+		Wavelength2 = RenderParams.wavelength2() * 1e-9f;
+		Wavelength3 = RenderParams.wavelength3() * 1e-9f;
+
+		if (Wavelength2 != (Wavelength1 + Wavelength3) / 2.0f)
+			UE_LOG(LogCielim, Warning, TEXT("W2 is not equal to (W1 + W3) / 2; QE approximation will be inaccurate."));
+	}
+
+	// Use Planck's law to calculate solar irradiance at specified wavelengths (assuming sun is ideal blackbody)
+
+	constexpr float SunRadius = 6.957e8f; // Meters
+	constexpr float SunTemperature = 5778.0f; // Kelvin
+	constexpr float RadiationConstant1 = 1.191e-16f; // W * Meters^2
+	constexpr float RadiationConstant2 = 1.439e-2f; // Meters * K
+
+	const float Wavelength1Radiance = 1e-9 * RadiationConstant1 /
+		(FMath::Pow(Wavelength1, 5) * (FMath::Exp(RadiationConstant2 / (Wavelength1 * SunTemperature)) - 1.0f));
+
+	const float Wavelength2Radiance = 1e-9 * RadiationConstant1 /
+		(FMath::Pow(Wavelength2, 5) * (FMath::Exp(RadiationConstant2 / (Wavelength2 * SunTemperature)) - 1.0f));
+
+	const float Wavelength3Radiance = 1e-9 * RadiationConstant1 /
+		(FMath::Pow(Wavelength3, 5) * (FMath::Exp(RadiationConstant2 / (Wavelength3 * SunTemperature)) - 1.0f));
+
+	const float Distance = SunLocation.Length(); // Meters
+	const float SunSolidAngle = 3.1415f * SunRadius * SunRadius / (Distance * Distance); // Steradians
+
+	const float Wavelength1Irradiance = Wavelength1Radiance * SunSolidAngle; // W * Meters^-2 * Nanometer^-1
+	const float Wavelength2Irradiance = Wavelength2Radiance * SunSolidAngle; // W * Meters^-2 * Nanometer^-1
+	const float Wavelength3Irradiance = Wavelength3Radiance * SunSolidAngle; // W * Meters^-2 * Nanometer^-1
 
 	/* We need to scale down the irradiance values so they can fit in [0,1] color and not be clamped. This will get
-	 * cancelled out when the color is multiplied with the intensity which has the inverse of the factor. */
-	constexpr float IntensityScaleFactor = 2.2f;
+	 * cancelled out when the color is multiplied with the intensity which is the inverse of the factor. */
+	const float SunIntensity = FMath::Max(Wavelength1Irradiance, Wavelength2Irradiance, Wavelength3Irradiance) * 1.1f;
 
-	constexpr float RedIntensity = RedIrradianceAtOneAU / IntensityScaleFactor;
-	constexpr float GreenIntensity = GreenIrradianceAtOneAU / IntensityScaleFactor;
-	constexpr float BlueIntensity = BlueIrradianceAtOneAU / IntensityScaleFactor;
-
-	// Length of 1 AU in meters
-	constexpr float OneAU = 1.496e11;
+	const float RedIntensity = Wavelength1Irradiance / SunIntensity;
+	const float GreenIntensity = Wavelength2Irradiance / SunIntensity;
+	const float BlueIntensity = Wavelength3Irradiance / SunIntensity;
 
 	/* The calculations determining the irradiance of the sun for each wavelength assumes all lit objects are
 	 * near the origin. Anything further than ~0.1 AU from the origin will have irradiance too high/low from expected.
-	 * This is because directional light intensity is constant regardless of position. We also multiply by 100 to
-	 * account for the fact that unreal uses cm instead of meters. */
-	const float SunDistanceRatio = 100.0f * OneAU / SunLocation.Length();
-	const float SunIntensity = SunDistanceRatio * SunDistanceRatio * IntensityScaleFactor;
+	 * This is because directional light intensity is constant regardless of position. */
 
-	this->SunLight->GetLightComponent()->SetIntensity(SunIntensity);
-	this->SunLight->GetLightComponent()->SetLightColor(FLinearColor(RedIntensity, GreenIntensity, BlueIntensity));
+	LightComp->SetIntensity(SunIntensity);
+	LightComp->SetLightColor(FLinearColor(RedIntensity, GreenIntensity, BlueIntensity));
+
+	if (UDirectionalLightComponent *DirectionalLightComp = Cast<UDirectionalLightComponent>(LightComp))
+	{
+		// Allow shadow maps to be seen from much further away
+		DirectionalLightComp->DynamicShadowDistanceMovableLight = 10000000.0f;
+		DirectionalLightComp->DistanceFieldShadowDistance = 100000000.0f;
+		DirectionalLightComp->TraceDistance = 20000.0f;
+	}
 
 	// Light should spawn as disabled so SceneManager can manage which scene's light is enabled
 	ToggleSunLight(false);
@@ -308,7 +364,7 @@ void USceneData::SpawnSunLight()
 void USceneData::UpdateCelestialBodies() const
 {
 	int Index = 0;
-	for (const auto &CelestialBody : CielimMessage.GetMessage().celestialbodies())
+	for (const auto &CelestialBody : CielimMessage->celestialbodies())
 	{
 		FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
 		FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
@@ -321,7 +377,7 @@ void USceneData::UpdateCelestialBodies() const
 
 void USceneData::UpdateSpacecraft() const
 {
-	const cielimMessage::Spacecraft &SpacecraftMessage = CielimMessage.GetMessage().spacecraft();
+	const cielimMessage::Spacecraft &SpacecraftMessage = CielimMessage->spacecraft();
 
 	const FVector3d PositionSpacecraft = GetSpacecraftPosition(SpacecraftMessage);
 	const FVector3d AttitudeVector =
@@ -331,15 +387,15 @@ void USceneData::UpdateSpacecraft() const
 	this->Spacecraft->Update(PositionSpacecraft, SpacecraftRotation);
 
 	// Update camera
-	if (this->CielimMessage.GetMessage().has_camera())
+	if (this->CielimMessage->has_camera())
 	{
-		const cielimMessage::CameraModel &Camera = CielimMessage.GetMessage().camera();
+		const cielimMessage::CameraModel &Camera = CielimMessage->camera();
 
 		const FRotator CameraRotation = GetCameraRotation(Camera);
 
 		this->Spacecraft->SetCameraRelativeOrientation(CameraRotation);
 
-		this->Spacecraft->CameraModel->SetCameraParameters(Camera);
+		this->Spacecraft->CameraModel->SetCameraParameters(*this->CielimMessage);
 	}
 }
 
@@ -367,7 +423,7 @@ void USceneData::BeginDestroy()
 // Gets the positions of a Spacecraft Object
 static FVector3d GetSpacecraftPosition(const cielimMessage::Spacecraft &Craft)
 {
-	const FVector3d PositionSpacecraft = 100.0f * FVector3d(Craft.position(0), Craft.position(1), Craft.position(2));
+	const FVector3d PositionSpacecraft = FVector3d(Craft.position(0), Craft.position(1), Craft.position(2));
 	return Right2LeftVector(PositionSpacecraft);
 }
 
@@ -382,7 +438,7 @@ static FRotator GetRotatorFromMrp(const FVector3d &Sigma)
 // Gets the position of a Camera Object
 static FVector3d GetCameraPosition(const cielimMessage::CameraModel &Camera)
 {
-	const FVector3d SigmaCamera = 100.0f *
+	const FVector3d SigmaCamera =
 		FVector3d(Camera.camerapositioninbody(0), Camera.camerapositioninbody(1), Camera.camerapositioninbody(2));
 	return Right2LeftVector(SigmaCamera);
 }
@@ -403,7 +459,7 @@ static FRotator GetCameraRotation(const cielimMessage::CameraModel &Camera)
 static FVector3d GetCelestialBodyPosition(const cielimMessage::CelestialBody &CelestialBody)
 {
 	const FVector3d PositionCelestialBody =
-		100.0f * FVector3d(CelestialBody.position(0), CelestialBody.position(1), CelestialBody.position(2));
+		FVector3d(CelestialBody.position(0), CelestialBody.position(1), CelestialBody.position(2));
 	return Right2LeftVector(PositionCelestialBody);
 }
 
