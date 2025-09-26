@@ -88,6 +88,7 @@ DerivedDataCache/*
 
 # Cielim-python data and folders
 Source/cielim-python/support-data/cassini-spice
+Source/cielim-python/support-data/deimos-spice
 Source/cielim-python/support-data/monte-carlo-sample
 Source/cielim-python/examples/images*
 
