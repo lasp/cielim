@@ -46,6 +46,7 @@ Building, cooking, and packaging Cielim can all be done using the `build.py` scr
 - `-p or --package` This argument tells it to package the Cielim executable.
 - `-r or --run` This argument tells it to run Cielim in the editor when the other tasks have finished.
 - `-d or --debug` This argument can take one of three values: `DebugGame`, `Development`, or `Shipping` which specify the debug mode that Cielim should be built/packaged in. It is recommended to stay on `Development` which is the default debug value.
+- `-x or --clean` This argument tells it to clean temporary build files.
 
 Alternatively, you can just run `build.py` with no arguments and this will build, cook, and package Cielim sequentially.
 You can also choose to cook and package Cielim from the Unreal Editor for more control over the process which is explained

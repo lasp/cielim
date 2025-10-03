@@ -1,6 +1,7 @@
 import os
 import sys
 import glob
+import shutil
 import platform
 import subprocess
 import argparse
@@ -166,6 +167,32 @@ def run_editor(unreal_path, args):
     process.wait()
 
 
+def clean():
+    print("Cleaning build files...")
+
+    cielim_path = os.path.dirname(os.path.abspath(__file__))
+
+    try:
+        shutil.rmtree(os.path.join(cielim_path, "Saved"))
+    except Exception as e:
+        print(f"Saved/ could not be removed: {e}")
+
+    try:
+        shutil.rmtree(os.path.join(cielim_path, "Binaries"))
+    except Exception as e:
+        print(f"Binaries/ could not be removed: {e}")
+
+    try:
+        shutil.rmtree(os.path.join(cielim_path, "Intermediate"))
+    except Exception as e:
+        print(f"Intermediate/ could not be removed: {e}")
+
+    try:
+        shutil.rmtree(os.path.join(cielim_path, "DerivedDataCache"))
+    except Exception as e:
+        print(f"DerivedDataCache/ could not be removed: {e}")
+
+
 if __name__ == "__main__":
     os_name = platform.system()
 
@@ -240,6 +267,7 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--package", action="store_true", help="Package Cielim as standalone executable")
     parser.add_argument("-r", "--run", action="store_true", help="Run Cielim in Unreal Editor")
     parser.add_argument("-d", "--debug", choices={"Development", "DebugGame", "Shipping"}, default="Development")
+    parser.add_argument("-x", "--clean", action="store_true", help="Clean Cielim build files")
 
     args, remaining_args = parser.parse_known_args()
 
@@ -247,6 +275,9 @@ if __name__ == "__main__":
 
     ranAtLeastOnce = False
 
+    if args.clean:
+        clean()
+        ranAtLeastOnce = True
     if args.build:
         build(platform_name, executable, debug_mode)
         ranAtLeastOnce = True
