@@ -432,6 +432,7 @@ void FRouter::ParseMessageAndSend(zmq::multipart_t &Message, zmq::multipart_t &R
 
 		ReturnData->payload.Emplace<FImagePayload>(FImagePayload());
 		ReturnData->payload.Get<FImagePayload>().shouldReturnImage = static_cast<bool>(std::stoi(Message.popstr()));
+		ReturnData->payload.Get<FImagePayload>().shouldReturnDiagnostics = static_cast<bool>(std::stoi(Message.popstr()));
 
 		UE_LOG(LogCielim, Display, TEXT("Router : Waiting to enqueue REQUEST_IMAGE..."));
 

@@ -133,7 +133,7 @@ void USceneData::ParseCommand(const TSharedPtr<FCircularQueueData> &CommandData,
 
 		ReturnData->query = CommandType::REQUEST_IMAGE;
 		ReturnData->payload.Emplace<FImagePayload>(FImagePayload());
-		
+
 		if (const auto *TempPayload = CommandData->payload.TryGet<FImagePayload>(); TempPayload != nullptr)
 		{
 			FImagePayload *ReturnPayload = ReturnData->payload.TryGet<FImagePayload>();
@@ -147,7 +147,11 @@ void USceneData::ParseCommand(const TSharedPtr<FCircularQueueData> &CommandData,
 				UE_LOG(LogCielim, Display, TEXT("Put back PNG image: ASimulationDataSourceActor"));
 			}
 
-			Camera->GetDiagnosticData(*ReturnPayload->diagnostics);
+			if (TempPayload->shouldReturnDiagnostics)
+			{
+				Camera->GetDiagnosticData(*ReturnPayload->diagnostics);
+				UE_LOG(LogCielim, Display, TEXT("Put back diagnostics data: ASimulationDataSourceActor"));
+			}
 		}
 	}
 	else

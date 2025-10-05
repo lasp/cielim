@@ -58,9 +58,16 @@ class Connector:
         _ = self.request_socket.send_multipart([b"SIM_UPDATE", sim_frame.SerializePartialToString()])
         return self.safe_recv_multipart()[0].decode("utf-8")
 
-    def request_image_for_camera_id(self, camera_id: int, should_return_image: bool = True):
+    def request_image_for_camera_id(
+        self, camera_id: int, should_return_image: bool = True, should_return_diagnostics: bool = True
+    ):
         _ = self.request_socket.send_multipart(
-            [b"REQUEST_IMAGE", str.encode(str(camera_id)), str.encode(str(int(should_return_image)))]
+            [
+                b"REQUEST_IMAGE",
+                str.encode(str(camera_id)),
+                str.encode(str(int(should_return_image))),
+                str.encode(str(int(should_return_diagnostics))),
+            ]
         )
 
         [image_data, image_data_size, cob_x, cob_y] = self.safe_recv_multipart()

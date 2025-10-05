@@ -39,6 +39,7 @@ struct FImagePayload
 
 	// Inbound data
 	bool shouldReturnImage;
+	bool shouldReturnDiagnostics;
 
 	FImagePayload() : shouldReturnImage(false) {}
 };
