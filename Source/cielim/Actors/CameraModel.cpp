@@ -195,15 +195,6 @@ void ACameraModel::SaveImageToDisk(const FString &FilePath, const FString &Filen
 	UKismetRenderingLibrary::ExportRenderTarget(this, this->SceneCaptureComponent2D->TextureTarget, FilePath, Filename);
 }
 
-void ACameraModel::GetImageData(TArray64<uint8> &ImageData, FVector2D &CobCoordinates)
-{
-	// Get initial diagnostic data
-	this->GetImageData(CobCoordinates);
-
-	// Get final render
-	this->GetImageData(ImageData);
-}
-
 void ACameraModel::GetImageData(TArray64<uint8> &ImageData)
 {
 	FImage Image;
@@ -220,13 +211,15 @@ void ACameraModel::GetImageData(TArray64<uint8> &ImageData)
 	verify(FImageUtils::CompressImage(ImageData, TEXT("PNG"), Image));
 }
 
-void ACameraModel::GetImageData(FVector2D &CobCoordinates)
+void ACameraModel::GetDiagnosticData(DiagnosticData::DiagnosticData &Diagnostics)
 {
 	this->CameraParams.bIsDiagnosticRun = true;
 
 	this->SceneCaptureComponent2D->CaptureScene();
 
-	CobCoordinates = this->GetCenterOfBrightness();
+	const FVector2D CobCoordinates = this->GetCenterOfBrightness();
+	Diagnostics.set_cob_x(CobCoordinates.X);
+	Diagnostics.set_cob_y(CobCoordinates.Y);
 }
 
 void ACameraModel::ApplyGammaCorrection() const
