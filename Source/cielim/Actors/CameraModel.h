@@ -86,9 +86,9 @@ public:
 	/**
 	 * @brief Gets image data including pre-post-processing diagnostic data and image data for final render.
 	 * @param ImageData Reference to TArray64 used to contain serialized image data in PNG format (mutable).
-	 * @param CobCoordinates Reference to optional FVector2D used to contain center of brightness coordinates (mutable).
+	 * @param CobCoordinates Reference to FVector2D used to contain center of brightness coordinates (mutable).
 	 */
-	void GetImageData(TArray64<uint8> &ImageData, TOptional<FVector2D> &CobCoordinates);
+	void GetImageData(TArray64<uint8> &ImageData, FVector2D &CobCoordinates);
 
 	/**
 	 * @brief Gets only image data for final render with corruption effects applied.
@@ -98,9 +98,9 @@ public:
 
 	/**
 	 * @brief Gets only pre-post-processing diagnostic data.
-	 * @param CobCoordinates Reference to optional FVector2D used to contain center of brightness coordinates (mutable).
+	 * @param CobCoordinates Reference to FVector2D used to contain center of brightness coordinates (mutable).
 	 */
-	void GetImageData(TOptional<FVector2D> &CobCoordinates);
+	void GetImageData(FVector2D &CobCoordinates);
 
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent *Body;
@@ -122,7 +122,7 @@ private:
 
 	/* Enqueues CoB calculation pass on the GPU and synchronously writes resulting buffer back to the CPU and does
 	 * final reduction to a 2-vector coordinate which is then returned as the final result. */
-	TOptional<FVector2D> GetCenterOfBrightness() const;
+	FVector2D GetCenterOfBrightness() const;
 
 	// Returns the list of all parameters for all cosmic rays
 	TTuple<float, TResourceArray<FVector2f>, TResourceArray<FVector2f>, TResourceArray<float>>

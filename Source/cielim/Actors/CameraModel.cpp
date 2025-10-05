@@ -195,7 +195,7 @@ void ACameraModel::SaveImageToDisk(const FString &FilePath, const FString &Filen
 	UKismetRenderingLibrary::ExportRenderTarget(this, this->SceneCaptureComponent2D->TextureTarget, FilePath, Filename);
 }
 
-void ACameraModel::GetImageData(TArray64<uint8> &ImageData, TOptional<FVector2D> &CobCoordinates)
+void ACameraModel::GetImageData(TArray64<uint8> &ImageData, FVector2D &CobCoordinates)
 {
 	// Get initial diagnostic data
 	this->GetImageData(CobCoordinates);
@@ -220,7 +220,7 @@ void ACameraModel::GetImageData(TArray64<uint8> &ImageData)
 	verify(FImageUtils::CompressImage(ImageData, TEXT("PNG"), Image));
 }
 
-void ACameraModel::GetImageData(TOptional<FVector2D> &CobCoordinates)
+void ACameraModel::GetImageData(FVector2D &CobCoordinates)
 {
 	this->CameraParams.bIsDiagnosticRun = true;
 
@@ -278,9 +278,9 @@ void ACameraModel::ApplyGammaCorrection() const
 		});
 }
 
-TOptional<FVector2D> ACameraModel::GetCenterOfBrightness() const
+FVector2D ACameraModel::GetCenterOfBrightness() const
 {
-	TOptional<FVector2D> CobCoords;
+	FVector2D CobCoords;
 
 	UTextureRenderTarget2D *RenderTarget = this->SceneCaptureComponent2D->TextureTarget;
 
@@ -377,6 +377,10 @@ TOptional<FVector2D> ACameraModel::GetCenterOfBrightness() const
 					const double CenterY = YLuminanceSum / LuminanceSum;
 					CobCoords = FVector2D(CenterX, CenterY);
 				}
+				else
+				{
+					CobCoords = FVector2D(-1.0f, -1.0f);
+				}
 
 				Readback.Unlock();
 			}
@@ -385,8 +389,7 @@ TOptional<FVector2D> ACameraModel::GetCenterOfBrightness() const
 	Fence.BeginFence();
 	Fence.Wait();
 
-	if (CobCoords.IsSet())
-		UE_LOG(LogCielim, Display, TEXT("Center of Brightness: %f, %f"), CobCoords->X, CobCoords->Y);
+	UE_LOG(LogCielim, Display, TEXT("Center of Brightness: %f, %f"), CobCoords.X, CobCoords.Y);
 
 	return CobCoords;
 }
