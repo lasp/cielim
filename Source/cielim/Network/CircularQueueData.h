@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 
+#include "../Protobuf/DiagnosticData.pb.h"
 #include "../Protobuf/cielimMessage.pb.h"
 
 // List of recognized commands
@@ -32,9 +33,11 @@ struct FUpdatePayload
 
 struct FImagePayload
 {
+	// Outbound data
 	TArray64<uint8> image_data;
-	TOptional<FVector2d> centerOfBrightness;
+	TSharedPtr<DiagnosticData::DiagnosticData> diagnostics;
 
+	// Inbound data
 	bool shouldReturnImage;
 
 	FImagePayload() : shouldReturnImage(false) {}

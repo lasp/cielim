@@ -478,10 +478,11 @@ void FRouter::ParseCircularQueueDataAndSend(const TSharedPtr<FCircularQueueData>
 		ReturnMessage.addmem(ResponseImage.GetData(), Bytes);
 		ReturnMessage.addtyp(Bytes);
 
-		if (TempPayload != nullptr && TempPayload->centerOfBrightness.IsSet())
+		if (TempPayload != nullptr && TempPayload->diagnostics != nullptr &&
+			TempPayload->diagnostics->cob_x() >= 0.0f && TempPayload->diagnostics->cob_y() >= 0.0f)
 		{
-			ReturnMessage.addtyp<double>(TempPayload->centerOfBrightness.GetValue().X);
-			ReturnMessage.addtyp<double>(TempPayload->centerOfBrightness.GetValue().Y);
+			ReturnMessage.addtyp<double>(TempPayload->diagnostics->cob_x());
+			ReturnMessage.addtyp<double>(TempPayload->diagnostics->cob_y());
 		}
 		else
 		{

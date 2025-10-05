@@ -149,7 +149,9 @@ void USceneData::ParseCommand(const TSharedPtr<FCircularQueueData> &CommandData,
 		ReturnData->query = CommandType::REQUEST_IMAGE;
 		ReturnData->payload.Emplace<FImagePayload>(FImagePayload());
 		ReturnData->payload.Get<FImagePayload>().image_data = ImageDataPng;
-		ReturnData->payload.Get<FImagePayload>().centerOfBrightness = CobCoords;
+		ReturnData->payload.Get<FImagePayload>().diagnostics = MakeShared<DiagnosticData::DiagnosticData>();
+		ReturnData->payload.Get<FImagePayload>().diagnostics->set_cob_x(CobCoords->X);
+		ReturnData->payload.Get<FImagePayload>().diagnostics->set_cob_y(CobCoords->Y);
 
 		UE_LOG(LogCielim, Display, TEXT("Put back PNG image: ASimulationDataSourceActor"));
 	}
