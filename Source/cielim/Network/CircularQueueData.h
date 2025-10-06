@@ -31,17 +31,20 @@ struct FUpdatePayload
 	FUpdatePayload() { message = MakeShared<cielimMessage::CielimMessage>(); }
 };
 
-struct FImagePayload
+struct FImageRequestPayload
 {
-	// Outbound data
-	TArray64<uint8> image_data;
-	TSharedPtr<DiagnosticData::DiagnosticData> diagnostics;
+	bool bShouldReturnImage;
+	bool bShouldReturnDiagnostics;
 
-	// Inbound data
-	bool shouldReturnImage;
-	bool shouldReturnDiagnostics;
+	FImageRequestPayload() : bShouldReturnImage(true), bShouldReturnDiagnostics(false) {}
+};
 
-	FImagePayload() : shouldReturnImage(false) {}
+struct FImageResponsePayload
+{
+	TArray64<uint8> ImageData;
+	TSharedPtr<DiagnosticData::DiagnosticData> Diagnostics;
+
+	FImageResponsePayload() { Diagnostics = MakeShared<DiagnosticData::DiagnosticData>(); }
 };
 
 struct FCircularQueueData
@@ -55,7 +58,7 @@ struct FCircularQueueData
 	// Defines which command we're dealing with
 	CommandType query;
 	// Payload whose type depends on the query
-	TVariant<FNoPayload, FUpdatePayload, FImagePayload> payload;
+	TVariant<FNoPayload, FUpdatePayload, FImageRequestPayload, FImageResponsePayload> payload;
 
 	// Define default states (payload defaults to monostate)
 	FCircularQueueData() : SceneID(0), bUseDelim(false), query(CommandType::ERROR) { payload.Emplace<FNoPayload>(); }

@@ -430,9 +430,11 @@ void FRouter::ParseMessageAndSend(zmq::multipart_t &Message, zmq::multipart_t &R
 
 		UE_LOG(LogCielim, Display, TEXT("Router : Camera ID: %d"), CameraID);
 
-		ReturnData->payload.Emplace<FImagePayload>(FImagePayload());
-		ReturnData->payload.Get<FImagePayload>().shouldReturnImage = static_cast<bool>(std::stoi(Message.popstr()));
-		ReturnData->payload.Get<FImagePayload>().shouldReturnDiagnostics = static_cast<bool>(std::stoi(Message.popstr()));
+		ReturnData->payload.Emplace<FImageRequestPayload>(FImageRequestPayload());
+		ReturnData->payload.Get<FImageRequestPayload>().bShouldReturnImage =
+			static_cast<bool>(std::stoi(Message.popstr()));
+		ReturnData->payload.Get<FImageRequestPayload>().bShouldReturnDiagnostics =
+			static_cast<bool>(std::stoi(Message.popstr()));
 
 		UE_LOG(LogCielim, Display, TEXT("Router : Waiting to enqueue REQUEST_IMAGE..."));
 
@@ -465,11 +467,11 @@ void FRouter::ParseCircularQueueDataAndSend(const TSharedPtr<FCircularQueueData>
 
 		TArray64<uint8> ResponseImage;
 
-		auto *TempPayload = Data->payload.TryGet<FImagePayload>();
+		const auto *TempPayload = Data->payload.TryGet<FImageResponsePayload>();
 
 		if (TempPayload != nullptr)
 		{
-			ResponseImage = TempPayload->image_data;
+			ResponseImage = TempPayload->ImageData;
 
 			UE_LOG(LogCielim, Display, TEXT("Router : Image data was not NULL."));
 		}
@@ -479,11 +481,11 @@ void FRouter::ParseCircularQueueDataAndSend(const TSharedPtr<FCircularQueueData>
 		ReturnMessage.addmem(ResponseImage.GetData(), Bytes);
 		ReturnMessage.addtyp(Bytes);
 
-		if (TempPayload != nullptr && TempPayload->diagnostics != nullptr &&
-			TempPayload->diagnostics->cob_x() >= 0.0f && TempPayload->diagnostics->cob_y() >= 0.0f)
+		if (TempPayload != nullptr && TempPayload->Diagnostics != nullptr &&
+			TempPayload->Diagnostics->cob_x() >= 0.0f && TempPayload->Diagnostics->cob_y() >= 0.0f)
 		{
-			ReturnMessage.addtyp<double>(TempPayload->diagnostics->cob_x());
-			ReturnMessage.addtyp<double>(TempPayload->diagnostics->cob_y());
+			ReturnMessage.addtyp<double>(TempPayload->Diagnostics->cob_x());
+			ReturnMessage.addtyp<double>(TempPayload->Diagnostics->cob_y());
 		}
 		else
 		{

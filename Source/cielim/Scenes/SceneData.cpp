@@ -132,24 +132,22 @@ void USceneData::ParseCommand(const TSharedPtr<FCircularQueueData> &CommandData,
 		}
 
 		ReturnData->query = CommandType::REQUEST_IMAGE;
-		ReturnData->payload.Emplace<FImagePayload>(FImagePayload());
+		ReturnData->payload.Emplace<FImageResponsePayload>(FImageResponsePayload());
 
-		if (const auto *TempPayload = CommandData->payload.TryGet<FImagePayload>(); TempPayload != nullptr)
+		if (const auto *TempPayload = CommandData->payload.TryGet<FImageRequestPayload>(); TempPayload != nullptr)
 		{
-			FImagePayload *ReturnPayload = ReturnData->payload.TryGet<FImagePayload>();
-			ReturnPayload->diagnostics = MakeShared<DiagnosticData::DiagnosticData>();
-
+			FImageResponsePayload *ReturnPayload = ReturnData->payload.TryGet<FImageResponsePayload>();
 			ACameraModel *Camera = this->Spacecraft->CameraModel;
 
-			if (TempPayload->shouldReturnImage)
+			if (TempPayload->bShouldReturnImage)
 			{
-				Camera->GetImageData(ReturnPayload->image_data);
+				Camera->GetImageData(ReturnPayload->ImageData);
 				UE_LOG(LogCielim, Display, TEXT("Put back PNG image: ASimulationDataSourceActor"));
 			}
 
-			if (TempPayload->shouldReturnDiagnostics)
+			if (TempPayload->bShouldReturnDiagnostics)
 			{
-				Camera->GetDiagnosticData(*ReturnPayload->diagnostics);
+				Camera->GetDiagnosticData(*ReturnPayload->Diagnostics);
 				UE_LOG(LogCielim, Display, TEXT("Put back diagnostics data: ASimulationDataSourceActor"));
 			}
 		}
