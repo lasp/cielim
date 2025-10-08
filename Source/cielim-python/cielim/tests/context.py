@@ -9,3 +9,4 @@ import driver
 import launcher
 import scene
 import cielimMessage_pb2
+import variable_map
