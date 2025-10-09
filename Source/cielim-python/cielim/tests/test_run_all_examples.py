@@ -148,6 +148,36 @@ def test_spice_scenario():
     shutil.rmtree(out_dir)
 
 
+def test_deimos_flyby():
+    # headless plotting
+    os.environ.setdefault("MPLBACKEND", "Agg")
+
+    # Require kernels; xfail if not available
+    spice_root = PROJECT_ROOT / "support-data" / "deimos-spice"
+    if not spice_root.exists():
+        pytest.skip(f"Missing SPICE kernels: {spice_root}")
+
+    # Load the example module
+    df = _load_module_from(EXAMPLES_DIR / "deimos_flyby.py", "spice_scenario")
+
+    # Output dir lives next to the script by its own logic
+    base_dir = Path(getattr(df, "current_file_path", EXAMPLES_DIR))
+    out_dir = base_dir / "images-deimos-spice"
+
+    # clean slate
+    if out_dir.exists():
+        shutil.rmtree(out_dir)
+
+    # run
+    df.spice_scenario()
+
+    # assert (numpy.testing)
+    np.testing.assert_(out_dir.exists(), msg="images-deimos-spice directory was not created")
+
+    # cleanup
+    shutil.rmtree(out_dir)
+
+
 def test_print_protobuffer_content():
     os.environ.setdefault("MPLBACKEND", "Agg")
 
