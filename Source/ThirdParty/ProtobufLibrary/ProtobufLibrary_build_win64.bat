@@ -29,8 +29,7 @@ if exist "%protobuf_lib_full_path%" (
     @REM but didn't get in to protobufs until 3.20.0. Unfortunately,
     @REM the most recent version we can used is tied to BSK's
     @REM currently or 3.18.0
-    git apply ../Protobuf_patch1.patch
-    git apply ../Protobuf_patch2.patch
+    git apply ../protobuf_fix.patch
 
     @REM Link to fix:
     @REM https://github.com/protocolbuffers/protobuf/commit/ef1c9fd9077440acacf4fec112153dda4a2c9d44#diff-d35d85d6ef5be92bdbaa901ca9155566f5d7dc2e4fbf5e4ae6d111a615169959

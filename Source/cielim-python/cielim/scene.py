@@ -4,6 +4,7 @@ import cielimMessage_pb2
 from orbital_motion import *
 from rigid_body_kinematics import *
 import numpy as np
+from qe_curve_fit import qe_curve_fit
 
 
 class Scene(object):
@@ -161,6 +162,23 @@ class Scene(object):
         """
         self.propagate(end_time, gravitational_parameter)
         self.look_at_target(target_name)
+
+    def set_qe_curve_fit(self, qe_data_path: str, exposure_time: float, solid_angle: float, pixel_area: float) -> None:
+        fit_wavelengths, fit_values = qe_curve_fit(
+            qe_data_path, exposure_time, solid_angle, pixel_area, show_plots=False
+        )
+        self.cielim_msg.renderParameters.wavelength1 = fit_wavelengths[0]
+        self.cielim_msg.renderParameters.wavelength2 = fit_wavelengths[1]
+        self.cielim_msg.renderParameters.wavelength3 = fit_wavelengths[2]
+        self.cielim_msg.camera.sensorModel.qeCurve.redValue1 = fit_values[0]
+        self.cielim_msg.camera.sensorModel.qeCurve.greenValue1 = fit_values[0]
+        self.cielim_msg.camera.sensorModel.qeCurve.blueValue1 = fit_values[0]
+        self.cielim_msg.camera.sensorModel.qeCurve.redValue2 = fit_values[1]
+        self.cielim_msg.camera.sensorModel.qeCurve.greenValue2 = fit_values[1]
+        self.cielim_msg.camera.sensorModel.qeCurve.blueValue2 = fit_values[1]
+        self.cielim_msg.camera.sensorModel.qeCurve.redValue3 = fit_values[2]
+        self.cielim_msg.camera.sensorModel.qeCurve.greenValue3 = fit_values[2]
+        self.cielim_msg.camera.sensorModel.qeCurve.blueValue3 = fit_values[2]
 
     def get_scene(self) -> cielimMessage_pb2.CielimMessage:
         """

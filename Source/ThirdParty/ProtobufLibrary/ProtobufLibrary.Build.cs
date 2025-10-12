@@ -11,8 +11,6 @@ public class ProtobufLibrary : ModuleRules
         Type = ModuleRules.ModuleType.External;
         PrecompileForTargets = PrecompileTargetsType.Any;
 
-        // PublicDefinitions.Add("CXXFLAGS=-Wno-undef-prefix"); // This should get rid of unnecessary warnings
-
         // Link to protobuf libraries
         if (Target.Platform == UnrealTargetPlatform.Mac || Target.Platform == UnrealTargetPlatform.Linux)
         {
