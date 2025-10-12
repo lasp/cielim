@@ -131,27 +131,26 @@ void USceneData::ParseCommand(const TSharedPtr<FCircularQueueData> &CommandData,
 			Instance->SetVectorParameterValue(ParamName, this->SunLight->GetActorForwardVector().GetSafeNormal());
 		}
 
-		TArray64<uint8> ImageDataPng;
-		TOptional<FVector2D> CobCoords;
-
-		ACameraModel *Camera = this->Spacecraft->CameraModel;
-
-		if (const auto *TempPayload = CommandData->payload.TryGet<FImagePayload>();
-			TempPayload != nullptr && TempPayload->shouldReturnImage)
-		{
-			Camera->GetImageData(ImageDataPng, CobCoords);
-		}
-		else
-		{
-			Camera->GetImageData(CobCoords);
-		}
-
 		ReturnData->query = CommandType::REQUEST_IMAGE;
-		ReturnData->payload.Emplace<FImagePayload>(FImagePayload());
-		ReturnData->payload.Get<FImagePayload>().image_data = ImageDataPng;
-		ReturnData->payload.Get<FImagePayload>().centerOfBrightness = CobCoords;
+		ReturnData->payload.Emplace<FImageResponsePayload>(FImageResponsePayload());
 
-		UE_LOG(LogCielim, Display, TEXT("Put back PNG image: ASimulationDataSourceActor"));
+		if (const auto *TempPayload = CommandData->payload.TryGet<FImageRequestPayload>(); TempPayload != nullptr)
+		{
+			FImageResponsePayload *ReturnPayload = ReturnData->payload.TryGet<FImageResponsePayload>();
+			ACameraModel *Camera = this->Spacecraft->CameraModel;
+
+			if (TempPayload->bShouldReturnImage)
+			{
+				Camera->GetImageData(ReturnPayload->ImageData);
+				UE_LOG(LogCielim, Display, TEXT("Put back PNG image: ASimulationDataSourceActor"));
+			}
+
+			if (TempPayload->bShouldReturnDiagnostics)
+			{
+				Camera->GetDiagnosticData(*ReturnPayload->Diagnostics);
+				UE_LOG(LogCielim, Display, TEXT("Put back diagnostics data: ASimulationDataSourceActor"));
+			}
+		}
 	}
 	else
 	{
