@@ -99,21 +99,6 @@ def scene_setup():
     protobuf_message.camera.lensModel.focalLength = 50.6 / 1000.0
     protobuf_message.camera.lensModel.pointSpreadFunction = 1.0
     protobuf_message.camera.lensModel.apertureRadius = 0.006024  # focal length / f#
-    # set quantum efficiency
-    qe_values = np.array([0.63963714, 0.91100815, 0.16740218])
-    protobuf_message.camera.sensorModel.qeCurve.redValue1 = qe_values[0]
-    protobuf_message.camera.sensorModel.qeCurve.greenValue1 = qe_values[0]
-    protobuf_message.camera.sensorModel.qeCurve.blueValue1 = qe_values[0]
-    protobuf_message.camera.sensorModel.qeCurve.redValue2 = qe_values[1]
-    protobuf_message.camera.sensorModel.qeCurve.greenValue2 = qe_values[1]
-    protobuf_message.camera.sensorModel.qeCurve.blueValue2 = qe_values[1]
-    protobuf_message.camera.sensorModel.qeCurve.redValue3 = qe_values[2]
-    protobuf_message.camera.sensorModel.qeCurve.greenValue3 = qe_values[2]
-    protobuf_message.camera.sensorModel.qeCurve.blueValue3 = qe_values[2]
-    fitted_wavelength = np.array([400.00063999, 676.55299175, 956.71887578])
-    protobuf_message.renderParameters.wavelength1 = fitted_wavelength[0]
-    protobuf_message.renderParameters.wavelength2 = fitted_wavelength[1]
-    protobuf_message.renderParameters.wavelength3 = fitted_wavelength[2]
 
     [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [25.8 * np.pi / 180, 19.3 * np.pi / 180]]
     [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
@@ -197,6 +182,12 @@ def spice_scenario():
         # update exposure time per image
         message.camera.sensorModel.exposureTime = exposure_time_list[idx]
         print(f"exposure time: {message.camera.sensorModel.exposureTime:.4f} sec")
+
+        qe_file_path = Path(__file__).resolve().parent.parent.parent / "support-data/deimos-spice/qe-mod-5.csv"
+        solid_angle = np.pi * 0.005**2 / (0.16**2)  # steradians
+        pixel_area = (0.022528 * 0.016896) / (4096 * 3072)  # m^2
+        f635_window = [625, 645]
+        scene_frame.set_qe_curve_fit(str(qe_file_path), exposure_time_list[idx], solid_angle, pixel_area, f635_window)
 
         scene_frame.set_existing_message(message)
         connector.send_frame(scene_frame.get_scene())
