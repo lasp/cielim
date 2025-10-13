@@ -118,6 +118,29 @@ def test_saved_monte_carlo_scenario():
     coverage_png.unlink()
 
 
+def test_corto_scenario():
+    # headless plotting
+    os.environ.setdefault("MPLBACKEND", "Agg")
+
+    # Load modules directly from files
+    corto = _load_module_from(EXAMPLES_DIR / "corto_scenario.py", "corto_scenario")
+
+    # Base dir where the example writes outputs (fallback to examples/)
+    base_dir = Path(getattr(corto, "current_file_path", EXAMPLES_DIR))
+
+    image_dir = base_dir / "images-corto"
+
+    # Remove previous file
+    if image_dir.exists():
+        shutil.rmtree(image_dir)
+
+    # Run the scenario
+    corto.corto_scenario()
+    assert image_dir.exists(), "corto scenario didn't create images"
+
+    shutil.rmtree(image_dir)
+
+
 def test_spice_scenario():
     # headless plotting
     os.environ.setdefault("MPLBACKEND", "Agg")
