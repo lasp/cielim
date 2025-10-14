@@ -1,0 +1,33 @@
+{
+    "camera_settings" :
+    {
+        "fov": 4,
+        "res_x": 2048,
+        "res_y": 2048,
+        "film_exposure": 10,
+        "sensor": "RGB",
+        "K": "np.eye(3,dtype = float)",
+        "clip_start": 0.1,
+        "clip_end": 1e4,
+        "bit_encoding": "8",
+        "viewtransform": "Filmic"
+    },
+    "sun_settings" :
+    {
+        "angle": 0.53,
+        "energy": 0.1
+    }
+    ,
+    "body_settings" :
+    {
+        "pass_index": 1,
+        "diffuse_bounces": 0
+    },
+    "rendering_settings" :
+    {
+        "engine": "CYCLES",
+        "device": "CPU",
+        "samples": 128,
+        "preview_samples": 16
+    }
+}
