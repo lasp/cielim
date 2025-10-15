@@ -97,9 +97,16 @@ def load_qe_from_csv(csv_path) -> tuple[np.ndarray, np.ndarray]:
     return wavelength_nm[order], qe_e_per_photon[order]
 
 
-def qe_curve_fit(qe_file_path, exposure_time, solid_angle, pixel_area, show_plots=True):
+def qe_curve_fit(qe_file_path, exposure_time, solid_angle, pixel_area, wavelength_window=None, show_plots=True):
     wavelength_nm, qe = load_qe_from_csv(qe_file_path)
 
+    if wavelength_window is not None and len(wavelength_window) == 2:
+        mask_low = wavelength_nm > wavelength_window[0]
+        wavelength_nm = wavelength_nm[mask_low]
+        qe = qe[mask_low]
+        mask_high = wavelength_nm < wavelength_window[1]
+        wavelength_nm = wavelength_nm[mask_high]
+        qe = qe[mask_high]
     # solar radiation intensity using black body radiation
     irr_wl_nm = np.copy(wavelength_nm)
     irr_interp = _solar_irradiance_planck_nm(irr_wl_nm)
