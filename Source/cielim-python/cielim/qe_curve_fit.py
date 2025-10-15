@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.integrate import simps
+from scipy.integrate import simpson
 from pathlib import Path
 import pandas as pd
 from scipy.optimize import basinhopping
@@ -129,7 +129,7 @@ def qe_curve_fit(qe_file_path, solid_angle, pixel_area, wavelength_window=None, 
     electrons_lambda = photons_lambda * qe
     # Numerical integration using Simpson's rule
     mask = (wavelength_nm >= wavelength_nm[0]) & (wavelength_nm <= wavelength_nm[-1])
-    integral_value = simps(electrons_lambda[mask], wavelength_nm[mask])
+    integral_value = simpson(electrons_lambda[mask], wavelength_nm[mask])
 
     if show_plots:
         print(
