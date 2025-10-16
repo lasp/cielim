@@ -45,6 +45,7 @@ FCelestialBodyMeshModel FCelestialBodyMeshModel::FromProtobuf(const cielimMessag
 
 	MeshModel.ProceduralRocks = Model.proceduralrocks();
 	MeshModel.MeanRadius = Model.meanradius();
+	MeshModel.GeometricAlbedo = Model.geometricalbedo();
 
 	if (Model.principalaxisdistortion().size() == 3)
 	{

@@ -109,6 +109,7 @@ constexpr MeshModel::MeshModel(
   , refmodel_(nullptr)
   , perlinnoise_(nullptr)
   , meanradius_(0)
+  , geometricalbedo_(0)
   , proceduralrocks_(0){}
 struct MeshModelDefaultTypeInternal {
   constexpr MeshModelDefaultTypeInternal()
@@ -126,7 +127,6 @@ constexpr CelestialBody::CelestialBody(
   , attitude_()
   , bodyname_(&::PROTOBUF_NAMESPACE_ID::internal::fixed_address_empty_string)
   , model_(nullptr)
-  , geometricalbedo_(0)
   , centralbody_(false){}
 struct CelestialBodyDefaultTypeInternal {
   constexpr CelestialBodyDefaultTypeInternal()
@@ -1761,47 +1761,55 @@ const char* MeshModel::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::
         } else
           goto handle_unusual;
         continue;
-      // repeated double principalAxisDistortion = 3;
+      // double geometricAlbedo = 3;
       case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 26)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 25)) {
+          geometricalbedo_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
+          ptr += sizeof(double);
+        } else
+          goto handle_unusual;
+        continue;
+      // repeated double principalAxisDistortion = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 34)) {
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedDoubleParser(_internal_mutable_principalaxisdistortion(), ptr, ctx);
           CHK_(ptr);
-        } else if (static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 25) {
+        } else if (static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 33) {
           _internal_add_principalaxisdistortion(::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr));
           ptr += sizeof(double);
         } else
           goto handle_unusual;
         continue;
-      // repeated double inertialToBodyMrp = 4;
-      case 4:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 34)) {
+      // repeated double inertialToBodyMrp = 5;
+      case 5:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 42)) {
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedDoubleParser(_internal_mutable_inertialtobodymrp(), ptr, ctx);
           CHK_(ptr);
-        } else if (static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 33) {
+        } else if (static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 41) {
           _internal_add_inertialtobodymrp(::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr));
           ptr += sizeof(double);
         } else
           goto handle_unusual;
         continue;
-      // .cielimMessage.ReflectanceModel refModel = 5;
-      case 5:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 42)) {
+      // .cielimMessage.ReflectanceModel refModel = 6;
+      case 6:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 50)) {
           ptr = ctx->ParseMessage(_internal_mutable_refmodel(), ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // .cielimMessage.PerlinNoise perlinNoise = 6;
-      case 6:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 50)) {
+      // .cielimMessage.PerlinNoise perlinNoise = 7;
+      case 7:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 58)) {
           ptr = ctx->ParseMessage(_internal_mutable_perlinnoise(), ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // double proceduralRocks = 7;
-      case 7:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 57)) {
+      // double proceduralRocks = 8;
+      case 8:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 65)) {
           proceduralrocks_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
           ptr += sizeof(double);
         } else
@@ -1852,36 +1860,42 @@ failure:
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(2, this->_internal_meanradius(), target);
   }
 
-  // repeated double principalAxisDistortion = 3;
+  // double geometricAlbedo = 3;
+  if (!(this->_internal_geometricalbedo() <= 0 && this->_internal_geometricalbedo() >= 0)) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(3, this->_internal_geometricalbedo(), target);
+  }
+
+  // repeated double principalAxisDistortion = 4;
   if (this->_internal_principalaxisdistortion_size() > 0) {
-    target = stream->WriteFixedPacked(3, _internal_principalaxisdistortion(), target);
+    target = stream->WriteFixedPacked(4, _internal_principalaxisdistortion(), target);
   }
 
-  // repeated double inertialToBodyMrp = 4;
+  // repeated double inertialToBodyMrp = 5;
   if (this->_internal_inertialtobodymrp_size() > 0) {
-    target = stream->WriteFixedPacked(4, _internal_inertialtobodymrp(), target);
+    target = stream->WriteFixedPacked(5, _internal_inertialtobodymrp(), target);
   }
 
-  // .cielimMessage.ReflectanceModel refModel = 5;
+  // .cielimMessage.ReflectanceModel refModel = 6;
   if (this->_internal_has_refmodel()) {
     target = stream->EnsureSpace(target);
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
       InternalWriteMessage(
-        5, _Internal::refmodel(this), target, stream);
+        6, _Internal::refmodel(this), target, stream);
   }
 
-  // .cielimMessage.PerlinNoise perlinNoise = 6;
+  // .cielimMessage.PerlinNoise perlinNoise = 7;
   if (this->_internal_has_perlinnoise()) {
     target = stream->EnsureSpace(target);
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
       InternalWriteMessage(
-        6, _Internal::perlinnoise(this), target, stream);
+        7, _Internal::perlinnoise(this), target, stream);
   }
 
-  // double proceduralRocks = 7;
+  // double proceduralRocks = 8;
   if (!(this->_internal_proceduralrocks() <= 0 && this->_internal_proceduralrocks() >= 0)) {
     target = stream->EnsureSpace(target);
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(7, this->_internal_proceduralrocks(), target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(8, this->_internal_proceduralrocks(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -1900,7 +1914,7 @@ size_t MeshModel::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // repeated double principalAxisDistortion = 3;
+  // repeated double principalAxisDistortion = 4;
   {
     unsigned int count = static_cast<unsigned int>(this->_internal_principalaxisdistortion_size());
     size_t data_size = 8UL * count;
@@ -1912,7 +1926,7 @@ size_t MeshModel::ByteSizeLong() const {
     total_size += data_size;
   }
 
-  // repeated double inertialToBodyMrp = 4;
+  // repeated double inertialToBodyMrp = 5;
   {
     unsigned int count = static_cast<unsigned int>(this->_internal_inertialtobodymrp_size());
     size_t data_size = 8UL * count;
@@ -1931,14 +1945,14 @@ size_t MeshModel::ByteSizeLong() const {
         this->_internal_shapemodel());
   }
 
-  // .cielimMessage.ReflectanceModel refModel = 5;
+  // .cielimMessage.ReflectanceModel refModel = 6;
   if (this->_internal_has_refmodel()) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
         *refmodel_);
   }
 
-  // .cielimMessage.PerlinNoise perlinNoise = 6;
+  // .cielimMessage.PerlinNoise perlinNoise = 7;
   if (this->_internal_has_perlinnoise()) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
@@ -1950,7 +1964,12 @@ size_t MeshModel::ByteSizeLong() const {
     total_size += 1 + 8;
   }
 
-  // double proceduralRocks = 7;
+  // double geometricAlbedo = 3;
+  if (!(this->_internal_geometricalbedo() <= 0 && this->_internal_geometricalbedo() >= 0)) {
+    total_size += 1 + 8;
+  }
+
+  // double proceduralRocks = 8;
   if (!(this->_internal_proceduralrocks() <= 0 && this->_internal_proceduralrocks() >= 0)) {
     total_size += 1 + 8;
   }
@@ -1988,6 +2007,9 @@ void MeshModel::MergeFrom(const MeshModel& from) {
   }
   if (!(from._internal_meanradius() <= 0 && from._internal_meanradius() >= 0)) {
     _internal_set_meanradius(from._internal_meanradius());
+  }
+  if (!(from._internal_geometricalbedo() <= 0 && from._internal_geometricalbedo() >= 0)) {
+    _internal_set_geometricalbedo(from._internal_geometricalbedo());
   }
   if (!(from._internal_proceduralrocks() <= 0 && from._internal_proceduralrocks() >= 0)) {
     _internal_set_proceduralrocks(from._internal_proceduralrocks());
@@ -2070,9 +2092,7 @@ CelestialBody::CelestialBody(const CelestialBody& from)
   } else {
     model_ = nullptr;
   }
-  ::memcpy(&geometricalbedo_, &from.geometricalbedo_,
-    static_cast<size_t>(reinterpret_cast<char*>(&centralbody_) -
-    reinterpret_cast<char*>(&geometricalbedo_)) + sizeof(centralbody_));
+  centralbody_ = from.centralbody_;
   // @@protoc_insertion_point(copy_constructor:cielimMessage.CelestialBody)
 }
 
@@ -2121,9 +2141,7 @@ void CelestialBody::Clear() {
     delete model_;
   }
   model_ = nullptr;
-  ::memset(&geometricalbedo_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&centralbody_) -
-      reinterpret_cast<char*>(&geometricalbedo_)) + sizeof(centralbody_));
+  centralbody_ = false;
   _internal_metadata_.Clear<std::string>();
 }
 
@@ -2189,14 +2207,6 @@ const char* CelestialBody::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_
         if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 48)) {
           centralbody_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
-        } else
-          goto handle_unusual;
-        continue;
-      // double geometricAlbedo = 7;
-      case 7:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 57)) {
-          geometricalbedo_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
-          ptr += sizeof(double);
         } else
           goto handle_unusual;
         continue;
@@ -2268,12 +2278,6 @@ failure:
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteBoolToArray(6, this->_internal_centralbody(), target);
   }
 
-  // double geometricAlbedo = 7;
-  if (!(this->_internal_geometricalbedo() <= 0 && this->_internal_geometricalbedo() >= 0)) {
-    target = stream->EnsureSpace(target);
-    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(7, this->_internal_geometricalbedo(), target);
-  }
-
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
         static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
@@ -2340,11 +2344,6 @@ size_t CelestialBody::ByteSizeLong() const {
         *model_);
   }
 
-  // double geometricAlbedo = 7;
-  if (!(this->_internal_geometricalbedo() <= 0 && this->_internal_geometricalbedo() >= 0)) {
-    total_size += 1 + 8;
-  }
-
   // bool centralBody = 6;
   if (this->_internal_centralbody() != 0) {
     total_size += 1 + 1;
@@ -2378,9 +2377,6 @@ void CelestialBody::MergeFrom(const CelestialBody& from) {
   }
   if (from._internal_has_model()) {
     _internal_mutable_model()->::cielimMessage::MeshModel::MergeFrom(from._internal_model());
-  }
-  if (!(from._internal_geometricalbedo() <= 0 && from._internal_geometricalbedo() >= 0)) {
-    _internal_set_geometricalbedo(from._internal_geometricalbedo());
   }
   if (from._internal_centralbody() != 0) {
     _internal_set_centralbody(from._internal_centralbody());

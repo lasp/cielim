@@ -32,6 +32,7 @@ public:
 	double Persistence{0.0f}; //[-] Persistence of the perlin noise
 	double ProceduralRocks{0.0f}; //[-] Parameter to generate procedural rocks on the base mesh
 	double MeanRadius{0.0f}; //[m] Length of the mean asteroid radius
+	double GeometricAlbedo{0.5f}; //[-] Geometric albedo of the celestial body
 
 	FVector3d PrincipalAxisDistortion{1.0, 1.0, 1.0}; //[%] Length distortions to apply to principal axes
 	FRotator InertialToBody = FRotator::ZeroRotator; // Attitude of mesh relative to inertial

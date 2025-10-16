@@ -1075,15 +1075,16 @@ class MeshModel final :
   // accessors -------------------------------------------------------
 
   enum : int {
-    kPrincipalAxisDistortionFieldNumber = 3,
-    kInertialToBodyMrpFieldNumber = 4,
+    kPrincipalAxisDistortionFieldNumber = 4,
+    kInertialToBodyMrpFieldNumber = 5,
     kShapeModelFieldNumber = 1,
-    kRefModelFieldNumber = 5,
-    kPerlinNoiseFieldNumber = 6,
+    kRefModelFieldNumber = 6,
+    kPerlinNoiseFieldNumber = 7,
     kMeanRadiusFieldNumber = 2,
-    kProceduralRocksFieldNumber = 7,
+    kGeometricAlbedoFieldNumber = 3,
+    kProceduralRocksFieldNumber = 8,
   };
-  // repeated double principalAxisDistortion = 3;
+  // repeated double principalAxisDistortion = 4;
   int principalaxisdistortion_size() const;
   private:
   int _internal_principalaxisdistortion_size() const;
@@ -1105,7 +1106,7 @@ class MeshModel final :
   ::PROTOBUF_NAMESPACE_ID::RepeatedField< double >*
       mutable_principalaxisdistortion();
 
-  // repeated double inertialToBodyMrp = 4;
+  // repeated double inertialToBodyMrp = 5;
   int inertialtobodymrp_size() const;
   private:
   int _internal_inertialtobodymrp_size() const;
@@ -1141,7 +1142,7 @@ class MeshModel final :
   std::string* _internal_mutable_shapemodel();
   public:
 
-  // .cielimMessage.ReflectanceModel refModel = 5;
+  // .cielimMessage.ReflectanceModel refModel = 6;
   bool has_refmodel() const;
   private:
   bool _internal_has_refmodel() const;
@@ -1159,7 +1160,7 @@ class MeshModel final :
       ::cielimMessage::ReflectanceModel* refmodel);
   ::cielimMessage::ReflectanceModel* unsafe_arena_release_refmodel();
 
-  // .cielimMessage.PerlinNoise perlinNoise = 6;
+  // .cielimMessage.PerlinNoise perlinNoise = 7;
   bool has_perlinnoise() const;
   private:
   bool _internal_has_perlinnoise() const;
@@ -1186,7 +1187,16 @@ class MeshModel final :
   void _internal_set_meanradius(double value);
   public:
 
-  // double proceduralRocks = 7;
+  // double geometricAlbedo = 3;
+  void clear_geometricalbedo();
+  double geometricalbedo() const;
+  void set_geometricalbedo(double value);
+  private:
+  double _internal_geometricalbedo() const;
+  void _internal_set_geometricalbedo(double value);
+  public:
+
+  // double proceduralRocks = 8;
   void clear_proceduralrocks();
   double proceduralrocks() const;
   void set_proceduralrocks(double value);
@@ -1208,6 +1218,7 @@ class MeshModel final :
   ::cielimMessage::ReflectanceModel* refmodel_;
   ::cielimMessage::PerlinNoise* perlinnoise_;
   double meanradius_;
+  double geometricalbedo_;
   double proceduralrocks_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_cielimMessage_2eproto;
@@ -1323,7 +1334,6 @@ class CelestialBody final :
     kAttitudeFieldNumber = 4,
     kBodyNameFieldNumber = 1,
     kModelFieldNumber = 5,
-    kGeometricAlbedoFieldNumber = 7,
     kCentralBodyFieldNumber = 6,
   };
   // repeated double position = 2;
@@ -1424,15 +1434,6 @@ class CelestialBody final :
       ::cielimMessage::MeshModel* model);
   ::cielimMessage::MeshModel* unsafe_arena_release_model();
 
-  // double geometricAlbedo = 7;
-  void clear_geometricalbedo();
-  double geometricalbedo() const;
-  void set_geometricalbedo(double value);
-  private:
-  double _internal_geometricalbedo() const;
-  void _internal_set_geometricalbedo(double value);
-  public:
-
   // bool centralBody = 6;
   void clear_centralbody();
   bool centralbody() const;
@@ -1454,7 +1455,6 @@ class CelestialBody final :
   ::PROTOBUF_NAMESPACE_ID::RepeatedField< double > attitude_;
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr bodyname_;
   ::cielimMessage::MeshModel* model_;
-  double geometricalbedo_;
   bool centralbody_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_cielimMessage_2eproto;
@@ -3525,7 +3525,27 @@ inline void MeshModel::set_meanradius(double value) {
   // @@protoc_insertion_point(field_set:cielimMessage.MeshModel.meanRadius)
 }
 
-// repeated double principalAxisDistortion = 3;
+// double geometricAlbedo = 3;
+inline void MeshModel::clear_geometricalbedo() {
+  geometricalbedo_ = 0;
+}
+inline double MeshModel::_internal_geometricalbedo() const {
+  return geometricalbedo_;
+}
+inline double MeshModel::geometricalbedo() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.MeshModel.geometricAlbedo)
+  return _internal_geometricalbedo();
+}
+inline void MeshModel::_internal_set_geometricalbedo(double value) {
+  
+  geometricalbedo_ = value;
+}
+inline void MeshModel::set_geometricalbedo(double value) {
+  _internal_set_geometricalbedo(value);
+  // @@protoc_insertion_point(field_set:cielimMessage.MeshModel.geometricAlbedo)
+}
+
+// repeated double principalAxisDistortion = 4;
 inline int MeshModel::_internal_principalaxisdistortion_size() const {
   return principalaxisdistortion_.size();
 }
@@ -3572,7 +3592,7 @@ MeshModel::mutable_principalaxisdistortion() {
   return _internal_mutable_principalaxisdistortion();
 }
 
-// repeated double inertialToBodyMrp = 4;
+// repeated double inertialToBodyMrp = 5;
 inline int MeshModel::_internal_inertialtobodymrp_size() const {
   return inertialtobodymrp_.size();
 }
@@ -3619,7 +3639,7 @@ MeshModel::mutable_inertialtobodymrp() {
   return _internal_mutable_inertialtobodymrp();
 }
 
-// .cielimMessage.ReflectanceModel refModel = 5;
+// .cielimMessage.ReflectanceModel refModel = 6;
 inline bool MeshModel::_internal_has_refmodel() const {
   return this != internal_default_instance() && refmodel_ != nullptr;
 }
@@ -3709,7 +3729,7 @@ inline void MeshModel::set_allocated_refmodel(::cielimMessage::ReflectanceModel*
   // @@protoc_insertion_point(field_set_allocated:cielimMessage.MeshModel.refModel)
 }
 
-// .cielimMessage.PerlinNoise perlinNoise = 6;
+// .cielimMessage.PerlinNoise perlinNoise = 7;
 inline bool MeshModel::_internal_has_perlinnoise() const {
   return this != internal_default_instance() && perlinnoise_ != nullptr;
 }
@@ -3799,7 +3819,7 @@ inline void MeshModel::set_allocated_perlinnoise(::cielimMessage::PerlinNoise* p
   // @@protoc_insertion_point(field_set_allocated:cielimMessage.MeshModel.perlinNoise)
 }
 
-// double proceduralRocks = 7;
+// double proceduralRocks = 8;
 inline void MeshModel::clear_proceduralrocks() {
   proceduralrocks_ = 0;
 }
@@ -4118,26 +4138,6 @@ inline void CelestialBody::_internal_set_centralbody(bool value) {
 inline void CelestialBody::set_centralbody(bool value) {
   _internal_set_centralbody(value);
   // @@protoc_insertion_point(field_set:cielimMessage.CelestialBody.centralBody)
-}
-
-// double geometricAlbedo = 7;
-inline void CelestialBody::clear_geometricalbedo() {
-  geometricalbedo_ = 0;
-}
-inline double CelestialBody::_internal_geometricalbedo() const {
-  return geometricalbedo_;
-}
-inline double CelestialBody::geometricalbedo() const {
-  // @@protoc_insertion_point(field_get:cielimMessage.CelestialBody.geometricAlbedo)
-  return _internal_geometricalbedo();
-}
-inline void CelestialBody::_internal_set_geometricalbedo(double value) {
-  
-  geometricalbedo_ = value;
-}
-inline void CelestialBody::set_geometricalbedo(double value) {
-  _internal_set_geometricalbedo(value);
-  // @@protoc_insertion_point(field_set:cielimMessage.CelestialBody.geometricAlbedo)
 }
 
 // -------------------------------------------------------------------

@@ -38,6 +38,8 @@ void ACelestialBody::LoadMesh(const FCelestialBodyMeshModel &Model)
 		MeshAsset = Cast<UStaticMesh>(MeshPath.TryLoad());
 	}
 
+	// Set asteroid shape model
+
 	if (const uint32 NumTriangles = MeshAsset->GetNumTriangles(0);
 		!this->MeshModel.HasPerlinNoise || NumTriangles > 15000)
 	{
@@ -118,16 +120,50 @@ void ACelestialBody::LoadMesh(const FCelestialBodyMeshModel &Model)
 		this->MeshComponent = ProceduralMesh;
 	}
 
+	// Set asteroid material
+
 	UE_LOG(LogCielim, Display, TEXT("BRDF Model: %s"), *this->MeshModel.BrdfModel)
 
-	if (this->MeshModel.BrdfModel.Equals("Regolith"))
-	{
-		UMaterialInterface *RegolithMaterial = Cast<UMaterialInterface>(StaticLoadObject(
-			UMaterialInterface::StaticClass(), nullptr, TEXT("Material'/Game/AsteroidMeshes/M_Regolith.M_Regolith'")));
+	FString BaseMaterialPath;
 
-		this->MeshComponent->SetMaterial(0, RegolithMaterial);
+	if (this->MeshModel.BrdfModel.ToLower().Equals("lambertian"))
+	{
+		BaseMaterialPath = "/Game/AsteroidMeshes/M_Lambertian.M_Lambertian";
+	}
+	else if (this->MeshModel.BrdfModel.ToLower().Equals("regolith"))
+	{
+		BaseMaterialPath = "/Game/AsteroidMeshes/M_Regolith.M_Regolith";
 	}
 
+	if (UMaterialInterface *BaseMaterial = LoadObject<UMaterialInterface>(nullptr, *BaseMaterialPath))
+	{
+		// Create instance of the base material that will be used by the mesh model
+		UMaterialInstanceDynamic *MaterialInstance = UMaterialInstanceDynamic::Create(BaseMaterial, this);
+
+		// All albedo map textures should follow this naming convention to be recognized
+		const FString TexturePath =
+			FString::Printf(TEXT("/Game/AsteroidMeshes/%s_albedo.%s_albedo"), *Model.ShapeModel, *Model.ShapeModel);
+
+		if (UTexture2D *AlbedoTexture = LoadObject<UTexture2D>(nullptr, *TexturePath))
+		{
+			MaterialInstance->SetTextureParameterValue(FName("AlbedoMap"), AlbedoTexture);
+		}
+		else
+		{
+			// If albedo map doesn't exist, just use plain white default texture
+			UE_LOG(LogCielim, Warning, TEXT("Albedo map %s couldn't be found, using default."), *TexturePath);
+		}
+
+		MaterialInstance->SetScalarParameterValue(FName("GeometricAlbedo"), Model.GeometricAlbedo);
+
+		this->MeshComponent->SetMaterial(0, MaterialInstance);
+	}
+	else
+	{
+		UE_LOG(LogCielim, Warning, TEXT("Material couldn't be found for BRDF, using default."))
+	}
+
+	// Use InertialToBody MRP to set the rotation of the mesh relative to the frame of the body
 	this->MeshComponent->SetRelativeRotation(this->MeshModel.InertialToBody);
 }
 
