@@ -76,10 +76,14 @@ def scene_setup():
     body.bodyName = "deimos"
     [body.position.append(item) for item in [0, 0, 0]]
     [body.velocity.append(item) for item in [0, 0, 0]]
-    [body.attitude.append(item) for item in [0, 0, 0]]
+    [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
 
-    body.model.shapeModel = "bennu_normalized"  # we use bennu shape so far, need to replace it with deimos
+    body.model.shapeModel = "deimos_normalized"  # we use bennu shape so far, need to replace it with deimos
+    body.model.refModel.brdfModel = "Regolith"
     body.model.meanRadius = 6.2 * 1e3  # radius in meter of deimos
+    body.model.geometricAlbedo = 0.12  # effective albedo of deimos
+    # NOTE: this is calculated by taking average albedo (~0.07) and dividing by the average pixel (~0.58) of the albedo map
+    # This is done so that average color of the shape model matches the real world average albedo
 
     sun = protobuf_message.celestialBodies.add()
     sun.bodyName = "sun"
