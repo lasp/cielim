@@ -173,7 +173,7 @@ def qe_curve_fit(qe_file_path, solid_angle, pixel_area, wavelength_window=None, 
         return simpson_error
 
     # Define an initial guess and bounds for the variables
-    initial_guess = np.array([400, 600, 800])
+    initial_guess = np.array([wavelength_nm[0], (wavelength_nm[0] + wavelength_nm[-1]) / 2, wavelength_nm[-1]])
     bounds = (
         (wavelength_nm[0], wavelength_nm[-1]),
         (wavelength_nm[0], wavelength_nm[-1]),
