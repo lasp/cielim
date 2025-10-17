@@ -178,13 +178,23 @@ def spice_scenario():
         # DEIMOS-centered states
         position, _ = spice.spkpos("-62", time, "J2000", "NONE", "DEIMOS")
         sun_pos, _ = spice.spkpos("SUN", time, "J2000", "NONE", "DEIMOS")
-
         BN = spice.pxform("J2000", instrument_id, time)  # instrument as body frame
         BN = C_img_cam @ C_img_cam @ BN
         # NOTE: we do the transformation "twice" in order to generate images close to the EMM mission
         # However, this should be done "once" in theory. Future work should investigate this.
 
         message = scene_frame.get_scene()
+
+        BN_object = spice.pxform("J2000", "IAU_DEIMOS", time)
+
+        TB = np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]])  # manual correction to inertial frame
+        BN_object = np.dot(TB, BN_object)
+
+        print("get DCM of deimos, det(DCM): ", np.linalg.det(BN_object))
+
+        message.celestialBodies[0].ClearField("attitude")
+        [message.celestialBodies[0].attitude.append(item) for item in BN_object.flatten().tolist()]
+
         message.spacecraft.ClearField("position")
         message.spacecraft.ClearField("attitude")
         [message.spacecraft.position.append(item) for item in position * 1e3]
