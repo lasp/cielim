@@ -142,10 +142,9 @@ def test_qe_curve_fit():
     qe_file_path = Path(__file__).resolve().parent.parent.parent / "support-data/deimos-spice/qe-mod-5.csv"
     if not qe_file_path.exists():
         pytest.skip(f"Missing data: {qe_file_path}")
-    exposure_time = 1.0e-3  # seconds
     solid_angle = np.pi * 0.005**2 / (0.16**2)  # steradians
     pixel_area = (0.022528 * 0.016896) / (4096 * 3072)  # m^2
-    scene_frame.set_qe_curve_fit(str(qe_file_path), exposure_time, solid_angle, pixel_area)
+    scene_frame.set_qe_curve_fit(str(qe_file_path), solid_angle, pixel_area)
 
     returned = scene_frame.get_scene()
     fit_wv1 = returned.renderParameters.wavelength1

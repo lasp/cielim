@@ -97,7 +97,7 @@ def load_qe_from_csv(csv_path) -> tuple[np.ndarray, np.ndarray]:
     return wavelength_nm[order], qe_e_per_photon[order]
 
 
-def qe_curve_fit(qe_file_path, exposure_time, solid_angle, pixel_area, wavelength_window=None, show_plots=True):
+def qe_curve_fit(qe_file_path, solid_angle, pixel_area, wavelength_window=None, show_plots=True):
     wavelength_nm, qe = load_qe_from_csv(qe_file_path)
 
     if wavelength_window is not None and len(wavelength_window) == 2:
@@ -122,7 +122,7 @@ def qe_curve_fit(qe_file_path, exposure_time, solid_angle, pixel_area, wavelengt
     power_lambda = solid_angle * pixel_area * radiance_per_nm  # W/nm
 
     # Number of photons per wavelength = power / photon energy (photons/s/m)
-    photons_lambda = exposure_time * power_lambda / photon_energy
+    photons_lambda = power_lambda / photon_energy
 
     # Calculate electrons per wavelength
     electrons_lambda = photons_lambda * qe
@@ -151,7 +151,7 @@ def qe_curve_fit(qe_file_path, exposure_time, solid_angle, pixel_area, wavelengt
         power_sample = solid_angle * pixel_area * radiance_sample  # W/nm
 
         # Photon rate per wavelength
-        photons_sample = exposure_time * power_sample / photon_energy_sample  # photons/nm
+        photons_sample = power_sample / photon_energy_sample  # photons/nm
 
         # Electrons per wavelength
         electrons_sample = photons_sample * qe_sample
@@ -206,7 +206,7 @@ def qe_curve_fit(qe_file_path, exposure_time, solid_angle, pixel_area, wavelengt
     power_sample = solid_angle * pixel_area * radiance_sample  # W/nm
 
     # Photon rate per wavelength
-    photons_sample = exposure_time * power_sample / photon_energy_sample  # photons/nm
+    photons_sample = power_sample / photon_energy_sample  # photons/nm
 
     # Electrons per wavelength
     electrons_sample = photons_sample * qe_sample
@@ -265,11 +265,10 @@ def qe_curve_fit(qe_file_path, exposure_time, solid_angle, pixel_area, wavelengt
 
 def main():
     # Parameters to modify
-    exposure_time = 1.0e-3  # seconds
     solid_angle = pi * 0.005**2 / (0.16**2)  # steradians
     pixel_area = (0.022528 * 0.016896) / (4096 * 3072)  # m^2
     qe_file_path = Path(__file__).resolve().parent.parent / "support-data/deimos-spice/qe-mod-5.csv"
-    qe_curve_fit(qe_file_path, exposure_time, solid_angle, pixel_area, show_plots=True)
+    qe_curve_fit(qe_file_path, solid_angle, pixel_area, show_plots=True)
 
 
 if __name__ == "__main__":
