@@ -3,8 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.integrate import simps
 from pathlib import Path
 import pandas as pd
-from scipy.optimize import minimize, Bounds
-
+from scipy.optimize import basinhopping
 
 # Constants
 h = 6.62607015e-34  # Planck constant, J·s
@@ -181,12 +180,24 @@ def qe_curve_fit(qe_file_path, solid_angle, pixel_area, wavelength_window=None, 
         (wavelength_nm[0], wavelength_nm[-1]),
     )
 
-    # Perform the minimization
-    result = minimize(fit_three_wavelengths, initial_guess, method="SLSQP", bounds=bounds)
+    def eq_constraint(wavelengths):
+        return wavelengths[1] - (wavelengths[2] + wavelengths[0]) / 2
 
-    print(f"Optimal variables: {result.x}")
-    print(f"Minimum function value: {result.fun}")
-    print(f"Optimization successful: {result.success}")
+    def ineq_constraint_1(wavelengths):
+        return wavelengths[1] - wavelengths[0] - 1
+
+    def ineq_constraint_2(wavelengths):
+        return wavelengths[2] - wavelengths[1] - 1
+
+    constrs = [
+        {"type": "ineq", "fun": ineq_constraint_1},
+        {"type": "ineq", "fun": ineq_constraint_2},
+        {"type": "eq", "fun": eq_constraint},
+    ]
+
+    # Run basinhopping with SLSQP as the local optimizer
+    minimizer_kwargs = {"method": "SLSQP", "bounds": bounds, "constraints": constrs}
+    result = basinhopping(fit_three_wavelengths, initial_guess, minimizer_kwargs=minimizer_kwargs, niter=100, seed=123)
 
     # get electrons/nm at fitted wavelength
     # Three wavelengths for sampling
