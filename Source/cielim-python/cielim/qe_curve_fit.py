@@ -102,10 +102,10 @@ def qe_curve_fit(qe_file_path, solid_angle, pixel_area, wavelength_window=None, 
 
     if wavelength_window is not None and len(wavelength_window) == 2:
         print("Applying wavelength window : " + str(wavelength_window))
-        mask_low = wavelength_nm > wavelength_window[0]
+        mask_low = wavelength_nm >= wavelength_window[0]
         wavelength_nm = wavelength_nm[mask_low]
         qe = qe[mask_low]
-        mask_high = wavelength_nm < wavelength_window[1]
+        mask_high = wavelength_nm <= wavelength_window[1]
         wavelength_nm = wavelength_nm[mask_high]
         qe = qe[mask_high]
     # solar radiation intensity using black body radiation
