@@ -1,5 +1,5 @@
 """
-Author: Chun-Wei Kong
+Author: Chun-Wei Kong, Owen Allison
 
 Goal:
     Generate images of deimos flyby according to the EMM Hope spacecraft.
@@ -27,6 +27,7 @@ from context import rigid_body_kinematics as rbk
 # from context import qe_curve_fit
 
 # ---- Paths (portable) ----
+current_file_path = os.path.dirname(__file__)
 HERE = Path(__file__).resolve()
 ROOT = HERE.parents[1]  # <repo root>
 MK = ROOT / "support-data" / "deimos-spice" / "deimos-spice.txt"
@@ -209,8 +210,11 @@ def spice_scenario():
 
         scene_frame.set_existing_message(message)
         connector.send_frame(scene_frame.get_scene())
+
+        print(f"Generating image for time {time_range_str[idx]}")
+
         [image, center_of_brightness] = connector.request_image_for_camera_id(1, 1)
-        cv2.imwrite(str(OUT_DIR / f"image-{time_range_str[idx]}.png"), image)
+        cv2.imwrite(os.path.join(current_file_path, f"images-deimos-spice/deimos_image_{idx}.png"), image)
 
     connector.disconnect()
     launcher.terminate()
