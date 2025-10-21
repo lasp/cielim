@@ -166,13 +166,12 @@ class Scene(object):
     def set_qe_curve_fit(
         self,
         qe_data_path: str,
-        exposure_time: float,
         solid_angle: float,
         pixel_area: float,
         wavelength_window: list = None,
     ) -> None:
         fit_wavelengths, fit_values = qe_curve_fit(
-            qe_data_path, exposure_time, solid_angle, pixel_area, wavelength_window=wavelength_window, show_plots=False
+            qe_data_path, solid_angle, pixel_area, wavelength_window=wavelength_window, show_plots=False
         )
         self.cielim_msg.renderParameters.wavelength1 = fit_wavelengths[0]
         self.cielim_msg.renderParameters.wavelength2 = fit_wavelengths[1]

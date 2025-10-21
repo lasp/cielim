@@ -3,8 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.integrate import simps
 from pathlib import Path
 import pandas as pd
-from scipy.optimize import minimize, Bounds
-
+from scipy.optimize import basinhopping
 
 # Constants
 h = 6.62607015e-34  # Planck constant, J·s
@@ -97,14 +96,16 @@ def load_qe_from_csv(csv_path) -> tuple[np.ndarray, np.ndarray]:
     return wavelength_nm[order], qe_e_per_photon[order]
 
 
-def qe_curve_fit(qe_file_path, exposure_time, solid_angle, pixel_area, wavelength_window=None, show_plots=True):
+def qe_curve_fit(qe_file_path, solid_angle, pixel_area, wavelength_window=None, show_plots=True):
     wavelength_nm, qe = load_qe_from_csv(qe_file_path)
+    print("Generating a qe curve fit with data in " + str(qe_file_path))
 
     if wavelength_window is not None and len(wavelength_window) == 2:
-        mask_low = wavelength_nm > wavelength_window[0]
+        print("Applying wavelength window : " + str(wavelength_window))
+        mask_low = wavelength_nm >= wavelength_window[0]
         wavelength_nm = wavelength_nm[mask_low]
         qe = qe[mask_low]
-        mask_high = wavelength_nm < wavelength_window[1]
+        mask_high = wavelength_nm <= wavelength_window[1]
         wavelength_nm = wavelength_nm[mask_high]
         qe = qe[mask_high]
     # solar radiation intensity using black body radiation
@@ -122,7 +123,7 @@ def qe_curve_fit(qe_file_path, exposure_time, solid_angle, pixel_area, wavelengt
     power_lambda = solid_angle * pixel_area * radiance_per_nm  # W/nm
 
     # Number of photons per wavelength = power / photon energy (photons/s/m)
-    photons_lambda = exposure_time * power_lambda / photon_energy
+    photons_lambda = power_lambda / photon_energy
 
     # Calculate electrons per wavelength
     electrons_lambda = photons_lambda * qe
@@ -130,10 +131,10 @@ def qe_curve_fit(qe_file_path, exposure_time, solid_angle, pixel_area, wavelengt
     mask = (wavelength_nm >= wavelength_nm[0]) & (wavelength_nm <= wavelength_nm[-1])
     integral_value = simps(electrons_lambda[mask], wavelength_nm[mask])
 
-    print(
-        f"Integral of electrons per wavelength from {wavelength_nm[0]:.1f} to {wavelength_nm[-1]:.1f} nm: {integral_value:.4e} (total electrons)"
-    )
-    # plt.show()
+    if show_plots:
+        print(
+            f"Integral of electrons per wavelength from {wavelength_nm[0]:.1f} to {wavelength_nm[-1]:.1f} nm: {integral_value:.4e} (total electrons)"
+        )
 
     # Define the 3-variable function to minimize
     def fit_three_wavelengths(sample_wl):
@@ -151,7 +152,7 @@ def qe_curve_fit(qe_file_path, exposure_time, solid_angle, pixel_area, wavelengt
         power_sample = solid_angle * pixel_area * radiance_sample  # W/nm
 
         # Photon rate per wavelength
-        photons_sample = exposure_time * power_sample / photon_energy_sample  # photons/nm
+        photons_sample = power_sample / photon_energy_sample  # photons/nm
 
         # Electrons per wavelength
         electrons_sample = photons_sample * qe_sample
@@ -174,19 +175,36 @@ def qe_curve_fit(qe_file_path, exposure_time, solid_angle, pixel_area, wavelengt
         return simpson_error
 
     # Define an initial guess and bounds for the variables
-    initial_guess = np.array([400, 600, 800])
+    initial_guess = np.array([wavelength_nm[0], (wavelength_nm[0] + wavelength_nm[-1]) / 2, wavelength_nm[-1]])
     bounds = (
         (wavelength_nm[0], wavelength_nm[-1]),
         (wavelength_nm[0], wavelength_nm[-1]),
         (wavelength_nm[0], wavelength_nm[-1]),
     )
 
-    # Perform the minimization
-    result = minimize(fit_three_wavelengths, initial_guess, method="SLSQP", bounds=bounds)
+    def eq_constraint(wavelengths):
+        return wavelengths[1] - (wavelengths[2] + wavelengths[0]) / 2
 
-    print(f"Optimal variables: {result.x}")
-    print(f"Minimum function value: {result.fun}")
-    print(f"Optimization successful: {result.success}")
+    def ineq_constraint_1(wavelengths):
+        return wavelengths[1] - wavelengths[0] - 1
+
+    def ineq_constraint_2(wavelengths):
+        return wavelengths[2] - wavelengths[1] - 1
+
+    constrs = [
+        {"type": "ineq", "fun": ineq_constraint_1},
+        {"type": "ineq", "fun": ineq_constraint_2},
+        {"type": "eq", "fun": eq_constraint},
+    ]
+
+    # Run basinhopping with SLSQP as the local optimizer
+    minimizer_kwargs = {"method": "SLSQP", "bounds": bounds, "constraints": constrs}
+    result = basinhopping(fit_three_wavelengths, initial_guess, minimizer_kwargs=minimizer_kwargs, niter=100, seed=123)
+
+    if show_plots:
+        print(f"Optimal variables: {result.x}")
+        print(f"Minimum function value: {result.fun}")
+        print(f"Optimization successful: {result.success}")
 
     # get electrons/nm at fitted wavelength
     # Three wavelengths for sampling
@@ -206,7 +224,7 @@ def qe_curve_fit(qe_file_path, exposure_time, solid_angle, pixel_area, wavelengt
     power_sample = solid_angle * pixel_area * radiance_sample  # W/nm
 
     # Photon rate per wavelength
-    photons_sample = exposure_time * power_sample / photon_energy_sample  # photons/nm
+    photons_sample = power_sample / photon_energy_sample  # photons/nm
 
     # Electrons per wavelength
     electrons_sample = photons_sample * qe_sample
@@ -227,18 +245,20 @@ def qe_curve_fit(qe_file_path, exposure_time, solid_angle, pixel_area, wavelengt
 
     simpson_error = np.abs((simpson_integral - integral_value) / integral_value) * 100
 
-    print("Electrons at sample points:")
-    for wl, val in zip(sample_wl, electrons_sample):
-        print(f"  λ = {wl:.1f} nm: {val:.4e} electrons/nm")
-
-    print(f"\nSimpson's 1/3 rule integral estimate: {simpson_integral:.4e} electrons (over 450–650 nm)")
-    print(f"Error from actual: {simpson_error:.2f}%")
-
     corrected_actual_color = (integral_value / 10e4) ** (1 / 2.2)
     corrected_estimate_color = (simpson_integral / 10e4) ** (1 / 2.2)
 
-    print(f"\nGrayscale actual color: {corrected_actual_color:.2f}")
-    print(f"Grayscale approx color: {corrected_estimate_color:.2f}")
+    if show_plots:
+        print("Electrons at sample points:")
+        for wl, val in zip(sample_wl, electrons_sample):
+            print(f"  λ = {wl:.1f} nm: {val:.4e} electrons/nm")
+
+        print(
+            f"\nSimpson's 1/3 rule integral estimate: {simpson_integral:.4e} electrons (over {wavelength_nm[0]:.1f} nm to {wavelength_nm[-1]:.1f} nm"
+        )
+        print(f"Error from actual: {simpson_error:.2f}%")
+        print(f"\nGrayscale actual color: {corrected_actual_color:.2f}")
+        print(f"Grayscale approx color: {corrected_estimate_color:.2f}")
 
     # ---- Plot ----
     plt.figure(figsize=(10, 6))
@@ -265,11 +285,10 @@ def qe_curve_fit(qe_file_path, exposure_time, solid_angle, pixel_area, wavelengt
 
 def main():
     # Parameters to modify
-    exposure_time = 1.0e-3  # seconds
     solid_angle = pi * 0.005**2 / (0.16**2)  # steradians
     pixel_area = (0.022528 * 0.016896) / (4096 * 3072)  # m^2
     qe_file_path = Path(__file__).resolve().parent.parent / "support-data/deimos-spice/qe-mod-5.csv"
-    qe_curve_fit(qe_file_path, exposure_time, solid_angle, pixel_area, show_plots=True)
+    qe_curve_fit(qe_file_path, solid_angle, pixel_area, show_plots=True)
 
 
 if __name__ == "__main__":

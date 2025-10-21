@@ -116,6 +116,16 @@ def spice_scenario():
     scene_frame = scene.Scene()
     scene_frame.set_existing_message(scene_setup())
 
+    message = scene_frame.get_scene()
+    qe_file_path = (
+        Path(__file__).resolve().parent.parent.parent / "cielim-python/support-data/deimos-spice/qe-mod-5.csv"
+    )
+    solid_angle = np.pi * 0.005**2 / (0.16**2)  # steradians
+    pixel_area = (0.022528 * 0.016896) / (4096 * 3072)  # m^2
+    f635_window = [625, 645]
+    scene_frame.set_qe_curve_fit(str(qe_file_path), solid_angle, pixel_area, f635_window)
+    scene_frame.set_existing_message(message)
+
     # Load SPICE kernels using a meta-kernel with RELATIVE paths.
     # We temporarily chdir to the repo root so 'support-data/…' resolves correctly.
     spice.kclear()
@@ -182,12 +192,6 @@ def spice_scenario():
         # update exposure time per image
         message.camera.sensorModel.exposureTime = exposure_time_list[idx]
         print(f"exposure time: {message.camera.sensorModel.exposureTime:.4f} sec")
-
-        qe_file_path = Path(__file__).resolve().parent.parent.parent / "support-data/deimos-spice/qe-mod-5.csv"
-        solid_angle = np.pi * 0.005**2 / (0.16**2)  # steradians
-        pixel_area = (0.022528 * 0.016896) / (4096 * 3072)  # m^2
-        f635_window = [625, 645]
-        scene_frame.set_qe_curve_fit(str(qe_file_path), exposure_time_list[idx], solid_angle, pixel_area, f635_window)
 
         scene_frame.set_existing_message(message)
         connector.send_frame(scene_frame.get_scene())

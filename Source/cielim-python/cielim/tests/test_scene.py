@@ -142,21 +142,25 @@ def test_qe_curve_fit():
     qe_file_path = Path(__file__).resolve().parent.parent.parent / "support-data/deimos-spice/qe-mod-5.csv"
     if not qe_file_path.exists():
         pytest.skip(f"Missing data: {qe_file_path}")
-    exposure_time = 1.0e-3  # seconds
     solid_angle = np.pi * 0.005**2 / (0.16**2)  # steradians
     pixel_area = (0.022528 * 0.016896) / (4096 * 3072)  # m^2
-    scene_frame.set_qe_curve_fit(str(qe_file_path), exposure_time, solid_angle, pixel_area)
+    scene_frame.set_qe_curve_fit(str(qe_file_path), solid_angle, pixel_area)
 
     returned = scene_frame.get_scene()
     fit_wv1 = returned.renderParameters.wavelength1
     fit_wv2 = returned.renderParameters.wavelength2
     fit_wv3 = returned.renderParameters.wavelength3
-    np.testing.assert_allclose(fit_wv1, 400.00030781)
-    np.testing.assert_allclose(fit_wv2, 676.55464436)
-    np.testing.assert_allclose(fit_wv3, 956.72477221)
+    np.testing.assert_almost_equal(fit_wv2, (fit_wv1 + fit_wv3) / 2)
+    np.testing.assert_array_less(fit_wv1, fit_wv2)
+    np.testing.assert_array_less(fit_wv2, fit_wv3)
+    np.testing.assert_allclose(fit_wv1, 350, atol=50)
+    np.testing.assert_allclose(fit_wv2, 650, atol=50)
+    np.testing.assert_allclose(fit_wv3, 950, atol=50)
     fit_redvalue1 = returned.camera.sensorModel.qeCurve.redValue1
     fit_redvalue2 = returned.camera.sensorModel.qeCurve.redValue2
     fit_redvalue3 = returned.camera.sensorModel.qeCurve.redValue3
-    np.testing.assert_allclose(fit_redvalue1, 0.63964393)
-    np.testing.assert_allclose(fit_redvalue2, 0.91099873)
-    np.testing.assert_allclose(fit_redvalue3, 0.16738981)
+    np.testing.assert_array_less(fit_redvalue1, fit_redvalue2)
+    np.testing.assert_array_less(fit_redvalue3, fit_redvalue2)
+    np.testing.assert_allclose(fit_redvalue1, 0.3, atol=0.1)
+    np.testing.assert_allclose(fit_redvalue2, 0.9, atol=0.1)
+    np.testing.assert_allclose(fit_redvalue3, 0.2, atol=0.1)
