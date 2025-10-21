@@ -1,5 +1,5 @@
 """
-Author: Chun-Wei Kong
+Author: Chun-Wei Kong, Owen Allison
 
 Goal:
     Generate images of deimos flyby according to the EMM Hope spacecraft.
@@ -27,6 +27,7 @@ from context import rigid_body_kinematics as rbk
 # from context import qe_curve_fit
 
 # ---- Paths (portable) ----
+current_file_path = os.path.dirname(__file__)
 HERE = Path(__file__).resolve()
 ROOT = HERE.parents[1]  # <repo root>
 MK = ROOT / "support-data" / "deimos-spice" / "deimos-spice.txt"
@@ -76,10 +77,14 @@ def scene_setup():
     body.bodyName = "deimos"
     [body.position.append(item) for item in [0, 0, 0]]
     [body.velocity.append(item) for item in [0, 0, 0]]
-    [body.attitude.append(item) for item in [0, 0, 0]]
+    [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
 
-    body.model.shapeModel = "bennu_normalized"  # we use bennu shape so far, need to replace it with deimos
+    body.model.shapeModel = "deimos_normalized"  # we use bennu shape so far, need to replace it with deimos
+    body.model.refModel.brdfModel = "Regolith"
     body.model.meanRadius = 6.2 * 1e3  # radius in meter of deimos
+    body.model.geometricAlbedo = 0.12  # effective albedo of deimos
+    # NOTE: this is calculated by taking average albedo (~0.07) and dividing by the average pixel (~0.58) of the albedo map
+    # This is done so that average color of the shape model matches the real world average albedo
 
     sun = protobuf_message.celestialBodies.add()
     sun.bodyName = "sun"
@@ -174,13 +179,23 @@ def spice_scenario():
         # DEIMOS-centered states
         position, _ = spice.spkpos("-62", time, "J2000", "NONE", "DEIMOS")
         sun_pos, _ = spice.spkpos("SUN", time, "J2000", "NONE", "DEIMOS")
-
         BN = spice.pxform("J2000", instrument_id, time)  # instrument as body frame
         BN = C_img_cam @ C_img_cam @ BN
         # NOTE: we do the transformation "twice" in order to generate images close to the EMM mission
         # However, this should be done "once" in theory. Future work should investigate this.
 
         message = scene_frame.get_scene()
+
+        BN_object = spice.pxform("J2000", "IAU_DEIMOS", time)
+
+        TB = np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]])  # manual correction to inertial frame
+        BN_object = np.dot(TB, BN_object)
+
+        print("get DCM of deimos, det(DCM): ", np.linalg.det(BN_object))
+
+        message.celestialBodies[0].ClearField("attitude")
+        [message.celestialBodies[0].attitude.append(item) for item in BN_object.flatten().tolist()]
+
         message.spacecraft.ClearField("position")
         message.spacecraft.ClearField("attitude")
         [message.spacecraft.position.append(item) for item in position * 1e3]
@@ -195,8 +210,11 @@ def spice_scenario():
 
         scene_frame.set_existing_message(message)
         connector.send_frame(scene_frame.get_scene())
+
+        print(f"Generating image for time {time_range_str[idx]}")
+
         [image, center_of_brightness] = connector.request_image_for_camera_id(1, 1)
-        cv2.imwrite(str(OUT_DIR / f"image-{time_range_str[idx]}.png"), image)
+        cv2.imwrite(os.path.join(current_file_path, f"images-deimos-spice/deimos_image_{idx}.png"), image)
 
     connector.disconnect()
     launcher.terminate()
