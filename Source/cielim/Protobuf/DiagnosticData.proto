@@ -6,4 +6,5 @@ option optimize_for = LITE_RUNTIME;
 message DiagnosticData{
     double cob_x = 1;
     double cob_y = 2;
+    double coverage = 3;
 }

@@ -224,6 +224,7 @@ void ACameraModel::GetDiagnosticData(DiagnosticData::DiagnosticData &Diagnostics
 
 	Diagnostics.set_cob_x(CobCoordinates.X);
 	Diagnostics.set_cob_y(CobCoordinates.Y);
+	Diagnostics.set_coverage(CoveragePercentage);
 }
 
 void ACameraModel::ApplyGammaCorrection() const

@@ -168,6 +168,7 @@ class DiagnosticData final :
   enum : int {
     kCobXFieldNumber = 1,
     kCobYFieldNumber = 2,
+    kCoverageFieldNumber = 3,
   };
   // double cob_x = 1;
   void clear_cob_x();
@@ -187,6 +188,15 @@ class DiagnosticData final :
   void _internal_set_cob_y(double value);
   public:
 
+  // double coverage = 3;
+  void clear_coverage();
+  double coverage() const;
+  void set_coverage(double value);
+  private:
+  double _internal_coverage() const;
+  void _internal_set_coverage(double value);
+  public:
+
   // @@protoc_insertion_point(class_scope:DiagnosticData.DiagnosticData)
  private:
   class _Internal;
@@ -196,6 +206,7 @@ class DiagnosticData final :
   typedef void DestructorSkippable_;
   double cob_x_;
   double cob_y_;
+  double coverage_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_DiagnosticData_2eproto;
 };
@@ -248,6 +259,26 @@ inline void DiagnosticData::_internal_set_cob_y(double value) {
 inline void DiagnosticData::set_cob_y(double value) {
   _internal_set_cob_y(value);
   // @@protoc_insertion_point(field_set:DiagnosticData.DiagnosticData.cob_y)
+}
+
+// double coverage = 3;
+inline void DiagnosticData::clear_coverage() {
+  coverage_ = 0;
+}
+inline double DiagnosticData::_internal_coverage() const {
+  return coverage_;
+}
+inline double DiagnosticData::coverage() const {
+  // @@protoc_insertion_point(field_get:DiagnosticData.DiagnosticData.coverage)
+  return _internal_coverage();
+}
+inline void DiagnosticData::_internal_set_coverage(double value) {
+  
+  coverage_ = value;
+}
+inline void DiagnosticData::set_coverage(double value) {
+  _internal_set_coverage(value);
+  // @@protoc_insertion_point(field_set:DiagnosticData.DiagnosticData.coverage)
 }
 
 #ifdef __GNUC__
