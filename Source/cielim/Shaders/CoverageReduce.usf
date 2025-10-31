@@ -1,0 +1,62 @@
+//=================== Copyright (c) 2025 Laboratory for Atmospheric and Space Physics ===================//
+//
+// Purpose: Compute shader used to reduce summation calculations for calculating the percentage of pixels
+//          with bright pixels.
+//
+// License: MIT License. See LICENSE file.
+//
+//=======================================================================================================//
+
+#include "/Engine/Public/Platform.ush"
+
+Texture2D InputTexture;
+
+uint2 TextureSize;
+float Threshold;
+
+RWStructuredBuffer<uint> PartialSumBuffer;
+
+groupshared uint SharedPixelSum[256];
+
+[numthreads(16, 16, 1)]
+void MainCS(uint3 GlobalThreadID : SV_DispatchThreadID, uint GI : SV_GroupIndex)
+{
+	// Don't check outside bounding box (for now the entire screen)
+	if (GlobalThreadID.x >= TextureSize.x || GlobalThreadID.y >= TextureSize.y)
+	{
+		SharedPixelSum[GI] = 0;
+	}
+	else
+	{
+		float4 Color = InputTexture.Load(int3(GlobalThreadID.xy, 0));
+
+		// https://en.wikipedia.org/wiki/Relative_luminance
+		float Luminance = dot(Color.rgb, float3(0.2126, 0.7152, 0.0722));
+
+		// Is 1 if Luminance > Threshold, else 0
+		SharedPixelSum[GI] = (uint) step(Threshold + 1e-3, Luminance);
+	}
+
+	// Wait for group to finish
+	GroupMemoryBarrierWithGroupSync();
+
+	// Binary tree parallel reduction to 0th index thread
+	for (uint Offset = 128; Offset > 0; Offset >>= 1)
+	{
+		if (GI < Offset)
+		{
+			SharedPixelSum[GI] += SharedPixelSum[GI + Offset];
+		}
+
+		GroupMemoryBarrierWithGroupSync();
+	}
+
+	if (GI == 0)
+	{
+		uint XTile = GlobalThreadID.x / 16;
+		uint YTile = GlobalThreadID.y / 16;
+		uint TileFlatIndex = XTile + YTile * ceil(TextureSize.x / 16.0f);
+
+		PartialSumBuffer[TileFlatIndex] = SharedPixelSum[0];
+	}
+}

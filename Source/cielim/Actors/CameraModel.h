@@ -118,6 +118,10 @@ private:
 	 * final reduction to a 2-vector coordinate which is then returned as the final result. */
 	FVector2D GetCenterOfBrightness() const;
 
+	/* Enqueues coverage calculation pass on the GPU and synchronously writes resulting buffer back to the CPU
+	 * and does final reduction to a float which is then returned as the final result. */
+	float GetCoveragePercent() const;
+
 	// Returns the list of all parameters for all cosmic rays
 	TTuple<float, TResourceArray<FVector2f>, TResourceArray<FVector2f>, TResourceArray<float>>
 	GetCosmicRays(const float Sigma) const;

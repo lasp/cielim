@@ -16,10 +16,12 @@
 #include "ScreenPass.h"
 
 #include "cielim/Shaders/CenBrightReduce.h"
+#include "cielim/Shaders/CoverageReduce.h"
 #include "cielim/Shaders/GammaCorrect.h"
 #include "cielim/Utilities/Logging/CielimLoggingMacros.h"
 
 DECLARE_GPU_STAT_NAMED(CobReductionCalculations, TEXT("CoBReductionCalculations"));
+DECLARE_GPU_STAT_NAMED(CoverageReductionCalculations, TEXT("CoverageReductionCalculations"));
 DECLARE_GPU_STAT_NAMED(GammaCorrection, TEXT("GammaCorrection"));
 
 ACameraModel::ACameraModel()
@@ -218,6 +220,8 @@ void ACameraModel::GetDiagnosticData(DiagnosticData::DiagnosticData &Diagnostics
 	this->SceneCaptureComponent2D->CaptureScene();
 
 	const FVector2D CobCoordinates = this->GetCenterOfBrightness();
+	const float CoveragePercentage = this->GetCoveragePercent();
+
 	Diagnostics.set_cob_x(CobCoordinates.X);
 	Diagnostics.set_cob_y(CobCoordinates.Y);
 }
@@ -385,6 +389,109 @@ FVector2D ACameraModel::GetCenterOfBrightness() const
 	UE_LOG(LogCielim, Display, TEXT("Center of Brightness: %f, %f"), CobCoords.X, CobCoords.Y);
 
 	return CobCoords;
+}
+
+float ACameraModel::GetCoveragePercent() const
+{
+	float CoveragePercent = 0.0f;
+
+	UTextureRenderTarget2D *RenderTarget = this->SceneCaptureComponent2D->TextureTarget;
+
+	if (!RenderTarget)
+		return CoveragePercent;
+
+	FTextureRenderTargetResource *RTResource = RenderTarget->GameThread_GetRenderTargetResource();
+	FRHIGPUBufferReadback Readback(TEXT("Coverage Reduction Calculations Readback"));
+
+	const uint32 Width = RenderTarget->SizeX;
+	const uint32 Height = RenderTarget->SizeY;
+
+	const uint32 GroupCountX = FMath::DivideAndRoundUp(Width, 16u);
+	const uint32 GroupCountY = FMath::DivideAndRoundUp(Height, 16u);
+	const uint32 NumGroups = GroupCountX * GroupCountY;
+
+	FRenderCommandFence Fence;
+
+	ENQUEUE_RENDER_COMMAND(COB_Calculations)
+	(
+		[RTResource, &Readback, Width, Height, GroupCountX, GroupCountY,
+		 NumGroups](FRHICommandListImmediate &RHICmdList)
+		{
+			FRDGBuilder GraphBuilder(RHICmdList);
+
+			const FRDGTextureRef RenderTargetBase =
+				RegisterExternalTexture(GraphBuilder, RTResource->GetRenderTargetTexture(), TEXT("RenderTarget"));
+
+			const FRDGBufferDesc PartialSumsDesc = FRDGBufferDesc::CreateStructuredDesc(sizeof(uint32), NumGroups);
+			const FRDGBufferRef PartialSumsBuffer =
+				GraphBuilder.CreateBuffer(PartialSumsDesc, TEXT("PartialSumsBuffer"));
+
+			FCoverageReduce::FParameters *CvgParams = GraphBuilder.AllocParameters<FCoverageReduce::FParameters>();
+			CvgParams->InputTexture = RenderTargetBase;
+			CvgParams->TextureSize = FIntPoint(Width, Height);
+			CvgParams->Threshold = 0.001; // Hard coding this for now
+			CvgParams->PartialSumBuffer = GraphBuilder.CreateUAV(PartialSumsBuffer, PF_A32B32G32R32F);
+
+			{
+				RDG_GPU_STAT_SCOPE(GraphBuilder, CoverageReductionCalculations);
+				RDG_EVENT_SCOPE(GraphBuilder, "CoverageReductionCalculations");
+
+				const TShaderMapRef<FCoverageReduce> CoverageReduceShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+
+				const FIntVector GroupCount = FIntVector(GroupCountX, GroupCountY, 1);
+				FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("ComputeCoverage"), CoverageReduceShader,
+											 CvgParams, GroupCount);
+
+				AddEnqueueCopyPass(GraphBuilder, &Readback, PartialSumsBuffer, sizeof(uint32) * NumGroups);
+			}
+
+			GraphBuilder.Execute();
+			RHICmdList.SubmitCommandsAndFlushGPU(); // Metals refuses to auto-flush unless forced
+		});
+
+	Fence.BeginFence();
+	Fence.Wait();
+
+	ENQUEUE_RENDER_COMMAND(COB_Readback)
+	(
+		[&Readback, &CoveragePercent, Width, Height, NumGroups](FRHICommandListImmediate &RHICmdList)
+		{
+			const double StartTime = FPlatformTime::Seconds();
+
+			while (!Readback.IsReady())
+			{
+				FPlatformProcess::Sleep(0.001f);
+
+				if (FPlatformTime::Seconds() - StartTime > 5.0f)
+				{
+					UE_LOG(LogCielim, Warning, TEXT("Readback polling has timed out; skipping readback..."));
+					break;
+				}
+			}
+
+			if (Readback.IsReady())
+			{
+				const uint32 *RawData = static_cast<uint32 *>(Readback.Lock(sizeof(uint32) * NumGroups));
+
+				uint32 PixelSum = 0;
+
+				for (uint32 i = 0; i < NumGroups; i++)
+				{
+					PixelSum += RawData[i];
+				}
+
+				CoveragePercent = static_cast<float>(PixelSum) / (Width * Height);
+
+				Readback.Unlock();
+			}
+		});
+
+	Fence.BeginFence();
+	Fence.Wait();
+
+	UE_LOG(LogCielim, Display, TEXT("Coverage Percentage: %f %%"), CoveragePercent * 100.0f);
+
+	return CoveragePercent;
 }
 
 // Helper Functions
