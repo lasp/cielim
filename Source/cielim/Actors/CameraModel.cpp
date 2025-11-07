@@ -78,9 +78,11 @@ void ACameraModel::SetCameraParameters(const cielimMessage::CielimMessage &Cieli
 		return;
 
 	const auto CameraModel = CielimMessage.camera();
+
 	// Set camera parameters
 
 	const bool bHasRenderParams = CielimMessage.has_renderparameters();
+	const bool bHasAreaOfInterest = CameraModel.has_areaofinterest();
 	const bool bHasLensModel = CameraModel.has_lensmodel();
 	const bool bHasSensorModel = CameraModel.has_sensormodel();
 
@@ -139,6 +141,27 @@ void ACameraModel::SetCameraParameters(const cielimMessage::CielimMessage &Cieli
 			CameraParams.QuECurveG.Set(QuECurve.greenvalue1(), QuECurve.greenvalue2(), QuECurve.greenvalue3());
 			CameraParams.QuECurveB.Set(QuECurve.bluevalue1(), QuECurve.bluevalue2(), QuECurve.bluevalue3());
 		}
+	}
+
+	// Set diagnostic parameters
+	if (bHasAreaOfInterest)
+	{
+		const auto AreaOfInterest = CameraModel.areaofinterest();
+
+		if (AreaOfInterest.centerx() > 0.0f && AreaOfInterest.centery() > 0.0f)
+		{
+			this->DiagnosticParams.CenterPixelX = AreaOfInterest.centerx();
+			this->DiagnosticParams.CenterPixelY = AreaOfInterest.centery();
+		}
+
+		if (AreaOfInterest.width() > 0.0f && AreaOfInterest.height() > 0.0f)
+		{
+			this->DiagnosticParams.AreaWidth = AreaOfInterest.width();
+			this->DiagnosticParams.AreaHeight = AreaOfInterest.height();
+		}
+
+		if (AreaOfInterest.threshold() > 0.0f)
+			this->DiagnosticParams.Threshold = AreaOfInterest.threshold();
 	}
 
 	// Set image corruption parameters
@@ -225,6 +248,9 @@ void ACameraModel::GetDiagnosticData(imageDiagnostics::DiagnosticData &Diagnosti
 	Diagnostics.set_cob_x(CobCoordinates.X);
 	Diagnostics.set_cob_y(CobCoordinates.Y);
 	Diagnostics.set_coverage(CoveragePercentage);
+
+	const float CoverageArea = this->DiagnosticParams.AreaWidth * this->DiagnosticParams.AreaHeight;
+	Diagnostics.set_totalbrightpixels(static_cast<uint32>(CoveragePercentage * CoverageArea));
 }
 
 void ACameraModel::ApplyGammaCorrection() const
@@ -411,12 +437,20 @@ float ACameraModel::GetCoveragePercent() const
 	const uint32 GroupCountY = FMath::DivideAndRoundUp(Height, 16u);
 	const uint32 NumGroups = GroupCountX * GroupCountY;
 
+	const uint32 CenterPixelX =
+		this->DiagnosticParams.CenterPixelX > 0.0f ? this->DiagnosticParams.CenterPixelX : Width / 2;
+	const uint32 CenterPixelY =
+		this->DiagnosticParams.CenterPixelY > 0.0f ? this->DiagnosticParams.CenterPixelY : Height / 2;
+	const float AreaWidth = this->DiagnosticParams.AreaWidth > 0.0f ? this->DiagnosticParams.AreaWidth : Width;
+	const float AreaHeight = this->DiagnosticParams.AreaHeight > 0.0f ? this->DiagnosticParams.AreaHeight : Height;
+	const float Threshold = this->DiagnosticParams.Threshold >= 0.0f ? this->DiagnosticParams.Threshold : 0.0f;
+
 	FRenderCommandFence Fence;
 
-	ENQUEUE_RENDER_COMMAND(COB_Calculations)
+	ENQUEUE_RENDER_COMMAND(Coverage_Calculations)
 	(
-		[RTResource, &Readback, Width, Height, GroupCountX, GroupCountY,
-		 NumGroups](FRHICommandListImmediate &RHICmdList)
+		[RTResource, &Readback, Width, Height, GroupCountX, GroupCountY, NumGroups, CenterPixelX, CenterPixelY,
+		 AreaWidth, AreaHeight, Threshold](FRHICommandListImmediate &RHICmdList)
 		{
 			FRDGBuilder GraphBuilder(RHICmdList);
 
@@ -430,7 +464,11 @@ float ACameraModel::GetCoveragePercent() const
 			FCoverageReduce::FParameters *CvgParams = GraphBuilder.AllocParameters<FCoverageReduce::FParameters>();
 			CvgParams->InputTexture = RenderTargetBase;
 			CvgParams->TextureSize = FIntPoint(Width, Height);
-			CvgParams->Threshold = 0.001; // Hard coding this for now
+			CvgParams->CenterPixelX = CenterPixelX;
+			CvgParams->CenterPixelY = CenterPixelY;
+			CvgParams->ApothemX = AreaWidth / 2.0f;
+			CvgParams->ApothemY = AreaHeight / 2.0f;
+			CvgParams->Threshold = Threshold;
 			CvgParams->PartialSumBuffer = GraphBuilder.CreateUAV(PartialSumsBuffer, PF_A32B32G32R32F);
 
 			{
@@ -455,7 +493,7 @@ float ACameraModel::GetCoveragePercent() const
 
 	ENQUEUE_RENDER_COMMAND(COB_Readback)
 	(
-		[&Readback, &CoveragePercent, Width, Height, NumGroups](FRHICommandListImmediate &RHICmdList)
+		[&Readback, &CoveragePercent, AreaWidth, AreaHeight, NumGroups](FRHICommandListImmediate &RHICmdList)
 		{
 			const double StartTime = FPlatformTime::Seconds();
 
@@ -481,7 +519,7 @@ float ACameraModel::GetCoveragePercent() const
 					PixelSum += RawData[i];
 				}
 
-				CoveragePercent = static_cast<float>(PixelSum) / (Width * Height);
+				CoveragePercent = static_cast<float>(PixelSum) / FMath::Max((AreaWidth * AreaHeight), 1e-6);
 
 				Readback.Unlock();
 			}

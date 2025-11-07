@@ -12,6 +12,10 @@
 Texture2D InputTexture;
 
 uint2 TextureSize;
+float CenterPixelX;
+float CenterPixelY;
+float ApothemX;
+float ApothemY;
 float Threshold;
 
 RWStructuredBuffer<uint> PartialSumBuffer;
@@ -21,8 +25,14 @@ groupshared uint SharedPixelSum[256];
 [numthreads(16, 16, 1)]
 void MainCS(uint3 GlobalThreadID : SV_DispatchThreadID, uint GI : SV_GroupIndex)
 {
-	// Don't check outside bounding box (for now the entire screen)
+	// Don't check outside of texture bounds
 	if (GlobalThreadID.x >= TextureSize.x || GlobalThreadID.y >= TextureSize.y)
+	{
+		SharedPixelSum[GI] = 0;
+	}
+	// Don't check outside bounding box
+	else if (GlobalThreadID.x >= CenterPixelX + ApothemX || GlobalThreadID.x <= CenterPixelX - ApothemX ||
+			 GlobalThreadID.y >= CenterPixelY + ApothemY || GlobalThreadID.y <= CenterPixelY - ApothemY)
 	{
 		SharedPixelSum[GI] = 0;
 	}

@@ -40,6 +40,16 @@ struct FCameraParams
 	float Gamma;
 };
 
+struct FDiagnosticParams
+{
+	// Coverage area of interest
+	float CenterPixelX;
+	float CenterPixelY;
+	float AreaWidth;
+	float AreaHeight;
+	float Threshold;
+};
+
 struct FImageCorruptionParams
 {
 	// Gaussian PSF
@@ -103,6 +113,7 @@ public:
 	UCameraViewCaptureComponent2D *SceneCaptureComponent2D;
 
 	FCameraParams CameraParams{};
+	FDiagnosticParams DiagnosticParams{};
 	FImageCorruptionParams CorruptionParams{};
 
 protected:
