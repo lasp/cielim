@@ -13,8 +13,8 @@
 #include "GameFramework/Actor.h"
 
 #include "CameraViewCaptureComponent2D.h"
-#include "cielim/Protobuf/DiagnosticData.pb.h"
 #include "cielim/Protobuf/cielimMessage.pb.h"
+#include "cielim/Protobuf/imageDiagnostics.pb.h"
 
 #include "CameraModel.generated.h"
 
@@ -94,7 +94,7 @@ public:
 	 * @brief Gets pre-post-processing diagnostic data.
 	 * @param Diagnostics Reference to protobuf containing diagnostic data (mutable).
 	 */
-	void GetDiagnosticData(DiagnosticData::DiagnosticData &Diagnostics);
+	void GetDiagnosticData(imageDiagnostics::DiagnosticData &Diagnostics);
 
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent *Body;

@@ -18,7 +18,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
     syntax="proto3",
     serialized_options=b"H\003",
     create_key=_descriptor._internal_create_key,
-    serialized_pb=b'\n\x13\x63ielimMessage.proto\x12\rcielimMessage"8\n\tTimeStamp\x12\x13\n\x0b\x66rameNumber\x18\x01 \x01(\x03\x12\x16\n\x0esimTimeElapsed\x18\x02 \x01(\x01"j\n\rEpochDateTime\x12\x0c\n\x04year\x18\x01 \x01(\x05\x12\r\n\x05month\x18\x02 \x01(\x05\x12\x0b\n\x03\x64\x61y\x18\x03 \x01(\x05\x12\r\n\x05hours\x18\x04 \x01(\x05\x12\x0f\n\x07minutes\x18\x05 \x01(\x05\x12\x0f\n\x07seconds\x18\x06 \x01(\x01"\xbd\x01\n\x0eRenderingModel\x12\x13\n\x0bwavelength1\x18\x01 \x01(\x01\x12\x13\n\x0bwavelength2\x18\x02 \x01(\x01\x12\x13\n\x0bwavelength3\x18\x03 \x01(\x01\x12\x1d\n\x15\x63osmicRayStdDeviation\x18\x04 \x01(\x01\x12\x12\n\nstrayLight\x18\x05 \x01(\x01\x12\x11\n\tstarField\x18\x06 \x01(\x08\x12\x11\n\trendering\x18\x07 \x01(\t\x12\x13\n\x0b\x65nableSmear\x18\x08 \x01(\x08"e\n\x0bPerlinNoise\x12\x13\n\x0boctaveCount\x18\x01 \x01(\x05\x12\x15\n\rbaseFrequency\x18\x02 \x01(\x01\x12\x15\n\rbaseAmplitude\x18\x03 \x01(\x01\x12\x13\n\x0bpersistence\x18\x04 \x01(\x01"a\n\x10ReflectanceModel\x12\x11\n\tbrdfModel\x18\x01 \x01(\t\x12\x1b\n\x13isotropicScattering\x18\x02 \x01(\x01\x12\x1d\n\x15reflectanceParameters\x18\x03 \x03(\x01"\x85\x02\n\tMeshModel\x12\x12\n\nshapeModel\x18\x01 \x01(\t\x12\x12\n\nmeanRadius\x18\x02 \x01(\x01\x12\x17\n\x0fgeometricAlbedo\x18\x03 \x01(\x01\x12\x1f\n\x17principalAxisDistortion\x18\x04 \x03(\x01\x12\x19\n\x11inertialToBodyMrp\x18\x05 \x03(\x01\x12\x31\n\x08refModel\x18\x06 \x01(\x0b\x32\x1f.cielimMessage.ReflectanceModel\x12/\n\x0bperlinNoise\x18\x07 \x01(\x0b\x32\x1a.cielimMessage.PerlinNoise\x12\x17\n\x0fproceduralRocks\x18\x08 \x01(\x01"\x95\x01\n\rCelestialBody\x12\x10\n\x08\x62odyName\x18\x01 \x01(\t\x12\x10\n\x08position\x18\x02 \x03(\x01\x12\x10\n\x08velocity\x18\x03 \x03(\x01\x12\x10\n\x08\x61ttitude\x18\x04 \x03(\x01\x12\'\n\x05model\x18\x05 \x01(\x0b\x32\x18.cielimMessage.MeshModel\x12\x13\n\x0b\x63\x65ntralBody\x18\x06 \x01(\x08"Z\n\nSpacecraft\x12\x16\n\x0espacecraftName\x18\x01 \x01(\t\x12\x10\n\x08position\x18\x02 \x03(\x01\x12\x10\n\x08velocity\x18\x03 \x03(\x01\x12\x10\n\x08\x61ttitude\x18\x04 \x03(\x01"\xe8\x01\n\x11QuantumEfficiency\x12\x1f\n\x17integrationWeightFactor\x18\x01 \x01(\x01\x12\x11\n\tredValue1\x18\x02 \x01(\x01\x12\x11\n\tredValue2\x18\x03 \x01(\x01\x12\x11\n\tredValue3\x18\x04 \x01(\x01\x12\x13\n\x0bgreenValue1\x18\x05 \x01(\x01\x12\x13\n\x0bgreenValue2\x18\x06 \x01(\x01\x12\x13\n\x0bgreenValue3\x18\x07 \x01(\x01\x12\x12\n\nblueValue1\x18\x08 \x01(\x01\x12\x12\n\nblueValue2\x18\t \x01(\x01\x12\x12\n\nblueValue3\x18\n \x01(\x01"\xce\x01\n\tLensModel\x12\x13\n\x0b\x66ieldOfView\x18\x01 \x03(\x01\x12\x13\n\x0b\x66ocalLength\x18\x02 \x01(\x01\x12\x1b\n\x13pointSpreadFunction\x18\x03 \x01(\x01\x12\x16\n\x0e\x61pertureRadius\x18\x04 \x01(\x01\x12\x1c\n\x14horizontalVignetting\x18\x05 \x03(\x01\x12\x1a\n\x12verticalVignetting\x18\x06 \x03(\x01\x12\x12\n\ndistortion\x18\x07 \x03(\x01\x12\x14\n\x0ctransmission\x18\x08 \x01(\x01"\xa1\x02\n\x0bSensorModel\x12\x12\n\nresolution\x18\x01 \x03(\x03\x12\x12\n\nrenderRate\x18\x02 \x01(\x04\x12\x14\n\x0c\x65xposureTime\x18\x03 \x01(\x01\x12\x11\n\treadNoise\x18\x04 \x01(\x01\x12\x11\n\tshotNoise\x18\x05 \x01(\x08\x12\x13\n\x0b\x64\x61rkCurrent\x18\x06 \x01(\x01\x12\x12\n\nsystemGain\x18\x07 \x01(\x01\x12\x13\n\x0bsensorWidth\x18\x08 \x01(\x01\x12\x14\n\x0csensorHeight\x18\t \x01(\x01\x12\x18\n\x10\x66ullWellCapacity\x18\n \x01(\x01\x12\r\n\x05gamma\x18\x0b \x01(\x01\x12\x31\n\x07qeCurve\x18\x0c \x01(\x0b\x32 .cielimMessage.QuantumEfficiency"\xcd\x01\n\x0b\x43\x61meraModel\x12\x10\n\x08\x63\x61meraId\x18\x01 \x01(\x03\x12\x12\n\nparentName\x18\x02 \x01(\t\x12\x1c\n\x14\x63\x61meraPositionInBody\x18\x03 \x03(\x01\x12\x1c\n\x14\x62odyFrameToCameraMrp\x18\x04 \x03(\x01\x12+\n\tlensModel\x18\x05 \x01(\x0b\x32\x18.cielimMessage.LensModel\x12/\n\x0bsensorModel\x18\x06 \x01(\x0b\x32\x1a.cielimMessage.SensorModel"\xb6\x02\n\rCielimMessage\x12+\n\x05\x65poch\x18\x01 \x01(\x0b\x32\x1c.cielimMessage.EpochDateTime\x12-\n\x0b\x63urrentTime\x18\x02 \x01(\x0b\x32\x18.cielimMessage.TimeStamp\x12\x37\n\x10renderParameters\x18\x03 \x01(\x0b\x32\x1d.cielimMessage.RenderingModel\x12\x35\n\x0f\x63\x65lestialBodies\x18\x04 \x03(\x0b\x32\x1c.cielimMessage.CelestialBody\x12-\n\nspacecraft\x18\x05 \x01(\x0b\x32\x19.cielimMessage.Spacecraft\x12*\n\x06\x63\x61mera\x18\x06 \x01(\x0b\x32\x1a.cielimMessage.CameraModelB\x02H\x03\x62\x06proto3',
+    serialized_pb=b'\n\x13\x63ielimMessage.proto\x12\rcielimMessage"8\n\tTimeStamp\x12\x13\n\x0b\x66rameNumber\x18\x01 \x01(\x03\x12\x16\n\x0esimTimeElapsed\x18\x02 \x01(\x01"j\n\rEpochDateTime\x12\x0c\n\x04year\x18\x01 \x01(\x05\x12\r\n\x05month\x18\x02 \x01(\x05\x12\x0b\n\x03\x64\x61y\x18\x03 \x01(\x05\x12\r\n\x05hours\x18\x04 \x01(\x05\x12\x0f\n\x07minutes\x18\x05 \x01(\x05\x12\x0f\n\x07seconds\x18\x06 \x01(\x01"\xbd\x01\n\x0eRenderingModel\x12\x13\n\x0bwavelength1\x18\x01 \x01(\x01\x12\x13\n\x0bwavelength2\x18\x02 \x01(\x01\x12\x13\n\x0bwavelength3\x18\x03 \x01(\x01\x12\x1d\n\x15\x63osmicRayStdDeviation\x18\x04 \x01(\x01\x12\x12\n\nstrayLight\x18\x05 \x01(\x01\x12\x11\n\tstarField\x18\x06 \x01(\x08\x12\x11\n\trendering\x18\x07 \x01(\t\x12\x13\n\x0b\x65nableSmear\x18\x08 \x01(\x08"e\n\x0bPerlinNoise\x12\x13\n\x0boctaveCount\x18\x01 \x01(\x05\x12\x15\n\rbaseFrequency\x18\x02 \x01(\x01\x12\x15\n\rbaseAmplitude\x18\x03 \x01(\x01\x12\x13\n\x0bpersistence\x18\x04 \x01(\x01"a\n\x10ReflectanceModel\x12\x11\n\tbrdfModel\x18\x01 \x01(\t\x12\x1b\n\x13isotropicScattering\x18\x02 \x01(\x01\x12\x1d\n\x15reflectanceParameters\x18\x03 \x03(\x01"\x85\x02\n\tMeshModel\x12\x12\n\nshapeModel\x18\x01 \x01(\t\x12\x12\n\nmeanRadius\x18\x02 \x01(\x01\x12\x17\n\x0fgeometricAlbedo\x18\x03 \x01(\x01\x12\x1f\n\x17principalAxisDistortion\x18\x04 \x03(\x01\x12\x19\n\x11inertialToBodyMrp\x18\x05 \x03(\x01\x12\x31\n\x08refModel\x18\x06 \x01(\x0b\x32\x1f.cielimMessage.ReflectanceModel\x12/\n\x0bperlinNoise\x18\x07 \x01(\x0b\x32\x1a.cielimMessage.PerlinNoise\x12\x17\n\x0fproceduralRocks\x18\x08 \x01(\x01"\x95\x01\n\rCelestialBody\x12\x10\n\x08\x62odyName\x18\x01 \x01(\t\x12\x10\n\x08position\x18\x02 \x03(\x01\x12\x10\n\x08velocity\x18\x03 \x03(\x01\x12\x10\n\x08\x61ttitude\x18\x04 \x03(\x01\x12\'\n\x05model\x18\x05 \x01(\x0b\x32\x18.cielimMessage.MeshModel\x12\x13\n\x0b\x63\x65ntralBody\x18\x06 \x01(\x08"Z\n\nSpacecraft\x12\x16\n\x0espacecraftName\x18\x01 \x01(\t\x12\x10\n\x08position\x18\x02 \x03(\x01\x12\x10\n\x08velocity\x18\x03 \x03(\x01\x12\x10\n\x08\x61ttitude\x18\x04 \x03(\x01"\xe8\x01\n\x11QuantumEfficiency\x12\x1f\n\x17integrationWeightFactor\x18\x01 \x01(\x01\x12\x11\n\tredValue1\x18\x02 \x01(\x01\x12\x11\n\tredValue2\x18\x03 \x01(\x01\x12\x11\n\tredValue3\x18\x04 \x01(\x01\x12\x13\n\x0bgreenValue1\x18\x05 \x01(\x01\x12\x13\n\x0bgreenValue2\x18\x06 \x01(\x01\x12\x13\n\x0bgreenValue3\x18\x07 \x01(\x01\x12\x12\n\nblueValue1\x18\x08 \x01(\x01\x12\x12\n\nblueValue2\x18\t \x01(\x01\x12\x12\n\nblueValue3\x18\n \x01(\x01"\xce\x01\n\tLensModel\x12\x13\n\x0b\x66ieldOfView\x18\x01 \x03(\x01\x12\x13\n\x0b\x66ocalLength\x18\x02 \x01(\x01\x12\x1b\n\x13pointSpreadFunction\x18\x03 \x01(\x01\x12\x16\n\x0e\x61pertureRadius\x18\x04 \x01(\x01\x12\x1c\n\x14horizontalVignetting\x18\x05 \x03(\x01\x12\x1a\n\x12verticalVignetting\x18\x06 \x03(\x01\x12\x12\n\ndistortion\x18\x07 \x03(\x01\x12\x14\n\x0ctransmission\x18\x08 \x01(\x01"\xa1\x02\n\x0bSensorModel\x12\x12\n\nresolution\x18\x01 \x03(\x03\x12\x12\n\nrenderRate\x18\x02 \x01(\x04\x12\x14\n\x0c\x65xposureTime\x18\x03 \x01(\x01\x12\x11\n\treadNoise\x18\x04 \x01(\x01\x12\x11\n\tshotNoise\x18\x05 \x01(\x08\x12\x13\n\x0b\x64\x61rkCurrent\x18\x06 \x01(\x01\x12\x12\n\nsystemGain\x18\x07 \x01(\x01\x12\x13\n\x0bsensorWidth\x18\x08 \x01(\x01\x12\x14\n\x0csensorHeight\x18\t \x01(\x01\x12\x18\n\x10\x66ullWellCapacity\x18\n \x01(\x01\x12\r\n\x05gamma\x18\x0b \x01(\x01\x12\x31\n\x07qeCurve\x18\x0c \x01(\x0b\x32 .cielimMessage.QuantumEfficiency"d\n\x0e\x41reaOfInterest\x12\x0f\n\x07\x63\x65nterX\x18\x01 \x01(\x01\x12\x0f\n\x07\x63\x65nterY\x18\x02 \x01(\x01\x12\r\n\x05width\x18\x03 \x01(\x01\x12\x0e\n\x06height\x18\x04 \x01(\x01\x12\x11\n\tthreshold\x18\x05 \x01(\x01"\x84\x02\n\x0b\x43\x61meraModel\x12\x10\n\x08\x63\x61meraId\x18\x01 \x01(\x03\x12\x12\n\nparentName\x18\x02 \x01(\t\x12\x1c\n\x14\x63\x61meraPositionInBody\x18\x03 \x03(\x01\x12\x1c\n\x14\x62odyFrameToCameraMrp\x18\x04 \x03(\x01\x12+\n\tlensModel\x18\x05 \x01(\x0b\x32\x18.cielimMessage.LensModel\x12/\n\x0bsensorModel\x18\x06 \x01(\x0b\x32\x1a.cielimMessage.SensorModel\x12\x35\n\x0e\x61reaOfInterest\x18\x07 \x01(\x0b\x32\x1d.cielimMessage.AreaOfInterest"\xb6\x02\n\rCielimMessage\x12+\n\x05\x65poch\x18\x01 \x01(\x0b\x32\x1c.cielimMessage.EpochDateTime\x12-\n\x0b\x63urrentTime\x18\x02 \x01(\x0b\x32\x18.cielimMessage.TimeStamp\x12\x37\n\x10renderParameters\x18\x03 \x01(\x0b\x32\x1d.cielimMessage.RenderingModel\x12\x35\n\x0f\x63\x65lestialBodies\x18\x04 \x03(\x0b\x32\x1c.cielimMessage.CelestialBody\x12-\n\nspacecraft\x18\x05 \x01(\x0b\x32\x19.cielimMessage.Spacecraft\x12*\n\x06\x63\x61mera\x18\x06 \x01(\x0b\x32\x1a.cielimMessage.CameraModelB\x02H\x03\x62\x06proto3',
 )
 
 
@@ -1613,6 +1613,123 @@ _SENSORMODEL = _descriptor.Descriptor(
 )
 
 
+_AREAOFINTEREST = _descriptor.Descriptor(
+    name="AreaOfInterest",
+    full_name="cielimMessage.AreaOfInterest",
+    filename=None,
+    file=DESCRIPTOR,
+    containing_type=None,
+    create_key=_descriptor._internal_create_key,
+    fields=[
+        _descriptor.FieldDescriptor(
+            name="centerX",
+            full_name="cielimMessage.AreaOfInterest.centerX",
+            index=0,
+            number=1,
+            type=1,
+            cpp_type=5,
+            label=1,
+            has_default_value=False,
+            default_value=float(0),
+            message_type=None,
+            enum_type=None,
+            containing_type=None,
+            is_extension=False,
+            extension_scope=None,
+            serialized_options=None,
+            file=DESCRIPTOR,
+            create_key=_descriptor._internal_create_key,
+        ),
+        _descriptor.FieldDescriptor(
+            name="centerY",
+            full_name="cielimMessage.AreaOfInterest.centerY",
+            index=1,
+            number=2,
+            type=1,
+            cpp_type=5,
+            label=1,
+            has_default_value=False,
+            default_value=float(0),
+            message_type=None,
+            enum_type=None,
+            containing_type=None,
+            is_extension=False,
+            extension_scope=None,
+            serialized_options=None,
+            file=DESCRIPTOR,
+            create_key=_descriptor._internal_create_key,
+        ),
+        _descriptor.FieldDescriptor(
+            name="width",
+            full_name="cielimMessage.AreaOfInterest.width",
+            index=2,
+            number=3,
+            type=1,
+            cpp_type=5,
+            label=1,
+            has_default_value=False,
+            default_value=float(0),
+            message_type=None,
+            enum_type=None,
+            containing_type=None,
+            is_extension=False,
+            extension_scope=None,
+            serialized_options=None,
+            file=DESCRIPTOR,
+            create_key=_descriptor._internal_create_key,
+        ),
+        _descriptor.FieldDescriptor(
+            name="height",
+            full_name="cielimMessage.AreaOfInterest.height",
+            index=3,
+            number=4,
+            type=1,
+            cpp_type=5,
+            label=1,
+            has_default_value=False,
+            default_value=float(0),
+            message_type=None,
+            enum_type=None,
+            containing_type=None,
+            is_extension=False,
+            extension_scope=None,
+            serialized_options=None,
+            file=DESCRIPTOR,
+            create_key=_descriptor._internal_create_key,
+        ),
+        _descriptor.FieldDescriptor(
+            name="threshold",
+            full_name="cielimMessage.AreaOfInterest.threshold",
+            index=4,
+            number=5,
+            type=1,
+            cpp_type=5,
+            label=1,
+            has_default_value=False,
+            default_value=float(0),
+            message_type=None,
+            enum_type=None,
+            containing_type=None,
+            is_extension=False,
+            extension_scope=None,
+            serialized_options=None,
+            file=DESCRIPTOR,
+            create_key=_descriptor._internal_create_key,
+        ),
+    ],
+    extensions=[],
+    nested_types=[],
+    enum_types=[],
+    serialized_options=None,
+    is_extendable=False,
+    syntax="proto3",
+    extension_ranges=[],
+    oneofs=[],
+    serialized_start=1842,
+    serialized_end=1942,
+)
+
+
 _CAMERAMODEL = _descriptor.Descriptor(
     name="CameraModel",
     full_name="cielimMessage.CameraModel",
@@ -1735,6 +1852,25 @@ _CAMERAMODEL = _descriptor.Descriptor(
             file=DESCRIPTOR,
             create_key=_descriptor._internal_create_key,
         ),
+        _descriptor.FieldDescriptor(
+            name="areaOfInterest",
+            full_name="cielimMessage.CameraModel.areaOfInterest",
+            index=6,
+            number=7,
+            type=11,
+            cpp_type=10,
+            label=1,
+            has_default_value=False,
+            default_value=None,
+            message_type=None,
+            enum_type=None,
+            containing_type=None,
+            is_extension=False,
+            extension_scope=None,
+            serialized_options=None,
+            file=DESCRIPTOR,
+            create_key=_descriptor._internal_create_key,
+        ),
     ],
     extensions=[],
     nested_types=[],
@@ -1744,8 +1880,8 @@ _CAMERAMODEL = _descriptor.Descriptor(
     syntax="proto3",
     extension_ranges=[],
     oneofs=[],
-    serialized_start=1843,
-    serialized_end=2048,
+    serialized_start=1945,
+    serialized_end=2205,
 )
 
 
@@ -1880,8 +2016,8 @@ _CIELIMMESSAGE = _descriptor.Descriptor(
     syntax="proto3",
     extension_ranges=[],
     oneofs=[],
-    serialized_start=2051,
-    serialized_end=2361,
+    serialized_start=2208,
+    serialized_end=2518,
 )
 
 _MESHMODEL.fields_by_name["refModel"].message_type = _REFLECTANCEMODEL
@@ -1890,6 +2026,7 @@ _CELESTIALBODY.fields_by_name["model"].message_type = _MESHMODEL
 _SENSORMODEL.fields_by_name["qeCurve"].message_type = _QUANTUMEFFICIENCY
 _CAMERAMODEL.fields_by_name["lensModel"].message_type = _LENSMODEL
 _CAMERAMODEL.fields_by_name["sensorModel"].message_type = _SENSORMODEL
+_CAMERAMODEL.fields_by_name["areaOfInterest"].message_type = _AREAOFINTEREST
 _CIELIMMESSAGE.fields_by_name["epoch"].message_type = _EPOCHDATETIME
 _CIELIMMESSAGE.fields_by_name["currentTime"].message_type = _TIMESTAMP
 _CIELIMMESSAGE.fields_by_name["renderParameters"].message_type = _RENDERINGMODEL
@@ -1907,6 +2044,7 @@ DESCRIPTOR.message_types_by_name["Spacecraft"] = _SPACECRAFT
 DESCRIPTOR.message_types_by_name["QuantumEfficiency"] = _QUANTUMEFFICIENCY
 DESCRIPTOR.message_types_by_name["LensModel"] = _LENSMODEL
 DESCRIPTOR.message_types_by_name["SensorModel"] = _SENSORMODEL
+DESCRIPTOR.message_types_by_name["AreaOfInterest"] = _AREAOFINTEREST
 DESCRIPTOR.message_types_by_name["CameraModel"] = _CAMERAMODEL
 DESCRIPTOR.message_types_by_name["CielimMessage"] = _CIELIMMESSAGE
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
@@ -2031,6 +2169,17 @@ SensorModel = _reflection.GeneratedProtocolMessageType(
     },
 )
 _sym_db.RegisterMessage(SensorModel)
+
+AreaOfInterest = _reflection.GeneratedProtocolMessageType(
+    "AreaOfInterest",
+    (_message.Message,),
+    {
+        "DESCRIPTOR": _AREAOFINTEREST,
+        "__module__": "cielimMessage_pb2",
+        # @@protoc_insertion_point(class_scope:cielimMessage.AreaOfInterest)
+    },
+)
+_sym_db.RegisterMessage(AreaOfInterest)
 
 CameraModel = _reflection.GeneratedProtocolMessageType(
     "CameraModel",

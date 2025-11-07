@@ -216,6 +216,22 @@ struct SensorModelDefaultTypeInternal {
   };
 };
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT SensorModelDefaultTypeInternal _SensorModel_default_instance_;
+constexpr AreaOfInterest::AreaOfInterest(
+  ::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized)
+  : centerx_(0)
+  , centery_(0)
+  , width_(0)
+  , height_(0)
+  , threshold_(0){}
+struct AreaOfInterestDefaultTypeInternal {
+  constexpr AreaOfInterestDefaultTypeInternal()
+    : _instance(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized{}) {}
+  ~AreaOfInterestDefaultTypeInternal() {}
+  union {
+    AreaOfInterest _instance;
+  };
+};
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT AreaOfInterestDefaultTypeInternal _AreaOfInterest_default_instance_;
 constexpr CameraModel::CameraModel(
   ::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized)
   : camerapositioninbody_()
@@ -223,6 +239,7 @@ constexpr CameraModel::CameraModel(
   , parentname_(&::PROTOBUF_NAMESPACE_ID::internal::fixed_address_empty_string)
   , lensmodel_(nullptr)
   , sensormodel_(nullptr)
+  , areaofinterest_(nullptr)
   , cameraid_(int64_t{0}){}
 struct CameraModelDefaultTypeInternal {
   constexpr CameraModelDefaultTypeInternal()
@@ -3952,10 +3969,286 @@ std::string SensorModel::GetTypeName() const {
 
 // ===================================================================
 
+class AreaOfInterest::_Internal {
+ public:
+};
+
+AreaOfInterest::AreaOfInterest(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                         bool is_message_owned)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
+  SharedCtor();
+  if (!is_message_owned) {
+    RegisterArenaDtor(arena);
+  }
+  // @@protoc_insertion_point(arena_constructor:cielimMessage.AreaOfInterest)
+}
+AreaOfInterest::AreaOfInterest(const AreaOfInterest& from)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite() {
+  _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+  ::memcpy(&centerx_, &from.centerx_,
+    static_cast<size_t>(reinterpret_cast<char*>(&threshold_) -
+    reinterpret_cast<char*>(&centerx_)) + sizeof(threshold_));
+  // @@protoc_insertion_point(copy_constructor:cielimMessage.AreaOfInterest)
+}
+
+void AreaOfInterest::SharedCtor() {
+::memset(reinterpret_cast<char*>(this) + static_cast<size_t>(
+    reinterpret_cast<char*>(&centerx_) - reinterpret_cast<char*>(this)),
+    0, static_cast<size_t>(reinterpret_cast<char*>(&threshold_) -
+    reinterpret_cast<char*>(&centerx_)) + sizeof(threshold_));
+}
+
+AreaOfInterest::~AreaOfInterest() {
+  // @@protoc_insertion_point(destructor:cielimMessage.AreaOfInterest)
+  if (GetArenaForAllocation() != nullptr) return;
+  SharedDtor();
+  _internal_metadata_.Delete<std::string>();
+}
+
+inline void AreaOfInterest::SharedDtor() {
+  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+}
+
+void AreaOfInterest::ArenaDtor(void* object) {
+  AreaOfInterest* _this = reinterpret_cast< AreaOfInterest* >(object);
+  (void)_this;
+}
+void AreaOfInterest::RegisterArenaDtor(::PROTOBUF_NAMESPACE_ID::Arena*) {
+}
+void AreaOfInterest::SetCachedSize(int size) const {
+  _cached_size_.Set(size);
+}
+
+void AreaOfInterest::Clear() {
+// @@protoc_insertion_point(message_clear_start:cielimMessage.AreaOfInterest)
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  ::memset(&centerx_, 0, static_cast<size_t>(
+      reinterpret_cast<char*>(&threshold_) -
+      reinterpret_cast<char*>(&centerx_)) + sizeof(threshold_));
+  _internal_metadata_.Clear<std::string>();
+}
+
+const char* AreaOfInterest::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) {
+#define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
+  while (!ctx->Done(&ptr)) {
+    ::PROTOBUF_NAMESPACE_ID::uint32 tag;
+    ptr = ::PROTOBUF_NAMESPACE_ID::internal::ReadTag(ptr, &tag);
+    switch (tag >> 3) {
+      // double centerX = 1;
+      case 1:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 9)) {
+          centerx_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
+          ptr += sizeof(double);
+        } else
+          goto handle_unusual;
+        continue;
+      // double centerY = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 17)) {
+          centery_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
+          ptr += sizeof(double);
+        } else
+          goto handle_unusual;
+        continue;
+      // double width = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 25)) {
+          width_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
+          ptr += sizeof(double);
+        } else
+          goto handle_unusual;
+        continue;
+      // double height = 4;
+      case 4:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 33)) {
+          height_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
+          ptr += sizeof(double);
+        } else
+          goto handle_unusual;
+        continue;
+      // double threshold = 5;
+      case 5:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 41)) {
+          threshold_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
+          ptr += sizeof(double);
+        } else
+          goto handle_unusual;
+        continue;
+      default:
+        goto handle_unusual;
+    }  // switch
+  handle_unusual:
+    if ((tag == 0) || ((tag & 7) == 4)) {
+      CHK_(ptr);
+      ctx->SetLastTag(tag);
+      goto message_done;
+    }
+    ptr = UnknownFieldParse(
+        tag,
+        _internal_metadata_.mutable_unknown_fields<std::string>(),
+        ptr, ctx);
+    CHK_(ptr != nullptr);
+  }  // while
+message_done:
+  return ptr;
+failure:
+  ptr = nullptr;
+  goto message_done;
+#undef CHK_
+}
+
+::PROTOBUF_NAMESPACE_ID::uint8* AreaOfInterest::_InternalSerialize(
+    ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+  // @@protoc_insertion_point(serialize_to_array_start:cielimMessage.AreaOfInterest)
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  // double centerX = 1;
+  if (!(this->_internal_centerx() <= 0 && this->_internal_centerx() >= 0)) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(1, this->_internal_centerx(), target);
+  }
+
+  // double centerY = 2;
+  if (!(this->_internal_centery() <= 0 && this->_internal_centery() >= 0)) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(2, this->_internal_centery(), target);
+  }
+
+  // double width = 3;
+  if (!(this->_internal_width() <= 0 && this->_internal_width() >= 0)) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(3, this->_internal_width(), target);
+  }
+
+  // double height = 4;
+  if (!(this->_internal_height() <= 0 && this->_internal_height() >= 0)) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(4, this->_internal_height(), target);
+  }
+
+  // double threshold = 5;
+  if (!(this->_internal_threshold() <= 0 && this->_internal_threshold() >= 0)) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(5, this->_internal_threshold(), target);
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
+        static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:cielimMessage.AreaOfInterest)
+  return target;
+}
+
+size_t AreaOfInterest::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:cielimMessage.AreaOfInterest)
+  size_t total_size = 0;
+
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  // double centerX = 1;
+  if (!(this->_internal_centerx() <= 0 && this->_internal_centerx() >= 0)) {
+    total_size += 1 + 8;
+  }
+
+  // double centerY = 2;
+  if (!(this->_internal_centery() <= 0 && this->_internal_centery() >= 0)) {
+    total_size += 1 + 8;
+  }
+
+  // double width = 3;
+  if (!(this->_internal_width() <= 0 && this->_internal_width() >= 0)) {
+    total_size += 1 + 8;
+  }
+
+  // double height = 4;
+  if (!(this->_internal_height() <= 0 && this->_internal_height() >= 0)) {
+    total_size += 1 + 8;
+  }
+
+  // double threshold = 5;
+  if (!(this->_internal_threshold() <= 0 && this->_internal_threshold() >= 0)) {
+    total_size += 1 + 8;
+  }
+
+  if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
+    total_size += _internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size();
+  }
+  int cached_size = ::PROTOBUF_NAMESPACE_ID::internal::ToCachedSize(total_size);
+  SetCachedSize(cached_size);
+  return total_size;
+}
+
+void AreaOfInterest::CheckTypeAndMergeFrom(
+    const ::PROTOBUF_NAMESPACE_ID::MessageLite& from) {
+  MergeFrom(*::PROTOBUF_NAMESPACE_ID::internal::DownCast<const AreaOfInterest*>(
+      &from));
+}
+
+void AreaOfInterest::MergeFrom(const AreaOfInterest& from) {
+// @@protoc_insertion_point(class_specific_merge_from_start:cielimMessage.AreaOfInterest)
+  GOOGLE_DCHECK_NE(&from, this);
+  ::PROTOBUF_NAMESPACE_ID::uint32 cached_has_bits = 0;
+  (void) cached_has_bits;
+
+  if (!(from._internal_centerx() <= 0 && from._internal_centerx() >= 0)) {
+    _internal_set_centerx(from._internal_centerx());
+  }
+  if (!(from._internal_centery() <= 0 && from._internal_centery() >= 0)) {
+    _internal_set_centery(from._internal_centery());
+  }
+  if (!(from._internal_width() <= 0 && from._internal_width() >= 0)) {
+    _internal_set_width(from._internal_width());
+  }
+  if (!(from._internal_height() <= 0 && from._internal_height() >= 0)) {
+    _internal_set_height(from._internal_height());
+  }
+  if (!(from._internal_threshold() <= 0 && from._internal_threshold() >= 0)) {
+    _internal_set_threshold(from._internal_threshold());
+  }
+  _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
+}
+
+void AreaOfInterest::CopyFrom(const AreaOfInterest& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:cielimMessage.AreaOfInterest)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+bool AreaOfInterest::IsInitialized() const {
+  return true;
+}
+
+void AreaOfInterest::InternalSwap(AreaOfInterest* other) {
+  using std::swap;
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  ::PROTOBUF_NAMESPACE_ID::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(AreaOfInterest, threshold_)
+      + sizeof(AreaOfInterest::threshold_)
+      - PROTOBUF_FIELD_OFFSET(AreaOfInterest, centerx_)>(
+          reinterpret_cast<char*>(&centerx_),
+          reinterpret_cast<char*>(&other->centerx_));
+}
+
+std::string AreaOfInterest::GetTypeName() const {
+  return "cielimMessage.AreaOfInterest";
+}
+
+
+// ===================================================================
+
 class CameraModel::_Internal {
  public:
   static const ::cielimMessage::LensModel& lensmodel(const CameraModel* msg);
   static const ::cielimMessage::SensorModel& sensormodel(const CameraModel* msg);
+  static const ::cielimMessage::AreaOfInterest& areaofinterest(const CameraModel* msg);
 };
 
 const ::cielimMessage::LensModel&
@@ -3965,6 +4258,10 @@ CameraModel::_Internal::lensmodel(const CameraModel* msg) {
 const ::cielimMessage::SensorModel&
 CameraModel::_Internal::sensormodel(const CameraModel* msg) {
   return *msg->sensormodel_;
+}
+const ::cielimMessage::AreaOfInterest&
+CameraModel::_Internal::areaofinterest(const CameraModel* msg) {
+  return *msg->areaofinterest_;
 }
 CameraModel::CameraModel(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
@@ -3997,6 +4294,11 @@ CameraModel::CameraModel(const CameraModel& from)
   } else {
     sensormodel_ = nullptr;
   }
+  if (from._internal_has_areaofinterest()) {
+    areaofinterest_ = new ::cielimMessage::AreaOfInterest(*from.areaofinterest_);
+  } else {
+    areaofinterest_ = nullptr;
+  }
   cameraid_ = from.cameraid_;
   // @@protoc_insertion_point(copy_constructor:cielimMessage.CameraModel)
 }
@@ -4021,6 +4323,7 @@ inline void CameraModel::SharedDtor() {
   parentname_.DestroyNoArena(&::PROTOBUF_NAMESPACE_ID::internal::GetEmptyStringAlreadyInited());
   if (this != internal_default_instance()) delete lensmodel_;
   if (this != internal_default_instance()) delete sensormodel_;
+  if (this != internal_default_instance()) delete areaofinterest_;
 }
 
 void CameraModel::ArenaDtor(void* object) {
@@ -4050,6 +4353,10 @@ void CameraModel::Clear() {
     delete sensormodel_;
   }
   sensormodel_ = nullptr;
+  if (GetArenaForAllocation() == nullptr && areaofinterest_ != nullptr) {
+    delete areaofinterest_;
+  }
+  areaofinterest_ = nullptr;
   cameraid_ = int64_t{0};
   _internal_metadata_.Clear<std::string>();
 }
@@ -4112,6 +4419,14 @@ const char* CameraModel::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID
       case 6:
         if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 50)) {
           ptr = ctx->ParseMessage(_internal_mutable_sensormodel(), ptr);
+          CHK_(ptr);
+        } else
+          goto handle_unusual;
+        continue;
+      // .cielimMessage.AreaOfInterest areaOfInterest = 7;
+      case 7:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 58)) {
+          ptr = ctx->ParseMessage(_internal_mutable_areaofinterest(), ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -4187,6 +4502,14 @@ failure:
         6, _Internal::sensormodel(this), target, stream);
   }
 
+  // .cielimMessage.AreaOfInterest areaOfInterest = 7;
+  if (this->_internal_has_areaofinterest()) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+      InternalWriteMessage(
+        7, _Internal::areaofinterest(this), target, stream);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
         static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
@@ -4248,6 +4571,13 @@ size_t CameraModel::ByteSizeLong() const {
         *sensormodel_);
   }
 
+  // .cielimMessage.AreaOfInterest areaOfInterest = 7;
+  if (this->_internal_has_areaofinterest()) {
+    total_size += 1 +
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
+        *areaofinterest_);
+  }
+
   // int64 cameraId = 1;
   if (this->_internal_cameraid() != 0) {
     total_size += ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::Int64SizePlusOne(this->_internal_cameraid());
@@ -4283,6 +4613,9 @@ void CameraModel::MergeFrom(const CameraModel& from) {
   }
   if (from._internal_has_sensormodel()) {
     _internal_mutable_sensormodel()->::cielimMessage::SensorModel::MergeFrom(from._internal_sensormodel());
+  }
+  if (from._internal_has_areaofinterest()) {
+    _internal_mutable_areaofinterest()->::cielimMessage::AreaOfInterest::MergeFrom(from._internal_areaofinterest());
   }
   if (from._internal_cameraid() != 0) {
     _internal_set_cameraid(from._internal_cameraid());
@@ -4758,6 +5091,9 @@ template<> PROTOBUF_NOINLINE ::cielimMessage::LensModel* Arena::CreateMaybeMessa
 }
 template<> PROTOBUF_NOINLINE ::cielimMessage::SensorModel* Arena::CreateMaybeMessage< ::cielimMessage::SensorModel >(Arena* arena) {
   return Arena::CreateMessageInternal< ::cielimMessage::SensorModel >(arena);
+}
+template<> PROTOBUF_NOINLINE ::cielimMessage::AreaOfInterest* Arena::CreateMaybeMessage< ::cielimMessage::AreaOfInterest >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::cielimMessage::AreaOfInterest >(arena);
 }
 template<> PROTOBUF_NOINLINE ::cielimMessage::CameraModel* Arena::CreateMaybeMessage< ::cielimMessage::CameraModel >(Arena* arena) {
   return Arena::CreateMessageInternal< ::cielimMessage::CameraModel >(arena);

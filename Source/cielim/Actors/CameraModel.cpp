@@ -213,7 +213,7 @@ void ACameraModel::GetImageData(TArray64<uint8> &ImageData)
 	verify(FImageUtils::CompressImage(ImageData, TEXT("PNG"), Image));
 }
 
-void ACameraModel::GetDiagnosticData(DiagnosticData::DiagnosticData &Diagnostics)
+void ACameraModel::GetDiagnosticData(imageDiagnostics::DiagnosticData &Diagnostics)
 {
 	this->CameraParams.bIsDiagnosticRun = true;
 
