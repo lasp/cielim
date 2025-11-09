@@ -47,7 +47,7 @@ if __name__ == "__main__":
 
     connector.send_init_request()
     connector.send_frame(scene)
-    image, _ = connector.request_image_for_camera_id(1, 1)
+    image, _, _ = connector.request_image_for_camera_id(1, 1)
 
     WindowName = f"Image_Client_{connector.identity}"
     cv2.namedWindow(WindowName, cv2.WINDOW_NORMAL)

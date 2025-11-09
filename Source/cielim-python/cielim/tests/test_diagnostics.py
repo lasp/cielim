@@ -41,7 +41,7 @@ def test_request_image_and_center_of_brightness(cielim_connection, scene_setup):
     connector.send_init_request()
     connector.send_frame(scene_setup)
 
-    [image, center_of_brightness] = connector.request_image_for_camera_id(1, 1)
+    [image, center_of_brightness, _] = connector.request_image_for_camera_id(1, 1)
     height, width, channels = image.shape
     np.testing.assert_allclose([4000, 3000], [width, height], rtol=0, atol=0, err_msg="Returned image not correct")
 
@@ -59,7 +59,7 @@ def test_request_only_center_of_brightness(cielim_connection, scene_setup):
     connector = cielim_connection
     connector.send_frame(scene_setup)
 
-    [image, center_of_brightness] = connector.request_image_for_camera_id(1, 0)
+    [image, center_of_brightness, _] = connector.request_image_for_camera_id(1, 0)
 
     assert image == None
 

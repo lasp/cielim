@@ -87,7 +87,7 @@ def test_init_scene(cielim_connection):
 
     # Get image and check for blank
 
-    [image, center_of_brightness] = connector.request_image_for_camera_id(1, 1)
+    [image, _, _] = connector.request_image_for_camera_id(1, 1)
 
     np.testing.assert_(np.all(image <= 2), "Image was not cleared")
 
@@ -122,7 +122,7 @@ def test_send_frame(cielim_connection, position):
     except AssertionError as e:
         print(f"Fail in test_send_frame: {e}")
 
-    [image, center_of_brightness] = connector.request_image_for_camera_id(1, 1)
+    [_, center_of_brightness, _] = connector.request_image_for_camera_id(1, 1)
 
     # Check the object definitively moved on the screen
 
@@ -155,7 +155,7 @@ def test_request_image(cielim_connection, position):
 
     # Get image
 
-    [image, center_of_brightness] = connector.request_image_for_camera_id(1, 1)
+    [image, _, _] = connector.request_image_for_camera_id(1, 1)
 
     # Check image is not null
     try:

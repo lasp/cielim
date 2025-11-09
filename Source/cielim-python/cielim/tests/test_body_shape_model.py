@@ -47,7 +47,7 @@ def sphere_baseline_cob(connector):
     scene.celestialBodies[0].model.shapeModel = "sphere_normalized"
 
     connector.send_frame(scene)
-    image, _ = connector.request_image_for_camera_id(1, 1)
+    image, _, _ = connector.request_image_for_camera_id(1, 1)
 
     if len(image.shape) == 3:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -81,7 +81,7 @@ def test_center_of_brightness_shift(cielim_connection, scene_setup, test_name, s
     scene.celestialBodies[0].model.shapeModel = shape_model
 
     connector.send_frame(scene)
-    image, _ = connector.request_image_for_camera_id(1, 1)
+    image, _, _ = connector.request_image_for_camera_id(1, 1)
 
     if len(image.shape) == 3:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)

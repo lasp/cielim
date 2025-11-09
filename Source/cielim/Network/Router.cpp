@@ -483,21 +483,12 @@ void FRouter::ParseCircularQueueDataAndSend(const TSharedPtr<FCircularQueueData>
 
 		if (TempPayload != nullptr && TempPayload->Diagnostics != nullptr)
 		{
-			if (TempPayload->Diagnostics->cob_x() >= 0.0f)
-				ReturnMessage.addtyp<double>(TempPayload->Diagnostics->cob_x());
-			else
-				ReturnMessage.addmem(nullptr, 0);
-
-			if (TempPayload->Diagnostics->cob_y() >= 0.0f)
-				ReturnMessage.addtyp<double>(TempPayload->Diagnostics->cob_y());
-			else
-				ReturnMessage.addmem(nullptr, 0);
-
-			// Uncomment this to send coverage data
-			/*if (TempPayload->Diagnostics->coverage() >= 0.0f)
-				ReturnMessage.addtyp<double>(TempPayload->Diagnostics->coverage());
-			else
-				ReturnMessage.addmem(nullptr, 0);*/
+			const std::string SerializedBuf = TempPayload->Diagnostics->SerializeAsString();
+			ReturnMessage.addmem(SerializedBuf.data(), SerializedBuf.size());
+		}
+		else
+		{
+			ReturnMessage.addmem(nullptr, 0);
 		}
 	}
 	else

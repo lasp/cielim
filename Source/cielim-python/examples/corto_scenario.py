@@ -231,7 +231,7 @@ def corto_scenario():
 
         scene_frame.set_existing_message(message)
         connector.send_frame(scene_frame.get_scene())
-        [image, _] = connector.request_image_for_camera_id(1, 1)
+        [image, _, _] = connector.request_image_for_camera_id(1, 1)
         cv2.imwrite(directory_path + "/image-" + str(image_number) + ".png", image)
 
     connector.disconnect()

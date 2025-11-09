@@ -50,7 +50,7 @@ def test_PerlinNoise(cielim_connection, scene_setup):
 
     connector.send_init_request()
     connector.send_frame(scene)
-    base_image, _ = connector.request_image_for_camera_id(1, True)
+    base_image, _, _ = connector.request_image_for_camera_id(1, True)
 
     # Apply a lot of noise so that the circle becomes spikey
 
@@ -61,7 +61,7 @@ def test_PerlinNoise(cielim_connection, scene_setup):
 
     connector.send_init_request()
     connector.send_frame(scene)
-    noise_image, _ = connector.request_image_for_camera_id(1, True)
+    noise_image, _, _ = connector.request_image_for_camera_id(1, True)
 
     # Compare image shapes
 
