@@ -71,3 +71,60 @@ def test_request_only_center_of_brightness(cielim_connection, scene_setup):
         atol=1e-1,
         err_msg="Center of brightness not close enough to expected",
     )
+
+
+@pytest.mark.parametrize(
+    "center_x, center_y, width, height, distance",
+    [
+        (2000, 1500, 4000, 3000, 75000),
+        (2000, 1500, 2000, 1500, 100000),
+        (2000, 1500, 2000, 1500, 120000),
+        (2000, 1500, 2000, 1500, 150000),
+        (2000, 1500, 2000, 1500, 200000),
+        (2000, 1500, 2000, 1500, 1000000),
+        (2000, 1500, 1000, 750, 1000000),
+        (2000, 1500, 500, 375, 1000000),
+        (2000, 1500, 250, 250, 1000000),
+    ],
+)
+def test_coverage(cielim_connection, scene_setup, center_x, center_y, width, height, distance):
+    connector = cielim_connection
+
+    scene_setup.camera.areaOfInterest.centerX = center_x
+    scene_setup.camera.areaOfInterest.centerY = center_y
+    scene_setup.camera.areaOfInterest.width = width
+    scene_setup.camera.areaOfInterest.height = height
+
+    threshold = 0.01
+
+    scene_setup.camera.areaOfInterest.threshold = threshold
+
+    del scene_setup.spacecraft.position[:]
+    [scene_setup.spacecraft.position.append(item) for item in [0, 0, -1 * distance]]
+
+    connector.send_frame(scene_setup)
+
+    [image, _, coverage] = connector.request_image_for_camera_id(1)
+
+    # Convert to grayscale
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # Compute bounds
+    x1 = max(center_x - width // 2, 0)
+    y1 = max(center_y - height // 2, 0)
+    x2 = min(center_x + width // 2, 4000)
+    y2 = min(center_y + height // 2, 3000)
+
+    bounds = gray[y1 : y2 + 1, x1 : x2 + 1]
+
+    mask = bounds > threshold * 255
+
+    # Ratio of bright pixels
+    pct = np.sum(mask) / bounds.size
+
+    np.testing.assert_allclose(
+        coverage,
+        pct,
+        rtol=0.02,
+        err_msg=f"Coverage not close enough to expected",
+    )
