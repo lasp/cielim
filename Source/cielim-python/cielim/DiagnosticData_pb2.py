@@ -18,7 +18,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
     syntax="proto3",
     serialized_options=b"H\003",
     create_key=_descriptor._internal_create_key,
-    serialized_pb=b'\n\x14\x44iagnosticData.proto\x12\x0e\x44iagnosticData".\n\x0e\x44iagnosticData\x12\r\n\x05\x63ob_x\x18\x01 \x01(\x01\x12\r\n\x05\x63ob_y\x18\x02 \x01(\x01\x42\x02H\x03\x62\x06proto3',
+    serialized_pb=b'\n\x14\x44iagnosticData.proto\x12\x0e\x44iagnosticData"@\n\x0e\x44iagnosticData\x12\r\n\x05\x63ob_x\x18\x01 \x01(\x01\x12\r\n\x05\x63ob_y\x18\x02 \x01(\x01\x12\x10\n\x08\x63overage\x18\x03 \x01(\x01\x42\x02H\x03\x62\x06proto3',
 )
 
 
@@ -68,6 +68,25 @@ _DIAGNOSTICDATA = _descriptor.Descriptor(
             file=DESCRIPTOR,
             create_key=_descriptor._internal_create_key,
         ),
+        _descriptor.FieldDescriptor(
+            name="coverage",
+            full_name="DiagnosticData.DiagnosticData.coverage",
+            index=2,
+            number=3,
+            type=1,
+            cpp_type=5,
+            label=1,
+            has_default_value=False,
+            default_value=float(0),
+            message_type=None,
+            enum_type=None,
+            containing_type=None,
+            is_extension=False,
+            extension_scope=None,
+            serialized_options=None,
+            file=DESCRIPTOR,
+            create_key=_descriptor._internal_create_key,
+        ),
     ],
     extensions=[],
     nested_types=[],
@@ -78,7 +97,7 @@ _DIAGNOSTICDATA = _descriptor.Descriptor(
     extension_ranges=[],
     oneofs=[],
     serialized_start=40,
-    serialized_end=86,
+    serialized_end=104,
 )
 
 DESCRIPTOR.message_types_by_name["DiagnosticData"] = _DIAGNOSTICDATA

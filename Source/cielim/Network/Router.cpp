@@ -481,16 +481,23 @@ void FRouter::ParseCircularQueueDataAndSend(const TSharedPtr<FCircularQueueData>
 		ReturnMessage.addmem(ResponseImage.GetData(), Bytes);
 		ReturnMessage.addtyp(Bytes);
 
-		if (TempPayload != nullptr && TempPayload->Diagnostics != nullptr &&
-			TempPayload->Diagnostics->cob_x() >= 0.0f && TempPayload->Diagnostics->cob_y() >= 0.0f)
+		if (TempPayload != nullptr && TempPayload->Diagnostics != nullptr)
 		{
-			ReturnMessage.addtyp<double>(TempPayload->Diagnostics->cob_x());
-			ReturnMessage.addtyp<double>(TempPayload->Diagnostics->cob_y());
-		}
-		else
-		{
-			ReturnMessage.addmem(nullptr, 0);
-			ReturnMessage.addmem(nullptr, 0);
+			if (TempPayload->Diagnostics->cob_x() >= 0.0f)
+				ReturnMessage.addtyp<double>(TempPayload->Diagnostics->cob_x());
+			else
+				ReturnMessage.addmem(nullptr, 0);
+
+			if (TempPayload->Diagnostics->cob_y() >= 0.0f)
+				ReturnMessage.addtyp<double>(TempPayload->Diagnostics->cob_y());
+			else
+				ReturnMessage.addmem(nullptr, 0);
+
+			// Uncomment this to send coverage data
+			/*if (TempPayload->Diagnostics->coverage() >= 0.0f)
+				ReturnMessage.addtyp<double>(TempPayload->Diagnostics->coverage());
+			else
+				ReturnMessage.addmem(nullptr, 0);*/
 		}
 	}
 	else

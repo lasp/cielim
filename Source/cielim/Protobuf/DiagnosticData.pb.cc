@@ -26,7 +26,8 @@ namespace DiagnosticData {
 constexpr DiagnosticData::DiagnosticData(
   ::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized)
   : cob_x_(0)
-  , cob_y_(0){}
+  , cob_y_(0)
+  , coverage_(0){}
 struct DiagnosticDataDefaultTypeInternal {
   constexpr DiagnosticDataDefaultTypeInternal()
     : _instance(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized{}) {}
@@ -58,16 +59,16 @@ DiagnosticData::DiagnosticData(const DiagnosticData& from)
   : ::PROTOBUF_NAMESPACE_ID::MessageLite() {
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
   ::memcpy(&cob_x_, &from.cob_x_,
-    static_cast<size_t>(reinterpret_cast<char*>(&cob_y_) -
-    reinterpret_cast<char*>(&cob_x_)) + sizeof(cob_y_));
+    static_cast<size_t>(reinterpret_cast<char*>(&coverage_) -
+    reinterpret_cast<char*>(&cob_x_)) + sizeof(coverage_));
   // @@protoc_insertion_point(copy_constructor:DiagnosticData.DiagnosticData)
 }
 
 void DiagnosticData::SharedCtor() {
 ::memset(reinterpret_cast<char*>(this) + static_cast<size_t>(
     reinterpret_cast<char*>(&cob_x_) - reinterpret_cast<char*>(this)),
-    0, static_cast<size_t>(reinterpret_cast<char*>(&cob_y_) -
-    reinterpret_cast<char*>(&cob_x_)) + sizeof(cob_y_));
+    0, static_cast<size_t>(reinterpret_cast<char*>(&coverage_) -
+    reinterpret_cast<char*>(&cob_x_)) + sizeof(coverage_));
 }
 
 DiagnosticData::~DiagnosticData() {
@@ -98,8 +99,8 @@ void DiagnosticData::Clear() {
   (void) cached_has_bits;
 
   ::memset(&cob_x_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&cob_y_) -
-      reinterpret_cast<char*>(&cob_x_)) + sizeof(cob_y_));
+      reinterpret_cast<char*>(&coverage_) -
+      reinterpret_cast<char*>(&cob_x_)) + sizeof(coverage_));
   _internal_metadata_.Clear<std::string>();
 }
 
@@ -121,6 +122,14 @@ const char* DiagnosticData::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE
       case 2:
         if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 17)) {
           cob_y_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
+          ptr += sizeof(double);
+        } else
+          goto handle_unusual;
+        continue;
+      // double coverage = 3;
+      case 3:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 25)) {
+          coverage_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr);
           ptr += sizeof(double);
         } else
           goto handle_unusual;
@@ -166,6 +175,12 @@ failure:
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(2, this->_internal_cob_y(), target);
   }
 
+  // double coverage = 3;
+  if (!(this->_internal_coverage() <= 0 && this->_internal_coverage() >= 0)) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteDoubleToArray(3, this->_internal_coverage(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = stream->WriteRaw(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).data(),
         static_cast<int>(_internal_metadata_.unknown_fields<std::string>(::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString).size()), target);
@@ -189,6 +204,11 @@ size_t DiagnosticData::ByteSizeLong() const {
 
   // double cob_y = 2;
   if (!(this->_internal_cob_y() <= 0 && this->_internal_cob_y() >= 0)) {
+    total_size += 1 + 8;
+  }
+
+  // double coverage = 3;
+  if (!(this->_internal_coverage() <= 0 && this->_internal_coverage() >= 0)) {
     total_size += 1 + 8;
   }
 
@@ -218,6 +238,9 @@ void DiagnosticData::MergeFrom(const DiagnosticData& from) {
   if (!(from._internal_cob_y() <= 0 && from._internal_cob_y() >= 0)) {
     _internal_set_cob_y(from._internal_cob_y());
   }
+  if (!(from._internal_coverage() <= 0 && from._internal_coverage() >= 0)) {
+    _internal_set_coverage(from._internal_coverage());
+  }
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
 }
 
@@ -236,8 +259,8 @@ void DiagnosticData::InternalSwap(DiagnosticData* other) {
   using std::swap;
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(DiagnosticData, cob_y_)
-      + sizeof(DiagnosticData::cob_y_)
+      PROTOBUF_FIELD_OFFSET(DiagnosticData, coverage_)
+      + sizeof(DiagnosticData::coverage_)
       - PROTOBUF_FIELD_OFFSET(DiagnosticData, cob_x_)>(
           reinterpret_cast<char*>(&cob_x_),
           reinterpret_cast<char*>(&other->cob_x_));
