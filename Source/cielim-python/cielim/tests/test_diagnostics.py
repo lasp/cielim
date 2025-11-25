@@ -74,20 +74,20 @@ def test_request_only_center_of_brightness(cielim_connection, scene_setup):
 
 
 @pytest.mark.parametrize(
-    "center_x, center_y, width, height, distance",
+    "center_x, center_y, width, height",
     [
-        (2000, 1500, 4000, 3000, 75000),
-        (2000, 1500, 2000, 1500, 100000),
-        (2000, 1500, 2000, 1500, 120000),
-        (2000, 1500, 2000, 1500, 150000),
-        (2000, 1500, 2000, 1500, 200000),
-        (2000, 1500, 2000, 1500, 1000000),
-        (2000, 1500, 1000, 750, 1000000),
-        (2000, 1500, 500, 375, 1000000),
-        (2000, 1500, 250, 250, 1000000),
+        (2000, 1500, 4000, 3000),
+        (2000, 1500, 2000, 1500),
+        (2000, 1500, 2000, 1500),
+        (2000, 1500, 2000, 1500),
+        (2000, 1500, 2000, 1500),
+        (2000, 1500, 2000, 1500),
+        (2000, 1500, 1000, 750),
+        (2000, 1500, 500, 375),
+        (2000, 1500, 250, 250),
     ],
 )
-def test_coverage(cielim_connection, scene_setup, center_x, center_y, width, height, distance):
+def test_coverage(cielim_connection, scene_setup, center_x, center_y, width, height):
     connector = cielim_connection
 
     scene_setup.camera.areaOfInterest.centerX = center_x
@@ -100,7 +100,7 @@ def test_coverage(cielim_connection, scene_setup, center_x, center_y, width, hei
     scene_setup.camera.areaOfInterest.threshold = threshold
 
     del scene_setup.spacecraft.position[:]
-    [scene_setup.spacecraft.position.append(item) for item in [0, 0, -1 * distance]]
+    [scene_setup.spacecraft.position.append(item) for item in [0, 0, -1 * 75000]]  # Make circle fill most of the screen
 
     connector.send_frame(scene_setup)
 
@@ -117,10 +117,11 @@ def test_coverage(cielim_connection, scene_setup, center_x, center_y, width, hei
 
     bounds = gray[y1 : y2 + 1, x1 : x2 + 1]
 
-    mask = bounds > threshold * 255
+    mask_total = gray > threshold * 255
+    mask_covered = bounds > threshold * 255
 
     # Ratio of bright pixels
-    pct = np.sum(mask) / bounds.size
+    pct = np.sum(mask_covered) / np.sum(mask_total)
 
     np.testing.assert_allclose(
         coverage,

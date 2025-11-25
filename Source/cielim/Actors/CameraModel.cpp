@@ -428,7 +428,8 @@ float ACameraModel::GetCoveragePercent() const
 		return CoveragePercent;
 
 	FTextureRenderTargetResource *RTResource = RenderTarget->GameThread_GetRenderTargetResource();
-	FRHIGPUBufferReadback Readback(TEXT("Coverage Reduction Calculations Readback"));
+	FRHIGPUBufferReadback ReadbackTotal(TEXT("Coverage Reduction Calculations Readback for Total Sum"));
+	FRHIGPUBufferReadback ReadbackCovered(TEXT("Coverage Reduction Calculations Readback for Covered Sum"));
 
 	const uint32 Width = RenderTarget->SizeX;
 	const uint32 Height = RenderTarget->SizeY;
@@ -449,13 +450,17 @@ float ACameraModel::GetCoveragePercent() const
 
 	ENQUEUE_RENDER_COMMAND(Coverage_Calculations)
 	(
-		[RTResource, &Readback, Width, Height, GroupCountX, GroupCountY, NumGroups, CenterPixelX, CenterPixelY,
-		 AreaWidth, AreaHeight, Threshold](FRHICommandListImmediate &RHICmdList)
+		[RTResource, &ReadbackTotal, &ReadbackCovered, Width, Height, GroupCountX, GroupCountY, NumGroups, CenterPixelX,
+		 CenterPixelY, AreaWidth, AreaHeight, Threshold](FRHICommandListImmediate &RHICmdList)
 		{
 			FRDGBuilder GraphBuilder(RHICmdList);
 
 			const FRDGTextureRef RenderTargetBase =
 				RegisterExternalTexture(GraphBuilder, RTResource->GetRenderTargetTexture(), TEXT("RenderTarget"));
+
+			const FRDGBufferDesc PartialTotalSumsDesc = FRDGBufferDesc::CreateStructuredDesc(sizeof(uint32), NumGroups);
+			const FRDGBufferRef PartialTotalSumsBuffer =
+				GraphBuilder.CreateBuffer(PartialTotalSumsDesc, TEXT("PartialTotalSumsBuffer"));
 
 			const FRDGBufferDesc PartialSumsDesc = FRDGBufferDesc::CreateStructuredDesc(sizeof(uint32), NumGroups);
 			const FRDGBufferRef PartialSumsBuffer =
@@ -469,6 +474,7 @@ float ACameraModel::GetCoveragePercent() const
 			CvgParams->ApothemX = AreaWidth / 2.0f;
 			CvgParams->ApothemY = AreaHeight / 2.0f;
 			CvgParams->Threshold = Threshold;
+			CvgParams->PartialTotalSumBuffer = GraphBuilder.CreateUAV(PartialTotalSumsBuffer, PF_A32B32G32R32F);
 			CvgParams->PartialSumBuffer = GraphBuilder.CreateUAV(PartialSumsBuffer, PF_A32B32G32R32F);
 
 			{
@@ -481,7 +487,8 @@ float ACameraModel::GetCoveragePercent() const
 				FComputeShaderUtils::AddPass(GraphBuilder, RDG_EVENT_NAME("ComputeCoverage"), CoverageReduceShader,
 											 CvgParams, GroupCount);
 
-				AddEnqueueCopyPass(GraphBuilder, &Readback, PartialSumsBuffer, sizeof(uint32) * NumGroups);
+				AddEnqueueCopyPass(GraphBuilder, &ReadbackTotal, PartialTotalSumsBuffer, sizeof(uint32) * NumGroups);
+				AddEnqueueCopyPass(GraphBuilder, &ReadbackCovered, PartialSumsBuffer, sizeof(uint32) * NumGroups);
 			}
 
 			GraphBuilder.Execute();
@@ -493,11 +500,16 @@ float ACameraModel::GetCoveragePercent() const
 
 	ENQUEUE_RENDER_COMMAND(COB_Readback)
 	(
-		[&Readback, &CoveragePercent, AreaWidth, AreaHeight, NumGroups](FRHICommandListImmediate &RHICmdList)
+		[&ReadbackTotal, &ReadbackCovered, &CoveragePercent, NumGroups](FRHICommandListImmediate &RHICmdList)
 		{
 			const double StartTime = FPlatformTime::Seconds();
 
-			while (!Readback.IsReady())
+			// Compute coverage as percentage of total pixels above threshold
+
+			float TotalPixels = 0;
+			float CoveredPixels = 0;
+
+			while (!ReadbackTotal.IsReady())
 			{
 				FPlatformProcess::Sleep(0.001f);
 
@@ -508,21 +520,42 @@ float ACameraModel::GetCoveragePercent() const
 				}
 			}
 
-			if (Readback.IsReady())
+			if (ReadbackTotal.IsReady())
 			{
-				const uint32 *RawData = static_cast<uint32 *>(Readback.Lock(sizeof(uint32) * NumGroups));
-
-				uint32 PixelSum = 0;
+				const uint32 *RawData = static_cast<uint32 *>(ReadbackTotal.Lock(sizeof(uint32) * NumGroups));
 
 				for (uint32 i = 0; i < NumGroups; i++)
 				{
-					PixelSum += RawData[i];
+					TotalPixels += RawData[i];
 				}
 
-				CoveragePercent = static_cast<float>(PixelSum) / FMath::Max((AreaWidth * AreaHeight), 1e-6);
-
-				Readback.Unlock();
+				ReadbackTotal.Unlock();
 			}
+
+			while (!ReadbackCovered.IsReady())
+			{
+				FPlatformProcess::Sleep(0.001f);
+
+				if (FPlatformTime::Seconds() - StartTime > 5.0f)
+				{
+					UE_LOG(LogCielim, Warning, TEXT("Readback polling has timed out; skipping readback..."));
+					break;
+				}
+			}
+
+			if (ReadbackCovered.IsReady())
+			{
+				const uint32 *RawData = static_cast<uint32 *>(ReadbackCovered.Lock(sizeof(uint32) * NumGroups));
+
+				for (uint32 i = 0; i < NumGroups; i++)
+				{
+					CoveredPixels += RawData[i];
+				}
+
+				ReadbackCovered.Unlock();
+			}
+
+			CoveragePercent = CoveredPixels / FMath::Max(TotalPixels, 1e-6);
 		});
 
 	Fence.BeginFence();

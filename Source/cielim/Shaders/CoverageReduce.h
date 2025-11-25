@@ -25,6 +25,7 @@ class FCoverageReduce : public FGlobalShader
 	SHADER_PARAMETER(float, ApothemX)
 	SHADER_PARAMETER(float, ApothemY)
 	SHADER_PARAMETER(float, Threshold)
+	SHADER_PARAMETER_RDG_BUFFER_UAV(RWStructuredBuffer<uint>, PartialTotalSumBuffer)
 	SHADER_PARAMETER_RDG_BUFFER_UAV(RWStructuredBuffer<uint>, PartialSumBuffer)
 	END_SHADER_PARAMETER_STRUCT()
 };
