@@ -213,7 +213,7 @@ def spice_scenario():
 
         print(f"Generating image for time {time_range_str[idx]}")
 
-        [image, center_of_brightness] = connector.request_image_for_camera_id(1, 1)
+        [image, _, _] = connector.request_image_for_camera_id(1, 1)
         cv2.imwrite(os.path.join(current_file_path, f"images-deimos-spice/deimos_image_{idx}.png"), image)
 
     connector.disconnect()

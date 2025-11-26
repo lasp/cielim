@@ -152,7 +152,7 @@ def random_asteroid_generation(number_of_images: int):
         image_name = "image-" + str(idx)
         connector.send_init_request()  # re-initialize shape model
         connector.send_frame(scene_frame.get_scene())
-        [image, center_of_brightness] = connector.request_image_for_camera_id(1, 1)
+        [image, center_of_brightness, _] = connector.request_image_for_camera_id(1, 1)
         if center_of_brightness is not None:
             cv2.imwrite(directory_path + "/" + image_name + ".png", image)
 

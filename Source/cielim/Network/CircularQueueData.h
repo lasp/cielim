@@ -2,8 +2,8 @@
 
 #include "CoreMinimal.h"
 
-#include "../Protobuf/DiagnosticData.pb.h"
 #include "../Protobuf/cielimMessage.pb.h"
+#include "../Protobuf/imageDiagnostics.pb.h"
 
 // List of recognized commands
 enum class CommandType
@@ -42,9 +42,9 @@ struct FImageRequestPayload
 struct FImageResponsePayload
 {
 	TArray64<uint8> ImageData;
-	TSharedPtr<DiagnosticData::DiagnosticData> Diagnostics;
+	TSharedPtr<imageDiagnostics::DiagnosticData> Diagnostics;
 
-	FImageResponsePayload() { Diagnostics = MakeShared<DiagnosticData::DiagnosticData>(); }
+	FImageResponsePayload() { Diagnostics = MakeShared<imageDiagnostics::DiagnosticData>(); }
 };
 
 struct FCircularQueueData

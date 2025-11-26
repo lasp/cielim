@@ -84,11 +84,12 @@ if __name__ == "__main__":
         print(f"Generating frame {idx}...")
 
         response = connector.send_frame(frame)
-        [image, center_of_brightness] = connector.request_image_for_camera_id(1)
+        [image, center_of_brightness, coverage] = connector.request_image_for_camera_id(1)
 
         cv2.imwrite(image_folder + f"/received_image_{idx}.png", image)
 
         print(f"Center of Brightness: {center_of_brightness}")
+        print(f"Coverage: {coverage * 100} %")
         print(response)
 
         idx = idx + 1

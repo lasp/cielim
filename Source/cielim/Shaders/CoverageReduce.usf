@@ -12,18 +12,25 @@
 Texture2D InputTexture;
 
 uint2 TextureSize;
+float CenterPixelX;
+float CenterPixelY;
+float ApothemX;
+float ApothemY;
 float Threshold;
 
-RWStructuredBuffer<uint> PartialSumBuffer;
+RWStructuredBuffer<uint> PartialTotalSumBuffer; // All pixels in image above threshold
+RWStructuredBuffer<uint> PartialSumBuffer; // All pixels in bounding box above threshold
 
+groupshared uint SharedTotalPixelSum[256];
 groupshared uint SharedPixelSum[256];
 
 [numthreads(16, 16, 1)]
 void MainCS(uint3 GlobalThreadID : SV_DispatchThreadID, uint GI : SV_GroupIndex)
 {
-	// Don't check outside bounding box (for now the entire screen)
+	// Don't check outside of texture bounds
 	if (GlobalThreadID.x >= TextureSize.x || GlobalThreadID.y >= TextureSize.y)
 	{
+		SharedTotalPixelSum[GI] = 0;
 		SharedPixelSum[GI] = 0;
 	}
 	else
@@ -34,7 +41,20 @@ void MainCS(uint3 GlobalThreadID : SV_DispatchThreadID, uint GI : SV_GroupIndex)
 		float Luminance = dot(Color.rgb, float3(0.2126, 0.7152, 0.0722));
 
 		// Is 1 if Luminance > Threshold, else 0
-		SharedPixelSum[GI] = (uint) step(Threshold + 1e-3, Luminance);
+		uint IsCovered = (uint) step(Threshold + 1e-3, Luminance);
+
+		SharedTotalPixelSum[GI] = IsCovered;
+
+		// Check if inside bounding box
+		if (GlobalThreadID.x >= CenterPixelX + ApothemX || GlobalThreadID.x <= CenterPixelX - ApothemX ||
+		    GlobalThreadID.y >= CenterPixelY + ApothemY || GlobalThreadID.y <= CenterPixelY - ApothemY)
+		{
+			SharedPixelSum[GI] = 0;
+		}
+		else
+		{
+			SharedPixelSum[GI] = IsCovered;
+		}
 	}
 
 	// Wait for group to finish
@@ -45,6 +65,7 @@ void MainCS(uint3 GlobalThreadID : SV_DispatchThreadID, uint GI : SV_GroupIndex)
 	{
 		if (GI < Offset)
 		{
+			SharedTotalPixelSum[GI] += SharedTotalPixelSum[GI + Offset];
 			SharedPixelSum[GI] += SharedPixelSum[GI + Offset];
 		}
 
@@ -57,6 +78,7 @@ void MainCS(uint3 GlobalThreadID : SV_DispatchThreadID, uint GI : SV_GroupIndex)
 		uint YTile = GlobalThreadID.y / 16;
 		uint TileFlatIndex = XTile + YTile * ceil(TextureSize.x / 16.0f);
 
+		PartialTotalSumBuffer[TileFlatIndex] = SharedTotalPixelSum[0];
 		PartialSumBuffer[TileFlatIndex] = SharedPixelSum[0];
 	}
 }

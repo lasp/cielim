@@ -99,7 +99,7 @@ def spice_scenario():
         [message.spacecraft.attitude.append(item) for item in rbk.dcm_to_mrp(BN)]
         scene_frame.set_existing_message(message)
         connector.send_frame(scene_frame.get_scene())
-        [image, center_of_brightness] = connector.request_image_for_camera_id(1, 1)
+        [image, _, _] = connector.request_image_for_camera_id(1, 1)
         cv2.imwrite(directory_path + "/cassini-" + str(time) + ".png", image)
 
     connector.disconnect()

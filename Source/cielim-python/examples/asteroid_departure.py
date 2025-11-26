@@ -90,7 +90,7 @@ def departure_scene(number_of_images: int):
         image_name = "image-" + str(idx)
         connector.send_init_request()  # re-initialize shape model
         connector.send_frame(scene_frame.get_scene())
-        [image, center_of_brightness] = connector.request_image_for_camera_id(1, 1)
+        [image, _, _] = connector.request_image_for_camera_id(1, 1)
         cv2.imwrite(directory_path + "/" + image_name + ".png", image)
         append_protobuf_to_file(protobuff_file, message)
 

@@ -20,7 +20,12 @@ class FCoverageReduce : public FGlobalShader
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
 	SHADER_PARAMETER_RDG_TEXTURE(Texture2D, InputTexture)
 	SHADER_PARAMETER(FIntPoint, TextureSize)
+	SHADER_PARAMETER(float, CenterPixelX)
+	SHADER_PARAMETER(float, CenterPixelY)
+	SHADER_PARAMETER(float, ApothemX)
+	SHADER_PARAMETER(float, ApothemY)
 	SHADER_PARAMETER(float, Threshold)
+	SHADER_PARAMETER_RDG_BUFFER_UAV(RWStructuredBuffer<uint>, PartialTotalSumBuffer)
 	SHADER_PARAMETER_RDG_BUFFER_UAV(RWStructuredBuffer<uint>, PartialSumBuffer)
 	END_SHADER_PARAMETER_STRUCT()
 };

@@ -7,6 +7,7 @@ import zmq
 import random
 
 import cielimMessage_pb2 as cielimMessage
+import imageDiagnostics_pb2 as imageDiagnostics
 
 
 class Connector:
@@ -70,18 +71,21 @@ class Connector:
             ]
         )
 
-        [image_data, image_data_size, cob_x, cob_y] = self.safe_recv_multipart()
+        [image_data, image_data_size, diagnostics_serialized] = self.safe_recv_multipart()
 
         image = None
         if should_return_image:
             buf = np.asarray(bytearray(image_data), dtype="uint8")
             image = cv2.imdecode(buf, cv2.IMREAD_COLOR)
 
-        cob = None
-        if cob_x != b"" and cob_y != b"":
-            cob = np.array([struct.unpack("d", cob_x)[0], struct.unpack("d", cob_y)[0]])
+        diagnostics = imageDiagnostics.DiagnosticData()
+        diagnostics.ParseFromString(diagnostics_serialized)
 
-        return [image, cob]
+        cob = (diagnostics.cob_x, diagnostics.cob_y)
+
+        coverage = diagnostics.coverage
+
+        return [image, cob, coverage]
 
     def disconnect(self):
         self.request_socket.disconnect(self.address)

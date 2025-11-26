@@ -50,6 +50,6 @@ def test_example(cielim_connection, scene_setup):
     for time in times:
         scene_frame.propagate_and_stare(time)
         connector.send_frame(scene_frame.get_scene())
-        [image, center_of_brightness] = connector.request_image_for_camera_id(1, 1)
+        [image, _, _] = connector.request_image_for_camera_id(1, 1)
         height, width, _ = image.shape
         np.testing.assert_allclose([4000, 3000], [width, height], rtol=0, atol=0, err_msg="Returned image not correct")

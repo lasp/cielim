@@ -49,7 +49,7 @@ def get_baseline_cob(connector):
     [scene.celestialBodies[0].model.principalAxisDistortion.append(val) for val in [1, 1, 1]]
 
     connector.send_frame(scene)
-    image, _ = connector.request_image_for_camera_id(1, 1)
+    image, _, _ = connector.request_image_for_camera_id(1, 1)
 
     if len(image.shape) == 3:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -81,7 +81,7 @@ def test_body_scaling(cielim_connection, scene_setup, test_name, distortion):
     [scene.celestialBodies[0].model.principalAxisDistortion.append(val) for val in distortion]
 
     connector.send_frame(scene)
-    image, _ = connector.request_image_for_camera_id(1, 1)
+    image, _, _ = connector.request_image_for_camera_id(1, 1)
 
     if len(image.shape) == 3:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)

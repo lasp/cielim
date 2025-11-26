@@ -63,7 +63,7 @@ def test_object_position(cielim_connection, scene_setup, test_name, shift):
     initial_x, initial_y, initial_z = scene.celestialBodies[0].position[:3]
 
     connector.send_frame(scene)
-    baseline_image, _ = connector.request_image_for_camera_id(1, 1)
+    baseline_image, _, _ = connector.request_image_for_camera_id(1, 1)
 
     if len(baseline_image.shape) == 3:
         baseline_image = cv2.cvtColor(baseline_image, cv2.COLOR_BGR2GRAY)
@@ -83,7 +83,7 @@ def test_object_position(cielim_connection, scene_setup, test_name, shift):
     [scene.celestialBodies[0].position.append(item) for item in shifted]
 
     connector.send_frame(scene)
-    moved_image, _ = connector.request_image_for_camera_id(1, 1)
+    moved_image, _, _ = connector.request_image_for_camera_id(1, 1)
 
     if len(moved_image.shape) == 3:
         moved_image = cv2.cvtColor(moved_image, cv2.COLOR_BGR2GRAY)

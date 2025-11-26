@@ -44,13 +44,16 @@ struct TableStruct_cielimMessage_2eproto {
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
   static const ::PROTOBUF_NAMESPACE_ID::internal::AuxiliaryParseTableField aux[]
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
-  static const ::PROTOBUF_NAMESPACE_ID::internal::ParseTable schema[13]
+  static const ::PROTOBUF_NAMESPACE_ID::internal::ParseTable schema[14]
     PROTOBUF_SECTION_VARIABLE(protodesc_cold);
   static const ::PROTOBUF_NAMESPACE_ID::internal::FieldMetadata field_metadata[];
   static const ::PROTOBUF_NAMESPACE_ID::internal::SerializationTable serialization_table[];
   static const ::PROTOBUF_NAMESPACE_ID::uint32 offsets[];
 };
 namespace cielimMessage {
+class AreaOfInterest;
+struct AreaOfInterestDefaultTypeInternal;
+extern AreaOfInterestDefaultTypeInternal _AreaOfInterest_default_instance_;
 class CameraModel;
 struct CameraModelDefaultTypeInternal;
 extern CameraModelDefaultTypeInternal _CameraModel_default_instance_;
@@ -92,6 +95,7 @@ struct TimeStampDefaultTypeInternal;
 extern TimeStampDefaultTypeInternal _TimeStamp_default_instance_;
 }  // namespace cielimMessage
 PROTOBUF_NAMESPACE_OPEN
+template<> ::cielimMessage::AreaOfInterest* Arena::CreateMaybeMessage<::cielimMessage::AreaOfInterest>(Arena*);
 template<> ::cielimMessage::CameraModel* Arena::CreateMaybeMessage<::cielimMessage::CameraModel>(Arena*);
 template<> ::cielimMessage::CelestialBody* Arena::CreateMaybeMessage<::cielimMessage::CelestialBody>(Arena*);
 template<> ::cielimMessage::CielimMessage* Arena::CreateMaybeMessage<::cielimMessage::CielimMessage>(Arena*);
@@ -2422,6 +2426,178 @@ class SensorModel final :
 };
 // -------------------------------------------------------------------
 
+class AreaOfInterest final :
+    public ::PROTOBUF_NAMESPACE_ID::MessageLite /* @@protoc_insertion_point(class_definition:cielimMessage.AreaOfInterest) */ {
+ public:
+  inline AreaOfInterest() : AreaOfInterest(nullptr) {}
+  ~AreaOfInterest() override;
+  explicit constexpr AreaOfInterest(::PROTOBUF_NAMESPACE_ID::internal::ConstantInitialized);
+
+  AreaOfInterest(const AreaOfInterest& from);
+  AreaOfInterest(AreaOfInterest&& from) noexcept
+    : AreaOfInterest() {
+    *this = ::std::move(from);
+  }
+
+  inline AreaOfInterest& operator=(const AreaOfInterest& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline AreaOfInterest& operator=(AreaOfInterest&& from) noexcept {
+    if (this == &from) return *this;
+    if (GetOwningArena() == from.GetOwningArena()
+  #ifdef PROTOBUF_FORCE_COPY_IN_MOVE
+        && GetOwningArena() != nullptr
+  #endif  // !PROTOBUF_FORCE_COPY_IN_MOVE
+    ) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  static const AreaOfInterest& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const AreaOfInterest* internal_default_instance() {
+    return reinterpret_cast<const AreaOfInterest*>(
+               &_AreaOfInterest_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages =
+    11;
+
+  friend void swap(AreaOfInterest& a, AreaOfInterest& b) {
+    a.Swap(&b);
+  }
+  inline void Swap(AreaOfInterest* other) {
+    if (other == this) return;
+    if (GetOwningArena() == other->GetOwningArena()) {
+      InternalSwap(other);
+    } else {
+      ::PROTOBUF_NAMESPACE_ID::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(AreaOfInterest* other) {
+    if (other == this) return;
+    GOOGLE_DCHECK(GetOwningArena() == other->GetOwningArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  inline AreaOfInterest* New() const final {
+    return new AreaOfInterest();
+  }
+
+  AreaOfInterest* New(::PROTOBUF_NAMESPACE_ID::Arena* arena) const final {
+    return CreateMaybeMessage<AreaOfInterest>(arena);
+  }
+  void CheckTypeAndMergeFrom(const ::PROTOBUF_NAMESPACE_ID::MessageLite& from)  final;
+  void CopyFrom(const AreaOfInterest& from);
+  void MergeFrom(const AreaOfInterest& from);
+  PROTOBUF_ATTRIBUTE_REINITIALIZES void Clear() final;
+  bool IsInitialized() const final;
+
+  size_t ByteSizeLong() const final;
+  const char* _InternalParse(const char* ptr, ::PROTOBUF_NAMESPACE_ID::internal::ParseContext* ctx) final;
+  ::PROTOBUF_NAMESPACE_ID::uint8* _InternalSerialize(
+      ::PROTOBUF_NAMESPACE_ID::uint8* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const final;
+  void DiscardUnknownFields();
+  int GetCachedSize() const final { return _cached_size_.Get(); }
+
+  private:
+  void SharedCtor();
+  void SharedDtor();
+  void SetCachedSize(int size) const;
+  void InternalSwap(AreaOfInterest* other);
+  friend class ::PROTOBUF_NAMESPACE_ID::internal::AnyMetadata;
+  static ::PROTOBUF_NAMESPACE_ID::StringPiece FullMessageName() {
+    return "cielimMessage.AreaOfInterest";
+  }
+  protected:
+  explicit AreaOfInterest(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+                       bool is_message_owned = false);
+  private:
+  static void ArenaDtor(void* object);
+  inline void RegisterArenaDtor(::PROTOBUF_NAMESPACE_ID::Arena* arena);
+  public:
+
+  std::string GetTypeName() const final;
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+
+  enum : int {
+    kCenterXFieldNumber = 1,
+    kCenterYFieldNumber = 2,
+    kWidthFieldNumber = 3,
+    kHeightFieldNumber = 4,
+    kThresholdFieldNumber = 5,
+  };
+  // double centerX = 1;
+  void clear_centerx();
+  double centerx() const;
+  void set_centerx(double value);
+  private:
+  double _internal_centerx() const;
+  void _internal_set_centerx(double value);
+  public:
+
+  // double centerY = 2;
+  void clear_centery();
+  double centery() const;
+  void set_centery(double value);
+  private:
+  double _internal_centery() const;
+  void _internal_set_centery(double value);
+  public:
+
+  // double width = 3;
+  void clear_width();
+  double width() const;
+  void set_width(double value);
+  private:
+  double _internal_width() const;
+  void _internal_set_width(double value);
+  public:
+
+  // double height = 4;
+  void clear_height();
+  double height() const;
+  void set_height(double value);
+  private:
+  double _internal_height() const;
+  void _internal_set_height(double value);
+  public:
+
+  // double threshold = 5;
+  void clear_threshold();
+  double threshold() const;
+  void set_threshold(double value);
+  private:
+  double _internal_threshold() const;
+  void _internal_set_threshold(double value);
+  public:
+
+  // @@protoc_insertion_point(class_scope:cielimMessage.AreaOfInterest)
+ private:
+  class _Internal;
+
+  template <typename T> friend class ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper;
+  typedef void InternalArenaConstructable_;
+  typedef void DestructorSkippable_;
+  double centerx_;
+  double centery_;
+  double width_;
+  double height_;
+  double threshold_;
+  mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
+  friend struct ::TableStruct_cielimMessage_2eproto;
+};
+// -------------------------------------------------------------------
+
 class CameraModel final :
     public ::PROTOBUF_NAMESPACE_ID::MessageLite /* @@protoc_insertion_point(class_definition:cielimMessage.CameraModel) */ {
  public:
@@ -2461,7 +2637,7 @@ class CameraModel final :
                &_CameraModel_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    11;
+    12;
 
   friend void swap(CameraModel& a, CameraModel& b) {
     a.Swap(&b);
@@ -2531,6 +2707,7 @@ class CameraModel final :
     kParentNameFieldNumber = 2,
     kLensModelFieldNumber = 5,
     kSensorModelFieldNumber = 6,
+    kAreaOfInterestFieldNumber = 7,
     kCameraIdFieldNumber = 1,
   };
   // repeated double cameraPositionInBody = 3;
@@ -2627,6 +2804,24 @@ class CameraModel final :
       ::cielimMessage::SensorModel* sensormodel);
   ::cielimMessage::SensorModel* unsafe_arena_release_sensormodel();
 
+  // .cielimMessage.AreaOfInterest areaOfInterest = 7;
+  bool has_areaofinterest() const;
+  private:
+  bool _internal_has_areaofinterest() const;
+  public:
+  void clear_areaofinterest();
+  const ::cielimMessage::AreaOfInterest& areaofinterest() const;
+  PROTOBUF_MUST_USE_RESULT ::cielimMessage::AreaOfInterest* release_areaofinterest();
+  ::cielimMessage::AreaOfInterest* mutable_areaofinterest();
+  void set_allocated_areaofinterest(::cielimMessage::AreaOfInterest* areaofinterest);
+  private:
+  const ::cielimMessage::AreaOfInterest& _internal_areaofinterest() const;
+  ::cielimMessage::AreaOfInterest* _internal_mutable_areaofinterest();
+  public:
+  void unsafe_arena_set_allocated_areaofinterest(
+      ::cielimMessage::AreaOfInterest* areaofinterest);
+  ::cielimMessage::AreaOfInterest* unsafe_arena_release_areaofinterest();
+
   // int64 cameraId = 1;
   void clear_cameraid();
   ::PROTOBUF_NAMESPACE_ID::int64 cameraid() const;
@@ -2648,6 +2843,7 @@ class CameraModel final :
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr parentname_;
   ::cielimMessage::LensModel* lensmodel_;
   ::cielimMessage::SensorModel* sensormodel_;
+  ::cielimMessage::AreaOfInterest* areaofinterest_;
   ::PROTOBUF_NAMESPACE_ID::int64 cameraid_;
   mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   friend struct ::TableStruct_cielimMessage_2eproto;
@@ -2693,7 +2889,7 @@ class CielimMessage final :
                &_CielimMessage_default_instance_);
   }
   static constexpr int kIndexInFileMessages =
-    12;
+    13;
 
   friend void swap(CielimMessage& a, CielimMessage& b) {
     a.Swap(&b);
@@ -5150,6 +5346,110 @@ inline void SensorModel::set_allocated_qecurve(::cielimMessage::QuantumEfficienc
 
 // -------------------------------------------------------------------
 
+// AreaOfInterest
+
+// double centerX = 1;
+inline void AreaOfInterest::clear_centerx() {
+  centerx_ = 0;
+}
+inline double AreaOfInterest::_internal_centerx() const {
+  return centerx_;
+}
+inline double AreaOfInterest::centerx() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.AreaOfInterest.centerX)
+  return _internal_centerx();
+}
+inline void AreaOfInterest::_internal_set_centerx(double value) {
+  
+  centerx_ = value;
+}
+inline void AreaOfInterest::set_centerx(double value) {
+  _internal_set_centerx(value);
+  // @@protoc_insertion_point(field_set:cielimMessage.AreaOfInterest.centerX)
+}
+
+// double centerY = 2;
+inline void AreaOfInterest::clear_centery() {
+  centery_ = 0;
+}
+inline double AreaOfInterest::_internal_centery() const {
+  return centery_;
+}
+inline double AreaOfInterest::centery() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.AreaOfInterest.centerY)
+  return _internal_centery();
+}
+inline void AreaOfInterest::_internal_set_centery(double value) {
+  
+  centery_ = value;
+}
+inline void AreaOfInterest::set_centery(double value) {
+  _internal_set_centery(value);
+  // @@protoc_insertion_point(field_set:cielimMessage.AreaOfInterest.centerY)
+}
+
+// double width = 3;
+inline void AreaOfInterest::clear_width() {
+  width_ = 0;
+}
+inline double AreaOfInterest::_internal_width() const {
+  return width_;
+}
+inline double AreaOfInterest::width() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.AreaOfInterest.width)
+  return _internal_width();
+}
+inline void AreaOfInterest::_internal_set_width(double value) {
+  
+  width_ = value;
+}
+inline void AreaOfInterest::set_width(double value) {
+  _internal_set_width(value);
+  // @@protoc_insertion_point(field_set:cielimMessage.AreaOfInterest.width)
+}
+
+// double height = 4;
+inline void AreaOfInterest::clear_height() {
+  height_ = 0;
+}
+inline double AreaOfInterest::_internal_height() const {
+  return height_;
+}
+inline double AreaOfInterest::height() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.AreaOfInterest.height)
+  return _internal_height();
+}
+inline void AreaOfInterest::_internal_set_height(double value) {
+  
+  height_ = value;
+}
+inline void AreaOfInterest::set_height(double value) {
+  _internal_set_height(value);
+  // @@protoc_insertion_point(field_set:cielimMessage.AreaOfInterest.height)
+}
+
+// double threshold = 5;
+inline void AreaOfInterest::clear_threshold() {
+  threshold_ = 0;
+}
+inline double AreaOfInterest::_internal_threshold() const {
+  return threshold_;
+}
+inline double AreaOfInterest::threshold() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.AreaOfInterest.threshold)
+  return _internal_threshold();
+}
+inline void AreaOfInterest::_internal_set_threshold(double value) {
+  
+  threshold_ = value;
+}
+inline void AreaOfInterest::set_threshold(double value) {
+  _internal_set_threshold(value);
+  // @@protoc_insertion_point(field_set:cielimMessage.AreaOfInterest.threshold)
+}
+
+// -------------------------------------------------------------------
+
 // CameraModel
 
 // int64 cameraId = 1;
@@ -5490,6 +5790,96 @@ inline void CameraModel::set_allocated_sensormodel(::cielimMessage::SensorModel*
   }
   sensormodel_ = sensormodel;
   // @@protoc_insertion_point(field_set_allocated:cielimMessage.CameraModel.sensorModel)
+}
+
+// .cielimMessage.AreaOfInterest areaOfInterest = 7;
+inline bool CameraModel::_internal_has_areaofinterest() const {
+  return this != internal_default_instance() && areaofinterest_ != nullptr;
+}
+inline bool CameraModel::has_areaofinterest() const {
+  return _internal_has_areaofinterest();
+}
+inline void CameraModel::clear_areaofinterest() {
+  if (GetArenaForAllocation() == nullptr && areaofinterest_ != nullptr) {
+    delete areaofinterest_;
+  }
+  areaofinterest_ = nullptr;
+}
+inline const ::cielimMessage::AreaOfInterest& CameraModel::_internal_areaofinterest() const {
+  const ::cielimMessage::AreaOfInterest* p = areaofinterest_;
+  return p != nullptr ? *p : reinterpret_cast<const ::cielimMessage::AreaOfInterest&>(
+      ::cielimMessage::_AreaOfInterest_default_instance_);
+}
+inline const ::cielimMessage::AreaOfInterest& CameraModel::areaofinterest() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.CameraModel.areaOfInterest)
+  return _internal_areaofinterest();
+}
+inline void CameraModel::unsafe_arena_set_allocated_areaofinterest(
+    ::cielimMessage::AreaOfInterest* areaofinterest) {
+  if (GetArenaForAllocation() == nullptr) {
+    delete reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(areaofinterest_);
+  }
+  areaofinterest_ = areaofinterest;
+  if (areaofinterest) {
+    
+  } else {
+    
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:cielimMessage.CameraModel.areaOfInterest)
+}
+inline ::cielimMessage::AreaOfInterest* CameraModel::release_areaofinterest() {
+  
+  ::cielimMessage::AreaOfInterest* temp = areaofinterest_;
+  areaofinterest_ = nullptr;
+#ifdef PROTOBUF_FORCE_COPY_IN_RELEASE
+  auto* old =  reinterpret_cast<::PROTOBUF_NAMESPACE_ID::MessageLite*>(temp);
+  temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  if (GetArenaForAllocation() == nullptr) { delete old; }
+#else  // PROTOBUF_FORCE_COPY_IN_RELEASE
+  if (GetArenaForAllocation() != nullptr) {
+    temp = ::PROTOBUF_NAMESPACE_ID::internal::DuplicateIfNonNull(temp);
+  }
+#endif  // !PROTOBUF_FORCE_COPY_IN_RELEASE
+  return temp;
+}
+inline ::cielimMessage::AreaOfInterest* CameraModel::unsafe_arena_release_areaofinterest() {
+  // @@protoc_insertion_point(field_release:cielimMessage.CameraModel.areaOfInterest)
+  
+  ::cielimMessage::AreaOfInterest* temp = areaofinterest_;
+  areaofinterest_ = nullptr;
+  return temp;
+}
+inline ::cielimMessage::AreaOfInterest* CameraModel::_internal_mutable_areaofinterest() {
+  
+  if (areaofinterest_ == nullptr) {
+    auto* p = CreateMaybeMessage<::cielimMessage::AreaOfInterest>(GetArenaForAllocation());
+    areaofinterest_ = p;
+  }
+  return areaofinterest_;
+}
+inline ::cielimMessage::AreaOfInterest* CameraModel::mutable_areaofinterest() {
+  ::cielimMessage::AreaOfInterest* _msg = _internal_mutable_areaofinterest();
+  // @@protoc_insertion_point(field_mutable:cielimMessage.CameraModel.areaOfInterest)
+  return _msg;
+}
+inline void CameraModel::set_allocated_areaofinterest(::cielimMessage::AreaOfInterest* areaofinterest) {
+  ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
+  if (message_arena == nullptr) {
+    delete areaofinterest_;
+  }
+  if (areaofinterest) {
+    ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
+        ::PROTOBUF_NAMESPACE_ID::Arena::InternalHelper<::cielimMessage::AreaOfInterest>::GetOwningArena(areaofinterest);
+    if (message_arena != submessage_arena) {
+      areaofinterest = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, areaofinterest, submessage_arena);
+    }
+    
+  } else {
+    
+  }
+  areaofinterest_ = areaofinterest;
+  // @@protoc_insertion_point(field_set_allocated:cielimMessage.CameraModel.areaOfInterest)
 }
 
 // -------------------------------------------------------------------
@@ -5989,6 +6379,8 @@ inline void CielimMessage::set_allocated_camera(::cielimMessage::CameraModel* ca
 #ifdef __GNUC__
   #pragma GCC diagnostic pop
 #endif  // __GNUC__
+// -------------------------------------------------------------------
+
 // -------------------------------------------------------------------
 
 // -------------------------------------------------------------------
