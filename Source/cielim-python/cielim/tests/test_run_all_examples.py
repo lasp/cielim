@@ -261,6 +261,36 @@ def test_bennu():
     shutil.rmtree(out_dir)
 
 
+def test_vesta():
+    # headless plotting
+    os.environ.setdefault("MPLBACKEND", "Agg")
+
+    # Require kernels; xfail if not available
+    spice_root = PROJECT_ROOT / "support-data" / "vesta-spice"
+    if not spice_root.exists():
+        pytest.skip(f"Missing SPICE kernels: {spice_root}")
+
+    # Load the example module
+    df = _load_module_from(EXAMPLES_DIR / "vesta_scenario.py", "spice_scenario")
+
+    # Output dir lives next to the script by its own logic
+    base_dir = Path(getattr(df, "current_file_path", EXAMPLES_DIR))
+    out_dir = base_dir / "images-vesta"
+
+    # clean slate
+    if out_dir.exists():
+        shutil.rmtree(out_dir)
+
+    # run
+    df.vesta_scenario(3)
+
+    # assert (numpy.testing)
+    np.testing.assert_(out_dir.exists(), msg="images-vesta directory was not created")
+
+    # cleanup
+    shutil.rmtree(out_dir)
+
+
 def test_print_protobuffer_content():
     os.environ.setdefault("MPLBACKEND", "Agg")
 
