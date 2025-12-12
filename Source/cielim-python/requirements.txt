@@ -1,6 +1,10 @@
-delimited-protobuf
+delimited-protobuf==1.0.0
 numpy
-opencv-python
 protobuf==3.19.1
-typing
 zmq
+spiceypy==6.0.0
+astropy==6.1.4
+astropy-iers-data==0.2025.11.10.0.38.31
+astroquery==0.4.7
+opencv-contrib-python==4.11.0.86
+opencv-python==4.11.0.86
