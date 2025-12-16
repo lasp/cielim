@@ -1,129 +1,73 @@
-# cielim
-A photorealistic image generation tool for the space environment.
+# Cielim (syel-im)
 
-## Building the Project
+<img width="256" height="256" alt="11-204T18_16_02 018" src="https://github.com/user-attachments/assets/efaf9ac1-0068-4cdb-9984-b4ef3b7b4978" />
+<img width="225" height="256" alt="deimos_cielim2 (2)" src="https://github.com/user-attachments/assets/5a206aa5-78e8-461c-926a-a18b7b221b3c" />
+<img width="256" height="256" alt="11-185T02_34_01 932" src="https://github.com/user-attachments/assets/91175747-c53b-4fb2-8b6a-5bf02baa89e1" />
 
-### Cloning
+All latest information on how to build, install, and contributing can be found on the [Cielim Wiki](https://github.com/lasp/cielim/wiki)
 
-The repository uses git submodules to manage dependencies. To ensure all submodules are cloned
-properly, add the `--recurse-submodules` argument when doing git clone. For example:
+---
 
-`git clone https://github.com/lasp/cielim.git --recurse-submodules`
+## Introduction
 
-### Dependencies
+Cielim is an open-source, high-performance, photorealistic camera emulator for space applications. Cielim is developed by the [Laboratory for Atmospheric and Space Physics](https://lasp.colorado.edu/) (LASP) at the University of Colorado Boulder for research in astrodynamics and spacecraft mission development and analysis.
 
-To build this project install Unreal Engine (Currently version 5.6). Additionally, the following tools need to be installed and added to your PATH environment variable:
+Cielim is a camera emulation tool that models both the space environment and camera systems to generate photometrically calibrated images. The name combines "Ciel" (French for sky) with "im" (image).
 
-#### Linux
-  - Automake
-  - Autoconf
-  - Libtool
-  - Make
-  - CMake (3.0 or higher)
-  - Python (3.0 or higher)
-#### Mac
-  - Automake `brew install automake`
-  - Autoconf `brew install autoconf`
-  - Libtool `brew install libtool`
-  - Make `brew install make`
-  - CMake (3.0 or higher) `brew install cmake`
-  - python (3.0 or higher)
-#### Windows
-  - Visual Studio Community 2022 and MSVC Build Tools
-  - CMake (3.0 or higher)
-  - Python (3.0 or higher)
+---
 
-These tools are necessary to build Cielim and the third party libraries it uses. These third party libraries will be built automatically when building Cielim, but can also be built on their own using the .sh build scripts located in the respective folders in `Source/ThirdParty`.
+### Build & Install
 
-**Additionally:** If you're working on Windows, you will need to copy and paste the .dll files corresponding to the linked .lib files for the dynamically linked libraries in your `cielim\Binaries\Win64` directory. These include:
-- libzmq-(version).dll
+**[Get started with Cielim](https://github.com/lasp/cielim/wiki/Install-and-Build)**
 
-### Build Process
+Setup dependencies, build from source, and run your first simulation
 
-Building, cooking, and packaging Cielim can all be done using the `build.py` script. It can take the following command line arguments:
-- `-b or --build` This argument tells it to build Cielim.
-- `-c or --cook` This argument tells it to cook the content for Cielim.
-- `-p or --package` This argument tells it to package the Cielim executable.
-- `-r or --run` This argument tells it to run Cielim in the editor when the other tasks have finished.
-- `-d or --debug` This argument can take one of three values: `DebugGame`, `Development`, or `Shipping` which specify the debug mode that Cielim should be built/packaged in. It is recommended to stay on `Development` which is the default debug value.
-- `-x or --clean` This argument tells it to clean temporary build files.
+</td>
+<td width="33%" align="center">
 
-Alternatively, you can just run `build.py` with no arguments and this will build, cook, and package Cielim sequentially.
-You can also choose to cook and package Cielim from the Unreal Editor for more control over the process which is explained
-in a later section of this document.
+### Verification & Performance
 
-In order to run Cielim in the Unreal Editor, you can double click on the `cielim.uproject` file which will open the editor. Additionally, you can run Cielim from `build.py` and feed it arguments or launch the Unreal Editor from your IDE directly.
+**[Testing and Validation](https://github.com/lasp/cielim/wiki/Validation-and-Performance)**
 
-To generate project files for your IDE of choice, either double click on the .uproject file and click "Generate ... project files" or open the .uproject with your IDE, or both.
+Compare images to real data, run testing suites
 
-### Common Errors When Working
+</td>
+<td width="33%" align="center">
 
-There are several common errors that you may encounter when working with the source code:
-- `Expecting to find a type to be declared in a module rules named 'cielim' in 'Unknown Assembly'. This type must derive from the 'ModuleRules' type defined by UnrealBuildTool`.
-If you encounter this error, it means that you have modified one of the Target.cs or Build.cs files and they now contain an error. Resolve the issues in these files and this error will go away.
-- `Missing third party include files`.
-If you get a compilation error saying one or many third party includes are missing, this is most likely due to one or multiple of the third party libraries not being built. Make sure you have all of the dependencies installed. Alternatively, try deleting the Intermediate folder in /cielim and opening theBuild.cs files.
-- `Third party library directories could not be found`.
-If this happens, it means you didn't pull the git submodules when cloning the cielim repository. Try pulling the git submodules or cloning their repositories into their respectives folders under the ThirdParty folder directly.
-- Errors linking to `UnrealEditor-DetailCustomizations.dylib` or `UnrealEditor-UMGEditor.dylib` during cooking or packaging can occur when your UE5 was recently updated. Go to your Epic Games and "Verify" your current engine version. Launch the editor from Epic Games (by hitting the launch on the engine version) to ensure it links all libraries properly on your machine.
+### Collaboration
 
-### Packaging Game as Standalone Build
-- Follow Guide in Unreal Documentation for [Releasing Your Project](https://docs.unrealengine.com/5.2/en-US/preparing-unreal-engine-projects-for-release/)
-  - **Note:** Set build configuration to `Developement` instead of `Shipping`
-  - In **Build** -> **Advanced Settings** make sure `Build UAT` is unchecked
-  - Under **Cooked Platforms** check `Mac`
-  - Under **Cooked Cultures** check `En`
-  - Under **Cooked Maps** check only `Lvl_Visualization`
-    - **Optional:** If you would like to build with the Main Menu UI check `Lvl_MainMenu` as well
-- Once Project Launcher has completed locate the application in `/Binaries` and launch from there
-- To use command line arguments locate application in `/Binaries` in a terminal and run:
-  - **For Mac**:
-    - `open cielim.app --args -myflag`
+**[Contributing to Cielim](https://github.com/lasp/cielim/wiki/Collaborating)**
 
-### pre-commit
-Pre-commit is a tool used to automate code formatting for easy reading.
-This allows the reviewer to focus on the architecture of a change and not simple nitpicks.
+Coding standards, development workflow, and community guidelines
 
-##### Installing pre-commit
+</td>
+</tr>
+</table>
 
-Verify pre-commit is installed with:
-```
-$ pre-commit --version
-pre-commit 3.6.2
-```
+---
 
-If you are using python virtual environments, you may need to activate your environment to use pre-commit.
+## Key Features
 
-Then run ```pre-commit install``` to set up the git hook scripts.
-You must run this inside of the repo and will only be installed inside that repository.
-```
-$ pre-commit install
-pre-commit installed at .git/hooks/pre-commit
-```
-Now ```pre-commit``` will run automatically whenever you run ```git commit```!
+* **Real-time and faster-than-real-time simulation** capability
+* **Reconfigurable interface** over a high-performance C/C++ core (Unreal Engine)
+* **Integrated unit testing and validation** support
+* **Hardware-in-the-loop compatibility** for system integration testing
+* **Cross-platform support** (Linux, Windows, macOS)
 
-When ```pre-commit``` decides to edit some of your files,
-you will need to add those changes to your commit and commit again.
+---
 
-##### Manually Running pre-commit
-For cases where pre-commit does not automatically run (for example when first installing and using pre-commit), you
-can manually run pre-commit on specific files you have edited. Use the command:
-```
-$ pre-commit run --files <file>
-```
-Note that you must run this command inside the directory containing the file you are running pre-commit on.
+## Use Cases
 
-##### Formatting Exceptions
-If there is a section of python code you want pre-commit to leave alone, wrap the section with ```# fmt: off``` and ```# fmt: on``` like this:
+### Astrodynamics Research
+Image generation for developing computer vision algorithms including:
+- Terrain Relative Navigation (TRN)
+- Simultaneous Localization and Mapping (SLAM)
+- Autonomous and ground-based optical navigation systems
 
-```
-# fmt: off
-custom_formatting = [
-    0, 1, 2,
-    3, 4, 5,
-    6, 7, 8
-]
-# fmt: on
-```
+### Mission Development
+- **Scientific observation prediction** for mission planning
+- **Closed-loop validation and verification** of Guidance, Navigation, and Control (GN&C) algorithms
+- **Fast image generation** (<0.1s per image) enabling Monte Carlo analysis
+- **Open-loop image generation** for machine learning dataset creation
 
-This tells pre-commit to turn formatting off until you tell it to turn back on again.
+---
