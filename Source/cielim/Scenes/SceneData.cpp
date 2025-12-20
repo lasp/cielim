@@ -105,7 +105,6 @@ void USceneData::ParseCommand(const TSharedPtr<FCircularQueueData> &CommandData,
 
 			this->SpawnCelestialBodies();
 			this->SpawnSpacecraft();
-			this->SpawnSunLight();
 
 			constexpr auto RenderMode = ESceneCapturePrimitiveRenderMode::PRM_UseShowOnlyList;
 
@@ -178,11 +177,11 @@ void USceneData::SpawnCelestialBodies()
 {
 	for (const auto &CelestialBody : CielimMessage->celestialbodies())
 	{
-		const FVector3d CelestialBodyPosition = GetCelestialBodyPosition(CelestialBody);
-		const FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
+		ACelestialBody *TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>();
 
-		ACelestialBody *TempCelestialBody =
-			GetWorld()->SpawnActor<ACelestialBody>(CelestialBodyPosition, CelestialBodyRotation);
+		TempCelestialBody->SetActorLocation(GetCelestialBodyPosition(CelestialBody));
+		TempCelestialBody->SetActorRotation(GetCelestialBodyRotation(CelestialBody));
+
 		TempCelestialBody->Name = FString(CelestialBody.bodyname().c_str());
 
 #if WITH_EDITOR
@@ -215,10 +214,107 @@ void USceneData::SpawnCelestialBodies()
 		if (TempCelestialBody->Name.ToLower() == SunNaifBodyName)
 		{
 			this->SunCelestialBody = TempCelestialBody;
+
+			// Spawn sun direction light
+
+			this->SunLight = GetWorld()->SpawnActor<ADirectionalLight>();
+
+			this->SunLight->SetMobility(EComponentMobility::Movable);
+
+			this->SunLight->AttachToActor(this->SunCelestialBody, FAttachmentTransformRules::KeepRelativeTransform);
+			this->SunLight->SetActorRelativeLocation(FVector::ZeroVector);
+			this->SunLight->SetActorRelativeRotation(FRotator::ZeroRotator);
+
+			ULightComponent *LightComp = this->SunLight->GetLightComponent();
+
+			LightComp->SetMobility(EComponentMobility::Movable);
+
+			if (UDirectionalLightComponent *DirectionalLightComp = Cast<UDirectionalLightComponent>(LightComp))
+			{
+				// Allow shadow maps to be seen from much further away
+				DirectionalLightComp->DynamicShadowDistanceMovableLight = 10000000.0f;
+				DirectionalLightComp->DistanceFieldShadowDistance = 100000000.0f;
+				DirectionalLightComp->TraceDistance = 20000.0f;
+			}
+
+			UpdateSunLight();
+
+			// Light should spawn as disabled so SceneManager can manage which scene's light is enabled
+			ToggleSunLight(false);
+
+			this->Actors.Add(SunLight);
 		}
 	}
 
 	this->bIsCelestialBodiesSpawned = true;
+}
+
+void USceneData::UpdateSunLight() const
+{
+	const FVector3d SunLocation = this->SunLight->GetActorLocation();
+
+	const FVector SunDirection = -SunLocation.GetSafeNormal();
+	const FRotator SunRotation = FRotationMatrix::MakeFromX(SunDirection).Rotator();
+
+	ULightComponent *LightComp = this->SunLight->GetLightComponent();
+
+	LightComp->SetWorldRotation(SunRotation);
+
+	float Wavelength1 = 650 * 1e-9f;
+	float Wavelength2 = 550 * 1e-9f;
+	float Wavelength3 = 450 * 1e-9f;
+
+	// Check if custom wavelengths are specified in the camera model, else use visible spectrum defaults
+
+	if (this->CielimMessage->has_renderparameters())
+	{
+		const auto RenderParams = this->CielimMessage->renderparameters();
+
+		Wavelength1 = RenderParams.wavelength1() * 1e-9f;
+		Wavelength2 = RenderParams.wavelength2() * 1e-9f;
+		Wavelength3 = RenderParams.wavelength3() * 1e-9f;
+
+		if (Wavelength2 != (Wavelength1 + Wavelength3) / 2.0f)
+			UE_LOG(LogCielim, Warning, TEXT("W2 is not equal to (W1 + W3) / 2; QE approximation will be inaccurate."));
+	}
+
+	// Use Planck's law to calculate solar irradiance at specified wavelengths (assuming sun is ideal blackbody)
+
+	constexpr float SunRadius = 6.957e8f; // Meters
+	constexpr float SunTemperature = 5778.0f; // Kelvin
+	constexpr float RadiationConstant1 = 1.191e-16f; // W * Meters^2
+	constexpr float RadiationConstant2 = 1.439e-2f; // Meters * K
+
+	const float Wavelength1Radiance = 1e-9 * RadiationConstant1 /
+		(FMath::Pow(Wavelength1, 5) * (FMath::Exp(RadiationConstant2 / (Wavelength1 * SunTemperature)) - 1.0f));
+
+	const float Wavelength2Radiance = 1e-9 * RadiationConstant1 /
+		(FMath::Pow(Wavelength2, 5) * (FMath::Exp(RadiationConstant2 / (Wavelength2 * SunTemperature)) - 1.0f));
+
+	const float Wavelength3Radiance = 1e-9 * RadiationConstant1 /
+		(FMath::Pow(Wavelength3, 5) * (FMath::Exp(RadiationConstant2 / (Wavelength3 * SunTemperature)) - 1.0f));
+
+	const float Distance = SunLocation.Length(); // Meters
+	const float SunSolidAngle = 3.1415f * SunRadius * SunRadius / (Distance * Distance); // Steradians
+
+	const float Wavelength1Irradiance = Wavelength1Radiance * SunSolidAngle; // W * Meters^-2 * Nanometer^-1
+	const float Wavelength2Irradiance = Wavelength2Radiance * SunSolidAngle; // W * Meters^-2 * Nanometer^-1
+	const float Wavelength3Irradiance = Wavelength3Radiance * SunSolidAngle; // W * Meters^-2 * Nanometer^-1
+
+	/* We need to scale down the irradiance values so they can fit in [0,1] color and not be clamped. This will get
+	 * canceled out when the color is multiplied with the intensity which is the inverse of the factor. */
+	const float SunIntensity = FMath::Max(Wavelength1Irradiance, Wavelength2Irradiance, Wavelength3Irradiance) * 1.1f;
+
+	const float RedIntensity = Wavelength1Irradiance / SunIntensity;
+	const float GreenIntensity = Wavelength2Irradiance / SunIntensity;
+	const float BlueIntensity = Wavelength3Irradiance / SunIntensity;
+
+	/* The calculations determining the irradiance of the sun for each wavelength assumes all lit objects are
+	 * near the origin. Anything further than ~0.1 AU from the origin will have irradiance too high/low from expected.
+	 * This is because directional light intensity is constant regardless of position. */
+
+	LightComp->SetIntensity(SunIntensity);
+	LightComp->SetLightColor(FLinearColor(RedIntensity, GreenIntensity, BlueIntensity));
 }
 
 void USceneData::SpawnSpacecraft()
@@ -275,91 +371,6 @@ void USceneData::SpawnSpacecraft()
 	this->bIsSpacecraftSpawned = true;
 }
 
-void USceneData::SpawnSunLight()
-{
-	const FVector3d SunLocation = this->SunCelestialBody->GetActorLocation();
-
-	const FVector SunDirection = -SunLocation.GetSafeNormal();
-	const FRotator SunRotation = FRotationMatrix::MakeFromX(SunDirection).Rotator();
-
-	this->SunLight = GetWorld()->SpawnActor<ADirectionalLight>();
-
-	ULightComponent *LightComp = this->SunLight->GetLightComponent();
-
-	LightComp->SetMobility(EComponentMobility::Movable);
-	LightComp->SetWorldLocation(SunLocation);
-	LightComp->SetWorldRotation(SunRotation);
-
-	float Wavelength1 = 650 * 1e-9f;
-	float Wavelength2 = 550 * 1e-9f;
-	float Wavelength3 = 450 * 1e-9f;
-
-	// Check if custom wavelengths are specified in the camera model, else use visible spectrum defaults
-
-	if (this->CielimMessage->has_renderparameters())
-	{
-		const auto RenderParams = this->CielimMessage->renderparameters();
-
-		Wavelength1 = RenderParams.wavelength1() * 1e-9f;
-		Wavelength2 = RenderParams.wavelength2() * 1e-9f;
-		Wavelength3 = RenderParams.wavelength3() * 1e-9f;
-
-		if (Wavelength2 != (Wavelength1 + Wavelength3) / 2.0f)
-			UE_LOG(LogCielim, Warning, TEXT("W2 is not equal to (W1 + W3) / 2; QE approximation will be inaccurate."));
-	}
-
-	// Use Planck's law to calculate solar irradiance at specified wavelengths (assuming sun is ideal blackbody)
-
-	constexpr float SunRadius = 6.957e8f; // Meters
-	constexpr float SunTemperature = 5778.0f; // Kelvin
-	constexpr float RadiationConstant1 = 1.191e-16f; // W * Meters^2
-	constexpr float RadiationConstant2 = 1.439e-2f; // Meters * K
-
-	const float Wavelength1Radiance = 1e-9 * RadiationConstant1 /
-		(FMath::Pow(Wavelength1, 5) * (FMath::Exp(RadiationConstant2 / (Wavelength1 * SunTemperature)) - 1.0f));
-
-	const float Wavelength2Radiance = 1e-9 * RadiationConstant1 /
-		(FMath::Pow(Wavelength2, 5) * (FMath::Exp(RadiationConstant2 / (Wavelength2 * SunTemperature)) - 1.0f));
-
-	const float Wavelength3Radiance = 1e-9 * RadiationConstant1 /
-		(FMath::Pow(Wavelength3, 5) * (FMath::Exp(RadiationConstant2 / (Wavelength3 * SunTemperature)) - 1.0f));
-
-	const float Distance = SunLocation.Length(); // Meters
-	const float SunSolidAngle = 3.1415f * SunRadius * SunRadius / (Distance * Distance); // Steradians
-
-	const float Wavelength1Irradiance = Wavelength1Radiance * SunSolidAngle; // W * Meters^-2 * Nanometer^-1
-	const float Wavelength2Irradiance = Wavelength2Radiance * SunSolidAngle; // W * Meters^-2 * Nanometer^-1
-	const float Wavelength3Irradiance = Wavelength3Radiance * SunSolidAngle; // W * Meters^-2 * Nanometer^-1
-
-	/* We need to scale down the irradiance values so they can fit in [0,1] color and not be clamped. This will get
-	 * cancelled out when the color is multiplied with the intensity which is the inverse of the factor. */
-	const float SunIntensity = FMath::Max(Wavelength1Irradiance, Wavelength2Irradiance, Wavelength3Irradiance) * 1.1f;
-
-	const float RedIntensity = Wavelength1Irradiance / SunIntensity;
-	const float GreenIntensity = Wavelength2Irradiance / SunIntensity;
-	const float BlueIntensity = Wavelength3Irradiance / SunIntensity;
-
-	/* The calculations determining the irradiance of the sun for each wavelength assumes all lit objects are
-	 * near the origin. Anything further than ~0.1 AU from the origin will have irradiance too high/low from expected.
-	 * This is because directional light intensity is constant regardless of position. */
-
-	LightComp->SetIntensity(SunIntensity);
-	LightComp->SetLightColor(FLinearColor(RedIntensity, GreenIntensity, BlueIntensity));
-
-	if (UDirectionalLightComponent *DirectionalLightComp = Cast<UDirectionalLightComponent>(LightComp))
-	{
-		// Allow shadow maps to be seen from much further away
-		DirectionalLightComp->DynamicShadowDistanceMovableLight = 10000000.0f;
-		DirectionalLightComp->DistanceFieldShadowDistance = 100000000.0f;
-		DirectionalLightComp->TraceDistance = 20000.0f;
-	}
-
-	// Light should spawn as disabled so SceneManager can manage which scene's light is enabled
-	ToggleSunLight(false);
-
-	this->Actors.Add(SunLight);
-}
-
 void USceneData::UpdateCelestialBodies() const
 {
 	int Index = 0;
@@ -369,6 +380,9 @@ void USceneData::UpdateCelestialBodies() const
 		FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
 
 		CelestialBodyArray[Index]->Update(PositionCelestialBody, CelestialBodyRotation);
+
+		if (CelestialBodyArray[Index]->Name.ToLower() == SunNaifBodyName)
+			UpdateSunLight();
 
 		Index++;
 	}

@@ -64,8 +64,8 @@ public:
 private:
 	// Spawns all necessary entities from the Cielim Protobuf Message into the level
 	void SpawnCelestialBodies();
+	void UpdateSunLight() const;
 	void SpawnSpacecraft();
-	void SpawnSunLight();
 
 	// Updates all entity positions and rotations
 	void UpdateCelestialBodies() const;
