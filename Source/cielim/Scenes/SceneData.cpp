@@ -197,17 +197,17 @@ void USceneData::SpawnCelestialBodies()
 
 			MeshModel = FCelestialBodyMeshModel::FromProtobuf(CelestialBody.model());
 			TempCelestialBody->LoadMesh(MeshModel);
+
+			// Meshes are ~1,000 units radius so we must scale down to normalize to 1 unit radius (1 unit = 1 meter)
+			constexpr float MeshNormFactor = 1.0f / 1000.0f;
+			const float RadiusScale = TempCelestialBody->GetMeanRadius();
+			const FVector ActorScale = TempCelestialBody->GetPrincipleAxisDistortions() * RadiusScale * MeshNormFactor;
+
+			if (ActorScale.X > 0.0f && ActorScale.Y > 0.0f && ActorScale.Z > 0.0f)
+				TempCelestialBody->SetActorScale3D(ActorScale);
+			else
+				UE_LOG(LogCielim, Warning, TEXT("Actor scale was invalid (<= 0), default is being used instead."));
 		}
-
-		// Meshes are ~1,000 units in radius so we need to scale down to normalize to 1-meter radius (1 unit = 1 meter)
-		constexpr float MeshNormFactor = 1.0f / 1000.0f;
-		const float RadiusScale = CelestialBody.model().meanradius();
-		const FVector ActorScale = TempCelestialBody->GetPrincipleAxisDistortions() * RadiusScale * MeshNormFactor;
-
-		if (ActorScale.X > 0.0f && ActorScale.Y > 0.0f && ActorScale.Z > 0.0f)
-			TempCelestialBody->SetActorScale3D(ActorScale);
-		else
-			UE_LOG(LogCielim, Warning, TEXT("Actor scale was invalid (<= 0), default is being used instead."));
 
 		this->CelestialBodyArray.Add(TempCelestialBody);
 		this->Actors.Add(TempCelestialBody);
