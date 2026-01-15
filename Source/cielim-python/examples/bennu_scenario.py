@@ -101,9 +101,9 @@ def scene_setup():
     [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
 
     body.model.shapeModel = "bennu_normalized"
+    body.model.geometricAlbedo = 0.044  # effective albedo of bennu
     body.model.refModel.brdfModel = "Regolith"  # Bennu has better results with Lambertian
     body.model.meanRadius = 246  # radius in meter of bennu
-    body.model.geometricAlbedo = 0.044 / 3  # effective albedo of bennu
 
     sun = protobuf_message.celestialBodies.add()
     sun.bodyName = "sun"

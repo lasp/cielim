@@ -70,13 +70,15 @@ def scene_setup():
 
     if os.path.exists(str(ROOT) + "/../../Content/AsteroidMeshes/bennu_medfi_normalized.uasset"):
         body.model.shapeModel = "bennu_medfi_normalized"
+        body.model.geometricAlbedo = 0.044 / 0.234745  # effective albedo of bennu
+        # NOTE: this is calculated by taking average albedo (~0.044) and dividing by the average pixel (in linear RGB) 0.234745 of the albedo map
+        # This is done so that average color of the shape model matches the real world average albedo
     else:
         body.model.shapeModel = "bennu_normalized"
-    body.model.refModel.brdfModel = "Lambertian"  # Bennu has better results with Lambertian
+        body.model.geometricAlbedo = 0.044  # effective albedo of bennu
+
+    body.model.refModel.brdfModel = "Regolith"
     body.model.meanRadius = 246  # radius in meter of bennu
-    body.model.geometricAlbedo = 0.044 / (132.14832 / 255)  # effective albedo of bennu
-    # NOTE: this is calculated by taking average albedo (~0.044) and dividing by the average pixel (132.14832 / 255) of the albedo map
-    # This is done so that average color of the shape model matches the real world average albedo
 
     sun = protobuf_message.celestialBodies.add()
     sun.bodyName = "sun"

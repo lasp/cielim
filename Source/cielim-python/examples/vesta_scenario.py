@@ -103,9 +103,9 @@ def scene_setup():
     [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
 
     body.model.shapeModel = "vesta_normalized"
+    body.model.geometricAlbedo = 0.423  # effective albedo of vesta
     body.model.refModel.brdfModel = "Regolith"  # vesta has better results with Lambertian
     body.model.meanRadius = 262.7 * 1e3  # radius in meter of vesta
-    body.model.geometricAlbedo = 0.423  # effective albedo of vesta
 
     sun = protobuf_message.celestialBodies.add()
     sun.bodyName = "sun"
@@ -223,8 +223,12 @@ def vesta_scenario(number_of_images: int = None):
         [message.spacecraft.position.append(item) for item in position * 1e3]
         [message.spacecraft.attitude.append(item) for item in rbk.dcm_to_mrp(BN)]
 
+        print(f"Spacecraft position: {position * 1e3}")
+
         message.celestialBodies[1].ClearField("position")
         [message.celestialBodies[1].position.append(item) for item in sun_pos * 1e3]
+
+        print(f"Sun position: {sun_pos * 1e3}")
 
         # update exposure time per image
         message.camera.sensorModel.exposureTime = exposure_time_list[idx]
@@ -238,7 +242,7 @@ def vesta_scenario(number_of_images: int = None):
 
         image, _, _ = connector.request_image_for_camera_id(1, 1)
         image = np.flip(image, 0)
-        cv2.imwrite(os.path.join(current_file_path, f"images-vesta/vesta_image_" + time_list[idx] + ".png"), image)
+        cv2.imwrite(os.path.join(current_file_path, f"images-vesta/vesta_image_{idx}.png"), image)
 
     connector.disconnect()
     launcher.terminate()
