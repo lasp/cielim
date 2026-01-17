@@ -103,9 +103,9 @@ def scene_setup():
     [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
 
     body.model.shapeModel = "vesta_normalized"
-    body.model.geometricAlbedo = 0.423  # effective albedo of vesta
     body.model.refModel.brdfModel = "Regolith"  # vesta has better results with Lambertian
     body.model.meanRadius = 262.7 * 1e3  # radius in meter of vesta
+    body.model.geometricAlbedo = 0.38  # effective albedo of vesta
 
     sun = protobuf_message.celestialBodies.add()
     sun.bodyName = "sun"
@@ -117,13 +117,11 @@ def scene_setup():
     protobuf_message.camera.sensorModel.exposureTime = 1e-3
 
     # newly set parameters
-    # (https://link.springer.com/article/10.1007/s11214-011-9745-4)
-    # (https://www.teledynespaceimaging.com/en-us/Products_/Documents/ccd-datasheets/CCD47-20%20FSI%20NIMO%20Datasheet%20(v9).pdf)
     protobuf_message.camera.sensorModel.systemGain = 1
     protobuf_message.camera.sensorModel.readNoise = 18
     protobuf_message.camera.sensorModel.sensorWidth = 13.3 * 10 ** (-3)  # 2592 * 2.2 um
     protobuf_message.camera.sensorModel.sensorHeight = 13.3 * 10 ** (-3)  # 1944 * 2.2 um
-    protobuf_message.camera.sensorModel.fullWellCapacity = 120_000
+    protobuf_message.camera.sensorModel.fullWellCapacity = 60000
     protobuf_message.camera.lensModel.focalLength = 150 / 1000
     protobuf_message.camera.lensModel.pointSpreadFunction = 1.0
     protobuf_message.camera.lensModel.apertureRadius = (
@@ -165,24 +163,78 @@ def vesta_scenario(number_of_images: int = None):
         exposure_time_list, time_list, position_list, attitude_list, sun_list = get_header_data()
     else:
         time_list = [
-            "2018-10-13T09:23:10.088",
-            "2018-10-14T09:23:18.953",
-            "2018-10-15T09:23:04.822",
-            "2018-11-08T06:09:26.456",
-            "2018-11-08T07:56:56.453",
-            "2018-11-09T07:56:56.852",
-            "2018-11-11T10:22:17.655",
-            "2018-11-12T04:28:23.821",
+            " 2011-123T13:35:16.604",
+            " 2011-123T13:36:01.154",
+            " 2011-130T07:01:01.172",
+            " 2011-130T07:03:16.914",
+            " 2011-137T12:56:16.145",
+            " 2011-137T12:57:01.090",
+            " 2011-144T08:51:16.627",
+            " 2011-144T08:52:01.065",
+            " 2011-152T06:36:16.081",
+            " 2011-152T06:37:01.030",
+            " 2011-159T15:22:01.038",
+            " 2011-159T15:24:15.999",
+            " 2011-165T13:36:46.016",
+            " 2011-165T13:38:15.973",
+            " 2011-168T12:36:45.972",
+            " 2011-168T12:38:16.019",
+            " 2011-171T13:36:45.955",
+            " 2011-171T13:38:15.959",
+            " 2011-175T04:06:46.443",
+            " 2011-175T04:08:15.931",
+            " 2011-185T00:37:01.932",
+            " 2011-185T00:40:01.944",
+            " 2011-185T02:34:01.932",
+            " 2011-198T03:36:47.087",
+            " 2011-198T03:39:47.473",
+            " 2011-198T05:30:46.950",
+            " 2011-198T05:33:46.958",
+            " 2011-199T20:37:01.953",
+            " 2011-199T20:40:01.965",
+            " 2011-199T22:31:02.019",
+            " 2011-199T22:34:02.012",
+            " 2011-204T18:16:02.018",
+            " 2011-204T18:19:03.011",
+            " 2011-204T21:10:02.026",
+            " 2011-204T21:13:02.756",
         ]
         exposure_time_list = [
-            4.000285275,
-            4.000285275,
-            4.000285275,
-            0.003224675,
-            0.003224675,
-            0.003224675,
-            0.002554475,
-            0.002554475,
+            1.5,
+            0.009,
+            1.5,
+            0.009,
+            1.5,
+            0.009,
+            1.5,
+            0.009,
+            1.5,
+            0.009,
+            1.5,
+            0.009,
+            1.5,
+            0.009,
+            1.5,
+            0.009,
+            1.5,
+            0.008,
+            1.5,
+            0.008,
+            1.5,
+            0.009,
+            0.009,
+            1.5,
+            0.015,
+            1.5,
+            0.015,
+            1.5,
+            0.031,
+            1.5,
+            0.031,
+            0.014,
+            0.014,
+            0.014,
+            0.014,
         ]
 
     if number_of_images is not None:
@@ -224,12 +276,8 @@ def vesta_scenario(number_of_images: int = None):
         [message.spacecraft.position.append(item) for item in position * 1e3]
         [message.spacecraft.attitude.append(item) for item in rbk.dcm_to_mrp(BN)]
 
-        print(f"Spacecraft position: {position * 1e3}")
-
         message.celestialBodies[1].ClearField("position")
         [message.celestialBodies[1].position.append(item) for item in sun_pos * 1e3]
-
-        print(f"Sun position: {sun_pos * 1e3}")
 
         # update exposure time per image
         message.camera.sensorModel.exposureTime = exposure_time_list[idx]
@@ -243,7 +291,7 @@ def vesta_scenario(number_of_images: int = None):
 
         image, _, _ = connector.request_image_for_camera_id(1, 1)
         image = np.flip(image, 0)
-        cv2.imwrite(os.path.join(current_file_path, f"images-vesta/vesta_image_{idx}.png"), image)
+        cv2.imwrite(os.path.join(current_file_path, f"images-vesta/vesta_image_" + time_list[idx] + ".png"), image)
 
     connector.disconnect()
     launcher.terminate()
