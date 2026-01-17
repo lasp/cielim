@@ -23,6 +23,7 @@ float4 QuECurveB;
 float SimpsonFactor;
 float CorrectionFactor;
 uint CurrentTime;
+uint EnableShotNoise; // 0 or 1
 float InvFullWellCapacity; // This is in # of electrons (inverse)
 
 // RNG is a version of the process described in:
@@ -116,7 +117,7 @@ float4 MainPS(float4 UV : TEXCOORD0, float4 Position : SV_Position) : SV_Target0
 
 	uint Seed = (uint(Position.x) * 1973u) ^ (uint(Position.y) * 9277u) ^ (CurrentTime * 2663u);
 
-	float3 ShotNoise = ComputeShotNoise(Seed, float3(NumElectronsR, NumElectronsG, NumElectronsB));
+	float3 ShotNoise = EnableShotNoise * ComputeShotNoise(Seed, float3(NumElectronsR, NumElectronsG, NumElectronsB));
 
 	NumElectronsR += ShotNoise.r;
 	NumElectronsG += ShotNoise.g;
