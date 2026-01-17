@@ -31,6 +31,7 @@ class FQuETonemap : public FGlobalShader
 	SHADER_PARAMETER(FVector4f, QuECurveB)
 	SHADER_PARAMETER(float, SimpsonFactor)
 	SHADER_PARAMETER(float, CorrectionFactor)
+	SHADER_PARAMETER(uint32, CurrentTime)
 	SHADER_PARAMETER(float, InvFullWellCapacity)
 	RENDER_TARGET_BINDING_SLOTS()
 	END_SHADER_PARAMETER_STRUCT()
