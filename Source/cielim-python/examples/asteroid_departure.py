@@ -29,29 +29,29 @@ def scene_setup() -> cielimMessage_pb2:
     body = protobuf_message.celestialBodies.add()
     body.bodyName = "2000269"
     [body.position.append(item) for item in [0, 0, 0]]
-    [body.velocity.append(item) for item in [0, 0, 0]]
     [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
 
-    body.model.shapeModel = "bennu_normalized"
+    body.model.shapeModel = "sphere_normalized"
+    body.model.geometricAlbedo = 1
     body.model.refModel.brdfModel = "Regolith"
-    body.model.meanRadius = 58232 * 1e3
+    body.model.meanRadius = 1000
 
     sun = protobuf_message.celestialBodies.add()
     sun.bodyName = "sun"
-    [sun.position.append(item) for item in [0, 0, -1e10]]
+    [sun.position.append(item) for item in [0, 0, -1000000]]
     [sun.attitude.append(item) for item in [0, 0, 0]]
 
     protobuf_message.camera.cameraId = 1
     protobuf_message.camera.parentName = "cielim_sat"
     [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [20 * np.pi / 180, 15 * np.pi / 180]]
     [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.cameraPositionInBody.append(item) for item in [1, 1, 1]]
+    [protobuf_message.camera.cameraPositionInBody.append(item) for item in [0, 0, 0]]
     [protobuf_message.camera.sensorModel.resolution.append(item) for item in [2000, 1500]]
 
     protobuf_message.spacecraft.spacecraftName = "cielim_sat"
-    [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -4e8]]
-    [protobuf_message.spacecraft.velocity.append(item) for item in [0, 1000, 0]]
+    [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -8000]]
     [protobuf_message.spacecraft.attitude.append(item) for item in [0, 0, 0]]
+
     return protobuf_message
 
 
@@ -68,7 +68,7 @@ def departure_scene(number_of_images: int):
     protobuff_file = directory_path + "/departure.bin"
     os.makedirs(directory_path, exist_ok=True)
 
-    position_shift = np.array([0, 0, -1e9])
+    position_shift = np.array([0, 0, -100000])
 
     connector = driver.Connector()
     launch = launcher.Launcher()
@@ -99,5 +99,5 @@ def departure_scene(number_of_images: int):
 
 
 if __name__ == "__main__":
-    number_of_images = 600
+    number_of_images = 100
     departure_scene(number_of_images)
