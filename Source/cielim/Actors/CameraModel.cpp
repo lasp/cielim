@@ -569,6 +569,54 @@ float ACameraModel::GetCoveragePercent() const
 	return CoveragePercent;
 }
 
+bool ACameraModel::IsCelestialBodyResolvable(const ACelestialBody &CelestialBody) const
+{
+	FVector Origin;
+	FVector Extent;
+
+	// Get bounds of the celestial body
+
+	CelestialBody.GetActorBounds(false, Origin, Extent);
+
+	if (Extent.IsZero())
+		return false;
+
+	// This is super hacky, but we have to set this up here to get view/projection matrices
+
+	FSceneViewInitOptions ViewInitOptions;
+
+	ViewInitOptions.ViewFamily = nullptr; // assigned later
+	ViewInitOptions.ViewOrigin = this->SceneCaptureComponent2D->GetComponentLocation();
+	ViewInitOptions.ViewRotationMatrix = FInverseRotationMatrix(this->SceneCaptureComponent2D->GetComponentRotation()) *
+		FMatrix(FPlane(0, 0, 1, 0), FPlane(1, 0, 0, 0), FPlane(0, 1, 0, 0), FPlane(0, 0, 0, 1));
+
+	const int32 SizeX = this->SceneCaptureComponent2D->TextureTarget->SizeX;
+	const int32 SizeY = this->SceneCaptureComponent2D->TextureTarget->SizeY;
+
+	ViewInitOptions.SetViewRectangle(FIntRect(0, 0, SizeX, SizeY));
+
+	ViewInitOptions.ProjectionMatrix = this->SceneCaptureComponent2D->CustomProjectionMatrix;
+
+	const FSceneViewFamilyContext ViewFamily(FSceneViewFamily::ConstructionValues(
+		nullptr, SceneCaptureComponent2D->GetScene(), SceneCaptureComponent2D->ShowFlags));
+
+	ViewInitOptions.ViewFamily = &ViewFamily;
+
+	const FSceneView View(ViewInitOptions);
+
+	const auto ViewportRect = View.UnconstrainedViewRect;
+
+	// This is the percentage of the screen size taken up by the celestial body
+	const float ScreenSize = ComputeBoundsScreenSize(Origin, Extent.Size(), View);
+
+	const float PixelSize = ScreenSize * FMath::Max(ViewportRect.Height(), ViewportRect.Width());
+
+	UE_LOG(LogCielim, Warning, TEXT("Screen size for %s: %f %f"), *CelestialBody.Name, ScreenSize, PixelSize);
+
+	// Unreal overcompensates so we have to overestimate somewhat when an object becomes subpixel
+	return PixelSize <= 5;
+}
+
 // Helper Functions
 
 TTuple<float, TResourceArray<FVector2f>, TResourceArray<FVector2f>, TResourceArray<float>>

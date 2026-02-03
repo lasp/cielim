@@ -13,6 +13,7 @@
 #include "GameFramework/Actor.h"
 
 #include "CameraViewCaptureComponent2D.h"
+#include "CelestialBody.h"
 #include "cielim/Protobuf/cielimMessage.pb.h"
 #include "cielim/Protobuf/imageDiagnostics.pb.h"
 
@@ -106,6 +107,8 @@ public:
 	 * @param Diagnostics Reference to protobuf containing diagnostic data (mutable).
 	 */
 	void GetDiagnosticData(imageDiagnostics::DiagnosticData &Diagnostics);
+
+	bool IsCelestialBodyResolvable(const ACelestialBody &CelestialBody) const;
 
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent *Body;
