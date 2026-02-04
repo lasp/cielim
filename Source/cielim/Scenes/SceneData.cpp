@@ -103,8 +103,8 @@ void USceneData::ParseCommand(const TSharedPtr<FCircularQueueData> &CommandData,
 
 			UE_LOG(LogCielim, Display, TEXT("Initialize scene..."));
 
-			this->SpawnCelestialBodies();
 			this->SpawnSpacecraft();
+			this->SpawnCelestialBodies();
 
 			constexpr auto RenderMode = ESceneCapturePrimitiveRenderMode::PRM_UseShowOnlyList;
 
@@ -171,6 +171,60 @@ void USceneData::UpdateScene() const
 	{
 		this->UpdateCelestialBodies();
 	}
+}
+
+void USceneData::SpawnSpacecraft()
+{
+	const cielimMessage::Spacecraft &SpacecraftMessage = this->CielimMessage->spacecraft();
+
+	const FVector3d PositionSpacecraft = GetSpacecraftPosition(SpacecraftMessage);
+
+	const double AttitudeX = SpacecraftMessage.attitude(0);
+	const double AttitudeY = SpacecraftMessage.attitude(1);
+	const double AttitudeZ = SpacecraftMessage.attitude(2);
+
+	const FVector3d AttitudeVector = FVector3d(AttitudeX, AttitudeY, AttitudeZ);
+	const FRotator SpacecraftRotation = GetRotatorFromMrp(AttitudeVector);
+
+	ASpacecraft *TempSpacecraft = GetWorld()->SpawnActor<ASpacecraft>(PositionSpacecraft, SpacecraftRotation);
+
+	TempSpacecraft->Name = FString(SpacecraftMessage.spacecraftname().c_str());
+
+	// Set camera
+	if (this->CielimMessage->has_camera())
+	{
+		const cielimMessage::CameraModel &Camera = CielimMessage->camera();
+
+		if (Camera.has_lensmodel())
+		{
+			const cielimMessage::LensModel &LensModel = Camera.lensmodel();
+
+			TempSpacecraft->SetFOV(FMath::RadiansToDegrees(LensModel.fieldofview(0)),
+								   FMath::RadiansToDegrees(LensModel.fieldofview(1)));
+		}
+
+		if (Camera.has_sensormodel())
+		{
+			const cielimMessage::SensorModel &SensorModel = Camera.sensormodel();
+
+			TempSpacecraft->SetResolution(SensorModel.resolution(0), SensorModel.resolution(1));
+		}
+
+
+		const FVector3d CameraPosition = GetCameraPosition(Camera);
+		TempSpacecraft->SetCameraRelativePosition(CameraPosition);
+
+		const FRotator CameraRotation = GetCameraRotation(Camera);
+		TempSpacecraft->SetCameraRelativeOrientation(CameraRotation);
+
+		TempSpacecraft->CameraModel->SetCameraParameters(*this->CielimMessage);
+
+		this->bHasCameras = true;
+	}
+
+	this->Spacecraft = TempSpacecraft;
+	this->Actors.Add(TempSpacecraft);
+	this->bIsSpacecraftSpawned = true;
 }
 
 void USceneData::SpawnCelestialBodies()
@@ -317,77 +371,6 @@ void USceneData::UpdateSunLight() const
 	LightComp->SetLightColor(FLinearColor(RedIntensity, GreenIntensity, BlueIntensity));
 }
 
-void USceneData::SpawnSpacecraft()
-{
-	const cielimMessage::Spacecraft &SpacecraftMessage = this->CielimMessage->spacecraft();
-
-	const FVector3d PositionSpacecraft = GetSpacecraftPosition(SpacecraftMessage);
-
-	const double AttitudeX = SpacecraftMessage.attitude(0);
-	const double AttitudeY = SpacecraftMessage.attitude(1);
-	const double AttitudeZ = SpacecraftMessage.attitude(2);
-
-	const FVector3d AttitudeVector = FVector3d(AttitudeX, AttitudeY, AttitudeZ);
-	const FRotator SpacecraftRotation = GetRotatorFromMrp(AttitudeVector);
-
-	ASpacecraft *TempSpacecraft = GetWorld()->SpawnActor<ASpacecraft>(PositionSpacecraft, SpacecraftRotation);
-
-	TempSpacecraft->Name = FString(SpacecraftMessage.spacecraftname().c_str());
-
-	// Set camera
-	if (this->CielimMessage->has_camera())
-	{
-		const cielimMessage::CameraModel &Camera = CielimMessage->camera();
-
-		if (Camera.has_lensmodel())
-		{
-			const cielimMessage::LensModel &LensModel = Camera.lensmodel();
-
-			TempSpacecraft->SetFOV(FMath::RadiansToDegrees(LensModel.fieldofview(0)),
-								   FMath::RadiansToDegrees(LensModel.fieldofview(1)));
-		}
-
-		if (Camera.has_sensormodel())
-		{
-			const cielimMessage::SensorModel &SensorModel = Camera.sensormodel();
-
-			TempSpacecraft->SetResolution(SensorModel.resolution(0), SensorModel.resolution(1));
-		}
-
-
-		const FVector3d CameraPosition = GetCameraPosition(Camera);
-		TempSpacecraft->SetCameraRelativePosition(CameraPosition);
-
-		const FRotator CameraRotation = GetCameraRotation(Camera);
-		TempSpacecraft->SetCameraRelativeOrientation(CameraRotation);
-
-		TempSpacecraft->CameraModel->SetCameraParameters(*this->CielimMessage);
-
-		this->bHasCameras = true;
-	}
-
-	this->Spacecraft = TempSpacecraft;
-	this->Actors.Add(TempSpacecraft);
-	this->bIsSpacecraftSpawned = true;
-}
-
-void USceneData::UpdateCelestialBodies() const
-{
-	int Index = 0;
-	for (const auto &CelestialBody : CielimMessage->celestialbodies())
-	{
-		FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
-		FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
-
-		CelestialBodyArray[Index]->Update(PositionCelestialBody, CelestialBodyRotation);
-
-		if (CelestialBodyArray[Index]->Name.ToLower() == SunNaifBodyName)
-			UpdateSunLight();
-
-		Index++;
-	}
-}
-
 void USceneData::UpdateSpacecraft() const
 {
 	const cielimMessage::Spacecraft &SpacecraftMessage = CielimMessage->spacecraft();
@@ -409,6 +392,23 @@ void USceneData::UpdateSpacecraft() const
 		this->Spacecraft->SetCameraRelativeOrientation(CameraRotation);
 
 		this->Spacecraft->CameraModel->SetCameraParameters(*this->CielimMessage);
+	}
+}
+
+void USceneData::UpdateCelestialBodies() const
+{
+	int Index = 0;
+	for (const auto &CelestialBody : CielimMessage->celestialbodies())
+	{
+		FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
+		FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
+
+		CelestialBodyArray[Index]->Update(PositionCelestialBody, CelestialBodyRotation);
+
+		if (CelestialBodyArray[Index]->Name.ToLower() == SunNaifBodyName)
+			UpdateSunLight();
+
+		Index++;
 	}
 }
 

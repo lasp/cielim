@@ -63,26 +63,28 @@ public:
 
 private:
 	// Spawns all necessary entities from the Cielim Protobuf Message into the level
-	void SpawnCelestialBodies();
-	void UpdateSunLight() const;
+
 	void SpawnSpacecraft();
+	void SpawnCelestialBodies();
 
 	// Updates all entity positions and rotations
-	void UpdateCelestialBodies() const;
+
+	void UpdateSunLight() const;
 	void UpdateSpacecraft() const;
+	void UpdateCelestialBodies() const;
 
 	TSharedPtr<cielimMessage::CielimMessage> CielimMessage;
 
 	UPROPERTY()
 	TArray<AActor *> Actors;
 	UPROPERTY()
-	TArray<ACelestialBody *> CelestialBodyArray;
-	UPROPERTY()
-	ACelestialBody *SunCelestialBody;
-	UPROPERTY()
 	ASpacecraft *Spacecraft;
 	UPROPERTY()
 	ADirectionalLight *SunLight;
+	UPROPERTY()
+	TArray<ACelestialBody *> CelestialBodyArray;
+	UPROPERTY()
+	ACelestialBody *SunCelestialBody;
 
 	UPROPERTY()
 	UMaterialParameterCollection *ActiveSunLightMPC;
