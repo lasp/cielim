@@ -262,6 +262,10 @@ void USceneData::SpawnCelestialBodies()
 				UE_LOG(LogCielim, Warning, TEXT("Actor scale was invalid (<= 0), default is being used instead."));
 		}
 
+		// Don't render with regular pipeline if the celestial body is sub-pixel
+		if (this->Spacecraft->CameraModel->IsCelestialBodyResolvable(*TempCelestialBody))
+			TempCelestialBody->SetActorHiddenInGame(true);
+
 		this->CelestialBodyArray.Add(TempCelestialBody);
 		this->Actors.Add(TempCelestialBody);
 
@@ -403,9 +407,16 @@ void USceneData::UpdateCelestialBodies() const
 		FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
 		FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
 
-		CelestialBodyArray[Index]->Update(PositionCelestialBody, CelestialBodyRotation);
+		ACelestialBody *TempCelestialBody = CelestialBodyArray[Index];
 
-		if (CelestialBodyArray[Index]->Name.ToLower() == SunNaifBodyName)
+		TempCelestialBody->Update(PositionCelestialBody, CelestialBodyRotation);
+
+		if (this->Spacecraft->CameraModel->IsCelestialBodyResolvable(*TempCelestialBody))
+			TempCelestialBody->SetActorHiddenInGame(true);
+		else
+			TempCelestialBody->SetActorHiddenInGame(false);
+
+		if (TempCelestialBody->Name.ToLower() == SunNaifBodyName)
 			UpdateSunLight();
 
 		Index++;
