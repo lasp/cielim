@@ -91,7 +91,6 @@ def scene_setup():
 
     # newly set parameters
     protobuf_message.camera.sensorModel.systemGain = 1
-    protobuf_message.camera.sensorModel.gamma = 1
     protobuf_message.camera.sensorModel.readNoise = 6.7
     protobuf_message.camera.sensorModel.sensorWidth = 5702.4 * 10 ** (-6)  # 2592 * 2.2 um
     protobuf_message.camera.sensorModel.sensorHeight = 4276.8 * 10 ** (-6)  # 1944 * 2.2 um
