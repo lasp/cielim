@@ -25,7 +25,6 @@ uint PcgHash(uint Input)
 	return (Word >> 22u) ^ Word;
 }
 
-
 uint CombinedTausworthe(inout uint Z, int S1, int S2, int S3, uint M)
 {
 	uint b = (Z << S1 ^ Z) >> S2;
@@ -40,7 +39,6 @@ float UniformRNG(uint Z1, uint Z2, uint Z3, inout uint Z4)
 	Z4 = Z4 * 1664525 + 1013904223u;
 	return 2.3283064365387e-10 * float(Step1 ^ Step2 ^ Step3 ^ Z4);
 }
-
 
 float2 BoxMuller(float U1, float U2)
 {
@@ -69,7 +67,7 @@ float4 MainPS(float4 UV : TEXCOORD0, float4 Position : SV_Position) : SV_Target0
 	float2 RandGaussian1 = BoxMuller(U1, U2) * ReadNoiseSigma;
 	float2 RandGaussian2 = BoxMuller(U3, U4) * ReadNoiseSigma;
 
-	float4 Noise = float4(saturate(RandGaussian1.x), saturate(RandGaussian1.y), saturate(RandGaussian2.x), 0.0f);
+	float4 ReadNoise = float4(RandGaussian1.x, RandGaussian1.y, RandGaussian2.x, 0.0f);
 
-	return Color + Noise;
+	return saturate(Color + ReadNoise);
 }

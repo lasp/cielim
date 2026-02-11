@@ -68,6 +68,7 @@ ACameraModel::ACameraModel()
 	this->CameraParams.QuECurveG = FVector3f::One();
 	this->CameraParams.QuECurveB = FVector3f::One();
 	this->CameraParams.CorrectionFactor = 1.0f;
+	this->CameraParams.bEnableShotNoise = false;
 	this->CameraParams.FullWellCapacity = 50000.0f;
 	this->CameraParams.Gamma = 2.2f;
 }
@@ -123,6 +124,8 @@ void ACameraModel::SetCameraParameters(const cielimMessage::CielimMessage &Cieli
 
 		if (SensorModel.exposuretime() > 0.0f)
 			this->CameraParams.ExposureTime = CameraModel.sensormodel().exposuretime();
+
+		this->CameraParams.bEnableShotNoise = CameraModel.sensormodel().shotnoise();
 
 		if (SensorModel.fullwellcapacity() > 0.0f)
 			this->CameraParams.FullWellCapacity = CameraModel.sensormodel().fullwellcapacity();

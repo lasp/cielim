@@ -88,6 +88,7 @@ void FCielimSceneViewExtension::PrePostProcessPass_RenderThread(FRDGBuilder &Gra
 		CameraParams.QuECurveG = FVector3f::One();
 		CameraParams.QuECurveB = FVector3f::One();
 		CameraParams.CorrectionFactor = 1.0f;
+		CameraParams.bEnableShotNoise = false;
 		CameraParams.FullWellCapacity = 50000.0f;
 		CameraParams.Gamma = 2.2f;
 
@@ -165,6 +166,8 @@ void FCielimSceneViewExtension::QuETonemapPass(FRDGBuilder &GraphBuilder, const 
 	QuEParams->QuECurveB = FVector4f(CameraParams.QuECurveB, 1.0f);
 	QuEParams->SimpsonFactor = FMath::Abs(CameraParams.Wavelength1 - CameraParams.Wavelength3) / 6.0f;
 	QuEParams->CorrectionFactor = CameraParams.CorrectionFactor;
+	QuEParams->CurrentTime = static_cast<uint32>(FDateTime::UtcNow().ToUnixTimestamp());
+	QuEParams->EnableShotNoise = static_cast<uint32>(CameraParams.bEnableShotNoise);
 	QuEParams->InvFullWellCapacity = 1.0f / FMath::Max(CameraParams.FullWellCapacity, 1e-6);
 	QuEParams->RenderTargets[0] = FRenderTargetBinding(TextureOut, ERenderTargetLoadAction::EClear);
 

@@ -36,6 +36,7 @@ struct FCameraParams
 	FVector3f QuECurveG;
 	FVector3f QuECurveB;
 	float CorrectionFactor;
+	bool bEnableShotNoise;
 	float FullWellCapacity;
 	float Gamma;
 };
