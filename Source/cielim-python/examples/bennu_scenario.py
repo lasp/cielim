@@ -111,14 +111,15 @@ def scene_setup():
     [sun.attitude.append(item) for item in [0, 0, 0]]
 
     protobuf_message.camera.cameraId = 1
-    protobuf_message.camera.parentName = "osiris_rex"
+    protobuf_message.camera.parentName = "PolyCam"
     protobuf_message.camera.sensorModel.exposureTime = 1e-3
 
     # newly set parameters
+    # (https://link.springer.com/article/10.1007/s11214-011-9745-4)
     protobuf_message.camera.sensorModel.systemGain = 1
     protobuf_message.camera.sensorModel.readNoise = 8.5
-    protobuf_message.camera.sensorModel.sensorWidth = 8.5 * 1032 * 10 ** (-6)  # 2592 * 2.2 um
-    protobuf_message.camera.sensorModel.sensorHeight = 8.5 * 1032 * 10 ** (-6)  # 1944 * 2.2 um
+    protobuf_message.camera.sensorModel.sensorWidth = 8.5 * 1024 * 10 ** (-6) # 8.5 um pixel pitch
+    protobuf_message.camera.sensorModel.sensorHeight = 8.5 * 1024 * 10 ** (-6)
     protobuf_message.camera.sensorModel.fullWellCapacity = 10000
     protobuf_message.camera.lensModel.focalLength = 610 / 1000
     protobuf_message.camera.lensModel.pointSpreadFunction = 1.0

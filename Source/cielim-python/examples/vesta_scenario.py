@@ -117,11 +117,13 @@ def scene_setup():
     protobuf_message.camera.sensorModel.exposureTime = 1e-3
 
     # newly set parameters
+    # (https://link.springer.com/article/10.1007/s11214-011-9745-4)
+    # (https://www.teledynespaceimaging.com/en-us/Products_/Documents/ccd-datasheets/CCD47-20%20FSI%20NIMO%20Datasheet%20(v9).pdf)
     protobuf_message.camera.sensorModel.systemGain = 1
     protobuf_message.camera.sensorModel.readNoise = 18
     protobuf_message.camera.sensorModel.sensorWidth = 13.3 * 10 ** (-3)  # 2592 * 2.2 um
     protobuf_message.camera.sensorModel.sensorHeight = 13.3 * 10 ** (-3)  # 1944 * 2.2 um
-    protobuf_message.camera.sensorModel.fullWellCapacity = 60000
+    protobuf_message.camera.sensorModel.fullWellCapacity = 120_000
     protobuf_message.camera.lensModel.focalLength = 150 / 1000
     protobuf_message.camera.lensModel.pointSpreadFunction = 1.0
     protobuf_message.camera.lensModel.apertureRadius = (
