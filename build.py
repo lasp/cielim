@@ -13,45 +13,6 @@ def build(platform_name, executable, debug_mode):
 
     cielim_path = os.path.dirname(os.path.abspath(__file__))
 
-    # check status of third party libraries
-
-    print("Checking submodules exist...")
-
-    result = subprocess.check_output(["git", "submodule", "status"], stderr=subprocess.STDOUT, text=True)
-
-    for line in result.splitlines():
-        if line.startswith("-"):
-            print("One or more git submodules haven't been cloned and thus the build process cannot proceed.")
-            response = input("Would you like to clone them now? (y/n) ").strip()
-
-            if response == "y" or response == "yes":
-                print("Cloning submodules...")
-
-                process = subprocess.Popen(
-                    ["git", "submodule", "update", "--init", "--recursive"],
-                    stdout=sys.stdout,
-                    stderr=sys.stderr,
-                )
-
-                process.wait()
-
-                break
-
-            else:
-                exit()
-
-    print("All submodules have been cloned.")
-
-    print("Status of third party libraries:")
-
-    proto_exists = os.path.exists(os.path.join(cielim_path, "Source/ThirdParty/ProtobufLibrary/lib"))
-    proto_status = "Built" if proto_exists else "Not built"
-    print(f"Protobuf... {proto_status}")
-
-    zmq_exists = os.path.exists(os.path.join(cielim_path, "Source/ThirdParty/ZMQ/libzmq/build"))
-    zmq_status = "Built" if zmq_exists else "Not built"
-    print(f"ZMQ... {zmq_status}")
-
     process = subprocess.Popen(
         [
             f"{executable}",
