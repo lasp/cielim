@@ -141,25 +141,16 @@ def clean():
 
     cielim_path = os.path.dirname(os.path.abspath(__file__))
 
-    try:
-        shutil.rmtree(os.path.join(cielim_path, "Saved"))
-    except Exception as e:
-        print(f"Saved/ could not be removed: {e}")
+    folders_to_clean = ["Saved", "Binaries", "Intermediate", "DerivedDataCache", "vcpkg_installed"]
 
-    try:
-        shutil.rmtree(os.path.join(cielim_path, "Binaries"))
-    except Exception as e:
-        print(f"Binaries/ could not be removed: {e}")
+    for folder in folders_to_clean:
+        dir = os.path.join(cielim_path, folder)
 
-    try:
-        shutil.rmtree(os.path.join(cielim_path, "Intermediate"))
-    except Exception as e:
-        print(f"Intermediate/ could not be removed: {e}")
-
-    try:
-        shutil.rmtree(os.path.join(cielim_path, "DerivedDataCache"))
-    except Exception as e:
-        print(f"DerivedDataCache/ could not be removed: {e}")
+        if os.path.isdir(dir):
+            shutil.rmtree(dir)
+            print(f"Removed {folder}/")
+        else:
+            print(f"{folder}/ already clean")
 
 
 if __name__ == "__main__":
