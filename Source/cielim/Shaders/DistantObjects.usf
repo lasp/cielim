@@ -1,0 +1,89 @@
+//=================== Copyright (c) 2025 Laboratory for Atmospheric and Space Physics ===================//
+//
+// Purpose: Shader that renders distant objects as quads with Lambertian BRDF.
+//
+// License: MIT License. See LICENSE file.
+//
+//=======================================================================================================//
+
+#include "/Engine/Public/Platform.ush"
+
+float3 CameraPosition;
+float4x4 ViewProjectionMatrix;
+
+float InverseProjectionX; // = tan(fov_x / 2)
+float InverseProjectionY; // = tan(fov_y / 2)
+
+float InverseViewWidth;
+float InverseViewHeight;
+
+// Hard coded parameters for now
+
+static const float3 AsteroidWorldPos = float3(0.0f, 0.0f, 0.0f);
+static const float ObjectRadius = 500.0f;
+static const float Albedo = 1.0f;
+
+static const float3 SolarSpectralIrradiance = float3(10.0f, 10.0f, 10.0f);
+
+struct FVSOutput
+{
+    float4 PositionCS : SV_Position;
+    float3 Radiance   : TEXCOORD0;
+};
+
+FVSOutput MainVS(uint VertexID : SV_VertexID)
+{
+    FVSOutput Out;
+
+    // Transform object world position to clip space
+	float4 ObjectCoordinateCS = mul(float4(AsteroidWorldPos, 1.0f), ViewProjectionMatrix);
+
+	// Don't do anything if object is behind the camera (w <= 0)
+	if (ObjectCoordinateCS.w <= 0.0f)
+	{
+		Out.PositionCS = float4(0.0f,0.0f,0.0f,0.0f);
+		Out.Radiance = 0.0f;
+		return Out;
+	}
+
+    // Compute object projected angular radius
+	float ObjectDistanceFromCamera = length(AsteroidWorldPos - CameraPosition);
+	float ObjectAngularRadius = atan(ObjectRadius / max(ObjectDistanceFromCamera, 1e-6f));
+
+    // Calculate pixel angular radius
+	float PixelAngularRadiusX = 2.0f * InverseProjectionX * InverseViewWidth;
+	float PixelAngularRadiusY = 2.0f * InverseProjectionY * InverseViewHeight;
+
+    // Calculate how much of the pixel is covered by the object
+	float ObjectAngularRadiusFractionX = ObjectAngularRadius / PixelAngularRadiusX;
+	float ObjectAngularRadiusFractionY = ObjectAngularRadius / PixelAngularRadiusY;
+	float Coverage = saturate(3.1415f * ObjectAngularRadiusFractionX * ObjectAngularRadiusFractionY);
+
+    // This is lambertian diffuse BRDF
+    float3 Radiance = Coverage * (SolarSpectralIrradiance * Albedo) * 0.31830989f;
+
+    Out.Radiance = Radiance;
+
+    // Render the object as a quad
+
+	float2 PixelSizeCS = float2(2.0f * InverseViewWidth, 2.0f * InverseViewHeight) * ObjectCoordinateCS.w;
+
+    float2 VertexOffset = 0;
+
+	// 20 x 20 pixels
+    if (VertexID == 0) VertexOffset = float2(-10.0f, -10.0f);
+    if (VertexID == 1) VertexOffset = float2( 10.0f, -10.0f);
+    if (VertexID == 2) VertexOffset = float2(-10.0f,  10.0f);
+    if (VertexID == 3) VertexOffset = float2( 10.0f,  10.0f);
+
+    float2 VertexCoordinateCS = ObjectCoordinateCS + VertexOffset * PixelSizeCS;
+
+    Out.PositionCS = float4(VertexCoordinateCS, ObjectCoordinateCS.z, ObjectCoordinateCS.w);
+
+    return Out;
+}
+
+float4 MainPS(FVSOutput In) : SV_Target0
+{
+	return float4(In.Radiance, 1.0f);
+}

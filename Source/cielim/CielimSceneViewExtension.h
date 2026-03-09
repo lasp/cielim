@@ -36,6 +36,9 @@ public:
 												 const FPostProcessingInputs &Inputs) override;
 
 private:
+	static void DistantObjectsPass(FRDGBuilder &GraphBuilder, const FSceneView &View, const FRDGTextureRef &SceneDepth,
+								   const FRDGTextureRef &SceneColor);
+
 	static void QuETonemapPass(FRDGBuilder &GraphBuilder, const FCameraParams &CameraParams,
 							   const FRDGTextureRef &TextureIn, const FRDGTextureRef &TextureOut);
 
