@@ -92,8 +92,8 @@ def scene_setup():
     # newly set parameters
     protobuf_message.camera.sensorModel.systemGain = 1
     protobuf_message.camera.sensorModel.readNoise = 6.7
-    protobuf_message.camera.sensorModel.sensorWidth = 5702.4 * 10 ** (-6)  # 2592 * 2.2 um
-    protobuf_message.camera.sensorModel.sensorHeight = 4276.8 * 10 ** (-6)  # 1944 * 2.2 um
+    protobuf_message.camera.sensorModel.sensorWidth = 2592 * 2.2 * 10 ** (-6)
+    protobuf_message.camera.sensorModel.sensorHeight = 1944 * 2.2 * 10 ** (-6)
     protobuf_message.camera.sensorModel.fullWellCapacity = 7000
     protobuf_message.camera.lensModel.focalLength = 7.6 / 1000
     protobuf_message.camera.lensModel.pointSpreadFunction = 1.0
@@ -101,7 +101,7 @@ def scene_setup():
         protobuf_message.camera.lensModel.focalLength / 3.5 / 2
     )  # focal length / f# / 2
 
-    [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [44.32 * np.pi / 180, 32.36 * np.pi / 180]]
+    [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [44 * np.pi / 180, 32 * np.pi / 180]]
     [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
     [protobuf_message.camera.cameraPositionInBody.append(item) for item in [0, 0, 0]]
     [protobuf_message.camera.sensorModel.resolution.append(item) for item in [2592, 1944]]

@@ -117,15 +117,13 @@ def scene_setup():
     # newly set parameters
     # (https://link.springer.com/article/10.1007/s11214-011-9745-4)
     protobuf_message.camera.sensorModel.systemGain = 1
-    protobuf_message.camera.sensorModel.readNoise = 8.5
-    protobuf_message.camera.sensorModel.sensorWidth = 8.5 * 1024 * 10 ** (-6) # 8.5 um pixel pitch
+    protobuf_message.camera.sensorModel.readNoise = 3
+    protobuf_message.camera.sensorModel.sensorWidth = 6.5 * 1024 * 10 ** (-6)  # 8.5 um pixel pitch
     protobuf_message.camera.sensorModel.sensorHeight = 8.5 * 1024 * 10 ** (-6)
-    protobuf_message.camera.sensorModel.fullWellCapacity = 10000
+    protobuf_message.camera.sensorModel.fullWellCapacity = int(14500 / 4.5)  # Using sensor linearity
     protobuf_message.camera.lensModel.focalLength = 610 / 1000
-    protobuf_message.camera.lensModel.pointSpreadFunction = 1.0
-    protobuf_message.camera.lensModel.apertureRadius = (
-        protobuf_message.camera.lensModel.focalLength / 3.5 / 2
-    )  # focal length / f# / 2
+    protobuf_message.camera.lensModel.pointSpreadFunction = 0
+    protobuf_message.camera.lensModel.apertureRadius = 0.175 / 2
 
     [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [13.8 / 1000, 13.8 / 1000]]
     [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
