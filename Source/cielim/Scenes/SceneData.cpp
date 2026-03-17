@@ -229,12 +229,15 @@ void USceneData::SpawnSpacecraft()
 
 void USceneData::SpawnCelestialBodies()
 {
-	for (const auto &CelestialBody : CielimMessage->celestialbodies())
+	for (const auto &CelestialBody : this->CielimMessage->celestialbodies())
 	{
 		ACelestialBody *TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>();
 
-		TempCelestialBody->SetActorLocation(GetCelestialBodyPosition(CelestialBody));
-		TempCelestialBody->SetActorRotation(GetCelestialBodyRotation(CelestialBody));
+		const FVector CelestialBodyPosition = GetCelestialBodyPosition(CelestialBody);
+		const FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
+
+		TempCelestialBody->SetActorLocation(CelestialBodyPosition);
+		TempCelestialBody->SetActorRotation(CelestialBodyRotation);
 
 		TempCelestialBody->Name = FString(CelestialBody.bodyname().c_str());
 
@@ -251,20 +254,33 @@ void USceneData::SpawnCelestialBodies()
 			MeshModel = FCelestialBodyMeshModel::FromProtobuf(CelestialBody.model());
 			TempCelestialBody->LoadMesh(MeshModel);
 
+			const float CelestialBodyRadius = CelestialBody.model().meanradius();
+			const float CelestialBodyAlbedo = CelestialBody.model().geometricalbedo();
+
 			// Meshes are ~1,000 units radius so we must scale down to normalize to 1 unit radius (1 unit = 1 meter)
 			constexpr float MeshNormFactor = 1.0f / 1000.0f;
-			const float RadiusScale = TempCelestialBody->GetMeanRadius();
+			const float RadiusScale = CelestialBodyRadius;
 			const FVector ActorScale = TempCelestialBody->GetPrincipleAxisDistortions() * RadiusScale * MeshNormFactor;
 
 			if (ActorScale.X > 0.0f && ActorScale.Y > 0.0f && ActorScale.Z > 0.0f)
 				TempCelestialBody->SetActorScale3D(ActorScale);
 			else
 				UE_LOG(LogCielim, Warning, TEXT("Actor scale was invalid (<= 0), default is being used instead."));
-		}
 
-		// Don't render with regular pipeline if the celestial body is sub-pixel
-		if (this->Spacecraft->CameraModel->IsCelestialBodyResolvable(*TempCelestialBody))
-			TempCelestialBody->SetActorHiddenInGame(true);
+			// If object is renderable, check whether it should be rendered as normal or distant object
+			if (this->Spacecraft->CameraModel->IsCelestialBodyResolvable(*TempCelestialBody))
+			{
+				// Don't render with regular pipeline if sub-pixel
+				TempCelestialBody->SetActorHiddenInGame(true);
+
+				const FVector3f DistantObjectPosition =
+					FVector3f(CelestialBodyPosition.X, CelestialBodyPosition.Y, CelestialBodyPosition.Z);
+
+				FDistantObject NewObject{DistantObjectPosition, CelestialBodyRadius, CelestialBodyAlbedo};
+
+				this->Spacecraft->CameraModel->DistantObjects.Add(NewObject);
+			}
+		}
 
 		this->CelestialBodyArray.Add(TempCelestialBody);
 		this->Actors.Add(TempCelestialBody);
@@ -359,6 +375,10 @@ void USceneData::UpdateSunLight() const
 	const float Wavelength2Irradiance = Wavelength2Radiance * SunSolidAngle; // W * Meters^-2 * Nanometer^-1
 	const float Wavelength3Irradiance = Wavelength3Radiance * SunSolidAngle; // W * Meters^-2 * Nanometer^-1
 
+	// The camera needs this for distant object rendering
+	this->Spacecraft->CameraModel->SolarSpectralIrradiance =
+		FVector3f(Wavelength1Irradiance, Wavelength2Irradiance, Wavelength3Irradiance);
+
 	/* We need to scale down the irradiance values so they can fit in [0,1] color and not be clamped. This will get
 	 * canceled out when the color is multiplied with the intensity which is the inverse of the factor. */
 	const float SunIntensity = FMath::Max(Wavelength1Irradiance, Wavelength2Irradiance, Wavelength3Irradiance) * 1.1f;
@@ -401,20 +421,47 @@ void USceneData::UpdateSpacecraft() const
 
 void USceneData::UpdateCelestialBodies() const
 {
+	/* Reset distant objects buffer
+	 * TODO: We need a better approach with unique ID indexing at some point so we don't have to rebuild every update */
+	this->Spacecraft->CameraModel->DistantObjects.Reset();
+
 	int Index = 0;
+	const int MaxIndex = this->CelestialBodyArray.Num();
+
 	for (const auto &CelestialBody : CielimMessage->celestialbodies())
 	{
-		FVector3d PositionCelestialBody = GetCelestialBodyPosition(CelestialBody);
-		FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
+		if (Index >= MaxIndex)
+			break;
 
+		const FVector CelestialBodyPosition = GetCelestialBodyPosition(CelestialBody);
+		const FRotator CelestialBodyRotation = GetCelestialBodyRotation(CelestialBody);
+
+		/* This assumes that the ordering of the celestial bodies doesn't change in the message. If this assumption
+		 * is not true, bodies will be updated erroneously. TODO: Fix this at some point. */
 		ACelestialBody *TempCelestialBody = CelestialBodyArray[Index];
 
-		TempCelestialBody->Update(PositionCelestialBody, CelestialBodyRotation);
+		TempCelestialBody->Update(CelestialBodyPosition, CelestialBodyRotation);
 
-		if (this->Spacecraft->CameraModel->IsCelestialBodyResolvable(*TempCelestialBody))
-			TempCelestialBody->SetActorHiddenInGame(true);
-		else
-			TempCelestialBody->SetActorHiddenInGame(false);
+		if (CelestialBody.has_model())
+		{
+			// If object is renderable, check whether it should be rendered as normal or distant object
+			if (this->Spacecraft->CameraModel->IsCelestialBodyResolvable(*TempCelestialBody))
+			{
+				// Don't render with regular pipeline if sub-pixel
+				TempCelestialBody->SetActorHiddenInGame(true);
+
+				const FVector3f DistantObjectPosition =
+					FVector3f(CelestialBodyPosition.X, CelestialBodyPosition.Y, CelestialBodyPosition.Z);
+				const float CelestialBodyRadius = CelestialBody.model().meanradius();
+				const float CelestialBodyAlbedo = CelestialBody.model().geometricalbedo();
+
+				FDistantObject NewObject{DistantObjectPosition, CelestialBodyRadius, CelestialBodyAlbedo};
+
+				this->Spacecraft->CameraModel->DistantObjects.Add(NewObject);
+			}
+			else
+				TempCelestialBody->SetActorHiddenInGame(false);
+		}
 
 		if (TempCelestialBody->Name.ToLower() == SunNaifBodyName)
 			UpdateSunLight();

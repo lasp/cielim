@@ -75,6 +75,7 @@ private:
 
 	TSharedPtr<cielimMessage::CielimMessage> CielimMessage;
 
+	// TODO: We need a proper ID system for our actors / celestial bodies so they can be indexed
 	UPROPERTY()
 	TArray<AActor *> Actors;
 	UPROPERTY()

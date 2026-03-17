@@ -71,6 +71,13 @@ struct FImageCorruptionParams
 	float SignalGain;
 };
 
+struct FDistantObject
+{
+	FVector3f WorldPosition;
+	float ObjectRadius;
+	float GeometricAlbedo; // TODO: Fix that this doesn't take into account albedo map corrections
+};
+
 UCLASS()
 class CIELIM_API ACameraModel : public AActor
 {
@@ -116,9 +123,16 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	UCameraViewCaptureComponent2D *SceneCaptureComponent2D;
 
+	// Camera parameters
+
 	FCameraParams CameraParams{};
 	FDiagnosticParams DiagnosticParams{};
 	FImageCorruptionParams CorruptionParams{};
+
+	// Distant object information
+
+	FVector3f SolarSpectralIrradiance{};
+	TArray<FDistantObject> DistantObjects{};
 
 protected:
 	// Called when spawned
