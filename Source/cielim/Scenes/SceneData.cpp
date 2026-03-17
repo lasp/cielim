@@ -273,10 +273,10 @@ void USceneData::SpawnCelestialBodies()
 				// Don't render with regular pipeline if sub-pixel
 				TempCelestialBody->SetActorHiddenInGame(true);
 
-				const FVector3f DistantObjectPosition =
-					FVector3f(CelestialBodyPosition.X, CelestialBodyPosition.Y, CelestialBodyPosition.Z);
+				const FVector4f DistantObjectPosition =
+					FVector4f(CelestialBodyPosition.X, CelestialBodyPosition.Y, CelestialBodyPosition.Z);
 
-				FDistantObject NewObject{DistantObjectPosition, CelestialBodyRadius, CelestialBodyAlbedo};
+				FDistantObject NewObject{DistantObjectPosition, FVector4f(CelestialBodyRadius, CelestialBodyAlbedo)};
 
 				this->Spacecraft->CameraModel->DistantObjects.Add(NewObject);
 			}
@@ -450,12 +450,12 @@ void USceneData::UpdateCelestialBodies() const
 				// Don't render with regular pipeline if sub-pixel
 				TempCelestialBody->SetActorHiddenInGame(true);
 
-				const FVector3f DistantObjectPosition =
-					FVector3f(CelestialBodyPosition.X, CelestialBodyPosition.Y, CelestialBodyPosition.Z);
+				const FVector4f DistantObjectPosition =
+					FVector4f(CelestialBodyPosition.X, CelestialBodyPosition.Y, CelestialBodyPosition.Z);
 				const float CelestialBodyRadius = CelestialBody.model().meanradius();
 				const float CelestialBodyAlbedo = CelestialBody.model().geometricalbedo();
 
-				FDistantObject NewObject{DistantObjectPosition, CelestialBodyRadius, CelestialBodyAlbedo};
+				FDistantObject NewObject{DistantObjectPosition, FVector4f(CelestialBodyRadius, CelestialBodyAlbedo)};
 
 				this->Spacecraft->CameraModel->DistantObjects.Add(NewObject);
 			}

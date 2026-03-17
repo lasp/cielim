@@ -73,9 +73,9 @@ struct FImageCorruptionParams
 
 struct FDistantObject
 {
-	FVector3f WorldPosition;
-	float ObjectRadius;
-	float GeometricAlbedo; // TODO: Fix that this doesn't take into account albedo map corrections
+	/* TODO: Fix that albedo doesn't take into account albedo map corrections */
+	FVector4f WorldPosition; // Float4's are used for alignment
+	FVector4f Parameters;
 };
 
 UCLASS()

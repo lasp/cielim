@@ -98,7 +98,9 @@ void FCielimSceneViewExtension::PrePostProcessPass_RenderThread(FRDGBuilder &Gra
 		CorruptionParams.Sigma = 0.25f;
 	}
 
-	DistantObjectsPass(GraphBuilder, View, SceneDepth, TextureIn);
+	if (CameraModel && CameraModel->DistantObjects.Num() > 0)
+		DistantObjectsPass(GraphBuilder, View, CameraModel->SolarSpectralIrradiance, CameraModel->DistantObjects,
+						   SceneDepth, TextureIn);
 
 	// These passes operate on light entering camera
 
@@ -141,6 +143,8 @@ void FCielimSceneViewExtension::PrePostProcessPass_RenderThread(FRDGBuilder &Gra
 // ---------- Shader pass definitions ----------
 
 void FCielimSceneViewExtension::DistantObjectsPass(FRDGBuilder &GraphBuilder, const FSceneView &View,
+												   const FVector3f &SolarIrradiance,
+												   const TArray<FDistantObject> &DistantObjects,
 												   const FRDGTextureRef &SceneDepth, const FRDGTextureRef &SceneColor)
 {
 	RDG_GPU_STAT_SCOPE(GraphBuilder, DistantObjects);
@@ -153,24 +157,35 @@ void FCielimSceneViewExtension::DistantObjectsPass(FRDGBuilder &GraphBuilder, co
 
 	const FMatrix44f ProjectionMatrix = FMatrix44f(View.ViewMatrices.GetProjectionMatrix());
 
+	const FRDGBufferRef DistantObjectsBuffer =
+		CreateStructuredBuffer<FDistantObject>(GraphBuilder, TEXT("DistantObjects"), DistantObjects);
+
 	DistantVSParams->CameraPosition = static_cast<FVector3f>(View.ViewLocation);
 	DistantVSParams->ViewProjectionMatrix = FMatrix44f(View.ViewMatrices.GetViewProjectionMatrix());
-	DistantVSParams->InverseProjectionX = 1.0f / ProjectionMatrix.M[0][0];
-	DistantVSParams->InverseProjectionY = 1.0f / ProjectionMatrix.M[1][1];
-	DistantVSParams->InverseViewWidth = 1.0f / Viewport.Rect.Width();
-	DistantVSParams->InverseViewHeight = 1.0f / Viewport.Rect.Height();
+	DistantVSParams->InverseProjectionX = 1.0f / FMath::Max(ProjectionMatrix.M[0][0], 1e-6f);
+	DistantVSParams->InverseProjectionY = 1.0f / FMath::Max(ProjectionMatrix.M[1][1], 1e-6f);
+	DistantVSParams->InverseViewWidth = 1.0f / FMath::Max(Viewport.Rect.Width(), 1e-6f);
+	DistantVSParams->InverseViewHeight = 1.0f / FMath::Max(Viewport.Rect.Height(), 1e-6f);
+	DistantVSParams->SolarSpectralIrradiance = SolarIrradiance;
+	DistantVSParams->DistantObjects = GraphBuilder.CreateSRV(DistantObjectsBuffer);
 
 	DistantPSParams->RenderTargets[0] = FRenderTargetBinding(SceneColor, ERenderTargetLoadAction::ELoad);
-
 	DistantPSParams->RenderTargets.DepthStencil =
 		FDepthStencilBinding(SceneDepth, ERenderTargetLoadAction::ELoad, FExclusiveDepthStencil::DepthRead);
+
+	FDistantObjectsParameters *PassParams = GraphBuilder.AllocParameters<FDistantObjectsParameters>();
+	PassParams->VS = *DistantVSParams;
+	PassParams->PS = *DistantPSParams;
 
 	const TShaderMapRef<FDistantObjectsVS> DistantObjectsVS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 	const TShaderMapRef<FDistantObjectsPS> DistantObjectsPS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 
+	const int NumInstances = DistantObjects.Num();
+
 	GraphBuilder.AddPass(
-		RDG_EVENT_NAME("Add Distant Objects"), DistantPSParams, ERDGPassFlags::Raster,
-		[DistantVSParams, DistantPSParams, DistantObjectsVS, DistantObjectsPS](FRHICommandList &RHICmdList)
+		RDG_EVENT_NAME("Add Distant Objects"), PassParams, ERDGPassFlags::Raster,
+		[DistantVSParams, DistantPSParams, DistantObjectsVS, DistantObjectsPS,
+		 NumInstances](FRHICommandList &RHICmdList)
 		{
 			FGraphicsPipelineStateInitializer GraphicsPSOInit;
 			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
@@ -195,7 +210,7 @@ void FCielimSceneViewExtension::DistantObjectsPass(FRDGBuilder &GraphBuilder, co
 			SetShaderParameters(RHICmdList, DistantObjectsVS, DistantObjectsVS.GetVertexShader(), *DistantVSParams);
 			SetShaderParameters(RHICmdList, DistantObjectsPS, DistantObjectsPS.GetPixelShader(), *DistantPSParams);
 
-			RHICmdList.DrawPrimitive(0, 2, 1);
+			RHICmdList.DrawPrimitive(0, 2, NumInstances);
 		});
 }
 

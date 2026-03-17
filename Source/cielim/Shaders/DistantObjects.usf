@@ -17,13 +17,15 @@ float InverseProjectionY; // = tan(fov_y / 2)
 float InverseViewWidth;
 float InverseViewHeight;
 
-// Hard coded parameters for now
+float3 SolarSpectralIrradiance;
 
-static const float3 AsteroidWorldPos = float3(0.0f, 0.0f, 0.0f);
-static const float ObjectRadius = 500.0f;
-static const float Albedo = 1.0f;
+struct FDistantObject
+{
+	float4 WorldPosition;
+	float4 Parameters;
+};
 
-static const float3 SolarSpectralIrradiance = float3(10.0f, 10.0f, 10.0f);
+StructuredBuffer<FDistantObject> DistantObjects;
 
 struct FVSOutput
 {
@@ -31,12 +33,18 @@ struct FVSOutput
     float3 Radiance   : TEXCOORD0;
 };
 
-FVSOutput MainVS(uint VertexID : SV_VertexID)
+FVSOutput MainVS(uint VertexID : SV_VertexID, uint InstanceID : SV_InstanceID)
 {
     FVSOutput Out;
 
+	FDistantObject Object = DistantObjects[InstanceID];
+
+	float3 ObjectWorldPosition = Object.WorldPosition.xyz;
+	float ObjectRadius = Object.Parameters.x;
+	float GeometricAlbedo = Object.Parameters.y;
+
     // Transform object world position to clip space
-	float4 ObjectCoordinateCS = mul(float4(AsteroidWorldPos, 1.0f), ViewProjectionMatrix);
+	float4 ObjectCoordinateCS = mul(float4(ObjectWorldPosition, 1.0f), ViewProjectionMatrix);
 
 	// Don't do anything if object is behind the camera (w <= 0)
 	if (ObjectCoordinateCS.w <= 0.0f)
@@ -47,7 +55,7 @@ FVSOutput MainVS(uint VertexID : SV_VertexID)
 	}
 
     // Compute object projected angular radius
-	float ObjectDistanceFromCamera = length(AsteroidWorldPos - CameraPosition);
+	float ObjectDistanceFromCamera = length(ObjectWorldPosition - CameraPosition);
 	float ObjectAngularRadius = atan(ObjectRadius / max(ObjectDistanceFromCamera, 1e-6f));
 
     // Calculate pixel angular radius
@@ -60,7 +68,7 @@ FVSOutput MainVS(uint VertexID : SV_VertexID)
 	float Coverage = saturate(3.1415f * ObjectAngularRadiusFractionX * ObjectAngularRadiusFractionY);
 
     // This is lambertian diffuse BRDF
-    float3 Radiance = Coverage * (SolarSpectralIrradiance * Albedo) * 0.31830989f;
+    float3 Radiance = Coverage * (SolarSpectralIrradiance * GeometricAlbedo) * 0.31830989f;
 
     Out.Radiance = Radiance;
 
