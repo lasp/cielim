@@ -150,7 +150,7 @@ void FCielimSceneViewExtension::DistantObjectsPass(FRDGBuilder &GraphBuilder, co
 	RDG_GPU_STAT_SCOPE(GraphBuilder, DistantObjects);
 	RDG_EVENT_SCOPE(GraphBuilder, "DistantObjects");
 
-	const FScreenPassTextureViewport Viewport(SceneColor);
+	const FIntRect &ViewRect = View.UnscaledViewRect;
 
 	FDistantObjectsVS::FParameters *DistantVSParams = GraphBuilder.AllocParameters<FDistantObjectsVS::FParameters>();
 	FDistantObjectsPS::FParameters *DistantPSParams = GraphBuilder.AllocParameters<FDistantObjectsPS::FParameters>();
@@ -164,8 +164,8 @@ void FCielimSceneViewExtension::DistantObjectsPass(FRDGBuilder &GraphBuilder, co
 	DistantVSParams->ViewProjectionMatrix = FMatrix44f(View.ViewMatrices.GetViewProjectionMatrix());
 	DistantVSParams->InverseProjectionX = 1.0f / FMath::Max(ProjectionMatrix.M[0][0], 1e-6f);
 	DistantVSParams->InverseProjectionY = 1.0f / FMath::Max(ProjectionMatrix.M[1][1], 1e-6f);
-	DistantVSParams->InverseViewWidth = 1.0f / FMath::Max(Viewport.Rect.Width(), 1e-6f);
-	DistantVSParams->InverseViewHeight = 1.0f / FMath::Max(Viewport.Rect.Height(), 1e-6f);
+	DistantVSParams->InverseViewWidth = 1.0f / FMath::Max(ViewRect.Width(), 1e-6f);
+	DistantVSParams->InverseViewHeight = 1.0f / FMath::Max(ViewRect.Height(), 1e-6f);
 	DistantVSParams->SolarSpectralIrradiance = SolarIrradiance;
 	DistantVSParams->DistantObjects = GraphBuilder.CreateSRV(DistantObjectsBuffer);
 
@@ -184,11 +184,12 @@ void FCielimSceneViewExtension::DistantObjectsPass(FRDGBuilder &GraphBuilder, co
 
 	GraphBuilder.AddPass(
 		RDG_EVENT_NAME("Add Distant Objects"), PassParams, ERDGPassFlags::Raster,
-		[DistantVSParams, DistantPSParams, DistantObjectsVS, DistantObjectsPS,
-		 NumInstances](FRHICommandList &RHICmdList)
+		[PassParams, DistantObjectsVS, DistantObjectsPS, ViewRect, NumInstances](FRHICommandList &RHICmdList)
 		{
 			FGraphicsPipelineStateInitializer GraphicsPSOInit;
 			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
+
+			RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 1.0f);
 
 			GraphicsPSOInit.BlendState =
 				TStaticBlendState<CW_RGBA, BO_Add, BF_One, BF_One, BO_Add, BF_One, BF_One>::GetRHI();
@@ -207,8 +208,8 @@ void FCielimSceneViewExtension::DistantObjectsPass(FRDGBuilder &GraphBuilder, co
 
 			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0);
 
-			SetShaderParameters(RHICmdList, DistantObjectsVS, DistantObjectsVS.GetVertexShader(), *DistantVSParams);
-			SetShaderParameters(RHICmdList, DistantObjectsPS, DistantObjectsPS.GetPixelShader(), *DistantPSParams);
+			SetShaderParameters(RHICmdList, DistantObjectsVS, DistantObjectsVS.GetVertexShader(), PassParams->VS);
+			SetShaderParameters(RHICmdList, DistantObjectsPS, DistantObjectsPS.GetPixelShader(), PassParams->PS);
 
 			RHICmdList.DrawPrimitive(0, 2, NumInstances);
 		});
