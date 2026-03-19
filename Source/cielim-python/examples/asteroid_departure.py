@@ -38,7 +38,7 @@ def scene_setup() -> cielimMessage_pb2:
 
     sun = protobuf_message.celestialBodies.add()
     sun.bodyName = "sun"
-    [sun.position.append(item) for item in [0, 0, -1000000]]
+    [sun.position.append(item) for item in [0, 0, -1.496e11]]
     [sun.attitude.append(item) for item in [0, 0, 0]]
 
     protobuf_message.camera.cameraId = 1
@@ -88,7 +88,6 @@ def departure_scene(number_of_images: int):
 
         # Generate image
         image_name = "image-" + str(idx)
-        connector.send_init_request()  # re-initialize shape model
         connector.send_frame(scene_frame.get_scene())
         [image, _, _] = connector.request_image_for_camera_id(1, 1)
         cv2.imwrite(directory_path + "/" + image_name + ".png", image)
