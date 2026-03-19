@@ -611,8 +611,6 @@ bool ACameraModel::IsCelestialBodyResolvable(const ACelestialBody &CelestialBody
 
 	const float PixelSize = ScreenSize * FMath::Max(ViewportRect.Height(), ViewportRect.Width());
 
-	UE_LOG(LogCielim, Warning, TEXT("Screen size for %s: %f %f"), *CelestialBody.Name, ScreenSize, PixelSize);
-
 	// Unreal overcompensates so we have to overestimate somewhat when an object becomes subpixel
 	return PixelSize <= 5;
 }
