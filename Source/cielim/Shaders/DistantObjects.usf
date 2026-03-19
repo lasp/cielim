@@ -79,10 +79,10 @@ FVSOutput MainVS(uint VertexID : SV_VertexID, uint InstanceID : SV_InstanceID)
     float2 VertexOffset = 0;
 
 	// 20 x 20 pixels
-    if (VertexID == 0) VertexOffset = float2(-10.0f, -10.0f);
-    if (VertexID == 1) VertexOffset = float2( 10.0f, -10.0f);
-    if (VertexID == 2) VertexOffset = float2(-10.0f,  10.0f);
-    if (VertexID == 3) VertexOffset = float2( 10.0f,  10.0f);
+    if (VertexID == 0) VertexOffset = float2(-1.0f, -1.0f);
+    if (VertexID == 1) VertexOffset = float2( 1.0f, -1.0f);
+    if (VertexID == 2) VertexOffset = float2(-1.0f,  1.0f);
+    if (VertexID == 3) VertexOffset = float2( 1.0f,  1.0f);
 
     float2 VertexCoordinateCS = ObjectCoordinateCS + VertexOffset * PixelSizeCS;
 
