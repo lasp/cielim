@@ -39,6 +39,11 @@ public:
 	 */
 	FString GetMeshModelName() const;
 	/**
+	 * @brief Gets the mean radius of the celestial body's mesh.
+	 * @return Returns the mean radius as a float.
+	 */
+	float GetMeanRadius() const;
+	/**
 	 * @brief Gets the inertial-to-body rotator of the celestial body's mesh.
 	 * @return Returns inertial-to-body rotator as an FRotator.
 	 */

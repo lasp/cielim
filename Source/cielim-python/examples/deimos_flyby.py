@@ -97,7 +97,6 @@ def scene_setup():
 
     # newly set parameters
     protobuf_message.camera.sensorModel.systemGain = 1
-    protobuf_message.camera.sensorModel.gamma = 1
     protobuf_message.camera.sensorModel.sensorWidth = 0.022528  # 4096 * 5.5 mu meter
     protobuf_message.camera.sensorModel.sensorHeight = 0.016896  # 3072 * 5.5 mu meter
     protobuf_message.camera.sensorModel.fullWellCapacity = 13500  # dynamic range = 13500 electrons full well

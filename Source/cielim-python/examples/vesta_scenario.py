@@ -103,9 +103,9 @@ def scene_setup():
     [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
 
     body.model.shapeModel = "vesta_normalized"
+    body.model.geometricAlbedo = 0.423  # effective albedo of vesta
     body.model.refModel.brdfModel = "Regolith"  # vesta has better results with Lambertian
     body.model.meanRadius = 262.7 * 1e3  # radius in meter of vesta
-    body.model.geometricAlbedo = 0.423  # effective albedo of vesta
 
     sun = protobuf_message.celestialBodies.add()
     sun.bodyName = "sun"
@@ -117,12 +117,13 @@ def scene_setup():
     protobuf_message.camera.sensorModel.exposureTime = 1e-3
 
     # newly set parameters
+    # (https://link.springer.com/article/10.1007/s11214-011-9745-4)
+    # (https://www.teledynespaceimaging.com/en-us/Products_/Documents/ccd-datasheets/CCD47-20%20FSI%20NIMO%20Datasheet%20(v9).pdf)
     protobuf_message.camera.sensorModel.systemGain = 1
-    protobuf_message.camera.sensorModel.gamma = 1
     protobuf_message.camera.sensorModel.readNoise = 18
     protobuf_message.camera.sensorModel.sensorWidth = 13.3 * 10 ** (-3)  # 2592 * 2.2 um
     protobuf_message.camera.sensorModel.sensorHeight = 13.3 * 10 ** (-3)  # 1944 * 2.2 um
-    protobuf_message.camera.sensorModel.fullWellCapacity = 60000
+    protobuf_message.camera.sensorModel.fullWellCapacity = 120_000
     protobuf_message.camera.lensModel.focalLength = 150 / 1000
     protobuf_message.camera.lensModel.pointSpreadFunction = 1.0
     protobuf_message.camera.lensModel.apertureRadius = (
@@ -223,8 +224,12 @@ def vesta_scenario(number_of_images: int = None):
         [message.spacecraft.position.append(item) for item in position * 1e3]
         [message.spacecraft.attitude.append(item) for item in rbk.dcm_to_mrp(BN)]
 
+        print(f"Spacecraft position: {position * 1e3}")
+
         message.celestialBodies[1].ClearField("position")
         [message.celestialBodies[1].position.append(item) for item in sun_pos * 1e3]
+
+        print(f"Sun position: {sun_pos * 1e3}")
 
         # update exposure time per image
         message.camera.sensorModel.exposureTime = exposure_time_list[idx]
@@ -238,7 +243,7 @@ def vesta_scenario(number_of_images: int = None):
 
         image, _, _ = connector.request_image_for_camera_id(1, 1)
         image = np.flip(image, 0)
-        cv2.imwrite(os.path.join(current_file_path, f"images-vesta/vesta_image_" + time_list[idx] + ".png"), image)
+        cv2.imwrite(os.path.join(current_file_path, f"images-vesta/vesta_image_{idx}.png"), image)
 
     connector.disconnect()
     launcher.terminate()
