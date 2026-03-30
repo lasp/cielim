@@ -131,6 +131,7 @@ public:
 
 	// Distant object information
 
+	FVector3f SolarDirection{};
 	FVector3f SolarSpectralIrradiance{};
 	TArray<FDistantObject> DistantObjects{};
 

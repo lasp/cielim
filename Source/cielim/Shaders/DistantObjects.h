@@ -25,6 +25,7 @@ class FDistantObjectsVS : public FGlobalShader
 	SHADER_PARAMETER(float, InverseProjectionY)
 	SHADER_PARAMETER(float, InverseViewWidth)
 	SHADER_PARAMETER(float, InverseViewHeight)
+	SHADER_PARAMETER(FVector3f, SolarDirection)
 	SHADER_PARAMETER(FVector3f, SolarSpectralIrradiance)
 	SHADER_PARAMETER_RDG_BUFFER_SRV(StructuredBuffer<FDistantObject>, DistantObjects)
 	END_SHADER_PARAMETER_STRUCT()

@@ -99,8 +99,8 @@ void FCielimSceneViewExtension::PrePostProcessPass_RenderThread(FRDGBuilder &Gra
 	}
 
 	if (CameraModel && CameraModel->DistantObjects.Num() > 0)
-		DistantObjectsPass(GraphBuilder, View, CameraModel->SolarSpectralIrradiance, CameraModel->DistantObjects,
-						   SceneDepth, TextureIn);
+		DistantObjectsPass(GraphBuilder, View, CameraModel->SolarDirection, CameraModel->SolarSpectralIrradiance,
+						   CameraModel->DistantObjects, SceneDepth, TextureIn);
 
 	// These passes operate on light entering camera
 
@@ -143,7 +143,7 @@ void FCielimSceneViewExtension::PrePostProcessPass_RenderThread(FRDGBuilder &Gra
 // ---------- Shader pass definitions ----------
 
 void FCielimSceneViewExtension::DistantObjectsPass(FRDGBuilder &GraphBuilder, const FSceneView &View,
-												   const FVector3f &SolarIrradiance,
+												   const FVector3f &SolarDirection, const FVector3f &SolarIrradiance,
 												   const TArray<FDistantObject> &DistantObjects,
 												   const FRDGTextureRef &SceneDepth, const FRDGTextureRef &SceneColor)
 {
@@ -166,6 +166,7 @@ void FCielimSceneViewExtension::DistantObjectsPass(FRDGBuilder &GraphBuilder, co
 	DistantVSParams->InverseProjectionY = 1.0f / FMath::Max(ProjectionMatrix.M[1][1], 1e-6f);
 	DistantVSParams->InverseViewWidth = 1.0f / FMath::Max(ViewRect.Width(), 1e-6f);
 	DistantVSParams->InverseViewHeight = 1.0f / FMath::Max(ViewRect.Height(), 1e-6f);
+	DistantVSParams->SolarDirection = SolarDirection;
 	DistantVSParams->SolarSpectralIrradiance = SolarIrradiance;
 	DistantVSParams->DistantObjects = GraphBuilder.CreateSRV(DistantObjectsBuffer);
 

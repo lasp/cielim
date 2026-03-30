@@ -334,6 +334,11 @@ void USceneData::UpdateSunLight() const
 
 	LightComp->SetWorldRotation(SunRotation);
 
+	FVector LightDirection = LightComp->GetDirection();
+	LightDirection.Normalize();
+
+	this->Spacecraft->CameraModel->SolarDirection = FVector3f(LightDirection.X, LightDirection.Y, LightDirection.Z);
+
 	float Wavelength1 = 650 * 1e-9f;
 	float Wavelength2 = 550 * 1e-9f;
 	float Wavelength3 = 450 * 1e-9f;

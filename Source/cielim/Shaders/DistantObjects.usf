@@ -17,6 +17,7 @@ float InverseProjectionY; // = tan(fov_y / 2)
 float InverseViewWidth;
 float InverseViewHeight;
 
+float3 SolarDirection;
 float3 SolarSpectralIrradiance;
 
 struct FDistantObject
@@ -55,7 +56,8 @@ FVSOutput MainVS(uint VertexID : SV_VertexID, uint InstanceID : SV_InstanceID)
 	}
 
     // Compute object projected angular radius
-	float ObjectDistanceFromCamera = length(ObjectWorldPosition - CameraPosition);
+	float3 ObjectDistanceVector = CameraPosition - ObjectWorldPosition;
+	float ObjectDistanceFromCamera = length(ObjectDistanceVector);
 	float ObjectAngularRadius = atan(ObjectRadius / max(ObjectDistanceFromCamera, 1e-6f));
 
     // Calculate pixel angular radius
@@ -67,8 +69,12 @@ FVSOutput MainVS(uint VertexID : SV_VertexID, uint InstanceID : SV_InstanceID)
 	float ObjectAngularRadiusFractionY = ObjectAngularRadius / PixelAngularRadiusY;
 	float Coverage = saturate(3.1415f * ObjectAngularRadiusFractionX * ObjectAngularRadiusFractionY);
 
+	float3 SunObjectVector = SolarDirection - ObjectWorldPosition;
+
+	float CosineLoss = max(0.0f, dot(normalize(ObjectDistanceVector), normalize(SunObjectVector)));
+
     // This is lambertian diffuse BRDF
-    float3 Radiance = Coverage * (SolarSpectralIrradiance * GeometricAlbedo) * 0.31830989f;
+    float3 Radiance = Coverage * CosineLoss * (SolarSpectralIrradiance * GeometricAlbedo) * 0.31830989f;
 
     Out.Radiance = Radiance;
 
@@ -78,7 +84,7 @@ FVSOutput MainVS(uint VertexID : SV_VertexID, uint InstanceID : SV_InstanceID)
 
     float2 VertexOffset = 0;
 
-	// 20 x 20 pixels
+	// 2 x 2 pixels
     if (VertexID == 0) VertexOffset = float2(-1.0f, -1.0f);
     if (VertexID == 1) VertexOffset = float2( 1.0f, -1.0f);
     if (VertexID == 2) VertexOffset = float2(-1.0f,  1.0f);
