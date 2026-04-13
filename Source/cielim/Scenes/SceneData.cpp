@@ -30,6 +30,8 @@ static FVector3d GetCameraPosition(const cielimMessage::CameraModel &Camera);
 static FRotator GetCameraRotation(const cielimMessage::CameraModel &Camera);
 static FVector3d GetCelestialBodyPosition(const cielimMessage::CelestialBody &CelestialBody);
 static FRotator GetCelestialBodyRotation(const cielimMessage::CelestialBody &CelestialBody);
+static FVector4f ComputeDistantObjectParameters(const float ObjectRadius, const float GeometricAlbedo,
+												const FString &BrdfModel);
 
 void USceneData::Init()
 {
@@ -229,6 +231,17 @@ void USceneData::SpawnSpacecraft()
 
 void USceneData::SpawnCelestialBodies()
 {
+	FVector SunPosition = FVector::ZeroVector;
+	for (const auto &Body : this->CielimMessage->celestialbodies())
+	{
+		if (FString(Body.bodyname().c_str()).ToLower() == SunNaifBodyName)
+		{
+			SunPosition = GetCelestialBodyPosition(Body);
+			break;
+		}
+	}
+	const FVector CameraPosition = this->Spacecraft->GetActorLocation();
+
 	for (const auto &CelestialBody : this->CielimMessage->celestialbodies())
 	{
 		ACelestialBody *TempCelestialBody = GetWorld()->SpawnActor<ACelestialBody>();
@@ -267,18 +280,24 @@ void USceneData::SpawnCelestialBodies()
 			else
 				UE_LOG(LogCielim, Warning, TEXT("Actor scale was invalid (<= 0), default is being used instead."));
 
-			// If object is renderable, check whether it should be rendered as normal or distant object
-			if (this->Spacecraft->CameraModel->IsCelestialBodyResolvable(*TempCelestialBody))
+			const FVector ObjToCamera = (CameraPosition - CelestialBodyPosition).GetSafeNormal();
+			const FVector ObjToSun = (SunPosition - CelestialBodyPosition).GetSafeNormal();
+			const float PhaseAngle =
+				FMath::Acos(FMath::Clamp(static_cast<float>(FVector::DotProduct(ObjToCamera, ObjToSun)), -1.0f, 1.0f));
+
+			if (this->Spacecraft->CameraModel->IsCelestialBodyResolvable(*TempCelestialBody, PhaseAngle))
 			{
 				// Don't render with regular pipeline if sub-pixel
 				TempCelestialBody->SetActorHiddenInGame(true);
 
+				const FString BrdfModel = TempCelestialBody->GetMeshBrdfModel().ToLower();
+				const FVector4f Parameters =
+					ComputeDistantObjectParameters(CelestialBodyRadius, CelestialBodyAlbedo, BrdfModel);
+
 				const FVector4f DistantObjectPosition =
 					FVector4f(CelestialBodyPosition.X, CelestialBodyPosition.Y, CelestialBodyPosition.Z);
 
-				FDistantObject NewObject{DistantObjectPosition, FVector4f(CelestialBodyRadius, CelestialBodyAlbedo)};
-
-				this->Spacecraft->CameraModel->DistantObjects.Add(NewObject);
+				this->Spacecraft->CameraModel->DistantObjects.Add({DistantObjectPosition, Parameters});
 			}
 		}
 
@@ -430,6 +449,17 @@ void USceneData::UpdateCelestialBodies() const
 	 * TODO: We need a better approach with unique ID indexing at some point so we don't have to rebuild every update */
 	this->Spacecraft->CameraModel->DistantObjects.Reset();
 
+	FVector SunPosition = FVector::ZeroVector;
+	for (const auto &Body : CielimMessage->celestialbodies())
+	{
+		if (FString(Body.bodyname().c_str()).ToLower() == SunNaifBodyName)
+		{
+			SunPosition = GetCelestialBodyPosition(Body);
+			break;
+		}
+	}
+	const FVector CameraPosition = this->Spacecraft->GetActorLocation();
+
 	int Index = 0;
 	const int MaxIndex = this->CelestialBodyArray.Num();
 
@@ -449,20 +479,26 @@ void USceneData::UpdateCelestialBodies() const
 
 		if (CelestialBody.has_model())
 		{
-			// If object is renderable, check whether it should be rendered as normal or distant object
-			if (this->Spacecraft->CameraModel->IsCelestialBodyResolvable(*TempCelestialBody))
+			const FVector ObjToCamera = (CameraPosition - CelestialBodyPosition).GetSafeNormal();
+			const FVector ObjToSun = (SunPosition - CelestialBodyPosition).GetSafeNormal();
+			const float PhaseAngle =
+				FMath::Acos(FMath::Clamp(static_cast<float>(FVector::DotProduct(ObjToCamera, ObjToSun)), -1.0f, 1.0f));
+
+			if (this->Spacecraft->CameraModel->IsCelestialBodyResolvable(*TempCelestialBody, PhaseAngle))
 			{
-				// Don't render with regular pipeline if sub-pixel
 				TempCelestialBody->SetActorHiddenInGame(true);
 
-				const FVector4f DistantObjectPosition =
-					FVector4f(CelestialBodyPosition.X, CelestialBodyPosition.Y, CelestialBodyPosition.Z);
 				const float CelestialBodyRadius = CelestialBody.model().meanradius();
 				const float CelestialBodyAlbedo = CelestialBody.model().geometricalbedo();
 
-				FDistantObject NewObject{DistantObjectPosition, FVector4f(CelestialBodyRadius, CelestialBodyAlbedo)};
+				const FString BrdfModel = TempCelestialBody->GetMeshBrdfModel().ToLower();
+				const FVector4f Parameters =
+					ComputeDistantObjectParameters(CelestialBodyRadius, CelestialBodyAlbedo, BrdfModel);
 
-				this->Spacecraft->CameraModel->DistantObjects.Add(NewObject);
+				const FVector4f DistantObjectPosition =
+					FVector4f(CelestialBodyPosition.X, CelestialBodyPosition.Y, CelestialBodyPosition.Z);
+
+				this->Spacecraft->CameraModel->DistantObjects.Add({DistantObjectPosition, Parameters});
 			}
 			else
 				TempCelestialBody->SetActorHiddenInGame(false);
@@ -555,4 +591,19 @@ static FRotator GetCelestialBodyRotation(const cielimMessage::CelestialBody &Cel
 	// Get FRotator
 	const FQuat QLeftHand = RightQuat2LeftQuat(Q);
 	return FRotator(QLeftHand);
+}
+
+/** Build the `Parameters` vector for the distant-object shader. Only phase-independent
+ *  quantities go here; phase angle, phase curve, and photocenter offset are computed per
+ *  instance in the shader. K=0 selects the Lambertian-sphere phase function on the GPU. */
+static FVector4f ComputeDistantObjectParameters(const float ObjectRadius, const float GeometricAlbedo,
+												const FString &BrdfModel)
+{
+	float BrdfAlbedo = GeometricAlbedo;
+	if (!(BrdfModel.IsEmpty() || BrdfModel.Equals("lambertian")))
+	{
+		BrdfAlbedo = GeometricAlbedo / UE_PI;
+	}
+	constexpr float PhaseCurveK_Lambertian = 0.0f;
+	return FVector4f(ObjectRadius, BrdfAlbedo, PhaseCurveK_Lambertian, 0.0f);
 }

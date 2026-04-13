@@ -115,7 +115,11 @@ public:
 	 */
 	void GetDiagnosticData(imageDiagnostics::DiagnosticData &Diagnostics);
 
-	bool IsCelestialBodyResolvable(const ACelestialBody &CelestialBody) const;
+	/**
+	 * @brief Decide whether a celestial body should be rendered by the distant-object shader
+	 *        (true) or by the UE5 mesh rasterizer (false).
+	 */
+	bool IsCelestialBodyResolvable(const ACelestialBody &CelestialBody, float PhaseAngle) const;
 
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent *Body;
