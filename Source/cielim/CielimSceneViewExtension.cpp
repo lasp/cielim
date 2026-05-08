@@ -40,7 +40,7 @@ void FCielimSceneViewExtension::SetupViewFamily(FSceneViewFamily &InViewFamily)
 
 void FCielimSceneViewExtension::SetupView(FSceneViewFamily &InViewFamily, FSceneView &InView)
 {
-	// InView.AntiAliasingMethod = AAM_FXAA;
+	InView.AntiAliasingMethod = AAM_None;
 
 	if (InView.ViewActor && !InView.ViewActor->GetClass()->GetName().Equals("PlayerController"))
 	{
