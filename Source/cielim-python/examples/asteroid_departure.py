@@ -43,6 +43,8 @@ def scene_setup() -> cielimMessage_pb2:
 
     protobuf_message.camera.cameraId = 1
     protobuf_message.camera.parentName = "cielim_sat"
+    protobuf_message.camera.sensorModel.exposureTime = 0.001
+    protobuf_message.camera.lensModel.pointSpreadFunction = 1
     [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [20 * np.pi / 180, 15 * np.pi / 180]]
     [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
     [protobuf_message.camera.cameraPositionInBody.append(item) for item in [0, 0, 0]]
