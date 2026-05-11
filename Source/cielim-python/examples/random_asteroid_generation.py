@@ -165,7 +165,7 @@ def random_asteroid_generation(number_of_images: int):
 
             data = {}
             data["image"] = image_name
-            data["center_of_brightness"] = center_of_brightness.tolist()
+            data["center_of_brightness"] = list(center_of_brightness)
             data["center_of_mass"] = com_pixel[:2].tolist()
             data["asteroid_mean_radius"] = mean_radius
             data["camera_ifov"] = message.camera.lensModel.fieldOfView[0] / message.camera.sensorModel.resolution[0]
