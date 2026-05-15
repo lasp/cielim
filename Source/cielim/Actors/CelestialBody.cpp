@@ -175,6 +175,8 @@ void ACelestialBody::Update(const FVector3d &NewPosition, const FRotator &NewRot
 
 FString ACelestialBody::GetMeshModelName() const { return this->MeshModel.ShapeModel; }
 
+FString ACelestialBody::GetMeshBrdfModel() const { return this->MeshModel.BrdfModel; }
+
 float ACelestialBody::GetMeanRadius() const { return this->MeshModel.MeanRadius; }
 
 FRotator ACelestialBody::GetInertialToBodyRotator() const { return this->MeshModel.InertialToBody; }

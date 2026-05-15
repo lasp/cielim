@@ -1,0 +1,130 @@
+//=================== Copyright (c) 2025 Laboratory for Atmospheric and Space Physics ===================//
+//
+// Purpose: Renders distant (sub-pixel) celestial bodies as pixel-snapped quads. Per instance:
+//          phase angle, phase curve, photocenter offset, and radiance are all computed here;
+//          the CPU passes only the unshifted world position, radius, albedo, and phase curve
+//          selector (Parameters.z: 0 = Lambertian, 1 = Lommel-Seeliger).
+//
+// License: MIT License. See LICENSE file.
+//
+//=======================================================================================================//
+
+#include "/Engine/Public/Platform.ush"
+
+#define PI 3.14159265f
+#define INV_PI 0.31830989f
+
+float3 CameraPosition;
+float4x4 ViewProjectionMatrix;
+
+float InverseProjectionX; // = tan(fov_x / 2)
+float InverseProjectionY; // = tan(fov_y / 2)
+
+float InverseViewWidth;
+float InverseViewHeight;
+
+float3 SolarDirection;
+float3 SolarSpectralIrradiance;
+
+struct FDistantObject
+{
+	float4 WorldPosition;
+	float4 Parameters;
+};
+
+StructuredBuffer<FDistantObject> DistantObjects;
+
+struct FVSOutput
+{
+    float4 PositionCS : SV_Position;
+    float3 Radiance   : TEXCOORD0;
+};
+
+FVSOutput MainVS(uint VertexID : SV_VertexID, uint InstanceID : SV_InstanceID)
+{
+    FVSOutput Out;
+
+	FDistantObject Object = DistantObjects[InstanceID];
+
+	float3 ObjectWorldPosition = Object.WorldPosition.xyz;
+	float ObjectRadius = Object.Parameters.x;
+	float BrdfCorrectedAlbedo = Object.Parameters.y;
+	float PhaseCurveK = Object.Parameters.z;
+
+	float3 ObjectToCamera = normalize(CameraPosition - ObjectWorldPosition);
+	float3 ObjectToSun = -normalize(SolarDirection);
+	float CosAlpha = clamp(dot(ObjectToCamera, ObjectToSun), -1.0f, 1.0f);
+	float PhaseAngle = acos(CosAlpha);
+	float SinAlpha = sin(PhaseAngle);
+
+	float LambertianPhase = (SinAlpha + (PI - PhaseAngle) * CosAlpha) / PI;
+	float LsPhase = 0.5f * (1.0f + CosAlpha);
+	float PhaseLoss = max(lerp(LambertianPhase, LsPhase, PhaseCurveK), 0.0f);
+
+	/* Photocenter offset: project the sub-solar direction onto the view plane and shift by
+	 * (3π sin α) / (16 · PhaseNorm), clamped to one radius. This is the Lambertian-sphere
+	 * centroid-shift — tracking it keeps the rendered centre where the lit crescent actually is. */
+	float3 ViewDir = -ObjectToCamera;
+	float3 SunProjected = ObjectToSun - dot(ObjectToSun, ViewDir) * ViewDir;
+	float SunProjectedLen = length(SunProjected);
+	float PhaseNorm = max(SinAlpha + (PI - PhaseAngle) * CosAlpha, 1e-6f);
+	float OffsetFraction = min((3.0f * PI * SinAlpha) / (16.0f * PhaseNorm), 1.0f);
+	float3 PhotocenterOffset = (SunProjectedLen > 1e-6f && SinAlpha > 1e-6f)
+		? (SunProjected / SunProjectedLen) * ObjectRadius * OffsetFraction
+		: float3(0.0f, 0.0f, 0.0f);
+
+	float4 ObjectCoordinateCS = mul(float4(ObjectWorldPosition + PhotocenterOffset, 1.0f), ViewProjectionMatrix);
+
+	// Don't do anything if object is behind the camera (w <= 0)
+	if (ObjectCoordinateCS.w <= 0.0f)
+	{
+		Out.PositionCS = float4(0.0f, 0.0f, 0.0f, 0.0f);
+		Out.Radiance = 0.0f;
+		return Out;
+	}
+
+	float ObjectDistanceFromCamera = length(CameraPosition - ObjectWorldPosition);
+	float ObjectAngularRadius = atan(ObjectRadius / max(ObjectDistanceFromCamera, 1e-6f));
+	float PixelAngularRadiusX = 2.0f * InverseProjectionX * InverseViewWidth;
+	float PixelAngularRadiusY = 2.0f * InverseProjectionY * InverseViewHeight;
+	float Coverage = saturate(PI
+		* (ObjectAngularRadius / PixelAngularRadiusX)
+		* (ObjectAngularRadius / PixelAngularRadiusY));
+
+	Out.Radiance = Coverage * PhaseLoss * (SolarSpectralIrradiance * BrdfCorrectedAlbedo) * INV_PI;
+
+	/* Pixel-snap the quad. PixelPos convention: integers = pixel boundaries, half-integers =
+	 * pixel centres. That matches D3D coordinates only for even viewport dimensions — for odd
+	 * widths/heights NDC=0 lands on a pixel centre, so we shift by 0.5 per odd axis. The
+	 * parity is derived from rounded 1/InverseView (float round-trip of 1/(1/N) can drift to
+	 * N±ε, so a straight fmod would mis-classify even viewports as odd). */
+	float2 PixelSizeCS = float2(2.0f * InverseViewWidth, 2.0f * InverseViewHeight) * ObjectCoordinateCS.w;
+	float2 ViewportSize = floor(float2(1.0f / InverseViewWidth, 1.0f / InverseViewHeight) + 0.5f);
+	float2 ParityShift = frac(ViewportSize * 0.5f);
+	float2 PixelPos = ObjectCoordinateCS.xy / PixelSizeCS + ParityShift;
+
+	// Epsilon nudge expands an object sitting near a pixel boundary to cover both adjacent pixels.
+	float2 QuadMin = floor(PixelPos - 0.01f);
+	float2 QuadMax = max(ceil(PixelPos + 0.01f), QuadMin + 1.0f);
+
+	float2 MinOffset = QuadMin - PixelPos;
+	float2 MaxOffset = QuadMax - PixelPos;
+
+    float2 VertexOffset = 0;
+
+    if (VertexID == 0) VertexOffset = float2(MinOffset.x, MinOffset.y);
+    if (VertexID == 1) VertexOffset = float2(MaxOffset.x, MinOffset.y);
+    if (VertexID == 2) VertexOffset = float2(MinOffset.x, MaxOffset.y);
+    if (VertexID == 3) VertexOffset = float2(MaxOffset.x, MaxOffset.y);
+
+    float2 VertexCoordinateCS = ObjectCoordinateCS.xy + VertexOffset * PixelSizeCS;
+
+    Out.PositionCS = float4(VertexCoordinateCS, ObjectCoordinateCS.z, ObjectCoordinateCS.w);
+
+    return Out;
+}
+
+float4 MainPS(FVSOutput In) : SV_Target0
+{
+	return float4(In.Radiance, 1.0f);
+}

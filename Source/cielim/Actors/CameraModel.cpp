@@ -569,6 +569,56 @@ float ACameraModel::GetCoveragePercent() const
 	return CoveragePercent;
 }
 
+bool ACameraModel::IsCelestialBodyResolvable(const ACelestialBody &CelestialBody, const float PhaseAngle) const
+{
+	FVector Origin;
+	FVector Extent;
+
+	// Get bounds of the celestial body
+
+	CelestialBody.GetActorBounds(false, Origin, Extent);
+
+	if (Extent.IsZero())
+		return false;
+
+	// This is super hacky, but we have to set this up here to get view/projection matrices
+
+	FSceneViewInitOptions ViewInitOptions;
+
+	ViewInitOptions.ViewFamily = nullptr; // assigned later
+	ViewInitOptions.ViewOrigin = this->SceneCaptureComponent2D->GetComponentLocation();
+	ViewInitOptions.ViewRotationMatrix = FInverseRotationMatrix(this->SceneCaptureComponent2D->GetComponentRotation()) *
+		FMatrix(FPlane(0, 0, 1, 0), FPlane(1, 0, 0, 0), FPlane(0, 1, 0, 0), FPlane(0, 0, 0, 1));
+
+	const int32 SizeX = this->SceneCaptureComponent2D->TextureTarget->SizeX;
+	const int32 SizeY = this->SceneCaptureComponent2D->TextureTarget->SizeY;
+
+	ViewInitOptions.SetViewRectangle(FIntRect(0, 0, SizeX, SizeY));
+
+	ViewInitOptions.ProjectionMatrix = this->SceneCaptureComponent2D->CustomProjectionMatrix;
+
+	const FSceneViewFamilyContext ViewFamily(FSceneViewFamily::ConstructionValues(
+		nullptr, SceneCaptureComponent2D->GetScene(), SceneCaptureComponent2D->ShowFlags));
+
+	ViewInitOptions.ViewFamily = &ViewFamily;
+
+	const FSceneView View(ViewInitOptions);
+
+	const auto ViewportRect = View.UnconstrainedViewRect;
+
+	// This is the percentage of the screen size taken up by the celestial body
+	const float ScreenSize = ComputeBoundsScreenSize(Origin, Extent.Size(), View);
+	const float PixelSize = ScreenSize * FMath::Max(ViewportRect.Height(), ViewportRect.Width());
+
+	/* Threshold for the mesh → distant transition: clamp(3 / (1 + cos α), 4, 15). Aims for a
+	 * ~1.5-pixel mesh crescent at transition for α in [110°, 143°], and caps at 15 past 143°
+	 * so the rasterized bounding box stays bounded once the crescent is sub-pixel anyway. */
+	const float CrescentFactor = FMath::Max(1.0f + FMath::Cos(PhaseAngle), 0.1f);
+	const float Threshold = FMath::Clamp(3.0f / CrescentFactor, 4.0f, 15.0f);
+
+	return PixelSize <= Threshold;
+}
+
 // Helper Functions
 
 TTuple<float, TResourceArray<FVector2f>, TResourceArray<FVector2f>, TResourceArray<float>>

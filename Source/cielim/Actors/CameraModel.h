@@ -13,6 +13,7 @@
 #include "GameFramework/Actor.h"
 
 #include "CameraViewCaptureComponent2D.h"
+#include "CelestialBody.h"
 #include "cielim/Protobuf/cielimMessage.pb.h"
 #include "cielim/Protobuf/imageDiagnostics.pb.h"
 
@@ -70,6 +71,13 @@ struct FImageCorruptionParams
 	float SignalGain;
 };
 
+struct FDistantObject
+{
+	/* TODO: Fix that albedo doesn't take into account albedo map corrections */
+	FVector4f WorldPosition; // Float4's are used for alignment
+	FVector4f Parameters;
+};
+
 UCLASS()
 class CIELIM_API ACameraModel : public AActor
 {
@@ -107,15 +115,29 @@ public:
 	 */
 	void GetDiagnosticData(imageDiagnostics::DiagnosticData &Diagnostics);
 
+	/**
+	 * @brief Decide whether a celestial body should be rendered by the distant-object shader
+	 *        (true) or by the UE5 mesh rasterizer (false).
+	 */
+	bool IsCelestialBodyResolvable(const ACelestialBody &CelestialBody, float PhaseAngle) const;
+
 	UPROPERTY(VisibleAnywhere)
 	UStaticMeshComponent *Body;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	UCameraViewCaptureComponent2D *SceneCaptureComponent2D;
 
+	// Camera parameters
+
 	FCameraParams CameraParams{};
 	FDiagnosticParams DiagnosticParams{};
 	FImageCorruptionParams CorruptionParams{};
+
+	// Distant object information
+
+	FVector3f SolarDirection{};
+	FVector3f SolarSpectralIrradiance{};
+	TArray<FDistantObject> DistantObjects{};
 
 protected:
 	// Called when spawned

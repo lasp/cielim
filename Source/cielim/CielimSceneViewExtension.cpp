@@ -13,12 +13,14 @@
 #include "ScreenPass.h"
 
 #include "Shaders/CosmicRays.h"
+#include "Shaders/DistantObjects.h"
 #include "Shaders/GaussianPSF.h"
 #include "Shaders/QuETonemap.h"
 #include "Shaders/ReadNoise.h"
 #include "Shaders/SignalGain.h"
 #include "Utilities/Logging/CielimLoggingMacros.h"
 
+DECLARE_GPU_STAT_NAMED(DistantObjects, TEXT("DistantObjects"));
 DECLARE_GPU_STAT_NAMED(QuETonemapping, TEXT("QuantumEfficiencyTonemapping"));
 DECLARE_GPU_STAT_NAMED(GaussianPSF, TEXT("GaussianPSF"));
 DECLARE_GPU_STAT_NAMED(CosmicRays, TEXT("CosmicRays"));
@@ -38,7 +40,7 @@ void FCielimSceneViewExtension::SetupViewFamily(FSceneViewFamily &InViewFamily)
 
 void FCielimSceneViewExtension::SetupView(FSceneViewFamily &InViewFamily, FSceneView &InView)
 {
-	// InView.AntiAliasingMethod = AAM_FXAA;
+	InView.AntiAliasingMethod = AAM_None;
 
 	if (InView.ViewActor && !InView.ViewActor->GetClass()->GetName().Equals("PlayerController"))
 	{
@@ -52,8 +54,8 @@ void FCielimSceneViewExtension::PrePostProcessPass_RenderThread(FRDGBuilder &Gra
 	checkSlow(View.bIsViewInfo);
 	Inputs.Validate();
 
-	const FScreenPassTexture ScreenPassTexture((*Inputs.SceneTextures)->SceneColorTexture);
-	const FRDGTextureRef SceneColor = ScreenPassTexture.Texture;
+	const FRDGTextureRef SceneColor = GetAsTexture(Inputs.SceneTextures->GetContents()->SceneColorTexture);
+	const FRDGTextureRef SceneDepth = GetAsTexture(Inputs.SceneTextures->GetContents()->SceneDepthTexture);
 
 	// Intermediates used for texture ping-pong
 	FRDGTextureRef TextureIn = GraphBuilder.CreateTexture(SceneColor->Desc, TEXT("Temp Input Texture"));
@@ -96,6 +98,10 @@ void FCielimSceneViewExtension::PrePostProcessPass_RenderThread(FRDGBuilder &Gra
 		CorruptionParams.Sigma = 0.25f;
 	}
 
+	if (CameraModel && CameraModel->DistantObjects.Num() > 0)
+		DistantObjectsPass(GraphBuilder, View, CameraModel->SolarDirection, CameraModel->SolarSpectralIrradiance,
+						   CameraModel->DistantObjects, SceneDepth, TextureIn);
+
 	// These passes operate on light entering camera
 
 	if (CorruptionParams.KernelWidth > 0 && CorruptionParams.Sigma > 0.0f)
@@ -135,6 +141,80 @@ void FCielimSceneViewExtension::PrePostProcessPass_RenderThread(FRDGBuilder &Gra
 }
 
 // ---------- Shader pass definitions ----------
+
+void FCielimSceneViewExtension::DistantObjectsPass(FRDGBuilder &GraphBuilder, const FSceneView &View,
+												   const FVector3f &SolarDirection, const FVector3f &SolarIrradiance,
+												   const TArray<FDistantObject> &DistantObjects,
+												   const FRDGTextureRef &SceneDepth, const FRDGTextureRef &SceneColor)
+{
+	RDG_GPU_STAT_SCOPE(GraphBuilder, DistantObjects);
+	RDG_EVENT_SCOPE(GraphBuilder, "DistantObjects");
+
+	const FIntRect &ViewRect = View.UnscaledViewRect;
+
+	FDistantObjectsVS::FParameters *DistantVSParams = GraphBuilder.AllocParameters<FDistantObjectsVS::FParameters>();
+	FDistantObjectsPS::FParameters *DistantPSParams = GraphBuilder.AllocParameters<FDistantObjectsPS::FParameters>();
+
+	const FMatrix44f ProjectionMatrix = FMatrix44f(View.ViewMatrices.GetProjectionMatrix());
+
+	const FRDGBufferRef DistantObjectsBuffer =
+		CreateStructuredBuffer<FDistantObject>(GraphBuilder, TEXT("DistantObjects"), DistantObjects);
+
+	DistantVSParams->CameraPosition = static_cast<FVector3f>(View.ViewLocation);
+	DistantVSParams->ViewProjectionMatrix = FMatrix44f(View.ViewMatrices.GetViewProjectionMatrix());
+	DistantVSParams->InverseProjectionX = 1.0f / FMath::Max(ProjectionMatrix.M[0][0], 1e-6f);
+	DistantVSParams->InverseProjectionY = 1.0f / FMath::Max(ProjectionMatrix.M[1][1], 1e-6f);
+	DistantVSParams->InverseViewWidth = 1.0f / FMath::Max(ViewRect.Width(), 1e-6f);
+	DistantVSParams->InverseViewHeight = 1.0f / FMath::Max(ViewRect.Height(), 1e-6f);
+	DistantVSParams->SolarDirection = SolarDirection;
+	DistantVSParams->SolarSpectralIrradiance = SolarIrradiance;
+	DistantVSParams->DistantObjects = GraphBuilder.CreateSRV(DistantObjectsBuffer);
+
+	DistantPSParams->RenderTargets[0] = FRenderTargetBinding(SceneColor, ERenderTargetLoadAction::ELoad);
+	DistantPSParams->RenderTargets.DepthStencil =
+		FDepthStencilBinding(SceneDepth, ERenderTargetLoadAction::ELoad, FExclusiveDepthStencil::DepthRead);
+
+	FDistantObjectsParameters *PassParams = GraphBuilder.AllocParameters<FDistantObjectsParameters>();
+	PassParams->VS = *DistantVSParams;
+	PassParams->PS = *DistantPSParams;
+
+	const TShaderMapRef<FDistantObjectsVS> DistantObjectsVS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+	const TShaderMapRef<FDistantObjectsPS> DistantObjectsPS(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+
+	const int NumInstances = DistantObjects.Num();
+
+	GraphBuilder.AddPass(
+		RDG_EVENT_NAME("Add Distant Objects"), PassParams, ERDGPassFlags::Raster,
+		[PassParams, DistantObjectsVS, DistantObjectsPS, ViewRect, NumInstances](FRHICommandList &RHICmdList)
+		{
+			FGraphicsPipelineStateInitializer GraphicsPSOInit;
+			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
+
+			RHICmdList.SetViewport(ViewRect.Min.X, ViewRect.Min.Y, 0.0f, ViewRect.Max.X, ViewRect.Max.Y, 1.0f);
+
+			GraphicsPSOInit.BlendState =
+				TStaticBlendState<CW_RGBA, BO_Add, BF_One, BF_One, BO_Add, BF_One, BF_One>::GetRHI();
+
+			GraphicsPSOInit.RasterizerState = TStaticRasterizerState<>::GetRHI();
+
+			GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<true, CF_GreaterEqual>::GetRHI();
+
+			GraphicsPSOInit.PrimitiveType = PT_TriangleStrip;
+
+			GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GEmptyVertexDeclaration.VertexDeclarationRHI;
+
+			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = DistantObjectsVS.GetVertexShader();
+
+			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = DistantObjectsPS.GetPixelShader();
+
+			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0);
+
+			SetShaderParameters(RHICmdList, DistantObjectsVS, DistantObjectsVS.GetVertexShader(), PassParams->VS);
+			SetShaderParameters(RHICmdList, DistantObjectsPS, DistantObjectsPS.GetPixelShader(), PassParams->PS);
+
+			RHICmdList.DrawPrimitive(0, 2, NumInstances);
+		});
+}
 
 void FCielimSceneViewExtension::QuETonemapPass(FRDGBuilder &GraphBuilder, const FCameraParams &CameraParams,
 											   const FRDGTextureRef &TextureIn, const FRDGTextureRef &TextureOut)

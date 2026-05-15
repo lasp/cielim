@@ -39,6 +39,11 @@ public:
 	 */
 	FString GetMeshModelName() const;
 	/**
+	 * @brief Gets the celestial body's BRDF model.
+	 * @return Returns the BRDF model name as an FString.
+	 */
+	FString GetMeshBrdfModel() const;
+	/**
 	 * @brief Gets the mean radius of the celestial body's mesh.
 	 * @return Returns the mean radius as a float.
 	 */
