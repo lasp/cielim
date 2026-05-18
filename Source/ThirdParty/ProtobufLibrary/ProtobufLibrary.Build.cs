@@ -11,22 +11,27 @@ public class ProtobufLibrary : ModuleRules
         Type = ModuleRules.ModuleType.External;
         PrecompileForTargets = PrecompileTargetsType.Any;
 
-        // Link to protobuf libraries
-        if (Target.Platform == UnrealTargetPlatform.Mac || Target.Platform == UnrealTargetPlatform.Linux)
+        // Link protobuf library
+
+        string VcpkgDir = Path.Combine(Target.ProjectFile.Directory.FullName, "vcpkg_installed");
+
+		string Architecture = Target.Architecture.ToString().Contains("arm64") ? "arm64" : "x64";
+
+		if (Target.Platform == UnrealTargetPlatform.Mac)
+		{
+			PublicAdditionalLibraries.Add(Path.Combine(VcpkgDir, $"{Architecture}-osx", "lib", "libprotobuf.a"));
+		}
+		else if (Target.Platform == UnrealTargetPlatform.Linux)
         {
-            PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "lib/libprotobuf.a"));
+			PublicAdditionalLibraries.Add(Path.Combine(VcpkgDir, $"{Architecture}-linux", "lib", "libprotobuf.a"));
         }
         else if (Target.Platform == UnrealTargetPlatform.Win64)
         {
-            PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "lib/libprotobuf.lib"));
+			PublicAdditionalLibraries.Add(Path.Combine(VcpkgDir, $"{Architecture}-windows-static-md", "lib", "libprotobuf.lib"));
         }
         else
         { 
-            string Err = string.Format("Protobuf runtime not available for platform {0}", Target.Platform.ToString());
-            throw new BuildException(Err);
+            throw new BuildException($"Unsupported platform: {Target.Platform}");
         }
-
-        // Add google headers to include path
-        PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "include"));
 	}
 }

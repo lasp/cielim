@@ -11,28 +11,28 @@ public class ZMQ : ModuleRules
         Type = ModuleRules.ModuleType.External;
         PrecompileForTargets = PrecompileTargetsType.Any;
 
-        // Link to libzmq libraries
+        // Link to libzmq library
 
-        if (Target.Platform == UnrealTargetPlatform.Mac || Target.Platform == UnrealTargetPlatform.Linux)
+        string VcpkgDir = Path.Combine(Target.ProjectFile.Directory.FullName, "vcpkg_installed");
+
+		string Architecture = Target.Architecture.ToString().Contains("arm64") ? "arm64" : "x64";
+
+		if (Target.Platform == UnrealTargetPlatform.Mac)
+		{
+			PublicAdditionalLibraries.Add(Path.Combine(VcpkgDir, $"{Architecture}-osx", "lib", "libzmq.a"));
+		}
+		else if (Target.Platform == UnrealTargetPlatform.Linux)
         {
-            // .a is unix specific library file
-            PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "libzmq/build/lib/libzmq.a"));
+			PublicAdditionalLibraries.Add(Path.Combine(VcpkgDir, $"{Architecture}-linux", "lib", "libzmq.a"));
         }
         else if (Target.Platform == UnrealTargetPlatform.Win64)
         {
-            RuntimeDependencies.Add(Path.Combine(ModuleDirectory, "libzmq/build/bin/Release/libzmq-v143-mt-4_3_6.dll"));
-            
-            // .lib is windows specific library file
-            PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "libzmq/build/lib/Release/libzmq-v143-mt-4_3_6.lib"));
+            PublicDefinitions.Add("ZMQ_STATIC");
+			PublicAdditionalLibraries.Add(Path.Combine(VcpkgDir, $"{Architecture}-windows-static-md", "lib", "libzmq-mt-s-4_3_5.lib"));
         }
         else
         { 
-            string Err = string.Format("ZMQ library not available for platform {0}", Target.Platform.ToString());
-            throw new BuildException(Err);
+            throw new BuildException($"Unsupported platform: {Target.Platform}");
         }
-
-        // Add ZMQ headers to include path
-        PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "cppzmq"));
-        PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "libzmq/include"));
 	}
 }
