@@ -118,20 +118,20 @@
 		}
 	],
 	"TargetPlatforms": [
-		"Linux",
 		"Mac",
+		"Linux",
 		"Windows"
 	],
 	"PreBuildSteps":
 	{
 		"Mac": [
-			"export PATH=/opt/homebrew/bin:$PATH",
-			"tcsh -ef $(ProjectDir)/Source/ThirdParty/ProtobufLibrary/ProtobufLibrary_build.sh \"$(ProjectDir)/Source/ThirdParty/ProtobufLibrary/\" ",
-			"tcsh -ef $(ProjectDir)/Source/ThirdParty/ZMQ/ZMQ_build.sh \"$(ProjectDir)/Source/ThirdParty/ZMQ/\" "
+			"python3 $(ProjectDir)/vcpkg_install.py",
+		],
+		"Linux": [
+			"python3 $(ProjectDir)/vcpkg_install.py",
 		],
 		"Win64": [
-			"call $(ProjectDir)\\Source\\ThirdParty\\ProtobufLibrary\\ProtobufLibrary_build_win64.bat \"$(ProjectDir)\\Source\\ThirdParty\\ProtobufLibrary\\\" ",
-			"call $(ProjectDir)\\Source\\ThirdParty\\ZMQ\\ZMQ_build_win64.bat \"$(ProjectDir)\\Source\\ThirdParty\\ZMQ\\\" "
+			"python $(ProjectDir)\\vcpkg_install.py"
 		]
 	}
 }

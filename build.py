@@ -7,11 +7,16 @@ import subprocess
 import argparse
 import json
 
+import vcpkg_install
+
 
 def build(platform_name, executable, debug_mode):
     print(f"Building for {platform_name} {platform.machine()} as {debug_mode}...")
 
     cielim_path = os.path.dirname(os.path.abspath(__file__))
+
+    # Ensure dependencies are installed before building
+    vcpkg_install.install_vcpkg_packages()
 
     process = subprocess.Popen(
         [
@@ -30,7 +35,7 @@ def build(platform_name, executable, debug_mode):
 
 
 def cook(platform_name, executable):
-    print("Cooking content...")
+    print(f"Cooking content for {platform_name} {platform.machine()}...")
 
     cielim_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -50,7 +55,7 @@ def cook(platform_name, executable):
 
 
 def package(platform_name, executable, debug_mode):
-    print("Packaging...")
+    print(f"Packaging for {platform_name} {platform.machine()} as {debug_mode}...")
 
     cielim_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -78,9 +83,12 @@ def package(platform_name, executable, debug_mode):
 
 
 def fullBuildCookRun(platform_name, executable, debug_mode):
-    print("Doing full run...")
+    print(f"Doing full run for {platform_name} {platform.machine()} as {debug_mode}...")
 
     cielim_path = os.path.dirname(os.path.abspath(__file__))
+
+    # Ensure dependencies are installed before building
+    vcpkg_install.install_vcpkg_packages()
 
     process = subprocess.Popen(
         [
