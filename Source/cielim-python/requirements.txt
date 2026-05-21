@@ -1,6 +1,6 @@
 delimited-protobuf==1.0.0
 numpy
-protobuf==3.19.1
+protobuf==6.33.4
 zmq
 spiceypy==6.0.0
 astropy==6.1.4

@@ -7,6 +7,6 @@
     "protobuf"
   ],
   "overrides": [
-    { "name": "protobuf", "version": "3.18.0", "port-version": 1 }
+    { "name": "protobuf", "version": "6.33.4", "port-version": 2 }
   ]
 }
