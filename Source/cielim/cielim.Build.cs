@@ -19,7 +19,7 @@ public class cielim : ModuleRules
 		PrivateIncludePaths.AddRange(new string[] {  Path.Combine(GetModuleDirectory("Renderer"), "Internal") });
 
 		// Add third party module dependencies
-		PrivateDependencyModuleNames.AddRange(new string[] { "ProtobufLibrary", "ZMQ" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "Protobuf", "ZMQ" });
 
 		// Add vcpkg includes
 

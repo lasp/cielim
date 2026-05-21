@@ -1,9 +1,9 @@
 using UnrealBuildTool;
 using System.IO;
 
-public class ProtobufLibrary : ModuleRules
+public class Protobuf : ModuleRules
 {
-	public ProtobufLibrary(ReadOnlyTargetRules Target) : base(Target)
+	public Protobuf(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	    bAddDefaultIncludePaths = false;
