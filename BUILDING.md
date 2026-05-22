@@ -67,7 +67,7 @@ It is important that the toolchain version that vcpkg uses to build the dependen
 
 The generated files ``Source/cielim/Protobuf/cielimMessage.pb.{h,cc}`` and ``Source/cielim/Protobuf/imageDiagnostics.pb.{h,cc}`` must be regenerated whenever the corresponding ``.proto`` files change. Use the **same protoc version** as the linked library to avoid header/binary mismatches.
 
-After a successful vcpkg install, the matching protoc binary is available as a symlink in the installed tree.
+After a successful vcpkg install, the matching protoc binary is available as a symlink in the installed tree. The generated files can then be rebuilt using the python script ``build_protobuf.py`` or manually.
 
    ```bash
    PROTOC="vcpkg_installed/<triplet>/tools/protobuf/protoc"
