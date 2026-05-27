@@ -90,6 +90,7 @@ DerivedDataCache/*
 # Cielim-python data and folders
 Source/cielim-python/support-data/*-spice
 Source/cielim-python/support-data/monte-carlo-sample
+Source/cielim-python/support-data/giant-vesta
 Source/cielim-python/examples/images*
 
 *.DS_Store
