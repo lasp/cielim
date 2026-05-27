@@ -1,15 +1,16 @@
 # Custom ignore paths
-/Saved
-/Releases
-/DerivedDataCache
-/.git
-/.vscode
-/Intermediate
+Saved
+Releases
+DerivedDataCache
+.git
+.vscode
+Intermediate
 
-# Third party build paths
-/Source/ThirdParty/ProtobufLibrary/include
-/Source/ThirdParty/ProtobufLibrary/lib
-/Content/FlybyData
+# Packages installed with vcpkg
+vcpkg_installed/
+
+# Protobuf bin files
+Content/FlybyData
 
 build_config.json
 

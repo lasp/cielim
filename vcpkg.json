@@ -1,0 +1,12 @@
+{
+  "name": "cielim",
+  "version-string": "0.1.0",
+  "dependencies": [
+    "zeromq",
+    "cppzmq",
+    "protobuf"
+  ],
+  "overrides": [
+    { "name": "protobuf", "version": "6.33.4", "port-version": 2 }
+  ]
+}

@@ -7,50 +7,16 @@ import subprocess
 import argparse
 import json
 
+import vcpkg_install
+
 
 def build(platform_name, executable, debug_mode):
     print(f"Building for {platform_name} {platform.machine()} as {debug_mode}...")
 
     cielim_path = os.path.dirname(os.path.abspath(__file__))
 
-    # check status of third party libraries
-
-    print("Checking submodules exist...")
-
-    result = subprocess.check_output(["git", "submodule", "status"], stderr=subprocess.STDOUT, text=True)
-
-    for line in result.splitlines():
-        if line.startswith("-"):
-            print("One or more git submodules haven't been cloned and thus the build process cannot proceed.")
-            response = input("Would you like to clone them now? (y/n) ").strip()
-
-            if response == "y" or response == "yes":
-                print("Cloning submodules...")
-
-                process = subprocess.Popen(
-                    ["git", "submodule", "update", "--init", "--recursive"],
-                    stdout=sys.stdout,
-                    stderr=sys.stderr,
-                )
-
-                process.wait()
-
-                break
-
-            else:
-                exit()
-
-    print("All submodules have been cloned.")
-
-    print("Status of third party libraries:")
-
-    proto_exists = os.path.exists(os.path.join(cielim_path, "Source/ThirdParty/ProtobufLibrary/lib"))
-    proto_status = "Built" if proto_exists else "Not built"
-    print(f"Protobuf... {proto_status}")
-
-    zmq_exists = os.path.exists(os.path.join(cielim_path, "Source/ThirdParty/ZMQ/libzmq/build"))
-    zmq_status = "Built" if zmq_exists else "Not built"
-    print(f"ZMQ... {zmq_status}")
+    # Ensure dependencies are installed before building
+    vcpkg_install.install_vcpkg_packages()
 
     process = subprocess.Popen(
         [
@@ -69,7 +35,7 @@ def build(platform_name, executable, debug_mode):
 
 
 def cook(platform_name, executable):
-    print("Cooking content...")
+    print(f"Cooking content for {platform_name} {platform.machine()}...")
 
     cielim_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -89,7 +55,7 @@ def cook(platform_name, executable):
 
 
 def package(platform_name, executable, debug_mode):
-    print("Packaging...")
+    print(f"Packaging for {platform_name} {platform.machine()} as {debug_mode}...")
 
     cielim_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -117,9 +83,12 @@ def package(platform_name, executable, debug_mode):
 
 
 def fullBuildCookRun(platform_name, executable, debug_mode):
-    print("Doing full run...")
+    print(f"Doing full run for {platform_name} {platform.machine()} as {debug_mode}...")
 
     cielim_path = os.path.dirname(os.path.abspath(__file__))
+
+    # Ensure dependencies are installed before building
+    vcpkg_install.install_vcpkg_packages()
 
     process = subprocess.Popen(
         [
@@ -172,25 +141,16 @@ def clean():
 
     cielim_path = os.path.dirname(os.path.abspath(__file__))
 
-    try:
-        shutil.rmtree(os.path.join(cielim_path, "Saved"))
-    except Exception as e:
-        print(f"Saved/ could not be removed: {e}")
+    folders_to_clean = ["Saved", "Binaries", "Intermediate", "DerivedDataCache", "vcpkg_installed"]
 
-    try:
-        shutil.rmtree(os.path.join(cielim_path, "Binaries"))
-    except Exception as e:
-        print(f"Binaries/ could not be removed: {e}")
+    for folder in folders_to_clean:
+        dir = os.path.join(cielim_path, folder)
 
-    try:
-        shutil.rmtree(os.path.join(cielim_path, "Intermediate"))
-    except Exception as e:
-        print(f"Intermediate/ could not be removed: {e}")
-
-    try:
-        shutil.rmtree(os.path.join(cielim_path, "DerivedDataCache"))
-    except Exception as e:
-        print(f"DerivedDataCache/ could not be removed: {e}")
+        if os.path.isdir(dir):
+            shutil.rmtree(dir)
+            print(f"Removed {folder}/")
+        else:
+            print(f"{folder}/ already clean")
 
 
 if __name__ == "__main__":

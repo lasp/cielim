@@ -7,131 +7,24 @@
 		{
 			"Name": "cielim",
 			"Type": "Runtime",
-			"LoadingPhase": "PostConfigInit",
-			"AdditionalDependencies": [
-				"Engine"
-			]
-		}
-	],
-	"Plugins": [
-		{
-			"Name": "ModelingToolsEditorMode",
-			"Enabled": true,
-			"TargetAllowList": [
-				"Editor"
-			]
-		},
-		{
-			"Name": "WmfMedia",
-			"Enabled": false
-		},
-		{
-			"Name": "WindowsMoviePlayer",
-			"Enabled": false
-		},
-		{
-			"Name": "WebMMoviePlayer",
-			"Enabled": false
-		},
-		{
-			"Name": "AndroidMedia",
-			"Enabled": false
-		},
-		{
-			"Name": "AndroidMoviePlayer",
-			"Enabled": false
-		},
-		{
-			"Name": "AppleMoviePlayer",
-			"Enabled": false
-		},
-		{
-			"Name": "AvfMedia",
-			"Enabled": false
-		},
-		{
-			"Name": "MediaPlate",
-			"Enabled": false
-		},
-		{
-			"Name": "MediaCompositing",
-			"Enabled": false
-		},
-		{
-			"Name": "ImgMedia",
-			"Enabled": false
-		},
-		{
-			"Name": "ChaosCloth",
-			"Enabled": false
-		},
-		{
-			"Name": "NiagaraSimCaching",
-			"Enabled": false
-		},
-		{
-			"Name": "AudioCapture",
-			"Enabled": false
-		},
-		{
-			"Name": "Synthesis",
-			"Enabled": false
-		},
-		{
-			"Name": "Metasound",
-			"Enabled": false
-		},
-		{
-			"Name": "SoundFields",
-			"Enabled": false
-		},
-		{
-			"Name": "ResonanceAudio",
-			"Enabled": false
-		},
-		{
-			"Name": "EnvironmentQueryEditor",
-			"Enabled": false
-		},
-		{
-			"Name": "AISupport",
-			"Enabled": false
-		},
-		{
-			"Name": "OnlineSubsystemGooglePlay",
-			"Enabled": false,
-			"SupportedTargetPlatforms": [
-				"Android"
-			]
-		},
-		{
-			"Name": "AndroidPermission",
-			"Enabled": false
-		},
-		{
-			"Name": "AndroidFileServer",
-			"Enabled": false
-		},
-		{
-			"Name": "GooglePAD",
-			"Enabled": false
+			"LoadingPhase": "PostConfigInit"
 		}
 	],
 	"TargetPlatforms": [
-		"Linux",
 		"Mac",
+		"Linux",
 		"Windows"
 	],
 	"PreBuildSteps":
 	{
 		"Mac": [
-			"export PATH=/opt/homebrew/bin:$PATH",
-			"tcsh -ef $(ProjectDir)/Source/ThirdParty/ProtobufLibrary/ProtobufLibrary_build.sh \"$(ProjectDir)/Source/ThirdParty/ProtobufLibrary/\" ",
-			"tcsh -ef $(ProjectDir)/Source/ThirdParty/ZMQ/ZMQ_build.sh \"$(ProjectDir)/Source/ThirdParty/ZMQ/\" "
+			"python3 $(ProjectDir)/vcpkg_install.py",
+		],
+		"Linux": [
+			"python3 $(ProjectDir)/vcpkg_install.py",
 		],
 		"Win64": [
-			"call $(ProjectDir)\\Source\\ThirdParty\\ProtobufLibrary\\ProtobufLibrary_build_win64.bat \"$(ProjectDir)\\Source\\ThirdParty\\ProtobufLibrary\\\" ",
-			"call $(ProjectDir)\\Source\\ThirdParty\\ZMQ\\ZMQ_build_win64.bat \"$(ProjectDir)\\Source\\ThirdParty\\ZMQ\\\" "
+			"python $(ProjectDir)\\vcpkg_install.py"
 		]
 	}
 }
