@@ -247,6 +247,31 @@ struct LensModelDefaultTypeInternal {
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
     PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 LensModelDefaultTypeInternal _LensModel_default_instance_;
 
+inline constexpr ImageFormat::Impl_::Impl_(
+    ::_pbi::ConstantInitialized) noexcept
+      : _cached_size_{0},
+        format_{static_cast< ::cielimMessage::ImageFormat_Format >(0)} {}
+
+template <typename>
+PROTOBUF_CONSTEXPR ImageFormat::ImageFormat(::_pbi::ConstantInitialized)
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+    : ::google::protobuf::MessageLite(ImageFormat_class_data_.base()),
+#else   // PROTOBUF_CUSTOM_VTABLE
+    : ::google::protobuf::MessageLite(),
+#endif  // PROTOBUF_CUSTOM_VTABLE
+      _impl_(::_pbi::ConstantInitialized()) {
+}
+struct ImageFormatDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR ImageFormatDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
+  ~ImageFormatDefaultTypeInternal() {}
+  union {
+    ImageFormat _instance;
+  };
+};
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 ImageFormatDefaultTypeInternal _ImageFormat_default_instance_;
+
 inline constexpr EpochDateTime::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
       : _cached_size_{0},
@@ -420,6 +445,7 @@ inline constexpr CameraModel::Impl_::Impl_(
         lensmodel_{nullptr},
         sensormodel_{nullptr},
         areaofinterest_{nullptr},
+        imageformat_{nullptr},
         cameraid_{::int64_t{0}} {}
 
 template <typename>
@@ -473,6 +499,56 @@ PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
     PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 CielimMessageDefaultTypeInternal _CielimMessage_default_instance_;
 }  // namespace cielimMessage
 namespace cielimMessage {
+PROTOBUF_CONSTINIT const uint32_t ImageFormat_Format_internal_data_[] = {
+    327680u, 0u, };
+static ::google::protobuf::internal::ExplicitlyConstructed<::std::string>
+    ImageFormat_Format_strings[5] = {};
+
+static const char ImageFormat_Format_names[] = {
+    "PNG"
+    "RAW_12"
+    "RAW_12_PACKED"
+    "RAW_16"
+    "RAW_8"
+};
+
+static const ::google::protobuf::internal::EnumEntry ImageFormat_Format_entries[] = {
+    {{&ImageFormat_Format_names[0], 3}, 0},
+    {{&ImageFormat_Format_names[3], 6}, 2},
+    {{&ImageFormat_Format_names[9], 13}, 3},
+    {{&ImageFormat_Format_names[22], 6}, 4},
+    {{&ImageFormat_Format_names[28], 5}, 1},
+};
+
+static const int ImageFormat_Format_entries_by_number[] = {
+    0,  // 0 -> PNG
+    4,  // 1 -> RAW_8
+    1,  // 2 -> RAW_12
+    2,  // 3 -> RAW_12_PACKED
+    3,  // 4 -> RAW_16
+};
+
+const ::std::string& ImageFormat_Format_Name(ImageFormat_Format value) {
+  static const bool kDummy = ::google::protobuf::internal::InitializeEnumStrings(
+      ImageFormat_Format_entries, ImageFormat_Format_entries_by_number, 5,
+      ImageFormat_Format_strings);
+  (void)kDummy;
+
+  int idx = ::google::protobuf::internal::LookUpEnumName(ImageFormat_Format_entries,
+                                  ImageFormat_Format_entries_by_number,
+                                  5, value);
+  return idx == -1 ? ::google::protobuf::internal::GetEmptyString() : ImageFormat_Format_strings[idx].get();
+}
+
+bool ImageFormat_Format_Parse(::absl::string_view name, ImageFormat_Format* PROTOBUF_NONNULL value) {
+  int int_value;
+  bool success = ::google::protobuf::internal::LookUpEnumValue(
+      ImageFormat_Format_entries, 5, name, &int_value);
+  if (success) {
+    *value = static_cast<ImageFormat_Format>(int_value);
+  }
+  return success;
+}
 // ===================================================================
 
 class TimeStamp::_Internal {
@@ -5744,6 +5820,251 @@ void AreaOfInterest::InternalSwap(AreaOfInterest* PROTOBUF_RESTRICT PROTOBUF_NON
 
 // ===================================================================
 
+class ImageFormat::_Internal {
+ public:
+  using HasBits =
+      decltype(::std::declval<ImageFormat>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+      8 * PROTOBUF_FIELD_OFFSET(ImageFormat, _impl_._has_bits_);
+};
+
+ImageFormat::ImageFormat(::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+    : ::google::protobuf::MessageLite(arena, ImageFormat_class_data_.base()) {
+#else   // PROTOBUF_CUSTOM_VTABLE
+    : ::google::protobuf::MessageLite(arena) {
+#endif  // PROTOBUF_CUSTOM_VTABLE
+  SharedCtor(arena);
+  // @@protoc_insertion_point(arena_constructor:cielimMessage.ImageFormat)
+}
+ImageFormat::ImageFormat(
+    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const ImageFormat& from)
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+    : ::google::protobuf::MessageLite(arena, ImageFormat_class_data_.base()),
+#else   // PROTOBUF_CUSTOM_VTABLE
+    : ::google::protobuf::MessageLite(arena),
+#endif  // PROTOBUF_CUSTOM_VTABLE
+      _impl_(from._impl_) {
+  _internal_metadata_.MergeFrom<::std::string>(
+      from._internal_metadata_);
+}
+PROTOBUF_NDEBUG_INLINE ImageFormat::Impl_::Impl_(
+    [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
+    [[maybe_unused]] ::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
+      : _cached_size_{0} {}
+
+inline void ImageFormat::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
+  new (&_impl_) Impl_(internal_visibility(), arena);
+  _impl_.format_ = {};
+}
+ImageFormat::~ImageFormat() {
+  // @@protoc_insertion_point(destructor:cielimMessage.ImageFormat)
+  SharedDtor(*this);
+}
+inline void ImageFormat::SharedDtor(MessageLite& self) {
+  ImageFormat& this_ = static_cast<ImageFormat&>(self);
+  if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
+    this_.CheckHasBitConsistency();
+  }
+  this_._internal_metadata_.Delete<::std::string>();
+  ABSL_DCHECK(this_.GetArena() == nullptr);
+  this_._impl_.~Impl_();
+}
+
+inline void* PROTOBUF_NONNULL ImageFormat::PlacementNew_(
+    const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena) {
+  return ::new (mem) ImageFormat(arena);
+}
+constexpr auto ImageFormat::InternalNewImpl_() {
+  return ::google::protobuf::internal::MessageCreator::ZeroInit(sizeof(ImageFormat),
+                                            alignof(ImageFormat));
+}
+constexpr auto ImageFormat::InternalGenerateClassData_() {
+  return ::google::protobuf::internal::ClassDataLite<26>{
+      {
+          &_ImageFormat_default_instance_._instance,
+          &_table_.header,
+          nullptr,  // OnDemandRegisterArenaDtor
+          nullptr,  // IsInitialized
+          &ImageFormat::MergeImpl,
+          ::google::protobuf::MessageLite::GetNewImpl<ImageFormat>(),
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+          &ImageFormat::SharedDtor,
+          ::google::protobuf::MessageLite::GetClearImpl<ImageFormat>(), &ImageFormat::ByteSizeLong,
+              &ImageFormat::_InternalSerialize,
+#endif  // PROTOBUF_CUSTOM_VTABLE
+          PROTOBUF_FIELD_OFFSET(ImageFormat, _impl_._cached_size_),
+          true,
+      },
+      "cielimMessage.ImageFormat",
+  };
+}
+
+PROTOBUF_CONSTINIT
+PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
+const ::google::protobuf::internal::ClassDataLite<26> ImageFormat_class_data_ =
+    ImageFormat::InternalGenerateClassData_();
+
+PROTOBUF_ATTRIBUTE_WEAK const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL
+ImageFormat::GetClassData() const {
+  return ImageFormat_class_data_.base();
+}
+PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
+const ::_pbi::TcParseTable<0, 1, 0, 0, 2>
+ImageFormat::_table_ = {
+  {
+    PROTOBUF_FIELD_OFFSET(ImageFormat, _impl_._has_bits_),
+    0, // no _extensions_
+    1, 0,  // max_field_number, fast_idx_mask
+    offsetof(decltype(_table_), field_lookup_table),
+    4294967294,  // skipmap
+    offsetof(decltype(_table_), field_entries),
+    1,  // num_field_entries
+    0,  // num_aux_entries
+    offsetof(decltype(_table_), field_names),  // no aux_entries
+    ImageFormat_class_data_.base(),
+    nullptr,  // post_loop_handler
+    ::_pbi::TcParser::GenericFallbackLite,  // fallback
+    #ifdef PROTOBUF_PREFETCH_PARSE_TABLE
+    ::_pbi::TcParser::GetTable<::cielimMessage::ImageFormat>(),  // to_prefetch
+    #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
+  }, {{
+    // .cielimMessage.ImageFormat.Format format = 1;
+    {::_pbi::TcParser::FastV32S1,
+     {8, 0, 0,
+      PROTOBUF_FIELD_OFFSET(ImageFormat, _impl_.format_)}},
+  }}, {{
+    65535, 65535
+  }}, {{
+    // .cielimMessage.ImageFormat.Format format = 1;
+    {PROTOBUF_FIELD_OFFSET(ImageFormat, _impl_.format_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcOptional | ::_fl::kOpenEnum)},
+  }},
+  // no aux_entries
+  {{
+  }},
+};
+PROTOBUF_NOINLINE void ImageFormat::Clear() {
+// @@protoc_insertion_point(message_clear_start:cielimMessage.ImageFormat)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  _impl_.format_ = 0;
+  _impl_._has_bits_.Clear();
+  _internal_metadata_.Clear<::std::string>();
+}
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+::uint8_t* PROTOBUF_NONNULL ImageFormat::_InternalSerialize(
+    const ::google::protobuf::MessageLite& base, ::uint8_t* PROTOBUF_NONNULL target,
+    ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) {
+  const ImageFormat& this_ = static_cast<const ImageFormat&>(base);
+#else   // PROTOBUF_CUSTOM_VTABLE
+::uint8_t* PROTOBUF_NONNULL ImageFormat::_InternalSerialize(
+    ::uint8_t* PROTOBUF_NONNULL target,
+    ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+  const ImageFormat& this_ = *this;
+#endif  // PROTOBUF_CUSTOM_VTABLE
+  if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
+    this_.CheckHasBitConsistency();
+  }
+  // @@protoc_insertion_point(serialize_to_array_start:cielimMessage.ImageFormat)
+  ::uint32_t cached_has_bits = 0;
+  (void)cached_has_bits;
+
+  cached_has_bits = this_._impl_._has_bits_[0];
+  // .cielimMessage.ImageFormat.Format format = 1;
+  if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+    if (this_._internal_format() != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteEnumToArray(
+          1, this_._internal_format(), target);
+    }
+  }
+
+  if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
+    target = stream->WriteRaw(
+        this_._internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString).data(),
+        static_cast<int>(this_._internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString).size()), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:cielimMessage.ImageFormat)
+  return target;
+}
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+::size_t ImageFormat::ByteSizeLong(const MessageLite& base) {
+  const ImageFormat& this_ = static_cast<const ImageFormat&>(base);
+#else   // PROTOBUF_CUSTOM_VTABLE
+::size_t ImageFormat::ByteSizeLong() const {
+  const ImageFormat& this_ = *this;
+#endif  // PROTOBUF_CUSTOM_VTABLE
+  // @@protoc_insertion_point(message_byte_size_start:cielimMessage.ImageFormat)
+  ::size_t total_size = 0;
+
+  ::uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void)cached_has_bits;
+
+   {
+    // .cielimMessage.ImageFormat.Format format = 1;
+    cached_has_bits = this_._impl_._has_bits_[0];
+    if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+      if (this_._internal_format() != 0) {
+        total_size += 1 +
+                      ::_pbi::WireFormatLite::EnumSize(this_._internal_format());
+      }
+    }
+  }
+  if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
+    total_size += this_._internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString).size();
+  }
+  this_._impl_._cached_size_.Set(::_pbi::ToCachedSize(total_size));
+  return total_size;
+}
+
+void ImageFormat::MergeImpl(::google::protobuf::MessageLite& to_msg,
+                            const ::google::protobuf::MessageLite& from_msg) {
+   auto* const _this =
+      static_cast<ImageFormat*>(&to_msg);
+  auto& from = static_cast<const ImageFormat&>(from_msg);
+  if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
+    from.CheckHasBitConsistency();
+  }
+  // @@protoc_insertion_point(class_specific_merge_from_start:cielimMessage.ImageFormat)
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
+  (void)cached_has_bits;
+
+  cached_has_bits = from._impl_._has_bits_[0];
+  if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+    if (from._internal_format() != 0) {
+      _this->_impl_.format_ = from._impl_.format_;
+    }
+  }
+  _this->_impl_._has_bits_[0] |= cached_has_bits;
+  _this->_internal_metadata_.MergeFrom<::std::string>(
+      from._internal_metadata_);
+}
+
+void ImageFormat::CopyFrom(const ImageFormat& from) {
+  // @@protoc_insertion_point(class_specific_copy_from_start:cielimMessage.ImageFormat)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+
+void ImageFormat::InternalSwap(ImageFormat* PROTOBUF_RESTRICT PROTOBUF_NONNULL other) {
+  using ::std::swap;
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
+  swap(_impl_.format_, other->_impl_.format_);
+}
+
+// ===================================================================
+
 class CameraModel::_Internal {
  public:
   using HasBits =
@@ -5794,6 +6115,9 @@ CameraModel::CameraModel(
   _impl_.areaofinterest_ = (CheckHasBit(cached_has_bits, 0x00000020U))
                 ? ::google::protobuf::MessageLite::CopyConstruct(arena, *from._impl_.areaofinterest_)
                 : nullptr;
+  _impl_.imageformat_ = (CheckHasBit(cached_has_bits, 0x00000040U))
+                ? ::google::protobuf::MessageLite::CopyConstruct(arena, *from._impl_.imageformat_)
+                : nullptr;
   _impl_.cameraid_ = from._impl_.cameraid_;
 
   // @@protoc_insertion_point(copy_constructor:cielimMessage.CameraModel)
@@ -5830,6 +6154,7 @@ inline void CameraModel::SharedDtor(MessageLite& self) {
   delete this_._impl_.lensmodel_;
   delete this_._impl_.sensormodel_;
   delete this_._impl_.areaofinterest_;
+  delete this_._impl_.imageformat_;
   this_._impl_.~Impl_();
 }
 
@@ -5889,17 +6214,17 @@ CameraModel::GetClassData() const {
   return CameraModel_class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<3, 7, 3, 44, 2>
+const ::_pbi::TcParseTable<3, 8, 4, 52, 2>
 CameraModel::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(CameraModel, _impl_._has_bits_),
     0, // no _extensions_
-    7, 56,  // max_field_number, fast_idx_mask
+    8, 56,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294967168,  // skipmap
+    4294967040,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    7,  // num_field_entries
-    3,  // num_aux_entries
+    8,  // num_field_entries
+    4,  // num_aux_entries
     offsetof(decltype(_table_), aux_entries),
     CameraModel_class_data_.base(),
     nullptr,  // post_loop_handler
@@ -5908,10 +6233,13 @@ CameraModel::_table_ = {
     ::_pbi::TcParser::GetTable<::cielimMessage::CameraModel>(),  // to_prefetch
     #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
   }, {{
-    {::_pbi::TcParser::MiniParse, {}},
+    // .cielimMessage.ImageFormat imageFormat = 8;
+    {::_pbi::TcParser::FastMtS1,
+     {66, 6, 3,
+      PROTOBUF_FIELD_OFFSET(CameraModel, _impl_.imageformat_)}},
     // int64 cameraId = 1;
     {::_pbi::TcParser::FastV64S1,
-     {8, 6, 0,
+     {8, 7, 0,
       PROTOBUF_FIELD_OFFSET(CameraModel, _impl_.cameraid_)}},
     // string parentName = 2;
     {::_pbi::TcParser::FastUS1,
@@ -5941,7 +6269,7 @@ CameraModel::_table_ = {
     65535, 65535
   }}, {{
     // int64 cameraId = 1;
-    {PROTOBUF_FIELD_OFFSET(CameraModel, _impl_.cameraid_), _Internal::kHasBitsOffset + 6, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt64)},
+    {PROTOBUF_FIELD_OFFSET(CameraModel, _impl_.cameraid_), _Internal::kHasBitsOffset + 7, 0, (0 | ::_fl::kFcOptional | ::_fl::kInt64)},
     // string parentName = 2;
     {PROTOBUF_FIELD_OFFSET(CameraModel, _impl_.parentname_), _Internal::kHasBitsOffset + 2, 0, (0 | ::_fl::kFcOptional | ::_fl::kUtf8String | ::_fl::kRepAString)},
     // repeated double cameraPositionInBody = 3;
@@ -5954,14 +6282,17 @@ CameraModel::_table_ = {
     {PROTOBUF_FIELD_OFFSET(CameraModel, _impl_.sensormodel_), _Internal::kHasBitsOffset + 4, 1, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
     // .cielimMessage.AreaOfInterest areaOfInterest = 7;
     {PROTOBUF_FIELD_OFFSET(CameraModel, _impl_.areaofinterest_), _Internal::kHasBitsOffset + 5, 2, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
+    // .cielimMessage.ImageFormat imageFormat = 8;
+    {PROTOBUF_FIELD_OFFSET(CameraModel, _impl_.imageformat_), _Internal::kHasBitsOffset + 6, 3, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
   }},
   {{
       {::_pbi::TcParser::GetTable<::cielimMessage::LensModel>()},
       {::_pbi::TcParser::GetTable<::cielimMessage::SensorModel>()},
       {::_pbi::TcParser::GetTable<::cielimMessage::AreaOfInterest>()},
+      {::_pbi::TcParser::GetTable<::cielimMessage::ImageFormat>()},
   }},
   {{
-    "\31\0\12\0\0\0\0\0"
+    "\31\0\12\0\0\0\0\0\0\0\0\0\0\0\0\0"
     "cielimMessage.CameraModel"
     "parentName"
   }},
@@ -5974,7 +6305,7 @@ PROTOBUF_NOINLINE void CameraModel::Clear() {
   (void) cached_has_bits;
 
   cached_has_bits = _impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x0000003fU)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x0000007fU)) {
     if (CheckHasBitForRepeated(cached_has_bits, 0x00000001U)) {
       _impl_.camerapositioninbody_.Clear();
     }
@@ -5995,6 +6326,10 @@ PROTOBUF_NOINLINE void CameraModel::Clear() {
     if (CheckHasBit(cached_has_bits, 0x00000020U)) {
       ABSL_DCHECK(_impl_.areaofinterest_ != nullptr);
       _impl_.areaofinterest_->Clear();
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000040U)) {
+      ABSL_DCHECK(_impl_.imageformat_ != nullptr);
+      _impl_.imageformat_->Clear();
     }
   }
   _impl_.cameraid_ = ::int64_t{0};
@@ -6022,7 +6357,7 @@ PROTOBUF_NOINLINE void CameraModel::Clear() {
 
   cached_has_bits = this_._impl_._has_bits_[0];
   // int64 cameraId = 1;
-  if (CheckHasBit(cached_has_bits, 0x00000040U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000080U)) {
     if (this_._internal_cameraid() != 0) {
       target =
           ::google::protobuf::internal::WireFormatLite::WriteInt64ToArrayWithField<1>(
@@ -6075,6 +6410,13 @@ PROTOBUF_NOINLINE void CameraModel::Clear() {
         stream);
   }
 
+  // .cielimMessage.ImageFormat imageFormat = 8;
+  if (CheckHasBit(cached_has_bits, 0x00000040U)) {
+    target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
+        8, *this_._impl_.imageformat_, this_._impl_.imageformat_->GetCachedSize(), target,
+        stream);
+  }
+
   if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
     target = stream->WriteRaw(
         this_._internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString).data(),
@@ -6100,7 +6442,7 @@ PROTOBUF_NOINLINE void CameraModel::Clear() {
 
   ::_pbi::Prefetch5LinesFrom7Lines(&this_);
   cached_has_bits = this_._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x0000007fU)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x000000ffU)) {
     // repeated double cameraPositionInBody = 3;
     if (CheckHasBitForRepeated(cached_has_bits, 0x00000001U)) {
       ::size_t data_size = ::size_t{8} *
@@ -6143,8 +6485,13 @@ PROTOBUF_NOINLINE void CameraModel::Clear() {
       total_size += 1 +
                     ::google::protobuf::internal::WireFormatLite::MessageSize(*this_._impl_.areaofinterest_);
     }
-    // int64 cameraId = 1;
+    // .cielimMessage.ImageFormat imageFormat = 8;
     if (CheckHasBit(cached_has_bits, 0x00000040U)) {
+      total_size += 1 +
+                    ::google::protobuf::internal::WireFormatLite::MessageSize(*this_._impl_.imageformat_);
+    }
+    // int64 cameraId = 1;
+    if (CheckHasBit(cached_has_bits, 0x00000080U)) {
       if (this_._internal_cameraid() != 0) {
         total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(
             this_._internal_cameraid());
@@ -6173,7 +6520,7 @@ void CameraModel::MergeImpl(::google::protobuf::MessageLite& to_msg,
   (void)cached_has_bits;
 
   cached_has_bits = from._impl_._has_bits_[0];
-  if (BatchCheckHasBit(cached_has_bits, 0x0000007fU)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x000000ffU)) {
     if (CheckHasBitForRepeated(cached_has_bits, 0x00000001U)) {
       _this->_internal_mutable_camerapositioninbody()->MergeFrom(from._internal_camerapositioninbody());
     }
@@ -6214,6 +6561,14 @@ void CameraModel::MergeImpl(::google::protobuf::MessageLite& to_msg,
       }
     }
     if (CheckHasBit(cached_has_bits, 0x00000040U)) {
+      ABSL_DCHECK(from._impl_.imageformat_ != nullptr);
+      if (_this->_impl_.imageformat_ == nullptr) {
+        _this->_impl_.imageformat_ = ::google::protobuf::MessageLite::CopyConstruct(arena, *from._impl_.imageformat_);
+      } else {
+        _this->_impl_.imageformat_->MergeFrom(*from._impl_.imageformat_);
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000080U)) {
       if (from._internal_cameraid() != 0) {
         _this->_impl_.cameraid_ = from._impl_.cameraid_;
       }
