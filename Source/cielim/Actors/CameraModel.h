@@ -133,6 +133,8 @@ public:
 	FDiagnosticParams DiagnosticParams{};
 	FImageCorruptionParams CorruptionParams{};
 
+	cielimMessage::ImageFormat::Format ImageFormat; // Defaults to PNG
+
 	// Distant object information
 
 	FVector3f SolarDirection{};
@@ -144,6 +146,18 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
+	// Packs image data into raw 8 bit format
+	static void ExportRaw8(const FImage &Image, TArray64<uint8> &ImageData);
+
+	// Packs image data into raw 12 bit unpacked format
+	static void ExportRaw12(const FImage &Image, TArray64<uint8> &ImageData);
+
+	// Packs image data into raw 12 bit packed format
+	static void ExportRaw12Packed(const FImage &Image, TArray64<uint8> &ImageData);
+
+	// Packs image data into raw 16 bit unpacked format
+	static void ExportRaw16(const FImage &Image, TArray64<uint8> &ImageData);
+
 	/* Apply gamma correction to the render target; this is done separate from the main post-process pipeline to
 	 * allow for the retrieval of a diagnostic image in linear color space. */
 	void ApplyGammaCorrection() const;
