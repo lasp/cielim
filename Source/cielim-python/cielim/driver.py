@@ -60,7 +60,11 @@ class Connector:
         return self.safe_recv_multipart()[0].decode("utf-8")
 
     def request_image_for_camera_id(
-        self, camera_id: int, should_return_image: bool = True, should_return_diagnostics: bool = True
+        self,
+        camera_id: int,
+        should_return_image: bool = True,
+        should_return_diagnostics: bool = True,
+        format_raw: bool = False,
     ):
         _ = self.request_socket.send_multipart(
             [
@@ -75,8 +79,12 @@ class Connector:
 
         image = None
         if should_return_image:
-            buf = np.asarray(bytearray(image_data), dtype="uint8")
-            image = cv2.imdecode(buf, cv2.IMREAD_COLOR)
+            buf = np.asarray(bytearray(image_data), dtype="uint8")  # Convert bytes to numpy array
+
+            if format_raw:
+                image = buf
+            else:
+                image = cv2.imdecode(buf, cv2.IMREAD_UNCHANGED)  # Format PNG image data for viewing with OpenCV (BGRA)
 
         diagnostics = imageDiagnostics.DiagnosticData()
         diagnostics.ParseFromString(diagnostics_serialized)
