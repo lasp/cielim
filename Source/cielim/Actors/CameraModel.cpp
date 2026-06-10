@@ -83,9 +83,10 @@ void ACameraModel::SetCameraParameters(const cielimMessage::CielimMessage &Cieli
 	// Set camera parameters
 
 	const bool bHasRenderParams = CielimMessage.has_renderparameters();
-	const bool bHasAreaOfInterest = CameraModel.has_areaofinterest();
 	const bool bHasLensModel = CameraModel.has_lensmodel();
 	const bool bHasSensorModel = CameraModel.has_sensormodel();
+	const bool bHasAreaOfInterest = CameraModel.has_areaofinterest();
+	const bool bHasImageFormat = CameraModel.has_imageformat();
 
 	if (bHasRenderParams)
 	{
@@ -144,6 +145,11 @@ void ACameraModel::SetCameraParameters(const cielimMessage::CielimMessage &Cieli
 			CameraParams.QuECurveG.Set(QuECurve.greenvalue1(), QuECurve.greenvalue2(), QuECurve.greenvalue3());
 			CameraParams.QuECurveB.Set(QuECurve.bluevalue1(), QuECurve.bluevalue2(), QuECurve.bluevalue3());
 		}
+	}
+
+	if (bHasImageFormat)
+	{
+		this->ImageFormat = CameraModel.imageformat().format();
 	}
 
 	// Set diagnostic parameters
@@ -235,8 +241,101 @@ void ACameraModel::GetImageData(TArray64<uint8> &ImageData)
 	// Copy the final render from the render target to Image
 	verify(FImageUtils::GetRenderTargetImage(this->SceneCaptureComponent2D->TextureTarget, Image));
 
-	// Take modified image data from Image and convert to PNG and copy to ImageData
-	verify(FImageUtils::CompressImage(ImageData, TEXT("PNG"), Image));
+	// Take modified image data from Image and convert/pack and copy to ImageData
+	switch (this->ImageFormat)
+	{
+	case cielimMessage::ImageFormat_Format_PNG:
+		verify(FImageUtils::CompressImage(ImageData, TEXT("PNG"), Image));
+		break;
+
+	case cielimMessage::ImageFormat_Format_RAW_8:
+		ExportRaw8(Image, ImageData);
+		break;
+
+	case cielimMessage::ImageFormat_Format_RAW_12:
+		ExportRaw12(Image, ImageData);
+		break;
+
+	case cielimMessage::ImageFormat_Format_RAW_12_PACKED:
+		ExportRaw12Packed(Image, ImageData);
+		break;
+
+	case cielimMessage::ImageFormat_Format_RAW_16:
+		ExportRaw16(Image, ImageData);
+		break;
+
+	default:
+		break;
+	}
+}
+
+void ACameraModel::ExportRaw8(const FImage &Image, TArray64<uint8> &ImageData)
+{
+	FImage FormattedImage;
+	Image.CopyTo(FormattedImage, ERawImageFormat::BGRA8, EGammaSpace::Linear);
+
+	ImageData = FormattedImage.RawData;
+}
+
+void ACameraModel::ExportRaw12(const FImage &Image, TArray64<uint8> &ImageData)
+{
+	FImage FormattedImage;
+	Image.CopyTo(FormattedImage, ERawImageFormat::RGBA16, EGammaSpace::Linear);
+
+	// Number of uint16 values (1 per color channel)
+	const uint32 NumSamples = FormattedImage.RawData.Num() / sizeof(uint16);
+
+	// Set number of uint8 values in byte data array
+	ImageData.SetNumUninitialized(NumSamples * 2);
+
+	const uint16 *ImageDataSource = reinterpret_cast<const uint16 *>(FormattedImage.RawData.GetData());
+	uint16 *ImageDataDestination = reinterpret_cast<uint16 *>(ImageData.GetData());
+
+	for (uint32 i = 0; i < NumSamples; i++)
+	{
+		// Zero out the 4 least significant bits
+		ImageDataDestination[i] = (ImageDataSource[i] >> 4) << 4;
+	}
+}
+
+void ACameraModel::ExportRaw12Packed(const FImage &Image, TArray64<uint8> &ImageData)
+{
+	FImage FormattedImage;
+	Image.CopyTo(FormattedImage, ERawImageFormat::RGBA16, EGammaSpace::Linear);
+
+	// Number of uint16 values (1 per color channel)
+	const uint32 NumSamples = FormattedImage.RawData.Num() / sizeof(uint16);
+	const uint32 NumSamplePairs = (NumSamples + 1) / 2; // Round pairs up in the case of odd number of samples
+
+	// 2 color channels are packed into 3 bytes
+	ImageData.SetNumUninitialized(NumSamplePairs * 3);
+
+	const uint16 *ImageDataSource = reinterpret_cast<const uint16 *>(FormattedImage.RawData.GetData());
+	uint8 *ImageDataDestination = ImageData.GetData();
+
+	for (uint32 i = 0; i < NumSamplePairs; i++)
+	{
+		// Scale each 16-bit source sample down to 12-bit
+		const uint16 SampleA = ImageDataSource[i * 2 + 0] >> 4;
+		const uint16 SampleB = (i * 2 + 1 < NumSamples) ? (ImageDataSource[i * 2 + 1] >> 4) : 0;
+
+		// Byte 0: Least significant 8 bits of A (7..0)
+		ImageDataDestination[i * 3 + 0] = SampleA & 0xFF;
+
+		// Byte 1: Remaining 4 bits of A (11..8) in rightmost bits, least significant 4 bits of B (3..0) in leftmost
+		ImageDataDestination[i * 3 + 1] = ((SampleB & 0x00F) << 4) | ((SampleA & 0xF00) >> 8);
+
+		// Byte 2: Most significant 8 bits of B (11..4)
+		ImageDataDestination[i * 3 + 2] = (SampleB >> 4) & 0xFF;
+	}
+}
+
+void ACameraModel::ExportRaw16(const FImage &Image, TArray64<uint8> &ImageData)
+{
+	FImage FormattedImage;
+	Image.CopyTo(FormattedImage, ERawImageFormat::RGBA16, EGammaSpace::Linear);
+
+	ImageData = FormattedImage.RawData;
 }
 
 void ACameraModel::GetDiagnosticData(imageDiagnostics::DiagnosticData &Diagnostics)

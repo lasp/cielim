@@ -116,6 +116,17 @@ message AreaOfInterest{
     double threshold = 5;  //!< [0-255] threshold for a bright pixel to count (values below threshold are zeroed)
 }
 
+message ImageFormat{
+    enum Format {
+        PNG = 0;
+        RAW_8 = 1;
+        RAW_12 = 2;
+        RAW_12_PACKED = 3;
+        RAW_16 = 4;
+    };
+    Format format = 1; // [-] Image format of the received image
+}
+
 //Camera parameters
 message CameraModel{
     int64 cameraId = 1;  //[-] ID of the camera
@@ -125,9 +136,10 @@ message CameraModel{
     LensModel lensModel = 5; // [-] Parameters to model the optics of the camera
     SensorModel sensorModel = 6; // [-] Parameters to model the camera sensor
     AreaOfInterest areaOfInterest = 7; // [-] Sub-fov of interest for diagnostics
+    ImageFormat imageFormat = 8; // [-] Output data format (PNG or RAW with specified bit depth)
 }
 
-/*! Cielim Message containing relevant data for image generation*/
+// Cielim Message containing relevant data for image generation
 message CielimMessage{
     EpochDateTime epoch = 1;
     TimeStamp currentTime = 2;

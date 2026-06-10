@@ -37,6 +37,7 @@
 #include "google/protobuf/message_lite.h"
 #include "google/protobuf/repeated_field.h"  // IWYU pragma: export
 #include "google/protobuf/extension_set.h"  // IWYU pragma: export
+#include "google/protobuf/generated_enum_util.h"
 // @@protoc_insertion_point(includes)
 
 // Must be included last.
@@ -58,6 +59,8 @@ struct TableStruct_cielimMessage_2eproto {
   static const ::uint32_t offsets[];
 };
 namespace cielimMessage {
+enum ImageFormat_Format : int;
+extern const uint32_t ImageFormat_Format_internal_data_[];
 class AreaOfInterest;
 struct AreaOfInterestDefaultTypeInternal;
 extern AreaOfInterestDefaultTypeInternal _AreaOfInterest_default_instance_;
@@ -78,6 +81,10 @@ class EpochDateTime;
 struct EpochDateTimeDefaultTypeInternal;
 extern EpochDateTimeDefaultTypeInternal _EpochDateTime_default_instance_;
 extern const ::google::protobuf::internal::ClassDataLite<28> EpochDateTime_class_data_;
+class ImageFormat;
+struct ImageFormatDefaultTypeInternal;
+extern ImageFormatDefaultTypeInternal _ImageFormat_default_instance_;
+extern const ::google::protobuf::internal::ClassDataLite<26> ImageFormat_class_data_;
 class LensModel;
 struct LensModelDefaultTypeInternal;
 extern LensModelDefaultTypeInternal _LensModel_default_instance_;
@@ -117,10 +124,44 @@ extern const ::google::protobuf::internal::ClassDataLite<24> TimeStamp_class_dat
 }  // namespace cielimMessage
 namespace google {
 namespace protobuf {
+template <>
+internal::EnumTraitsT<::cielimMessage::ImageFormat_Format_internal_data_>
+    internal::EnumTraitsImpl::value<::cielimMessage::ImageFormat_Format>;
 }  // namespace protobuf
 }  // namespace google
 
 namespace cielimMessage {
+enum ImageFormat_Format : int {
+  ImageFormat_Format_PNG = 0,
+  ImageFormat_Format_RAW_8 = 1,
+  ImageFormat_Format_RAW_12 = 2,
+  ImageFormat_Format_RAW_12_PACKED = 3,
+  ImageFormat_Format_RAW_16 = 4,
+  ImageFormat_Format_ImageFormat_Format_INT_MIN_SENTINEL_DO_NOT_USE_ =
+      ::std::numeric_limits<::int32_t>::min(),
+  ImageFormat_Format_ImageFormat_Format_INT_MAX_SENTINEL_DO_NOT_USE_ =
+      ::std::numeric_limits<::int32_t>::max(),
+};
+
+extern const uint32_t ImageFormat_Format_internal_data_[];
+inline constexpr ImageFormat_Format ImageFormat_Format_Format_MIN =
+    static_cast<ImageFormat_Format>(0);
+inline constexpr ImageFormat_Format ImageFormat_Format_Format_MAX =
+    static_cast<ImageFormat_Format>(4);
+inline bool ImageFormat_Format_IsValid(int value) {
+  return 0 <= value && value <= 4;
+}
+inline constexpr int ImageFormat_Format_Format_ARRAYSIZE = 4 + 1;
+const ::std::string& ImageFormat_Format_Name(ImageFormat_Format value);
+template <typename T>
+const ::std::string& ImageFormat_Format_Name(T value) {
+  static_assert(::std::is_same<T, ImageFormat_Format>::value ||
+                    ::std::is_integral<T>::value,
+                "Incorrect type passed to Format_Name().");
+  return ImageFormat_Format_Name(static_cast<ImageFormat_Format>(value));
+}
+bool ImageFormat_Format_Parse(
+    ::absl::string_view name, ImageFormat_Format* PROTOBUF_NONNULL value);
 
 // ===================================================================
 
@@ -1836,6 +1877,204 @@ class LensModel final : public ::google::protobuf::MessageLite
 extern const ::google::protobuf::internal::ClassDataLite<24> LensModel_class_data_;
 // -------------------------------------------------------------------
 
+class ImageFormat final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:cielimMessage.ImageFormat) */ {
+ public:
+  inline ImageFormat() : ImageFormat(nullptr) {}
+  ~ImageFormat() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(ImageFormat* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(ImageFormat));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR ImageFormat(::google::protobuf::internal::ConstantInitialized);
+
+  inline ImageFormat(const ImageFormat& from) : ImageFormat(nullptr, from) {}
+  inline ImageFormat(ImageFormat&& from) noexcept
+      : ImageFormat(nullptr, ::std::move(from)) {}
+  inline ImageFormat& operator=(const ImageFormat& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline ImageFormat& operator=(ImageFormat&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline ::std::string* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::std::string>();
+  }
+
+  static const ImageFormat& default_instance() {
+    return *reinterpret_cast<const ImageFormat*>(
+        &_ImageFormat_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 12;
+  friend void swap(ImageFormat& a, ImageFormat& b) { a.Swap(&b); }
+  inline void Swap(ImageFormat* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(ImageFormat* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  ImageFormat* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::MessageLite::DefaultConstruct<ImageFormat>(arena);
+  }
+  void CopyFrom(const ImageFormat& from);
+  void MergeFrom(const ImageFormat& from) { ImageFormat::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(ImageFormat* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "cielimMessage.ImageFormat"; }
+
+  explicit ImageFormat(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  ImageFormat(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const ImageFormat& from);
+  ImageFormat(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, ImageFormat&& from) noexcept
+      : ImageFormat(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  // nested types ----------------------------------------------------
+  using Format = ImageFormat_Format;
+  static constexpr Format PNG = ImageFormat_Format_PNG;
+  static constexpr Format RAW_8 = ImageFormat_Format_RAW_8;
+  static constexpr Format RAW_12 = ImageFormat_Format_RAW_12;
+  static constexpr Format RAW_12_PACKED = ImageFormat_Format_RAW_12_PACKED;
+  static constexpr Format RAW_16 = ImageFormat_Format_RAW_16;
+  static inline bool Format_IsValid(int value) {
+    return ImageFormat_Format_IsValid(value);
+  }
+  static constexpr Format Format_MIN = ImageFormat_Format_Format_MIN;
+  static constexpr Format Format_MAX = ImageFormat_Format_Format_MAX;
+  static constexpr int Format_ARRAYSIZE = ImageFormat_Format_Format_ARRAYSIZE;
+  template <typename T>
+  static inline const ::std::string& Format_Name(T value) {
+    return ImageFormat_Format_Name(value);
+  }
+  static inline bool Format_Parse(
+      ::absl::string_view name, Format* PROTOBUF_NONNULL value) {
+    return ImageFormat_Format_Parse(name, value);
+  }
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kFormatFieldNumber = 1,
+  };
+  // .cielimMessage.ImageFormat.Format format = 1;
+  void clear_format() ;
+  ::cielimMessage::ImageFormat_Format format() const;
+  void set_format(::cielimMessage::ImageFormat_Format value);
+
+  private:
+  ::cielimMessage::ImageFormat_Format _internal_format() const;
+  void _internal_set_format(::cielimMessage::ImageFormat_Format value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:cielimMessage.ImageFormat)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<0, 1,
+                                   0, 0,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const ImageFormat& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    int format_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_cielimMessage_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataLite<26> ImageFormat_class_data_;
+// -------------------------------------------------------------------
+
 class EpochDateTime final : public ::google::protobuf::MessageLite
 /* @@protoc_insertion_point(class_definition:cielimMessage.EpochDateTime) */ {
  public:
@@ -3235,7 +3474,7 @@ class CameraModel final : public ::google::protobuf::MessageLite
     return *reinterpret_cast<const CameraModel*>(
         &_CameraModel_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 12;
+  static constexpr int kIndexInFileMessages = 13;
   friend void swap(CameraModel& a, CameraModel& b) { a.Swap(&b); }
   inline void Swap(CameraModel* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -3325,6 +3564,7 @@ class CameraModel final : public ::google::protobuf::MessageLite
     kLensModelFieldNumber = 5,
     kSensorModelFieldNumber = 6,
     kAreaOfInterestFieldNumber = 7,
+    kImageFormatFieldNumber = 8,
     kCameraIdFieldNumber = 1,
   };
   // repeated double cameraPositionInBody = 3;
@@ -3423,6 +3663,21 @@ class CameraModel final : public ::google::protobuf::MessageLite
   ::cielimMessage::AreaOfInterest* PROTOBUF_NONNULL _internal_mutable_areaofinterest();
 
   public:
+  // .cielimMessage.ImageFormat imageFormat = 8;
+  bool has_imageformat() const;
+  void clear_imageformat() ;
+  const ::cielimMessage::ImageFormat& imageformat() const;
+  [[nodiscard]] ::cielimMessage::ImageFormat* PROTOBUF_NULLABLE release_imageformat();
+  ::cielimMessage::ImageFormat* PROTOBUF_NONNULL mutable_imageformat();
+  void set_allocated_imageformat(::cielimMessage::ImageFormat* PROTOBUF_NULLABLE value);
+  void unsafe_arena_set_allocated_imageformat(::cielimMessage::ImageFormat* PROTOBUF_NULLABLE value);
+  ::cielimMessage::ImageFormat* PROTOBUF_NULLABLE unsafe_arena_release_imageformat();
+
+  private:
+  const ::cielimMessage::ImageFormat& _internal_imageformat() const;
+  ::cielimMessage::ImageFormat* PROTOBUF_NONNULL _internal_mutable_imageformat();
+
+  public:
   // int64 cameraId = 1;
   void clear_cameraid() ;
   ::int64_t cameraid() const;
@@ -3437,8 +3692,8 @@ class CameraModel final : public ::google::protobuf::MessageLite
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
-  static const ::google::protobuf::internal::TcParseTable<3, 7,
-                                   3, 44,
+  static const ::google::protobuf::internal::TcParseTable<3, 8,
+                                   4, 52,
                                    2>
       _table_;
 
@@ -3465,6 +3720,7 @@ class CameraModel final : public ::google::protobuf::MessageLite
     ::cielimMessage::LensModel* PROTOBUF_NULLABLE lensmodel_;
     ::cielimMessage::SensorModel* PROTOBUF_NULLABLE sensormodel_;
     ::cielimMessage::AreaOfInterest* PROTOBUF_NULLABLE areaofinterest_;
+    ::cielimMessage::ImageFormat* PROTOBUF_NULLABLE imageformat_;
     ::int64_t cameraid_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -3521,7 +3777,7 @@ class CielimMessage final : public ::google::protobuf::MessageLite
     return *reinterpret_cast<const CielimMessage*>(
         &_CielimMessage_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 13;
+  static constexpr int kIndexInFileMessages = 14;
   friend void swap(CielimMessage& a, CielimMessage& b) { a.Swap(&b); }
   inline void Swap(CielimMessage* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -6552,6 +6808,35 @@ inline void AreaOfInterest::_internal_set_threshold(double value) {
 
 // -------------------------------------------------------------------
 
+// ImageFormat
+
+// .cielimMessage.ImageFormat.Format format = 1;
+inline void ImageFormat::clear_format() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.format_ = 0;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000001U);
+}
+inline ::cielimMessage::ImageFormat_Format ImageFormat::format() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.ImageFormat.format)
+  return _internal_format();
+}
+inline void ImageFormat::set_format(::cielimMessage::ImageFormat_Format value) {
+  _internal_set_format(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_set:cielimMessage.ImageFormat.format)
+}
+inline ::cielimMessage::ImageFormat_Format ImageFormat::_internal_format() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return static_cast<::cielimMessage::ImageFormat_Format>(_impl_.format_);
+}
+inline void ImageFormat::_internal_set_format(::cielimMessage::ImageFormat_Format value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.format_ = value;
+}
+
+// -------------------------------------------------------------------
+
 // CameraModel
 
 // int64 cameraId = 1;
@@ -6559,7 +6844,7 @@ inline void CameraModel::clear_cameraid() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.cameraid_ = ::int64_t{0};
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000040U);
+                  0x00000080U);
 }
 inline ::int64_t CameraModel::cameraid() const {
   // @@protoc_insertion_point(field_get:cielimMessage.CameraModel.cameraId)
@@ -6567,7 +6852,7 @@ inline ::int64_t CameraModel::cameraid() const {
 }
 inline void CameraModel::set_cameraid(::int64_t value) {
   _internal_set_cameraid(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000040U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000080U);
   // @@protoc_insertion_point(field_set:cielimMessage.CameraModel.cameraId)
 }
 inline ::int64_t CameraModel::_internal_cameraid() const {
@@ -7039,6 +7324,105 @@ inline void CameraModel::set_allocated_areaofinterest(::cielimMessage::AreaOfInt
 
   _impl_.areaofinterest_ = reinterpret_cast<::cielimMessage::AreaOfInterest*>(value);
   // @@protoc_insertion_point(field_set_allocated:cielimMessage.CameraModel.areaOfInterest)
+}
+
+// .cielimMessage.ImageFormat imageFormat = 8;
+inline bool CameraModel::has_imageformat() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000040U);
+  PROTOBUF_ASSUME(!value || _impl_.imageformat_ != nullptr);
+  return value;
+}
+inline void CameraModel::clear_imageformat() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.imageformat_ != nullptr) _impl_.imageformat_->Clear();
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000040U);
+}
+inline const ::cielimMessage::ImageFormat& CameraModel::_internal_imageformat() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  const ::cielimMessage::ImageFormat* p = _impl_.imageformat_;
+  return p != nullptr ? *p : reinterpret_cast<const ::cielimMessage::ImageFormat&>(::cielimMessage::_ImageFormat_default_instance_);
+}
+inline const ::cielimMessage::ImageFormat& CameraModel::imageformat() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:cielimMessage.CameraModel.imageFormat)
+  return _internal_imageformat();
+}
+inline void CameraModel::unsafe_arena_set_allocated_imageformat(
+    ::cielimMessage::ImageFormat* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.imageformat_);
+  }
+  _impl_.imageformat_ = reinterpret_cast<::cielimMessage::ImageFormat*>(value);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000040U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000040U);
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:cielimMessage.CameraModel.imageFormat)
+}
+inline ::cielimMessage::ImageFormat* PROTOBUF_NULLABLE CameraModel::release_imageformat() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000040U);
+  ::cielimMessage::ImageFormat* released = _impl_.imageformat_;
+  _impl_.imageformat_ = nullptr;
+  if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
+    auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    if (GetArena() == nullptr) {
+      delete old;
+    }
+  } else {
+    if (GetArena() != nullptr) {
+      released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    }
+  }
+  return released;
+}
+inline ::cielimMessage::ImageFormat* PROTOBUF_NULLABLE CameraModel::unsafe_arena_release_imageformat() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:cielimMessage.CameraModel.imageFormat)
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000040U);
+  ::cielimMessage::ImageFormat* temp = _impl_.imageformat_;
+  _impl_.imageformat_ = nullptr;
+  return temp;
+}
+inline ::cielimMessage::ImageFormat* PROTOBUF_NONNULL CameraModel::_internal_mutable_imageformat() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.imageformat_ == nullptr) {
+    auto* p = ::google::protobuf::MessageLite::DefaultConstruct<::cielimMessage::ImageFormat>(GetArena());
+    _impl_.imageformat_ = reinterpret_cast<::cielimMessage::ImageFormat*>(p);
+  }
+  return _impl_.imageformat_;
+}
+inline ::cielimMessage::ImageFormat* PROTOBUF_NONNULL CameraModel::mutable_imageformat()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000040U);
+  ::cielimMessage::ImageFormat* _msg = _internal_mutable_imageformat();
+  // @@protoc_insertion_point(field_mutable:cielimMessage.CameraModel.imageFormat)
+  return _msg;
+}
+inline void CameraModel::set_allocated_imageformat(::cielimMessage::ImageFormat* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (message_arena == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.imageformat_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = value->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    SetHasBit(_impl_._has_bits_[0], 0x00000040U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000040U);
+  }
+
+  _impl_.imageformat_ = reinterpret_cast<::cielimMessage::ImageFormat*>(value);
+  // @@protoc_insertion_point(field_set_allocated:cielimMessage.CameraModel.imageFormat)
 }
 
 // -------------------------------------------------------------------
@@ -7603,6 +7987,15 @@ inline void CielimMessage::set_allocated_camera(::cielimMessage::CameraModel* PR
 // @@protoc_insertion_point(namespace_scope)
 }  // namespace cielimMessage
 
+
+namespace google {
+namespace protobuf {
+
+template <>
+struct is_proto_enum<::cielimMessage::ImageFormat_Format> : std::true_type {};
+
+}  // namespace protobuf
+}  // namespace google
 
 // @@protoc_insertion_point(global_scope)
 

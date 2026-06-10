@@ -15,7 +15,7 @@ public class cielim : ModuleRules
 		Console.WriteLine("Architecture: " + Target.Architecture);
 
 		// Add engine module dependencies
-		PrivateDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "RenderCore", "Renderer", "RHI", "ProceduralMeshComponent" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "ImageCore", "RenderCore", "Renderer", "RHI", "ProceduralMeshComponent" });
 		PrivateIncludePaths.AddRange(new string[] {  Path.Combine(GetModuleDirectory("Renderer"), "Internal") });
 
 		// Add third party module dependencies
