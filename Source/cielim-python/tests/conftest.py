@@ -1,7 +1,8 @@
-import context
-from driver import *
-from launcher import *
 import pytest
+
+import context
+from cielim.driver import *
+from cielim.launcher import *
 
 
 @pytest.fixture(scope="session")

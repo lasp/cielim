@@ -1,7 +1,8 @@
-from context import driver, launcher
-from context import cielimMessage_pb2
-import numpy as np
 import cv2
+import numpy as np
+
+import context
+from cielim import cielimMessage_pb2, driver
 
 
 def default_scene():

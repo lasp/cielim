@@ -1,8 +1,9 @@
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.integrate import simpson
 from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+from scipy.integrate import simpson
 from scipy.optimize import basinhopping
 
 # Constants

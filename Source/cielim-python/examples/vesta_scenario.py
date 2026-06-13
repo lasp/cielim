@@ -1,14 +1,18 @@
-import os, contextlib
+import contextlib
+import os
 from pathlib import Path
+
+import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 import spiceypy as spice
-import cv2
+from astropy.io import fits
+
 import context
-from driver import *
-from launcher import *
-from context import cielimMessage_pb2
-from context import scene
-from context import rigid_body_kinematics as rbk
+from cielim import cielimMessage_pb2, scene
+from cielim import rigid_body_kinematics as rbk
+from cielim.driver import *
+from cielim.launcher import *
 
 # ---- Paths (portable) ----
 current_file_path = os.path.dirname(__file__)
@@ -27,11 +31,6 @@ def cd(path: Path):
         return (yield)
     finally:
         os.chdir(str(prev))
-
-
-import astropy
-from astropy.io import fits
-import matplotlib.pyplot as plt
 
 
 def get_header(filename: str) -> dict:

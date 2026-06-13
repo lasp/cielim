@@ -1,15 +1,15 @@
+import json
+import os
+import time
+
+import cv2
+import numpy as np
 from numpy import ndarray
 
-from context import driver, launcher
-from context import cielimMessage_pb2
-from context import scene
-from context import rigid_body_kinematics as rbk
-import numpy as np
-from orbital_motion import ClassicOrbitalElements
-import os
-import cv2
-import time
-import json
+import context
+from cielim import cielimMessage_pb2, driver, launcher, scene
+from cielim import rigid_body_kinematics as rbk
+from cielim.orbital_motion import ClassicOrbitalElements
 
 current_file_path = os.path.dirname(__file__)
 

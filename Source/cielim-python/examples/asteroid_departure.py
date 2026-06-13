@@ -1,13 +1,10 @@
-from numpy import ndarray
-
-from context import driver, launcher, variable_map
-from context import cielimMessage_pb2
-from context import scene
-from context import rigid_body_kinematics as rbk
-import numpy as np
-from orbital_motion import ClassicOrbitalElements
 import os
+
 import cv2
+import numpy as np
+
+import context
+from cielim import cielimMessage_pb2, driver, launcher, scene
 
 current_file_path = os.path.dirname(__file__)
 
@@ -20,7 +17,7 @@ def append_protobuf_to_file(filename, message):
         f.write(serialized_data)
 
 
-def scene_setup() -> cielimMessage_pb2:
+def scene_setup() -> cielimMessage_pb2.CielimMessage:
     """
     Setup basic scene: populate default values in protobuffer
     """
@@ -91,7 +88,7 @@ def departure_scene(number_of_images: int):
         # Generate image
         image_name = "image-" + str(idx)
         connector.send_frame(scene_frame.get_scene())
-        [image, _, _] = connector.request_image_for_camera_id(1, 1)
+        [image, _, _] = connector.request_image_for_camera_id(1)
         cv2.imwrite(directory_path + "/" + image_name + ".png", image)
         append_protobuf_to_file(protobuff_file, message)
 

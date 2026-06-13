@@ -1,5 +1,5 @@
 import context
-from rigid_body_kinematics import *
+from cielim.rigid_body_kinematics import *
 
 
 def test_dcm():

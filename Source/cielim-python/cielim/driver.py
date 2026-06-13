@@ -1,13 +1,12 @@
-import struct
+import random
 
 import cv2
 import delimited_protobuf
 import numpy as np
 import zmq
-import random
 
-import cielimMessage_pb2 as cielimMessage
-import imageDiagnostics_pb2 as imageDiagnostics
+from . import cielimMessage_pb2 as cielimMessage
+from . import imageDiagnostics_pb2 as imageDiagnostics
 
 
 class Connector:

@@ -1,6 +1,7 @@
-import context
-from orbital_motion import *
 import numpy as np
+
+import context
+from cielim.orbital_motion import *
 
 
 def test_rv_oe():

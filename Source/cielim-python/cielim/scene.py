@@ -1,10 +1,10 @@
+import numpy as np
 from numpy import ndarray
 
-import cielimMessage_pb2
-from orbital_motion import *
-from rigid_body_kinematics import *
-import numpy as np
-from qe_curve_fit import qe_curve_fit
+from . import cielimMessage_pb2
+from .orbital_motion import *
+from .qe_curve_fit import qe_curve_fit
+from .rigid_body_kinematics import *
 
 
 class Scene(object):

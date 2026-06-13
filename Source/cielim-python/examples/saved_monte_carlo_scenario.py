@@ -5,9 +5,8 @@ import pickle
 import cv2
 import numpy as np
 
-from context import driver, launcher, variable_map
-from context import cielimMessage_pb2
-from context import scene
+import context
+from cielim import cielimMessage_pb2, driver, launcher, scene, variable_map
 
 current_file_path = os.path.dirname(__file__)
 

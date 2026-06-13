@@ -1,28 +1,33 @@
+import contextlib
+import glob
+import io
+import os
+import re
 import sys
+from datetime import datetime
 from pathlib import Path
+
+import cv2
+import matplotlib
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import numpy as np
+import spiceypy as spice
+from PIL import Image
+
+import context
+from cielim import cielimMessage_pb2, scene
+from cielim import rigid_body_kinematics as rbk
+from cielim.driver import *
+from cielim.launcher import *
+
 
 HERE = Path(__file__).resolve()
 CIELIM_ROOT = HERE.parents[1]
 
 sys.path.insert(0, str(CIELIM_ROOT / "cielim"))
 sys.path.insert(0, str(HERE.parent))
-
-import os, contextlib, re, io, glob
-import numpy as np
-import spiceypy as spice
-import cv2
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-from pathlib import Path
-from PIL import Image
-from datetime import datetime
-from driver import *
-from launcher import *
-from context import cielimMessage_pb2
-from context import scene
-from context import rigid_body_kinematics as rbk
 
 MK = CIELIM_ROOT / "support-data" / "vesta-spice" / "vesta-spice.txt"
 FIT_DIR = CIELIM_ROOT / "support-data" / "vesta-spice" / "opnav"

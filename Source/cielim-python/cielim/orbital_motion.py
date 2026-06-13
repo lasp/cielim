@@ -2,6 +2,7 @@
 # by David A. Vallado, Chapter 1
 
 from collections.abc import Callable
+
 import numpy as np
 
 circular_threshold = 1e-10

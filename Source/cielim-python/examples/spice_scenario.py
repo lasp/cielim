@@ -1,13 +1,14 @@
-from context import driver, launcher
-from context import cielimMessage_pb2
-from context import scene
-from context import rigid_body_kinematics as rbk
-import numpy as np
-import spiceypy as spice
-import urllib.request
 import json
 import os
+import urllib.request
+
 import cv2
+import numpy as np
+import spiceypy as spice
+
+import context
+from cielim import cielimMessage_pb2, driver, launcher, scene
+from cielim import rigid_body_kinematics as rbk
 
 current_file_path = os.path.dirname(__file__)
 

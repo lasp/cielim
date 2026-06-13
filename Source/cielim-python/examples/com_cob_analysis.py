@@ -1,19 +1,11 @@
-from numpy import ndarray
-
-import context
-from driver import *
-from launcher import *
-from context import cielimMessage_pb2
-from context import scene
-import matplotlib.pyplot as plt
-import matplotlib
-from context import rigid_body_kinematics as rbk
-import numpy as np
-from orbital_motion import ClassicOrbitalElements
-import os
 import json
-import cv2
+import os
 import re
+
+import cv2
+import matplotlib
+import matplotlib.pyplot as plt
+import numpy as np
 
 matplotlib.rcParams.update({"font.size": 6})
 colorsInt = len(matplotlib.colormaps["inferno"].colors) / (10.0)

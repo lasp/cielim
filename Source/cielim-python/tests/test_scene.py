@@ -1,11 +1,12 @@
-import context
-from context import cielimMessage_pb2
-from context import scene
-from rigid_body_kinematics import *
-from orbital_motion import *
 from pathlib import Path
+
 import numpy as np
 import pytest
+
+import context
+from cielim import cielimMessage_pb2, scene
+from cielim.orbital_motion import *
+from cielim.rigid_body_kinematics import *
 
 
 def scene_setup():

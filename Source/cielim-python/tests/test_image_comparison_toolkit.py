@@ -1,14 +1,8 @@
 import numpy as np
 import pytest
-from pathlib import Path
-import sys
 
-HERE = Path(__file__).resolve().parent
-CIELIM_ROOT = HERE.parent
-
-sys.path.insert(0, str(CIELIM_ROOT))
-
-from image_comparison_toolkit import compute_disk_stats, cross_correlate_fft, THRESHOLD
+import context
+from cielim.image_comparison_toolkit import compute_disk_stats, cross_correlate_fft
 
 
 @pytest.fixture

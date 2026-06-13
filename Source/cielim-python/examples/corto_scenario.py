@@ -4,10 +4,15 @@ import os
 import cv2
 import numpy as np
 
-from context import driver, launcher, variable_map
-from context import cielimMessage_pb2
-from context import scene
-from context import rigid_body_kinematics
+import context
+from cielim import (
+    cielimMessage_pb2,
+    driver,
+    launcher,
+    rigid_body_kinematics,
+    scene,
+    variable_map,
+)
 
 current_file_path = os.path.dirname(__file__)
 

@@ -1,16 +1,17 @@
-from pathlib import Path
 import sys
+from pathlib import Path
+
 import cv2
 import numpy as np
 from PIL import Image
+
+import context
+from cielim.image_comparison_toolkit import generate_plots
 
 HERE = Path(__file__).resolve().parent
 CIELIM_ROOT = HERE.parent
 
 sys.path.insert(0, str(CIELIM_ROOT))
-
-import context
-from image_comparison_toolkit import generate_plots
 
 BASE_DIR = CIELIM_ROOT / "support-data" / "giant-vesta"
 

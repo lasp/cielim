@@ -1,7 +1,10 @@
-from context import driver, launcher
-import os
-import cv2
 import argparse
+import os
+
+import cv2
+
+import context
+from cielim import driver, launcher
 
 current_file_path = os.path.dirname(__file__)
 
@@ -128,7 +131,7 @@ if __name__ == "__main__":
         first_frame = cv2.imread(os.path.join(image_folder, sorted_frames[0]))
         height, width, _ = first_frame.shape
         video_out = cv2.VideoWriter(
-            f"{file_name_base}.mp4", cv2.VideoWriter_fourcc(*"mp4v"), args.video, (width, height)
+            f"{file_name_base}.mp4", cv2.VideoWriter.fourcc(*"mp4v"), args.video, (width, height)
         )
 
         for frame_name in sorted_frames:
