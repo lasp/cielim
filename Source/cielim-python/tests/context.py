@@ -1,7 +1,8 @@
 import os
 import sys
+from pathlib import Path
 
-sys.path.insert(0, os.path.dirname(__file__) + "/../")
+sys.path.append(os.path.join(str(Path(__file__).resolve().parent.parent), "cielim"))
 
 import orbital_motion
 import rigid_body_kinematics
