@@ -41,7 +41,7 @@ def scene_setup(spacecraft_position):
 def test_ping(cielim_connection):
     connector = cielim_connection
 
-    message = connector._send_ping()
+    message = connector.send_ping()
     try:
         np.testing.assert_string_equal(message, "PONG")
     except AssertionError as e:

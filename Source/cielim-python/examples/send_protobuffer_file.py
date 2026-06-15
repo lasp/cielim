@@ -71,7 +71,7 @@ if __name__ == "__main__":
     else:
         file = test_dir + file_name
 
-    file_handler = driver.MessageFileHandler(file)
+    file_handler = driver.CielimMessageFileHandler(file)
 
     idx = 0
     image = None
