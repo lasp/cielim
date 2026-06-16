@@ -1,133 +1,182 @@
 from __future__ import annotations
 
+import atexit
 import os
-import random
+import signal
 import socket
 import subprocess
+import sys
 import time
 from sys import platform
+from pathlib import Path
 
-# TODO : Find the path to the built app
-if platform == "darwin":
-    appPath = os.path.dirname(__file__) + "/../../../Binaries/Mac/cielim.app/Contents/MacOS/cielim"  # If on Mac
-elif platform == "win32":
-    appPath = os.path.dirname(__file__) + "/../../../Binaries/Win64/cielim.exe"  # If on Windows
+_default_app_path = os.path.join(str(Path(__file__).resolve().parent.parent.parent.parent), "Binaries")
+
+# Global application path variables
+if platform == "darwin":  # If on Mac
+    _default_app_path = os.path.join(_default_app_path, "Mac/cielim.app/Contents/MacOS/cielim")
+elif platform == "linux":  # If on Linux
+    _default_app_path = os.path.join(_default_app_path, "Linux/cielim")
+elif platform == "win32":  # If on Windows
+    _default_app_path = os.path.join(_default_app_path, "Win64/cielim.exe")
+else:
+    raise Exception("Unsupported platform, cannot determine Cielim application path.")
 
 
 class ZmqNetworkProtocol(object):
     """
-    Base class to manage zmq network transport, ip, port and zmq address string
+    Base class to manage zmq network transport, ip, port and zmq address string.
 
-    Parameters
-    ----------
-    port : int
-        tcp port number or ipc port name
-    transport_type : string
-        the transport type
+    Attributes:
+        port(int): TCP port number or ipc port name.
+        transport_type(string): The transport type.
     """
 
-    def __init__(self, port=0, transport_type="tcp"):
+    def __init__(self, port: int = 0, transport_type: str = "tcp"):
         self._transport_type = transport_type
         self.port = port
 
-    def as_bind_address(self):
+    def get_bind_address(self) -> str:
         """This method should be overriden by the inheriting class"""
-        pass
+        raise NotImplementedError("as_bind_address must be implemented by subclasses")
 
-    def as_connect_address(self):
+    def get_connect_address(self) -> str:
         """This method should be overriden by the inheriting class"""
-        pass
+        raise NotImplementedError("as_connect_address must be implemented by subclasses")
 
 
 class ZmqTcpProtocol(ZmqNetworkProtocol):
     """
-    A class to manage zmq TCP network transport
+    A class to manage zmq TCP network transport.
 
-    Parameters
-    ----------
-    host_name : string
-        ip address
-    port : int
-        tcp port number
+    Attributes:
+        host_name(string): IP address.
+        port(int): TCP port number.
     """
 
-    def __init__(self, host_name="127.0.0.1", port=0):
+    def __init__(self, host_name: str = "127.0.0.1", port: int = 0):
         super(ZmqTcpProtocol, self).__init__(port, "tcp")
         self.ip_address = host_name
         self.port = port
 
-    def as_connect_address(self):
-        return "{0}://{1}:{2}".format(self._transport_type, self.ip_address, str(self.port))
+    def get_connect_address(self):
+        return f"{self._transport_type}://{self.ip_address}:{self.port}"
 
-    def as_bind_address(self):
-        address = "{0}://{1}".format(self._transport_type, self.ip_address)
+    def get_bind_address(self):
+        address = f"{self._transport_type}://{self.ip_address}"
         if self.port:
-            address += ":" + str(self.port)
+            address += f":{self.port}"
         return address
 
     @classmethod
-    def from_address_string(self, cls: ZmqTcpProtocol, address: str) -> ZmqTcpProtocol:
-        parts = address.split(":")
-        ip_address = parts[1].lstrip("/")
-        port = int(parts[2])
-        return cls(ip_address, port)
+    def from_address_string(cls, address: str) -> "ZmqTcpProtocol":
+        try:
+            transport, rest = address.split("://", 1)  # Split transport protocol and the rest of the address
+
+            if transport != "tcp":
+                raise ValueError(f"Expected 'tcp' transport, got '{transport}'")
+
+            ip_address, port_str = rest.rsplit(":", 1)
+            return cls(ip_address, int(port_str))
+
+        except (ValueError, AttributeError) as e:
+            raise ValueError(f"Invalid TCP address string: '{address}'") from e
 
 
 class Launcher:
-    def __init__(self):
-        self.process_id = None
+    """
+    A class to launch Cielim instances.
+
+    Attributes:
+        app_path(string): Path to Cielim application executable. If not provided, will attempt to use default path based on operating system.
+    """
+
+    def __init__(self, app_path: str = _default_app_path):
+        if not os.path.isfile(app_path):
+            raise FileNotFoundError(f"App not found: {app_path}")
+
+        self.app_path = app_path
+        self._process = None
+
+        self._cleaned_up = False
+
+        # Register terminate function to run on shutdown
+        atexit.register(self.terminate)
+
+        # Register handle function to shutdown interpreter on signal
+        signal.signal(signal.SIGTERM, Launcher._handle_signal)
+        signal.signal(signal.SIGINT, Launcher._handle_signal)
+
+    def __enter__(self):
+        return self
 
     @staticmethod
-    def get_next_free_port():
-        max_port = 65535
-        min_port = 1024
-        # Use pid as port number but if it falls outside the bounds of allowable port numbers then choose one at random.
-        port = os.getpid()
-        if port < min_port or port > max_port:
-            port = random.randint(min_port, max_port)
+    def get_next_free_port() -> int:
+        """
+        Find next freely available port on the system.
+        """
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.bind(("", 0))
+            return sock.getsockname()[1]
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        attempts = 0
-        while attempts <= max_port - min_port:
-            try:
-                sock.bind(("", port))
-                return port
-            except OSError:
-                port = random.randint(min_port, max_port)
-                attempts += 1
-        raise IOError("no free ports")
+    def launch(self):
+        """
+        Launch new Cielim process.
+        """
+        if self._process and self._process.poll() is None:
+            raise RuntimeError("Launcher already has a running process, call terminate() first.")
 
-    @staticmethod
-    def run(port=5556):
-        end_point = ZmqTcpProtocol(port=port)
+        port = self.get_next_free_port()  # Port that will be used to connect to specific Cielim instance
+
+        end_point = ZmqTcpProtocol(port=port)  # Just use tcp for now
+        connection_address = end_point.get_connect_address()
+
         try:
             cielim_process = subprocess.Popen(
                 [
-                    appPath,
+                    self.app_path,
                     "/Game/Maps/Lvl_Visualization",
                     "-RenderOffscreen",
                     "-directComm",
-                    end_point.as_connect_address(),
+                    connection_address,
                 ],
-                cwd=os.path.dirname(appPath),
+                cwd=os.path.dirname(self.app_path),
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
-            print("Cielim spawned with pid: {0} on port: {1}".format(str(cielim_process.pid), end_point.port))
-            time.sleep(3)  # Give Cielim's rendering pipeline time to warm up
-            return cielim_process
-        except FileNotFoundError:
-            print("Cielim application not found")
-            return None
 
-    def launch(self):
-        port = self.get_next_free_port()
-        self.process_id = self.run(port)
-        address = "tcp://127.0.0.1:" + str(port)
-        return address
+            self._process = cielim_process
+            self._cleaned_up = False
+
+            print(f"Cielim spawned with pid: {cielim_process.pid} on port: {end_point.port}")
+            time.sleep(3)  # Give Cielim's rendering pipeline time to warm up
+            return connection_address
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Cielim application failed to launch at: {self.app_path}")
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.terminate()
+
+    def __del__(self):
+        self.terminate()
 
     def terminate(self):
-        if self.process_id is None:
-            print("cielim application is not launched")
-        else:
-            self.process_id.kill()
+        # Check we haven't already cleaned up
+        if self._cleaned_up:
+            return
+
+        # Only terminate if the process exists and is still running
+        if self._process and self._process.poll() is None:
+            self._process.terminate()
+            try:
+                self._process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self._process.kill()
+
+            self._process = None
+            self._cleaned_up = True
+
+    @staticmethod
+    def _handle_signal(signum, frame):
+        print(f"Received signal {signum}, shutting down...")
+        sys.exit(0)  # Shutdown interpreter
