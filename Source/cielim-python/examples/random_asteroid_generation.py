@@ -6,15 +6,14 @@ import cv2
 import numpy as np
 from numpy import ndarray
 
-import context
-from cielim import cielimMessage_pb2, driver, launcher, scene
+import cielim
+from cielim import orbital_motion, scene
 from cielim import rigid_body_kinematics as rbk
-from cielim.orbital_motion import ClassicOrbitalElements
 
 current_file_path = os.path.dirname(__file__)
 
 
-def vector_to_pixel(vector_C: ndarray, camera: cielimMessage_pb2.CameraModel) -> ndarray:
+def vector_to_pixel(vector_C: ndarray, camera: cielim.cielimProto.CameraModel) -> ndarray:
     """
     Computes the pixel location of a vector in the camera frame on the detector
     """
@@ -36,11 +35,11 @@ def vector_to_pixel(vector_C: ndarray, camera: cielimMessage_pb2.CameraModel) ->
     return np.dot(calibration_matrix, vector_C)
 
 
-def scene_setup() -> cielimMessage_pb2:
+def scene_setup() -> cielim.CielimMessage:
     """
     Setup basic scene: populate default values in protobuffer
     """
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+    protobuf_message = cielim.CielimMessage()
 
     body = protobuf_message.celestialBodies.add()
     body.bodyName = "2000269"
@@ -83,8 +82,8 @@ def random_asteroid_generation(number_of_images: int):
     directory_path = current_file_path + "/images-com-cob"
     os.makedirs(directory_path, exist_ok=True)
 
-    connector = driver.Connector()
-    launch = launcher.Launcher()
+    connector = cielim.Connector()
+    launch = cielim.Launcher()
     connector.connect(launch.launch())
     connector.send_init_request()
 
@@ -126,7 +125,7 @@ def random_asteroid_generation(number_of_images: int):
         scene_frame.set_existing_message(message)
 
         # Set a random orbital elements
-        elements = ClassicOrbitalElements()
+        elements = orbital_motion.ClassicOrbitalElements()
         elements.semi_major_axis = np.random.normal(2000e3, 400e3)
         elements.eccentricity = np.random.uniform(0, 0.5)
         elements.inclination = np.random.uniform(-np.pi / 2, np.pi / 2)
@@ -152,7 +151,7 @@ def random_asteroid_generation(number_of_images: int):
         image_name = "image-" + str(idx)
         connector.send_init_request()  # re-initialize shape model
         connector.send_frame(scene_frame.get_scene())
-        [image, center_of_brightness, _] = connector.request_image_for_camera_id(1, 1)
+        [image, center_of_brightness, _] = connector.request_image_for_camera_id(1)
         if center_of_brightness is not None:
             cv2.imwrite(directory_path + "/" + image_name + ".png", image)
 

@@ -1,14 +1,11 @@
 import numpy as np
 import pytest
 
-import context
-from cielim import cielimMessage_pb2
-from cielim.driver import *
-from cielim.launcher import *
+import cielim
 
 
 def scene_setup(spacecraft_position):
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+    protobuf_message = cielim.CielimMessage()
 
     sc_pos_x, sc_pos_y, sc_pos_z = spacecraft_position
 
@@ -88,7 +85,7 @@ def test_init_scene(cielim_connection):
 
     # Get image and check for blank
 
-    [image, _, _] = connector.request_image_for_camera_id(1, 1)
+    [image, _, _] = connector.request_image_for_camera_id(1, True, False)
 
     np.testing.assert_(np.all(image <= 2), "Image was not cleared")
 
@@ -123,7 +120,7 @@ def test_send_frame(cielim_connection, position):
     except AssertionError as e:
         print(f"Fail in test_send_frame: {e}")
 
-    [_, center_of_brightness, _] = connector.request_image_for_camera_id(1, 1)
+    [_, center_of_brightness, _] = connector.request_image_for_camera_id(1, False, True)
 
     # Check the object definitively moved on the screen
 
@@ -156,7 +153,7 @@ def test_request_image(cielim_connection, position):
 
     # Get image
 
-    [image, _, _] = connector.request_image_for_camera_id(1, 1)
+    [image, _, _] = connector.request_image_for_camera_id(1, True, False)
 
     # Check image is not null
     try:

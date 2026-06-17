@@ -1,19 +1,19 @@
 import numpy as np
 from numpy import ndarray
 
-from . import cielimMessage_pb2
-from .orbital_motion import *
+from . import orbital_motion
+from . import rigid_body_kinematics as rbk
+from .cielimMessage_pb2 import CielimMessage
 from .qe_curve_fit import qe_curve_fit
-from .rigid_body_kinematics import *
 
 
 class Scene(object):
     def __init__(self):
-        self.cielim_msg = cielimMessage_pb2.CielimMessage()
+        self.cielim_msg = CielimMessage()
         self.target_name = ""
         self.gravitational_parameter = 0
 
-    def set_existing_message(self, cielim_msg: cielimMessage_pb2.CielimMessage) -> None:
+    def set_existing_message(self, cielim_msg: CielimMessage) -> None:
         """
         Set an existing message
         :param: cielim_msg (cielim message type)
@@ -35,7 +35,7 @@ class Scene(object):
         self.gravitational_parameter = gravitational_parameter
 
     def set_orbital_elements(
-        self, orbital_elements: ClassicOrbitalElements, gravitational_parameter: float = 0
+        self, orbital_elements: orbital_motion.ClassicOrbitalElements, gravitational_parameter: float = 0
     ) -> None:
         """
         Set spacecraft position with orbital elements
@@ -44,7 +44,9 @@ class Scene(object):
         """
         if gravitational_parameter != 0:
             self.gravitational_parameter = gravitational_parameter
-        position, velocity = orbital_elements_to_cartesian(self.gravitational_parameter, orbital_elements)
+        position, velocity = orbital_motion.orbital_elements_to_cartesian(
+            self.gravitational_parameter, orbital_elements
+        )
         self.cielim_msg.spacecraft.ClearField("position")
         self.cielim_msg.spacecraft.ClearField("velocity")
         [self.cielim_msg.spacecraft.position.append(item) for item in position]
@@ -63,7 +65,7 @@ class Scene(object):
         Set attitude with a principal rotation vector
         :param: prv
         """
-        mrp = principalRotation_to_mrp(prv)
+        mrp = rbk.principalRotation_to_mrp(prv)
         self.cielim_msg.spacecraft.ClearField("attitude")
         [self.cielim_msg.spacecraft.attitude.append(item) for item in mrp]
 
@@ -72,7 +74,7 @@ class Scene(object):
         Set attitude with a direction cosine matrix
         :param: dcm
         """
-        mrp = dcm_to_mrp(dcm)
+        mrp = rbk.dcm_to_mrp(dcm)
         self.cielim_msg.spacecraft.ClearField("attitude")
         [self.cielim_msg.spacecraft.attitude.append(item) for item in mrp]
 
@@ -81,7 +83,7 @@ class Scene(object):
         Set attitude with euler angles
         :param: euler321
         """
-        mrp = euler321_to_mrp(euler321)
+        mrp = rbk.euler321_to_mrp(euler321)
         self.cielim_msg.spacecraft.ClearField("attitude")
         [self.cielim_msg.spacecraft.attitude.append(item) for item in mrp]
 
@@ -90,9 +92,9 @@ class Scene(object):
         Add a pointing offset using euler angles (assuming small offsets)
         :param: delta_euler321
         """
-        delta_dcm = euler321_to_dcm(delta_euler321)
-        dcm = mrp_to_dcm(self.cielim_msg.spacecraft.attitude)
-        mrp = dcm_to_mrp(np.dot(delta_dcm, dcm))
+        delta_dcm = rbk.euler321_to_dcm(delta_euler321)
+        dcm = rbk.mrp_to_dcm(self.cielim_msg.spacecraft.attitude)
+        mrp = rbk.dcm_to_mrp(np.dot(delta_dcm, dcm))
         self.cielim_msg.spacecraft.ClearField("attitude")
         [self.cielim_msg.spacecraft.attitude.append(item) for item in mrp]
 
@@ -126,9 +128,9 @@ class Scene(object):
         secondary = target_velocity - spacecraft_velocity
         secondary /= np.linalg.norm(secondary)
 
-        BN = body_to_inertial_for_pointing(primary, secondary, mrp_to_dcm(camera_orientation))
+        BN = rbk.body_to_inertial_for_pointing(primary, secondary, rbk.mrp_to_dcm(camera_orientation))
         self.cielim_msg.spacecraft.ClearField("attitude")
-        [self.cielim_msg.spacecraft.attitude.append(item) for item in dcm_to_mrp(BN)]
+        [self.cielim_msg.spacecraft.attitude.append(item) for item in rbk.dcm_to_mrp(BN)]
 
     def propagate(self, end_time: float, gravitational_parameter: float = 0) -> None:
         """
@@ -145,7 +147,7 @@ class Scene(object):
             print("No gravitational parameter provided, rectilinear trajectory assumed")
 
         initial_state = np.array(list(self.cielim_msg.spacecraft.position) + list(self.cielim_msg.spacecraft.velocity))
-        final_state = propagate_cartesian(self.gravitational_parameter, initial_state, 0, end_time)
+        final_state = orbital_motion.propagate_cartesian(self.gravitational_parameter, initial_state, 0, end_time)
         self.cielim_msg.spacecraft.ClearField("position")
         self.cielim_msg.spacecraft.ClearField("velocity")
         [self.cielim_msg.spacecraft.position.append(item) for item in final_state[:3]]
@@ -168,7 +170,7 @@ class Scene(object):
         qe_data_path: str,
         solid_angle: float,
         pixel_area: float,
-        wavelength_window: list = None,
+        wavelength_window: list | None = None,
     ) -> None:
         fit_wavelengths, fit_values = qe_curve_fit(
             qe_data_path, solid_angle, pixel_area, wavelength_window=wavelength_window, show_plots=False
@@ -186,7 +188,7 @@ class Scene(object):
         self.cielim_msg.camera.sensorModel.qeCurve.greenValue3 = fit_values[2]
         self.cielim_msg.camera.sensorModel.qeCurve.blueValue3 = fit_values[2]
 
-    def get_scene(self) -> cielimMessage_pb2.CielimMessage:
+    def get_scene(self) -> CielimMessage:
         """
         Return the current state of the protobuffer
         :return: protobuffer message

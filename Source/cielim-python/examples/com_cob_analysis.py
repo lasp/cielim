@@ -4,8 +4,8 @@ import re
 
 import cv2
 import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import pyplot as plt
 
 matplotlib.rcParams.update({"font.size": 6})
 colorsInt = len(matplotlib.colormaps["inferno"].colors) / (10.0)

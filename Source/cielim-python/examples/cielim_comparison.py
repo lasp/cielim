@@ -5,8 +5,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-import context
-from cielim.image_comparison_toolkit import generate_plots
+from cielim import image_comparison_toolkit as image_comparison
 
 HERE = Path(__file__).resolve().parent
 CIELIM_ROOT = HERE.parent
@@ -84,7 +83,7 @@ if __name__ == "__main__":
         crop_c = crop_roi(img_c, pad_c)
         crop_g = crop_roi(img_g, pad_g)
 
-        generate_plots(
+        image_comparison.generate_plots(
             crop_c,
             crop_g,
             title1=cielim_img.stem,

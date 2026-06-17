@@ -1,15 +1,13 @@
+import cv2
 import numpy as np
 import pytest
 
-import context
-from cielim import cielimMessage_pb2
-from cielim.driver import *
-from cielim.launcher import *
+import cielim
 
 
 @pytest.fixture
 def scene_setup():
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+    protobuf_message = cielim.CielimMessage()
 
     body = protobuf_message.celestialBodies.add()
     body.bodyName = "2000269"
@@ -42,7 +40,7 @@ def test_request_image_and_center_of_brightness(cielim_connection, scene_setup):
     connector.send_init_request()
     connector.send_frame(scene_setup)
 
-    [image, center_of_brightness, _] = connector.request_image_for_camera_id(1, 1)
+    [image, center_of_brightness, _] = connector.request_image_for_camera_id(1)
     height, width, channels = image.shape
     np.testing.assert_allclose([4000, 3000], [width, height], rtol=0, atol=0, err_msg="Returned image not correct")
 
@@ -60,9 +58,9 @@ def test_request_only_center_of_brightness(cielim_connection, scene_setup):
     connector = cielim_connection
     connector.send_frame(scene_setup)
 
-    [image, center_of_brightness, _] = connector.request_image_for_camera_id(1, 0)
+    [image, center_of_brightness, _] = connector.request_image_for_camera_id(1, False, True)
 
-    assert image == None
+    assert image is None
 
     true_center_of_brightness = [1999.5, 1499.5]
     np.testing.assert_allclose(
@@ -128,5 +126,5 @@ def test_coverage(cielim_connection, scene_setup, center_x, center_y, width, hei
         coverage,
         pct,
         rtol=0.02,
-        err_msg=f"Coverage not close enough to expected",
+        err_msg="Coverage not close enough to expected",
     )

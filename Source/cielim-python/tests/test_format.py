@@ -1,14 +1,11 @@
 import numpy as np
 import pytest
 
-import context
-from cielim import cielimMessage_pb2
-from cielim.driver import *
-from cielim.launcher import *
+import cielim
 
 
 def default_scene():
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+    protobuf_message = cielim.CielimMessage()
 
     body = protobuf_message.celestialBodies.add()
     body.bodyName = "2000269"
@@ -60,35 +57,35 @@ def test_Format(cielim_connection, scene_setup, test_name):
 
     connector.send_init_request()
     connector.send_frame(scene)
-    baseline_image, _, _ = connector.request_image_for_camera_id(1, True)
+    baseline_image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     # Refer to CameraModel.cpp for raw format generation algorithms
 
     if test_name == "RAW 8-bit":
-        scene.camera.imageFormat.format = cielimMessage_pb2.ImageFormat.RAW_8
+        scene.camera.imageFormat.format = cielim.cielimProto.ImageFormat.RAW_8
 
         connector.send_frame(scene)
-        data, _, _ = connector.request_image_for_camera_id(1, True, format_raw=True)
+        data, _, _ = connector.request_image_for_camera_id(1, True, False, format_raw=True)
 
         test_image = np.frombuffer(data, dtype=np.uint8).reshape((2000, 2000, 3))
 
         max_value = 255
 
     elif test_name == "RAW 12-bit":
-        scene.camera.imageFormat.format = cielimMessage_pb2.ImageFormat.RAW_12
+        scene.camera.imageFormat.format = cielim.cielimProto.ImageFormat.RAW_12
 
         connector.send_frame(scene)
-        data, _, _ = connector.request_image_for_camera_id(1, True, format_raw=True)
+        data, _, _ = connector.request_image_for_camera_id(1, True, False, format_raw=True)
 
         test_image = (np.frombuffer(data, dtype=np.uint16) >> 4 & 0x0FFF).reshape((2000, 2000, 3))
 
         max_value = 4095
 
     elif test_name == "RAW 12-bit packed":
-        scene.camera.imageFormat.format = cielimMessage_pb2.ImageFormat.RAW_12_PACKED
+        scene.camera.imageFormat.format = cielim.cielimProto.ImageFormat.RAW_12_PACKED
 
         connector.send_frame(scene)
-        data, _, _ = connector.request_image_for_camera_id(1, True, format_raw=True)
+        data, _, _ = connector.request_image_for_camera_id(1, True, False, format_raw=True)
 
         num_channels = 2000 * 2000 * 3
         num_pairs = (num_channels + 1) // 2
@@ -106,10 +103,10 @@ def test_Format(cielim_connection, scene_setup, test_name):
         max_value = 4095
 
     else:
-        scene.camera.imageFormat.format = cielimMessage_pb2.ImageFormat.RAW_16
+        scene.camera.imageFormat.format = cielim.cielimProto.ImageFormat.RAW_16
 
         connector.send_frame(scene)
-        data, _, _ = connector.request_image_for_camera_id(1, True, format_raw=True)
+        data, _, _ = connector.request_image_for_camera_id(1, True, False, format_raw=True)
 
         test_image = np.frombuffer(data, dtype=np.uint16).reshape((2000, 2000, 3))
 

@@ -17,16 +17,14 @@ import os
 from pathlib import Path
 
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 import spiceypy as spice
 from astropy.io import fits
+from matplotlib import pyplot as plt
 
-import context
-from cielim import cielimMessage_pb2, scene
+import cielim
 from cielim import rigid_body_kinematics as rbk
-from cielim.driver import *
-from cielim.launcher import *
+from cielim import scene
 
 # from context import qe_curve_fit
 
@@ -70,7 +68,7 @@ def _get_exposure_time():
 
 
 def scene_setup():
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+    protobuf_message = cielim.CielimMessage()
 
     body = protobuf_message.celestialBodies.add()
     body.bodyName = "deimos"
@@ -165,8 +163,8 @@ def spice_scenario():
     # Output dir
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    connector = Connector()
-    launcher = Launcher()
+    connector = cielim.Connector()
+    launcher = cielim.Launcher()
     connector.connect(launcher.launch())
     connector.send_init_request()
 
@@ -211,7 +209,7 @@ def spice_scenario():
 
         print(f"Generating image for time {time_range_str[idx]}")
 
-        [image, _, _] = connector.request_image_for_camera_id(1, 1)
+        [image, _, _] = connector.request_image_for_camera_id(1, True, False)
         cv2.imwrite(os.path.join(current_file_path, f"images-deimos-spice/deimos_image_{idx}.png"), image)
 
     connector.disconnect()

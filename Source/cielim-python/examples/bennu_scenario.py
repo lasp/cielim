@@ -3,16 +3,14 @@ import os
 from pathlib import Path
 
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 import spiceypy as spice
 from astropy.io import fits
+from matplotlib import pyplot as plt
 
-import context
-from cielim import cielimMessage_pb2, scene
+import cielim
 from cielim import rigid_body_kinematics as rbk
-from cielim.driver import Connector
-from cielim.launcher import Launcher
+from cielim import scene
 
 # ---- Paths (portable) ----
 current_file_path = os.path.dirname(__file__)
@@ -91,7 +89,7 @@ def _get_exposure_time():
 
 
 def scene_setup():
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+    protobuf_message = cielim.CielimMessage()
 
     body = protobuf_message.celestialBodies.add()
     body.bodyName = "bennu"
@@ -205,8 +203,8 @@ def bennu_scenario(number_of_images: int = None):
     # Output dir
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    connector = Connector()
-    launcher = Launcher()
+    connector = cielim.Connector()
+    launcher = cielim.Launcher()
     connector.connect(launcher.launch())
     connector.send_init_request()
 
@@ -253,7 +251,7 @@ def bennu_scenario(number_of_images: int = None):
         print(f"Generating image for time {time_list[idx]}")
         print(f"Phase angle {phase_angle}")
 
-        image, _, _ = connector.request_image_for_camera_id(1, 1)
+        image, _, _ = connector.request_image_for_camera_id(1, True, False)
         image = np.flip(image, 1)
         cv2.imwrite(os.path.join(current_file_path, f"images-bennu/bennu_image_{idx}.png"), image)
 

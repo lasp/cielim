@@ -2,17 +2,15 @@ import contextlib
 import os
 from pathlib import Path
 
-from astropy.io import fits
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 import spiceypy as spice
+from astropy.io import fits
+from matplotlib import pyplot as plt
 
-import context
-from cielim import cielimMessage_pb2, scene
+import cielim
 from cielim import rigid_body_kinematics as rbk
-from cielim.driver import *
-from cielim.launcher import *
+from cielim import scene
 
 # ---- Paths (portable) ----
 current_file_path = os.path.dirname(__file__)
@@ -59,7 +57,7 @@ def _get_exposure_time():
 
 
 def scene_setup():
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+    protobuf_message = cielim.CielimMessage()
 
     body = protobuf_message.celestialBodies.add()
     body.bodyName = "bennu"
@@ -262,8 +260,8 @@ def tag_scenario(number_of_images: int = None):
     # Output dir
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    connector = Connector()
-    launcher = Launcher()
+    connector = cielim.Connector()
+    launcher = cielim.Launcher()
     connector.connect(launcher.launch())
     connector.send_init_request()
 
@@ -303,7 +301,7 @@ def tag_scenario(number_of_images: int = None):
 
         print(f"Generating image for time {time_list[idx]}")
 
-        image, _, _ = connector.request_image_for_camera_id(1, 1)
+        image, _, _ = connector.request_image_for_camera_id(1, True, False)
         cv2.imwrite(os.path.join(current_file_path, f"images-bennu-tag/bennu_image_{idx}.png"), np.flip(image, 1))
 
     connector.disconnect()

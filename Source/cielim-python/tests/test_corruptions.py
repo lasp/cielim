@@ -1,15 +1,13 @@
+import cv2
 import numpy as np
 import pytest
 
-import context
-from cielim import cielimMessage_pb2
-from cielim.driver import *
-from cielim.launcher import *
+import cielim
 
 
 def default_scene():
 
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+    protobuf_message = cielim.CielimMessage()
 
     body = protobuf_message.celestialBodies.add()
     body.bodyName = "Plane"
@@ -158,13 +156,13 @@ def test_GaussianPSF(cielim_connection, scene_setup):
 
     connector.send_init_request()
     connector.send_frame(scene)
-    sharp_image, _, _ = connector.request_image_for_camera_id(1, 1)
+    sharp_image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     scene.camera.lensModel.pointSpreadFunction = 50
 
     connector.send_init_request()
     connector.send_frame(scene)
-    blurred_image, _, _ = connector.request_image_for_camera_id(1, 1)
+    blurred_image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     sharp_laplace = cv2.Laplacian(sharp_image, cv2.CV_64F)
     sharp_variance = sharp_laplace.var()
@@ -229,7 +227,7 @@ def test_CosmicRays(cielim_connection, scene_setup):
 
     connector.send_init_request()
     connector.send_frame(scene)
-    image, _, _ = connector.request_image_for_camera_id(1, 1)
+    image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     np.testing.assert_(np.any(np.all(image[:, :, :3] == 255, axis=-1)), "No cosmic rays found in otherwise blank image")
 
@@ -252,13 +250,13 @@ def test_ReadNoise(cielim_connection, scene_setup, read_noise):
 
     connector.send_init_request()
     connector.send_frame(scene)
-    image, _, _ = connector.request_image_for_camera_id(1, 1)
+    image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     image_normalized = image.astype(np.float32) / 255.0
 
     measured_std = np.std(image_normalized**2.2)
 
-    np.testing.assert_array_less(0.0, measured_std, err_msg=f"Image was blank and no noise was applied")
+    np.testing.assert_array_less(0.0, measured_std, err_msg="Image was blank and no noise was applied")
 
     np.testing.assert_allclose(
         measured_std,
@@ -295,7 +293,7 @@ def test_PixelDefect(cielim_connection, scene_setup, stuck_rate, dead_rate):
 
     connector.send_init_request()
     connector.send_frame(scene)
-    image, _, _ = connector.request_image_for_camera_id(1, 1)
+    image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     is_white = (image == [255, 255, 255]).all(axis=-1)
     is_black = (image == [0, 0, 0]).all(axis=-1)
@@ -334,7 +332,7 @@ def test_SignalGain(cielim_connection, scene_setup, signal_gain):
 
     connector.send_init_request()
     connector.send_frame(scene)
-    base_image, _, _ = connector.request_image_for_camera_id(1, 1)
+    base_image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     image_normalized = base_image.astype(np.float32) / 255.0
     img_linear = image_normalized**2.2
@@ -345,7 +343,7 @@ def test_SignalGain(cielim_connection, scene_setup, signal_gain):
 
     connector.send_init_request()
     connector.send_frame(scene)
-    gain_image, _, _ = connector.request_image_for_camera_id(1, 1)
+    gain_image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     np.testing.assert_allclose(
         gain_image, comparison_image, rtol=0.1, err_msg="Received image does not match comparison with specified gain"

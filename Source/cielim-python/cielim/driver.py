@@ -5,8 +5,8 @@ import delimited_protobuf
 import numpy as np
 import zmq
 
-from . import cielimMessage_pb2 as cielimMessage
-from . import imageDiagnostics_pb2 as imageDiagnostics
+from .cielimMessage_pb2 import CielimMessage
+from .imageDiagnostics_pb2 import DiagnosticData
 
 
 class Connector:
@@ -72,7 +72,7 @@ class Connector:
 
         return self._safe_recv_multipart()[0].decode("utf-8")
 
-    def send_frame(self, sim_frame: cielimMessage.CielimMessage):
+    def send_frame(self, sim_frame: CielimMessage):
         if self.request_socket is None:
             raise Exception("Socket not connected, cannot send frame.")
 
@@ -110,7 +110,7 @@ class Connector:
             else:
                 image = cv2.imdecode(buf, cv2.IMREAD_COLOR)  # Format PNG image data for viewing with OpenCV (BGRA)
 
-        diagnostics = imageDiagnostics.DiagnosticData()
+        diagnostics = DiagnosticData()
         diagnostics.ParseFromString(diagnostics_serialized)
 
         cob = (diagnostics.cob_x, diagnostics.cob_y)
@@ -141,7 +141,7 @@ class CielimMessageFileHandler:
         Jumps to first message in file at or after the requested sim time and returns that message.
         """
         while True:
-            message = delimited_protobuf.read(self.file_handle, cielimMessage.CielimMessage)
+            message = delimited_protobuf.read(self.file_handle, CielimMessage)
 
             if message is None:
                 raise Exception("Reached end of file without finding a message with sim time >= requested time.")
@@ -159,7 +159,7 @@ class CielimMessageFileHandler:
 
     def get_next_simulation_frame(self):
         try:
-            return delimited_protobuf.read(self.file_handle, cielimMessage.CielimMessage)
+            return delimited_protobuf.read(self.file_handle, CielimMessage)
         except Exception as e:
             print(f"Protobuf failed to decode: {e}")
             return None

@@ -1,8 +1,8 @@
 import os
 
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import pyplot as plt
 
 current_file_path = os.path.dirname(__file__)
 

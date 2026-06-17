@@ -1,8 +1,7 @@
 import numpy as np
 import pytest
 
-import context
-from cielim.image_comparison_toolkit import compute_disk_stats, cross_correlate_fft
+from cielim import image_comparison_toolkit as image_comparison
 
 
 @pytest.fixture
@@ -19,8 +18,8 @@ def circle_image():
 
 def test_histogram_diff_identical(circle_image):
 
-    s1 = compute_disk_stats(circle_image)
-    s2 = compute_disk_stats(circle_image)
+    s1 = image_comparison.compute_disk_stats(circle_image)
+    s2 = image_comparison.compute_disk_stats(circle_image)
 
     np.testing.assert_allclose(s1["mean"], s2["mean"], rtol=0, atol=0, err_msg="Means differ for identical images")
     np.testing.assert_allclose(
@@ -36,7 +35,7 @@ def test_histogram_diff_identical(circle_image):
     )
 
 
-@pytest.mark.parametrize("correlate_fn", [cross_correlate_fft])
+@pytest.mark.parametrize("correlate_fn", [image_comparison.cross_correlate_fft])
 def test_cross_correlation_function(circle_image, correlate_fn):
 
     shifted = np.roll(np.roll(circle_image, shift=20, axis=1), shift=15, axis=0)

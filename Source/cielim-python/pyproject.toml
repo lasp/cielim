@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cielim-python"
+version = "0.1.0"
+requires-python = ">=3.10"
+
+dependencies = [
+    "delimited-protobuf==1.0.0",
+    "numpy",
+    "opencv-contrib-python==4.11.0.86",
+    "opencv-python==4.11.0.86",
+    "protobuf==6.33.4",
+    "pyzmq",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit",
+]
+
+extra = [
+    "astropy-iers-data==0.2025.11.10.0.38.31",
+    "astropy==6.1.4",
+    "astroquery==0.4.7",
+    "matplotlib",
+    "pandas",
+    "scipy",
+    "spiceypy==6.0.0",
+]
+
+test = [
+    "pytest",
+]
+
+all = [
+    "cielim-python[dev]",
+    "cielim-python[extra]",
+    "cielim-python[test]",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["cielim*"]

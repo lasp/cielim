@@ -2,14 +2,11 @@ import cv2
 import numpy as np
 import pytest
 
-import context
-from cielim import cielimMessage_pb2
-from cielim.driver import *
-from cielim.launcher import *
+import cielim
 
 
 def default_scene():
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+    protobuf_message = cielim.CielimMessage()
 
     body = protobuf_message.celestialBodies.add()
     body.bodyName = "2000269"
@@ -50,7 +47,7 @@ def get_baseline_cob(connector):
     [scene.celestialBodies[0].model.principalAxisDistortion.append(val) for val in [1, 1, 1]]
 
     connector.send_frame(scene)
-    image, _, _ = connector.request_image_for_camera_id(1, 1)
+    image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     if len(image.shape) == 3:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -82,7 +79,7 @@ def test_body_scaling(cielim_connection, scene_setup, test_name, distortion):
     [scene.celestialBodies[0].model.principalAxisDistortion.append(val) for val in distortion]
 
     connector.send_frame(scene)
-    image, _, _ = connector.request_image_for_camera_id(1, 1)
+    image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     if len(image.shape) == 3:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)

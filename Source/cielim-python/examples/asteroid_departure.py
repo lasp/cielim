@@ -3,8 +3,8 @@ import os
 import cv2
 import numpy as np
 
-import context
-from cielim import cielimMessage_pb2, driver, launcher, scene
+import cielim
+from cielim import scene
 
 current_file_path = os.path.dirname(__file__)
 
@@ -17,11 +17,11 @@ def append_protobuf_to_file(filename, message):
         f.write(serialized_data)
 
 
-def scene_setup() -> cielimMessage_pb2.CielimMessage:
+def scene_setup() -> cielim.CielimMessage:
     """
     Setup basic scene: populate default values in protobuffer
     """
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+    protobuf_message = cielim.CielimMessage()
 
     body = protobuf_message.celestialBodies.add()
     body.bodyName = "2000269"
@@ -69,9 +69,9 @@ def departure_scene(number_of_images: int):
 
     position_shift = np.array([0, 0, -100000])
 
-    connector = driver.Connector()
-    launch = launcher.Launcher()
-    connector.connect(launch.launch())
+    connector = cielim.Connector()
+    launcher = cielim.Launcher()
+    connector.connect(launcher.launch())
     connector.send_init_request()
     message = scene_frame.get_scene()
     initial_position = np.array(message.spacecraft.position)
@@ -88,12 +88,12 @@ def departure_scene(number_of_images: int):
         # Generate image
         image_name = "image-" + str(idx)
         connector.send_frame(scene_frame.get_scene())
-        [image, _, _] = connector.request_image_for_camera_id(1)
+        [image, _, _] = connector.request_image_for_camera_id(1, True, False)
         cv2.imwrite(directory_path + "/" + image_name + ".png", image)
         append_protobuf_to_file(protobuff_file, message)
 
     connector.disconnect()
-    launch.terminate()
+    launcher.terminate()
 
 
 if __name__ == "__main__":

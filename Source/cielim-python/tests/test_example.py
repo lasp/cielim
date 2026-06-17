@@ -1,15 +1,13 @@
 import numpy as np
 import pytest
 
-import context
-from cielim import cielimMessage_pb2, scene
-from cielim.driver import *
-from cielim.launcher import *
+import cielim
+from cielim import scene
 
 
 @pytest.fixture
 def scene_setup():
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+    protobuf_message = cielim.CielimMessage()
 
     body = protobuf_message.celestialBodies.add()
     body.bodyName = "2000269"
@@ -50,6 +48,6 @@ def test_example(cielim_connection, scene_setup):
     for time in times:
         scene_frame.propagate_and_stare(time)
         connector.send_frame(scene_frame.get_scene())
-        [image, _, _] = connector.request_image_for_camera_id(1, 1)
+        [image, _, _] = connector.request_image_for_camera_id(1, True, False)
         height, width, _ = image.shape
         np.testing.assert_allclose([4000, 3000], [width, height], rtol=0, atol=0, err_msg="Returned image not correct")

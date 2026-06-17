@@ -5,8 +5,8 @@ import pickle
 import cv2
 import numpy as np
 
-import context
-from cielim import cielimMessage_pb2, driver, launcher, scene, variable_map
+import cielim
+from cielim import scene, variable_map
 
 current_file_path = os.path.dirname(__file__)
 
@@ -81,7 +81,7 @@ class BasiliskMCReader(variable_map.VariableMap):
 
 
 def scene_setup():
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+    protobuf_message = cielim.CielimMessage()
 
     body = protobuf_message.celestialBodies.add()
     body.bodyName = "2000269"
@@ -129,8 +129,8 @@ def saved_monte_carlo_scenario():
     directory_path = current_file_path + "/images-saved-monte-carlo"
     os.makedirs(directory_path, exist_ok=True)
 
-    connector = driver.Connector()
-    launch = launcher.Launcher()
+    connector = cielim.Connector()
+    launch = cielim.Launcher()
     connector.connect(launch.launch())
     connector.send_init_request()
 
@@ -149,7 +149,7 @@ def saved_monte_carlo_scenario():
                 [message.spacecraft.attitude.append(item) for item in attitude]
                 scene_frame.set_existing_message(message)
                 connector.send_frame(scene_frame.get_scene())
-                [image, _, _] = connector.request_image_for_camera_id(1, 1)
+                [image, _, _] = connector.request_image_for_camera_id(1, True, False)
                 cv2.imwrite(
                     directory_path + "/run-" + str(run_number) + "-time-" + str(np.round(time, 2)) + ".png", image
                 )

@@ -2,15 +2,12 @@ import cv2
 import numpy as np
 import pytest
 
-import context
-from cielim import cielimMessage_pb2
-from cielim.driver import *
-from cielim.launcher import *
+import cielim
 
 
 def default_scene():
 
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+    protobuf_message = cielim.CielimMessage()
 
     body = protobuf_message.celestialBodies.add()
     body.bodyName = "2000269"
@@ -53,7 +50,7 @@ def test_image_brightness(cielim_connection, scene_setup):
 
     connector.send_init_request()
     connector.send_frame(scene)
-    image, _, _ = connector.request_image_for_camera_id(1, 1)
+    image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     base_mean = np.mean(image_gray)
@@ -63,7 +60,7 @@ def test_image_brightness(cielim_connection, scene_setup):
 
     # connector.send_init_request()
     connector.send_frame(scene)
-    low_exposure_image, _, _ = connector.request_image_for_camera_id(1, 1)
+    low_exposure_image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     low_exposure_image_gray = cv2.cvtColor(low_exposure_image, cv2.COLOR_BGR2GRAY)
     low_exposure_mean = np.mean(low_exposure_image_gray)
@@ -100,7 +97,7 @@ def test_image_brightness(cielim_connection, scene_setup):
 
     # connector.send_init_request()
     connector.send_frame(scene)
-    low_qe_image, _, _ = connector.request_image_for_camera_id(1, 1)
+    low_qe_image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     low_qe_image_gray = cv2.cvtColor(low_qe_image, cv2.COLOR_BGR2GRAY)
     low_qe_mean = np.mean(low_qe_image_gray)
@@ -137,7 +134,7 @@ def test_camera_fov(cielim_connection, scene_setup, test_name, fov_x_deg, fov_y_
 
     connector.send_init_request()
     connector.send_frame(scene)
-    image, _, _ = connector.request_image_for_camera_id(1, 1)
+    image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     if len(image.shape) == 3:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -184,7 +181,7 @@ def get_baseline_bounds(connector):
 
     connector.send_init_request()
     connector.send_frame(scene)
-    image, _, _ = connector.request_image_for_camera_id(1, 1)
+    image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     if len(image.shape) == 3:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -217,7 +214,7 @@ def test_camera_resolution(cielim_connection, scene_setup, test_name, resolution
 
     connector.send_init_request()
     connector.send_frame(scene)
-    image, _, _ = connector.request_image_for_camera_id(1, 1)
+    image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     if len(image.shape) == 3:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)

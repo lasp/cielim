@@ -3,16 +3,14 @@ import os
 from pathlib import Path
 
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 import spiceypy as spice
 from astropy.io import fits
+from matplotlib import pyplot as plt
 
-import context
-from cielim import cielimMessage_pb2, scene
+import cielim
 from cielim import rigid_body_kinematics as rbk
-from cielim.driver import *
-from cielim.launcher import *
+from cielim import scene
 
 # ---- Paths (portable) ----
 current_file_path = os.path.dirname(__file__)
@@ -93,7 +91,7 @@ def get_header_data():
 
 
 def scene_setup():
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+    protobuf_message = cielim.CielimMessage()
 
     body = protobuf_message.celestialBodies.add()
     body.bodyName = "vesta"
@@ -141,7 +139,7 @@ def scene_setup():
     return protobuf_message
 
 
-def vesta_scenario(number_of_images: int = None):
+def vesta_scenario(number_of_images: int | None = None):
     scene_frame = scene.Scene()
     scene_frame.set_existing_message(scene_setup())
 
@@ -198,8 +196,8 @@ def vesta_scenario(number_of_images: int = None):
     # Output dir
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    connector = Connector()
-    launcher = Launcher()
+    connector = cielim.Connector()
+    launcher = cielim.Launcher()
     connector.connect(launcher.launch())
     connector.send_init_request()
 
@@ -240,7 +238,7 @@ def vesta_scenario(number_of_images: int = None):
         print(f"Generating image for time {time_list[idx]}")
         print(f"Phase angle {phase_angle}")
 
-        image, _, _ = connector.request_image_for_camera_id(1, 1)
+        image, _, _ = connector.request_image_for_camera_id(1, True, False)
         image = np.flip(image, 0)
         cv2.imwrite(os.path.join(current_file_path, f"images-vesta/vesta_image_{idx}.png"), image)
 

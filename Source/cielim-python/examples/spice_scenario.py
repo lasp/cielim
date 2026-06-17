@@ -6,9 +6,9 @@ import cv2
 import numpy as np
 import spiceypy as spice
 
-import context
-from cielim import cielimMessage_pb2, driver, launcher, scene
+import cielim
 from cielim import rigid_body_kinematics as rbk
+from cielim import scene
 
 current_file_path = os.path.dirname(__file__)
 
@@ -37,7 +37,7 @@ def get_spice_data(filename):
 
 
 def scene_setup():
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+    protobuf_message = cielim.CielimMessage()
 
     body = protobuf_message.celestialBodies.add()
     body.bodyName = "2000269"
@@ -85,8 +85,8 @@ def spice_scenario():
     directory_path = current_file_path + "/images-cassini-spice"
     os.makedirs(directory_path, exist_ok=True)
 
-    connector = driver.Connector()
-    launch = launcher.Launcher()
+    connector = cielim.Connector()
+    launch = cielim.Launcher()
     connector.connect(launch.launch())
     connector.send_init_request()
 
@@ -100,7 +100,7 @@ def spice_scenario():
         [message.spacecraft.attitude.append(item) for item in rbk.dcm_to_mrp(BN)]
         scene_frame.set_existing_message(message)
         connector.send_frame(scene_frame.get_scene())
-        [image, _, _] = connector.request_image_for_camera_id(1, 1)
+        [image, _, _] = connector.request_image_for_camera_id(1, True, False)
         cv2.imwrite(directory_path + "/cassini-" + str(time) + ".png", image)
 
     connector.disconnect()

@@ -1,13 +1,12 @@
 import cv2
 import numpy as np
 
-import context
-from cielim import cielimMessage_pb2, driver
+import cielim
 
 
 def default_scene():
 
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+    protobuf_message = cielim.CielimMessage()
 
     body = protobuf_message.celestialBodies.add()
     body.bodyName = "Plane"
@@ -41,14 +40,14 @@ if __name__ == "__main__":
     Spawn a Lambertian Diffuse plane for calibration
     """
 
-    connector = driver.Connector()
+    connector = cielim.Connector()
     connector.connect()
 
     scene = default_scene()
 
     connector.send_init_request()
     connector.send_frame(scene)
-    image, _, _ = connector.request_image_for_camera_id(1, 1)
+    image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     WindowName = f"Image_Client_{connector.identity}"
     cv2.namedWindow(WindowName, cv2.WINDOW_NORMAL)

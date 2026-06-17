@@ -3,8 +3,7 @@ import os
 
 import cv2
 
-import context
-from cielim import driver, launcher
+import cielim
 
 current_file_path = os.path.dirname(__file__)
 
@@ -12,7 +11,7 @@ file_dir = os.path.dirname(os.path.dirname(os.path.dirname(current_file_path))) 
 test_dir = os.path.dirname(current_file_path) + "/support-data/protobufs/"
 
 if __name__ == "__main__":
-    connector = driver.Connector()
+    connector = cielim.Connector()
 
     parser = argparse.ArgumentParser(
         description="Send protobuf to Cielim using either a new Cielim or already running Cielim process"
@@ -53,7 +52,7 @@ if __name__ == "__main__":
     if args.host is not None:
         connector.connect(args.host)
     else:
-        launch = launcher.Launcher()
+        launch = cielim.Launcher()
         connector.connect(launch.launch())
 
     if args.filename is not None:
@@ -71,7 +70,7 @@ if __name__ == "__main__":
     else:
         file = test_dir + file_name
 
-    file_handler = driver.CielimMessageFileHandler(file)
+    file_handler = cielim.CielimMessageFileHandler(file)
 
     idx = 0
     image = None

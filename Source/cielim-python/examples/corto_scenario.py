@@ -4,15 +4,9 @@ import os
 import cv2
 import numpy as np
 
-import context
-from cielim import (
-    cielimMessage_pb2,
-    driver,
-    launcher,
-    rigid_body_kinematics,
-    scene,
-    variable_map,
-)
+import cielim
+from cielim import rigid_body_kinematics as rbk
+from cielim import scene, variable_map
 
 current_file_path = os.path.dirname(__file__)
 
@@ -116,7 +110,7 @@ class CortoReader(variable_map.VariableMap):
 
 
 def scene_setup():
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+    protobuf_message = cielim.CielimMessage()
 
     body = protobuf_message.celestialBodies.add()
     body.bodyName = "bennu"
@@ -178,8 +172,8 @@ def corto_scenario():
     directory_path = current_file_path + "/images-corto"
     os.makedirs(directory_path, exist_ok=True)
 
-    connector = driver.Connector()
-    launch = launcher.Launcher()
+    connector = cielim.Connector()
+    launch = cielim.Launcher()
     connector.connect(launch.launch())
 
     number_of_images = int(reader.get_number_of_simulations() / 1000)
@@ -200,14 +194,14 @@ def corto_scenario():
         sun_position = reader.get_simulation_variables("sun.position", image_number)
 
         asteroid_ep = np.array([asteroid_quaternion[-1]] + asteroid_quaternion[:3])
-        asteroid_mrp = rigid_body_kinematics.quaternion_to_mrp(asteroid_ep)
+        asteroid_mrp = rbk.quaternion_to_mrp(asteroid_ep)
         asteroid_mrp = np.eye(3)
 
         spacecraft_ep = np.array(spacecraft_quaternion)
-        spacecraft_mrp = rigid_body_kinematics.quaternion_to_mrp(spacecraft_ep)
+        spacecraft_mrp = rbk.quaternion_to_mrp(spacecraft_ep)
         TC = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
 
-        camera_mrp = rigid_body_kinematics.dcm_to_mrp(TC)
+        camera_mrp = rbk.dcm_to_mrp(TC)
         message = scene_frame.get_scene()
 
         message.camera.lensModel.ClearField("fieldOfView")
@@ -236,7 +230,7 @@ def corto_scenario():
 
         scene_frame.set_existing_message(message)
         connector.send_frame(scene_frame.get_scene())
-        [image, _, _] = connector.request_image_for_camera_id(1, 1)
+        [image, _, _] = connector.request_image_for_camera_id(1, True, False)
         cv2.imwrite(directory_path + "/image-" + str(image_number) + ".png", image)
 
     connector.disconnect()

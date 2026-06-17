@@ -1,0 +1,9 @@
+astropy-iers-data==0.2025.11.10.0.38.31
+astropy==6.1.4
+astroquery==0.4.7
+matplotlib
+pandas
+pre-commit
+pytest
+scipy
+spiceypy==6.0.0

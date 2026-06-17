@@ -10,17 +10,15 @@ from pathlib import Path
 import cv2
 import matplotlib
 
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
+matplotlib.use("Agg")  # Use non-interactive backend for matplotlib
 import numpy as np
 import spiceypy as spice
+from matplotlib import pyplot as plt
 from PIL import Image
 
-import context
-from cielim import cielimMessage_pb2, scene
+import cielim
 from cielim import rigid_body_kinematics as rbk
-from cielim.driver import *
-from cielim.launcher import *
+from cielim import scene
 
 
 HERE = Path(__file__).resolve()
@@ -128,8 +126,8 @@ def make_cielim_frame(img: np.ndarray, timestamp: str, x1: int, x2: int, y1: int
     return Image.open(buf).copy().convert("RGB")
 
 
-def scene_setup() -> cielimMessage_pb2.CielimMessage:
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+def scene_setup() -> cielim.CielimMessage:
+    protobuf_message = cielim.CielimMessage()
 
     vesta = protobuf_message.celestialBodies.add()
     vesta.bodyName = "vesta"
@@ -303,8 +301,8 @@ def cielim_giant(number_of_images: int = None):
     with cd(CIELIM_ROOT):
         spice.furnsh(str(MK))
 
-    connector = Connector()
-    launcher = Launcher()
+    connector = cielim.Connector()
+    launcher = cielim.Launcher()
     connector.connect(launcher.launch())
     connector.send_init_request()
 
@@ -341,7 +339,7 @@ def cielim_giant(number_of_images: int = None):
         scene_frame.set_existing_message(message)
         connector.send_frame(scene_frame.get_scene())
 
-        image, _, _ = connector.request_image_for_camera_id(1, 1)
+        image, _, _ = connector.request_image_for_camera_id(1, True, False)
         image = np.flip(image, 0)
         cv2.imwrite(str(OUT_DIR / f"giant-cielim-vesta_{idx:03d}.png"), image)
 

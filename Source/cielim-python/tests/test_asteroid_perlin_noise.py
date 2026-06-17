@@ -1,15 +1,13 @@
+import cv2
 import numpy as np
 import pytest
 
-import context
-from cielim import cielimMessage_pb2
-from cielim.driver import *
-from cielim.launcher import *
+import cielim
 
 
 def default_scene():
 
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+    protobuf_message = cielim.CielimMessage()
 
     body = protobuf_message.celestialBodies.add()
     body.bodyName = "2000269"
@@ -52,7 +50,7 @@ def test_PerlinNoise(cielim_connection, scene_setup):
 
     connector.send_init_request()
     connector.send_frame(scene)
-    base_image, _, _ = connector.request_image_for_camera_id(1, True)
+    base_image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     # Apply a lot of noise so that the circle becomes spikey
 
@@ -63,7 +61,7 @@ def test_PerlinNoise(cielim_connection, scene_setup):
 
     connector.send_init_request()
     connector.send_frame(scene)
-    noise_image, _, _ = connector.request_image_for_camera_id(1, True)
+    noise_image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     # Compare image shapes
 

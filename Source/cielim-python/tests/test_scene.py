@@ -3,14 +3,13 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-import context
-from cielim import cielimMessage_pb2, scene
-from cielim.orbital_motion import *
-from cielim.rigid_body_kinematics import *
+import cielim
+from cielim import orbital_motion, scene
+from cielim import rigid_body_kinematics as rbk
 
 
 def scene_setup():
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+    protobuf_message = cielim.CielimMessage()
 
     body = protobuf_message.celestialBodies.add()
     body.bodyName = "earth"
@@ -43,7 +42,7 @@ def test_setters_getters():
     scene_frame.set_gravitational_parameter(3.2 * 1e-10)
     np.testing.assert_equal(scene_frame.gravitational_parameter, 3.2 * 1e-10)
 
-    orbital_elements = ClassicOrbitalElements()
+    orbital_elements = orbital_motion.ClassicOrbitalElements()
     orbital_elements.eccentricity = 0
     orbital_elements.semi_major_axis = 35786 * 10**3
     orbital_elements.inclination = np.pi / 6
@@ -86,9 +85,9 @@ def test_setters_getters():
     offset = [0.1, 0, 0]
     scene_frame.set_euler321_pointing_offset(offset)
     returned = scene_frame.get_scene()
-    dcm1 = euler321_to_dcm(euler321)
-    dcm2 = euler321_to_dcm(offset)
-    np.testing.assert_almost_equal(returned.spacecraft.attitude, dcm_to_mrp(np.dot(dcm2, dcm1)), decimal=15)
+    dcm1 = rbk.euler321_to_dcm(euler321)
+    dcm2 = rbk.euler321_to_dcm(offset)
+    np.testing.assert_almost_equal(returned.spacecraft.attitude, rbk.dcm_to_mrp(np.dot(dcm2, dcm1)), decimal=15)
 
 
 def test_camera_correction_rotation():
@@ -96,9 +95,9 @@ def test_camera_correction_rotation():
     scene_frame.set_existing_message(scene_setup())
     scene_frame.look_at_target("earth")
     returned = scene_frame.get_scene()
-    BN = mrp_to_dcm(list(returned.spacecraft.attitude))
+    BN = rbk.mrp_to_dcm(list(returned.spacecraft.attitude))
 
-    CB = mrp_to_dcm(list(returned.camera.bodyFrameToCameraMrp))
+    CB = rbk.mrp_to_dcm(list(returned.camera.bodyFrameToCameraMrp))
     CN = np.array([[0.0, 0.0, -1.0], [1.0, 0.0, 0.0], [0.0, -1, 0.0]])
 
     # TODO confirm that CN.T is correct and not CN (or that the method is correct)

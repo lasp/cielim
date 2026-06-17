@@ -1,14 +1,11 @@
 import os
 
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 import pytest
+from matplotlib import pyplot as plt
 
-import context
-from cielim import cielimMessage_pb2
-from cielim.driver import *
-from cielim.launcher import *
+import cielim
 
 # Read at import time so it survives pytest.main() re-importing this file as a module.
 show_plots = os.environ.get("show_plots", "False") == "True"
@@ -67,7 +64,7 @@ def compute_transition_distance(width=WIDTH, height=HEIGHT, phase_angle_deg=0, o
 
 def default_scene(camera_distance, width=WIDTH, height=HEIGHT):
     """Create a protobuf scene matching asteroid_departure.py at the given camera distance."""
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+    protobuf_message = cielim.CielimMessage()
 
     body = protobuf_message.celestialBodies.add()
     body.bodyName = "asteroid"
@@ -102,7 +99,7 @@ def default_scene(camera_distance, width=WIDTH, height=HEIGHT):
 def render_frame(connector, scene):
     """Send a frame and return (image, cob, coverage) for camera 1."""
     connector.send_frame(scene)
-    image, cob, coverage = connector.request_image_for_camera_id(1, 1)
+    image, cob, coverage = connector.request_image_for_camera_id(1)
     return image, cob, coverage
 
 
