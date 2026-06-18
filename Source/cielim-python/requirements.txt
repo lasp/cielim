@@ -1,6 +1,5 @@
 delimited-protobuf==1.0.0
 numpy
-opencv-contrib-python==4.11.0.86
-opencv-python==4.11.0.86
+opencv-python
 protobuf==6.33.4
 pyzmq

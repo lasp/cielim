@@ -10,8 +10,7 @@ requires-python = ">=3.10"
 dependencies = [
     "delimited-protobuf==1.0.0",
     "numpy",
-    "opencv-contrib-python==4.11.0.86",
-    "opencv-python==4.11.0.86",
+    "opencv-python",
     "protobuf==6.33.4",
     "pyzmq",
 ]
@@ -22,9 +21,7 @@ dev = [
 ]
 
 extra = [
-    "astropy-iers-data==0.2025.11.10.0.38.31",
     "astropy==6.1.4",
-    "astroquery==0.4.7",
     "matplotlib",
     "pandas",
     "scipy",
