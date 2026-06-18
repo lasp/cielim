@@ -6,7 +6,6 @@ import signal
 import socket
 import subprocess
 import sys
-import time
 from sys import platform
 from pathlib import Path
 
@@ -149,7 +148,6 @@ class Launcher:
             self._cleaned_up = False
 
             print(f"Cielim spawned with pid: {cielim_process.pid} on port: {end_point.port}")
-            time.sleep(3)  # Give Cielim's rendering pipeline time to warm up
             return connection_address
         except FileNotFoundError:
             raise FileNotFoundError(f"Cielim application failed to launch at: {self.app_path}")
