@@ -191,6 +191,12 @@ void ACameraModel::SetCameraParameters(const cielimMessage::CielimMessage &Cieli
 	{
 		const auto LensModel = CameraModel.lensmodel();
 
+		this->CorruptionParams.K1 = LensModel.distortionk1();
+		this->CorruptionParams.K2 = LensModel.distortionk2();
+		this->CorruptionParams.K3 = LensModel.distortionk3();
+		this->CorruptionParams.P1 = LensModel.distortionp1();
+		this->CorruptionParams.P2 = LensModel.distortionp2();
+
 		this->CorruptionParams.Sigma = LensModel.pointspreadfunction();
 	}
 

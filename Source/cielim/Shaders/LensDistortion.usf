@@ -1,0 +1,64 @@
+//=================== Copyright (c) 2026 Laboratory for Atmospheric and Space Physics ===================//
+//
+// Purpose: Pixel shader that adds lens distortion.
+//
+// License: MIT License. See LICENSE file.
+//
+//=======================================================================================================//
+
+#include "/Engine/Public/Platform.ush"
+
+Texture2D InputTexture;
+SamplerState InputSampler;
+
+float AspectRatio; // Resolution.x / Resolution.y
+
+// Radial distortion parameters
+float K1;
+float K2;
+float K3;
+
+// Tangential distortion parameters
+float P1;
+float P2;
+
+float4 MainPS(float4 UV : TEXCOORD0) : SV_Target0
+{
+	float2 Center = UV.xy - 0.5;
+	Center.x *= AspectRatio;
+
+	float RadialDist2 = dot(Center, Center);
+	float RadialDist4 = RadialDist2 * RadialDist2;
+	float RadialDist6 = RadialDist2 * RadialDist4;
+
+	float RadialDistFactor = 1.0 + K1 * RadialDist2 + K2 * RadialDist4 + K3 * RadialDist6;
+
+	float TangentialOffsetX = 2.0 * P1 * Center.x * Center.y  + P2 * (RadialDist2 + 2.0 * Center.x * Center.x);
+	float TangentialOffsetY = P1 * (RadialDist2 + 2.0 * Center.y * Center.y) + 2.0 * P2 * Center.x * Center.y;
+
+	// Right edge midpoint (x=0.5, y=0) in aspect-corrected space
+	float XEdge2  = (0.5 * AspectRatio) * (0.5 * AspectRatio);
+	float XScale    = 1.0 + K1 * XEdge2 + K2 * XEdge2 * XEdge2 + K3 * XEdge2 * XEdge2 * XEdge2;
+
+	// Top edge midpoint (x=0, y=0.5) in aspect-corrected space
+	float YEdge2  = 0.5 * 0.5;
+	float YScale    = 1.0 + K1 * YEdge2 + K2 * YEdge2 * YEdge2 + K3 * YEdge2 * YEdge2 * YEdge2;
+
+	Center.x /= XScale;
+	Center.y /= YScale;
+
+	Center = Center * RadialDistFactor + float2(TangentialOffsetX, TangentialOffsetY);
+
+	// Restore aspect ratio and shift back
+	Center.x /= AspectRatio;
+
+	float2 DistortedUV = Center + 0.5;
+
+	// Fill in image edges with black if distorted inwards
+	if (DistortedUV.x < 0.0 || DistortedUV.x > 1.0 || DistortedUV.y < 0.0 || DistortedUV.y > 1.0)
+	{
+		return float4(0.0, 0.0, 0.0, 1.0);
+	}
+
+	return InputTexture.Sample(InputSampler, DistortedUV.xy);
+}

@@ -15,6 +15,7 @@
 #include "Shaders/CosmicRays.h"
 #include "Shaders/DistantObjects.h"
 #include "Shaders/GaussianPSF.h"
+#include "Shaders/LensDistortion.h"
 #include "Shaders/QuETonemap.h"
 #include "Shaders/ReadNoise.h"
 #include "Shaders/SignalGain.h"
@@ -22,6 +23,7 @@
 
 DECLARE_GPU_STAT_NAMED(DistantObjects, TEXT("DistantObjects"));
 DECLARE_GPU_STAT_NAMED(QuETonemapping, TEXT("QuantumEfficiencyTonemapping"));
+DECLARE_GPU_STAT_NAMED(LensDistortion, TEXT("LensDistortion"));
 DECLARE_GPU_STAT_NAMED(GaussianPSF, TEXT("GaussianPSF"));
 DECLARE_GPU_STAT_NAMED(CosmicRays, TEXT("CosmicRays"));
 DECLARE_GPU_STAT_NAMED(ReadNoise, TEXT("ReadNoise"));
@@ -103,6 +105,13 @@ void FCielimSceneViewExtension::PrePostProcessPass_RenderThread(FRDGBuilder &Gra
 						   CameraModel->DistantObjects, SceneDepth, TextureIn);
 
 	// These passes operate on light entering camera
+
+	if (CorruptionParams.K1 != 0.0f || CorruptionParams.K2 != 0.0f || CorruptionParams.K3 != 0.0f ||
+		CorruptionParams.P1 != 0.0f || CorruptionParams.P2 != 0.0f)
+	{
+		LensDistortionPass(GraphBuilder, CorruptionParams, TextureIn, TextureOut);
+		Swap(TextureIn, TextureOut);
+	}
 
 	if (CorruptionParams.KernelWidth > 0 && CorruptionParams.Sigma > 0.0f)
 	{
@@ -255,6 +264,32 @@ void FCielimSceneViewExtension::QuETonemapPass(FRDGBuilder &GraphBuilder, const 
 
 	AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply QuE Tonemapping"), GMaxRHIFeatureLevel, Viewport, Viewport,
 					  QuETonemapShader, QuEParams);
+}
+
+void FCielimSceneViewExtension::LensDistortionPass(FRDGBuilder &GraphBuilder,
+												   const FImageCorruptionParams &CorruptionParams,
+												   FRDGTextureRef &TextureIn, FRDGTextureRef &TextureOut)
+{
+	RDG_GPU_STAT_SCOPE(GraphBuilder, LensDistortion);
+	RDG_EVENT_SCOPE(GraphBuilder, "LensDistortion");
+
+	const FScreenPassTextureViewport Viewport(TextureIn);
+
+	FLensDistortion::FParameters *DistortionParams = GraphBuilder.AllocParameters<FLensDistortion::FParameters>();
+	DistortionParams->InputTexture = TextureIn;
+	DistortionParams->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
+	DistortionParams->AspectRatio = Viewport.Rect.Width() / Viewport.Rect.Height();
+	DistortionParams->K1 = CorruptionParams.K1;
+	DistortionParams->K2 = CorruptionParams.K2;
+	DistortionParams->K3 = CorruptionParams.K3;
+	DistortionParams->P1 = CorruptionParams.P1;
+	DistortionParams->P2 = CorruptionParams.P2;
+	DistortionParams->RenderTargets[0] = FRenderTargetBinding(TextureOut, ERenderTargetLoadAction::EClear);
+
+	const TShaderMapRef<FLensDistortion> DistortionShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+
+	AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply Lens Distortion"), GMaxRHIFeatureLevel, Viewport, Viewport,
+					  DistortionShader, DistortionParams);
 }
 
 void FCielimSceneViewExtension::GaussianPSFPass(FRDGBuilder &GraphBuilder,
