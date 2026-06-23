@@ -44,7 +44,7 @@ def scene_setup():
 
 def test_image_brightness(cielim_connection, scene_setup):
     """
-    Tests that reducing exposure time and QE reduces image brightness.
+    Tests that reducing exposure time, transmission factor, and QE reduces image brightness.
     """
     connector = cielim_connection
 
@@ -71,6 +71,19 @@ def test_image_brightness(cielim_connection, scene_setup):
         low_exposure_mean, base_mean, err_msg="Brightness did not decrease with lower exposure."
     )
 
+    # Reduce transmission factor
+    scene.camera.lensModel.transmission = 0.25
+
+    connector.send_frame(scene)
+    low_transmission_image, _, _ = connector.request_image_for_camera_id(1, True, False)
+
+    low_transmission_image_gray = cv2.cvtColor(low_transmission_image, cv2.COLOR_BGR2GRAY)
+    low_transmission_mean = np.mean(low_transmission_image_gray)
+
+    np.testing.assert_array_less(
+        low_transmission_mean, low_exposure_mean, err_msg="Brightness did not decrease with lower transmission."
+    )
+
     # Reduce the quantum efficiency
     scene.camera.sensorModel.qeCurve.redValue1 = 0.35
     scene.camera.sensorModel.qeCurve.redValue2 = 0.35
@@ -89,7 +102,9 @@ def test_image_brightness(cielim_connection, scene_setup):
     low_qe_image_gray = cv2.cvtColor(low_qe_image, cv2.COLOR_BGR2GRAY)
     low_qe_mean = np.mean(low_qe_image_gray)
 
-    np.testing.assert_array_less(low_qe_mean, low_exposure_mean, err_msg="Brightness did not decrease with lower QE.")
+    np.testing.assert_array_less(
+        low_qe_mean, low_transmission_mean, err_msg="Brightness did not decrease with lower QE."
+    )
 
 
 @pytest.mark.parametrize(
