@@ -85,6 +85,7 @@ void FCielimSceneViewExtension::PrePostProcessPass_RenderThread(FRDGBuilder &Gra
 		CameraParams.SensorWidth = 0.036f;
 		CameraParams.SensorHeight = 0.024f;
 		CameraParams.ExposureTime = 5e-4f;
+		CameraParams.Transmission = 1.0f;
 		CameraParams.Wavelength1 = 650.0f;
 		CameraParams.Wavelength2 = 550.0f;
 		CameraParams.Wavelength3 = 450.0f;
@@ -247,6 +248,7 @@ void FCielimSceneViewExtension::QuETonemapPass(FRDGBuilder &GraphBuilder, const 
 	QuEParams->SolidAngle = SolidAngle;
 	QuEParams->PixelArea = PixelWidth * PixelHeight;
 	QuEParams->ExposureTime = CameraParams.ExposureTime;
+	QuEParams->Transmission = CameraParams.Transmission;
 	QuEParams->W1EnergyInverse = CameraParams.Wavelength1 * 5.034e15f; // Multiply by 1/hc [J^-1 nm^-1]
 	QuEParams->W2EnergyInverse = CameraParams.Wavelength2 * 5.034e15f; // Multiply by 1/hc [J^-1 nm^-1]
 	QuEParams->W3EnergyInverse = CameraParams.Wavelength3 * 5.034e15f; // Multiply by 1/hc [J^-1 nm^-1]

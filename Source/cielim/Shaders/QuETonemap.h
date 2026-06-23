@@ -23,6 +23,7 @@ class FQuETonemap : public FGlobalShader
 	SHADER_PARAMETER(float, SolidAngle)
 	SHADER_PARAMETER(float, PixelArea)
 	SHADER_PARAMETER(float, ExposureTime)
+	SHADER_PARAMETER(float, Transmission)
 	SHADER_PARAMETER(float, W1EnergyInverse)
 	SHADER_PARAMETER(float, W2EnergyInverse)
 	SHADER_PARAMETER(float, W3EnergyInverse)

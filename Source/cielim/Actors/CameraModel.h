@@ -33,6 +33,7 @@ struct FCameraParams
 	float Wavelength1; // This is assumed to be the longest wavelength (650 nm by default)
 	float Wavelength2; // This is assumed to be the middle wavelength (550 nm by default)
 	float Wavelength3; // This is assumed to be the shortest wavelength (450 nm by default)
+	float Transmission;
 	FVector3f QuECurveR;
 	FVector3f QuECurveG;
 	FVector3f QuECurveB;
