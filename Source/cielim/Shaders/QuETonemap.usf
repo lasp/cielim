@@ -14,7 +14,9 @@ SamplerState InputSampler;
 float SolidAngle; // This is in steradians
 float PixelArea; // This is in m^2
 float ExposureTime; // This is in seconds
-float Transmission; // dimensionless (0 to 1)
+float Transmission1; // dimensionless (0 to 1)
+float Transmission2; // dimensionless (0 to 1)
+float Transmission3; // dimensionless (0 to 1)
 float W1EnergyInverse; // These are in 1/J
 float W2EnergyInverse;
 float W3EnergyInverse;
@@ -88,9 +90,9 @@ float4 MainPS(float4 UV : TEXCOORD0, float4 Position : SV_Position) : SV_Target0
 	// This is in W/m^2/nm/str
 	float4 TotalRadiance = InputTexture.Sample(InputSampler, UV.xy);
 
-	float W1Power	= SolidAngle * PixelArea * Transmission * TotalRadiance.r;		// Power values are in W/nm
-	float W2Power	= SolidAngle * PixelArea * Transmission * TotalRadiance.g;
-	float W3Power	= SolidAngle * PixelArea * Transmission * TotalRadiance.b;
+	float W1Power	= SolidAngle * PixelArea * Transmission1 * TotalRadiance.r;		// Power values are in W/nm
+	float W2Power	= SolidAngle * PixelArea * Transmission2 * TotalRadiance.g;
+	float W3Power	= SolidAngle * PixelArea * Transmission3 * TotalRadiance.b;
 
 	float NumW1ElectronsR = W1Power * W1EnergyInverse * ExposureTime * QuECurveR.r;
 	float NumW2ElectronsR = W2Power * W2EnergyInverse * ExposureTime * QuECurveR.g;

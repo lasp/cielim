@@ -224,7 +224,9 @@ inline constexpr LensModel::Impl_::Impl_(
         focallength_{0},
         pointspreadfunction_{0},
         apertureradius_{0},
-        transmission_{0},
+        transmission1_{0},
+        transmission2_{0},
+        transmission3_{0},
         distortionk1_{0},
         distortionk2_{0},
         distortionk3_{0},
@@ -4467,16 +4469,16 @@ LensModel::GetClassData() const {
   return LensModel_class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<4, 12, 0, 0, 2>
+const ::_pbi::TcParseTable<4, 14, 0, 0, 2>
 LensModel::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(LensModel, _impl_._has_bits_),
     0, // no _extensions_
-    12, 120,  // max_field_number, fast_idx_mask
+    14, 120,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294963200,  // skipmap
+    4294950912,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    12,  // num_field_entries
+    14,  // num_field_entries
     0,  // num_aux_entries
     offsetof(decltype(_table_), field_names),  // no aux_entries
     LensModel_class_data_.base(),
@@ -4503,40 +4505,46 @@ LensModel::_table_ = {
     {::_pbi::TcParser::FastF64S1,
      {33, 5, 0,
       PROTOBUF_FIELD_OFFSET(LensModel, _impl_.apertureradius_)}},
-    // double transmission = 5;
-    {::_pbi::TcParser::FastF64S1,
-     {41, 6, 0,
-      PROTOBUF_FIELD_OFFSET(LensModel, _impl_.transmission_)}},
-    // repeated double horizontalVignetting = 6;
+    // float transmission1 = 5;
+    {::_pbi::TcParser::FastF32S1,
+     {45, 6, 0,
+      PROTOBUF_FIELD_OFFSET(LensModel, _impl_.transmission1_)}},
+    // float transmission2 = 6;
+    {::_pbi::TcParser::FastF32S1,
+     {53, 7, 0,
+      PROTOBUF_FIELD_OFFSET(LensModel, _impl_.transmission2_)}},
+    // float transmission3 = 7;
+    {::_pbi::TcParser::FastF32S1,
+     {61, 8, 0,
+      PROTOBUF_FIELD_OFFSET(LensModel, _impl_.transmission3_)}},
+    // repeated double horizontalVignetting = 8;
     {::_pbi::TcParser::FastF64P1,
-     {50, 1, 0,
+     {66, 1, 0,
       PROTOBUF_FIELD_OFFSET(LensModel, _impl_.horizontalvignetting_)}},
-    // repeated double verticalVignetting = 7;
+    // repeated double verticalVignetting = 9;
     {::_pbi::TcParser::FastF64P1,
-     {58, 2, 0,
+     {74, 2, 0,
       PROTOBUF_FIELD_OFFSET(LensModel, _impl_.verticalvignetting_)}},
-    // float distortionK1 = 8;
-    {::_pbi::TcParser::FastF32S1,
-     {69, 7, 0,
-      PROTOBUF_FIELD_OFFSET(LensModel, _impl_.distortionk1_)}},
-    // float distortionK2 = 9;
-    {::_pbi::TcParser::FastF32S1,
-     {77, 8, 0,
-      PROTOBUF_FIELD_OFFSET(LensModel, _impl_.distortionk2_)}},
-    // float distortionK3 = 10;
+    // float distortionK1 = 10;
     {::_pbi::TcParser::FastF32S1,
      {85, 9, 0,
-      PROTOBUF_FIELD_OFFSET(LensModel, _impl_.distortionk3_)}},
-    // float distortionP1 = 11;
+      PROTOBUF_FIELD_OFFSET(LensModel, _impl_.distortionk1_)}},
+    // float distortionK2 = 11;
     {::_pbi::TcParser::FastF32S1,
      {93, 10, 0,
-      PROTOBUF_FIELD_OFFSET(LensModel, _impl_.distortionp1_)}},
-    // float distortionP2 = 12;
+      PROTOBUF_FIELD_OFFSET(LensModel, _impl_.distortionk2_)}},
+    // float distortionK3 = 12;
     {::_pbi::TcParser::FastF32S1,
      {101, 11, 0,
+      PROTOBUF_FIELD_OFFSET(LensModel, _impl_.distortionk3_)}},
+    // float distortionP1 = 13;
+    {::_pbi::TcParser::FastF32S1,
+     {109, 12, 0,
+      PROTOBUF_FIELD_OFFSET(LensModel, _impl_.distortionp1_)}},
+    // float distortionP2 = 14;
+    {::_pbi::TcParser::FastF32S1,
+     {117, 13, 0,
       PROTOBUF_FIELD_OFFSET(LensModel, _impl_.distortionp2_)}},
-    {::_pbi::TcParser::MiniParse, {}},
-    {::_pbi::TcParser::MiniParse, {}},
     {::_pbi::TcParser::MiniParse, {}},
   }}, {{
     65535, 65535
@@ -4549,22 +4557,26 @@ LensModel::_table_ = {
     {PROTOBUF_FIELD_OFFSET(LensModel, _impl_.pointspreadfunction_), _Internal::kHasBitsOffset + 4, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
     // double apertureRadius = 4;
     {PROTOBUF_FIELD_OFFSET(LensModel, _impl_.apertureradius_), _Internal::kHasBitsOffset + 5, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
-    // double transmission = 5;
-    {PROTOBUF_FIELD_OFFSET(LensModel, _impl_.transmission_), _Internal::kHasBitsOffset + 6, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
-    // repeated double horizontalVignetting = 6;
+    // float transmission1 = 5;
+    {PROTOBUF_FIELD_OFFSET(LensModel, _impl_.transmission1_), _Internal::kHasBitsOffset + 6, 0, (0 | ::_fl::kFcOptional | ::_fl::kFloat)},
+    // float transmission2 = 6;
+    {PROTOBUF_FIELD_OFFSET(LensModel, _impl_.transmission2_), _Internal::kHasBitsOffset + 7, 0, (0 | ::_fl::kFcOptional | ::_fl::kFloat)},
+    // float transmission3 = 7;
+    {PROTOBUF_FIELD_OFFSET(LensModel, _impl_.transmission3_), _Internal::kHasBitsOffset + 8, 0, (0 | ::_fl::kFcOptional | ::_fl::kFloat)},
+    // repeated double horizontalVignetting = 8;
     {PROTOBUF_FIELD_OFFSET(LensModel, _impl_.horizontalvignetting_), _Internal::kHasBitsOffset + 1, 0, (0 | ::_fl::kFcRepeated | ::_fl::kPackedDouble)},
-    // repeated double verticalVignetting = 7;
+    // repeated double verticalVignetting = 9;
     {PROTOBUF_FIELD_OFFSET(LensModel, _impl_.verticalvignetting_), _Internal::kHasBitsOffset + 2, 0, (0 | ::_fl::kFcRepeated | ::_fl::kPackedDouble)},
-    // float distortionK1 = 8;
-    {PROTOBUF_FIELD_OFFSET(LensModel, _impl_.distortionk1_), _Internal::kHasBitsOffset + 7, 0, (0 | ::_fl::kFcOptional | ::_fl::kFloat)},
-    // float distortionK2 = 9;
-    {PROTOBUF_FIELD_OFFSET(LensModel, _impl_.distortionk2_), _Internal::kHasBitsOffset + 8, 0, (0 | ::_fl::kFcOptional | ::_fl::kFloat)},
-    // float distortionK3 = 10;
-    {PROTOBUF_FIELD_OFFSET(LensModel, _impl_.distortionk3_), _Internal::kHasBitsOffset + 9, 0, (0 | ::_fl::kFcOptional | ::_fl::kFloat)},
-    // float distortionP1 = 11;
-    {PROTOBUF_FIELD_OFFSET(LensModel, _impl_.distortionp1_), _Internal::kHasBitsOffset + 10, 0, (0 | ::_fl::kFcOptional | ::_fl::kFloat)},
-    // float distortionP2 = 12;
-    {PROTOBUF_FIELD_OFFSET(LensModel, _impl_.distortionp2_), _Internal::kHasBitsOffset + 11, 0, (0 | ::_fl::kFcOptional | ::_fl::kFloat)},
+    // float distortionK1 = 10;
+    {PROTOBUF_FIELD_OFFSET(LensModel, _impl_.distortionk1_), _Internal::kHasBitsOffset + 9, 0, (0 | ::_fl::kFcOptional | ::_fl::kFloat)},
+    // float distortionK2 = 11;
+    {PROTOBUF_FIELD_OFFSET(LensModel, _impl_.distortionk2_), _Internal::kHasBitsOffset + 10, 0, (0 | ::_fl::kFcOptional | ::_fl::kFloat)},
+    // float distortionK3 = 12;
+    {PROTOBUF_FIELD_OFFSET(LensModel, _impl_.distortionk3_), _Internal::kHasBitsOffset + 11, 0, (0 | ::_fl::kFcOptional | ::_fl::kFloat)},
+    // float distortionP1 = 13;
+    {PROTOBUF_FIELD_OFFSET(LensModel, _impl_.distortionp1_), _Internal::kHasBitsOffset + 12, 0, (0 | ::_fl::kFcOptional | ::_fl::kFloat)},
+    // float distortionP2 = 14;
+    {PROTOBUF_FIELD_OFFSET(LensModel, _impl_.distortionp2_), _Internal::kHasBitsOffset + 13, 0, (0 | ::_fl::kFcOptional | ::_fl::kFloat)},
   }},
   // no aux_entries
   {{
@@ -4591,13 +4603,13 @@ PROTOBUF_NOINLINE void LensModel::Clear() {
   }
   if (BatchCheckHasBit(cached_has_bits, 0x000000f8U)) {
     ::memset(&_impl_.focallength_, 0, static_cast<::size_t>(
-        reinterpret_cast<char*>(&_impl_.distortionk1_) -
-        reinterpret_cast<char*>(&_impl_.focallength_)) + sizeof(_impl_.distortionk1_));
+        reinterpret_cast<char*>(&_impl_.transmission2_) -
+        reinterpret_cast<char*>(&_impl_.focallength_)) + sizeof(_impl_.transmission2_));
   }
-  if (BatchCheckHasBit(cached_has_bits, 0x00000f00U)) {
-    ::memset(&_impl_.distortionk2_, 0, static_cast<::size_t>(
+  if (BatchCheckHasBit(cached_has_bits, 0x00003f00U)) {
+    ::memset(&_impl_.transmission3_, 0, static_cast<::size_t>(
         reinterpret_cast<char*>(&_impl_.distortionp2_) -
-        reinterpret_cast<char*>(&_impl_.distortionk2_)) + sizeof(_impl_.distortionp2_));
+        reinterpret_cast<char*>(&_impl_.transmission3_)) + sizeof(_impl_.distortionp2_));
   }
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::std::string>();
@@ -4656,71 +4668,89 @@ PROTOBUF_NOINLINE void LensModel::Clear() {
     }
   }
 
-  // double transmission = 5;
+  // float transmission1 = 5;
   if (CheckHasBit(cached_has_bits, 0x00000040U)) {
-    if (::absl::bit_cast<::uint64_t>(this_._internal_transmission()) != 0) {
+    if (::absl::bit_cast<::uint32_t>(this_._internal_transmission1()) != 0) {
       target = stream->EnsureSpace(target);
-      target = ::_pbi::WireFormatLite::WriteDoubleToArray(
-          5, this_._internal_transmission(), target);
+      target = ::_pbi::WireFormatLite::WriteFloatToArray(
+          5, this_._internal_transmission1(), target);
     }
   }
 
-  // repeated double horizontalVignetting = 6;
+  // float transmission2 = 6;
+  if (CheckHasBit(cached_has_bits, 0x00000080U)) {
+    if (::absl::bit_cast<::uint32_t>(this_._internal_transmission2()) != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteFloatToArray(
+          6, this_._internal_transmission2(), target);
+    }
+  }
+
+  // float transmission3 = 7;
+  if (CheckHasBit(cached_has_bits, 0x00000100U)) {
+    if (::absl::bit_cast<::uint32_t>(this_._internal_transmission3()) != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteFloatToArray(
+          7, this_._internal_transmission3(), target);
+    }
+  }
+
+  // repeated double horizontalVignetting = 8;
   if (CheckHasBitForRepeated(cached_has_bits, 0x00000002U)) {
     if (this_._internal_horizontalvignetting_size() > 0) {
-      target = stream->WriteFixedPacked(6, this_._internal_horizontalvignetting(), target);
+      target = stream->WriteFixedPacked(8, this_._internal_horizontalvignetting(), target);
     }
   }
 
-  // repeated double verticalVignetting = 7;
+  // repeated double verticalVignetting = 9;
   if (CheckHasBitForRepeated(cached_has_bits, 0x00000004U)) {
     if (this_._internal_verticalvignetting_size() > 0) {
-      target = stream->WriteFixedPacked(7, this_._internal_verticalvignetting(), target);
+      target = stream->WriteFixedPacked(9, this_._internal_verticalvignetting(), target);
     }
   }
 
-  // float distortionK1 = 8;
-  if (CheckHasBit(cached_has_bits, 0x00000080U)) {
+  // float distortionK1 = 10;
+  if (CheckHasBit(cached_has_bits, 0x00000200U)) {
     if (::absl::bit_cast<::uint32_t>(this_._internal_distortionk1()) != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteFloatToArray(
-          8, this_._internal_distortionk1(), target);
+          10, this_._internal_distortionk1(), target);
     }
   }
 
-  // float distortionK2 = 9;
-  if (CheckHasBit(cached_has_bits, 0x00000100U)) {
+  // float distortionK2 = 11;
+  if (CheckHasBit(cached_has_bits, 0x00000400U)) {
     if (::absl::bit_cast<::uint32_t>(this_._internal_distortionk2()) != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteFloatToArray(
-          9, this_._internal_distortionk2(), target);
+          11, this_._internal_distortionk2(), target);
     }
   }
 
-  // float distortionK3 = 10;
-  if (CheckHasBit(cached_has_bits, 0x00000200U)) {
+  // float distortionK3 = 12;
+  if (CheckHasBit(cached_has_bits, 0x00000800U)) {
     if (::absl::bit_cast<::uint32_t>(this_._internal_distortionk3()) != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteFloatToArray(
-          10, this_._internal_distortionk3(), target);
+          12, this_._internal_distortionk3(), target);
     }
   }
 
-  // float distortionP1 = 11;
-  if (CheckHasBit(cached_has_bits, 0x00000400U)) {
+  // float distortionP1 = 13;
+  if (CheckHasBit(cached_has_bits, 0x00001000U)) {
     if (::absl::bit_cast<::uint32_t>(this_._internal_distortionp1()) != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteFloatToArray(
-          11, this_._internal_distortionp1(), target);
+          13, this_._internal_distortionp1(), target);
     }
   }
 
-  // float distortionP2 = 12;
-  if (CheckHasBit(cached_has_bits, 0x00000800U)) {
+  // float distortionP2 = 14;
+  if (CheckHasBit(cached_has_bits, 0x00002000U)) {
     if (::absl::bit_cast<::uint32_t>(this_._internal_distortionp2()) != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteFloatToArray(
-          12, this_._internal_distortionp2(), target);
+          14, this_._internal_distortionp2(), target);
     }
   }
 
@@ -4760,7 +4790,7 @@ PROTOBUF_NOINLINE void LensModel::Clear() {
                               static_cast<::int32_t>(data_size));
       total_size += tag_size + data_size;
     }
-    // repeated double horizontalVignetting = 6;
+    // repeated double horizontalVignetting = 8;
     if (CheckHasBitForRepeated(cached_has_bits, 0x00000002U)) {
       ::size_t data_size = ::size_t{8} *
           ::_pbi::FromIntSize(this_._internal_horizontalvignetting_size());
@@ -4770,7 +4800,7 @@ PROTOBUF_NOINLINE void LensModel::Clear() {
                               static_cast<::int32_t>(data_size));
       total_size += tag_size + data_size;
     }
-    // repeated double verticalVignetting = 7;
+    // repeated double verticalVignetting = 9;
     if (CheckHasBitForRepeated(cached_has_bits, 0x00000004U)) {
       ::size_t data_size = ::size_t{8} *
           ::_pbi::FromIntSize(this_._internal_verticalvignetting_size());
@@ -4798,40 +4828,52 @@ PROTOBUF_NOINLINE void LensModel::Clear() {
         total_size += 9;
       }
     }
-    // double transmission = 5;
+    // float transmission1 = 5;
     if (CheckHasBit(cached_has_bits, 0x00000040U)) {
-      if (::absl::bit_cast<::uint64_t>(this_._internal_transmission()) != 0) {
-        total_size += 9;
+      if (::absl::bit_cast<::uint32_t>(this_._internal_transmission1()) != 0) {
+        total_size += 5;
       }
     }
-    // float distortionK1 = 8;
+    // float transmission2 = 6;
     if (CheckHasBit(cached_has_bits, 0x00000080U)) {
-      if (::absl::bit_cast<::uint32_t>(this_._internal_distortionk1()) != 0) {
+      if (::absl::bit_cast<::uint32_t>(this_._internal_transmission2()) != 0) {
         total_size += 5;
       }
     }
   }
-  if (BatchCheckHasBit(cached_has_bits, 0x00000f00U)) {
-    // float distortionK2 = 9;
+  if (BatchCheckHasBit(cached_has_bits, 0x00003f00U)) {
+    // float transmission3 = 7;
     if (CheckHasBit(cached_has_bits, 0x00000100U)) {
+      if (::absl::bit_cast<::uint32_t>(this_._internal_transmission3()) != 0) {
+        total_size += 5;
+      }
+    }
+    // float distortionK1 = 10;
+    if (CheckHasBit(cached_has_bits, 0x00000200U)) {
+      if (::absl::bit_cast<::uint32_t>(this_._internal_distortionk1()) != 0) {
+        total_size += 5;
+      }
+    }
+    // float distortionK2 = 11;
+    if (CheckHasBit(cached_has_bits, 0x00000400U)) {
       if (::absl::bit_cast<::uint32_t>(this_._internal_distortionk2()) != 0) {
         total_size += 5;
       }
     }
-    // float distortionK3 = 10;
-    if (CheckHasBit(cached_has_bits, 0x00000200U)) {
+    // float distortionK3 = 12;
+    if (CheckHasBit(cached_has_bits, 0x00000800U)) {
       if (::absl::bit_cast<::uint32_t>(this_._internal_distortionk3()) != 0) {
         total_size += 5;
       }
     }
-    // float distortionP1 = 11;
-    if (CheckHasBit(cached_has_bits, 0x00000400U)) {
+    // float distortionP1 = 13;
+    if (CheckHasBit(cached_has_bits, 0x00001000U)) {
       if (::absl::bit_cast<::uint32_t>(this_._internal_distortionp1()) != 0) {
         total_size += 5;
       }
     }
-    // float distortionP2 = 12;
-    if (CheckHasBit(cached_has_bits, 0x00000800U)) {
+    // float distortionP2 = 14;
+    if (CheckHasBit(cached_has_bits, 0x00002000U)) {
       if (::absl::bit_cast<::uint32_t>(this_._internal_distortionp2()) != 0) {
         total_size += 5;
       }
@@ -4884,33 +4926,43 @@ void LensModel::MergeImpl(::google::protobuf::MessageLite& to_msg,
       }
     }
     if (CheckHasBit(cached_has_bits, 0x00000040U)) {
-      if (::absl::bit_cast<::uint64_t>(from._internal_transmission()) != 0) {
-        _this->_impl_.transmission_ = from._impl_.transmission_;
+      if (::absl::bit_cast<::uint32_t>(from._internal_transmission1()) != 0) {
+        _this->_impl_.transmission1_ = from._impl_.transmission1_;
       }
     }
     if (CheckHasBit(cached_has_bits, 0x00000080U)) {
+      if (::absl::bit_cast<::uint32_t>(from._internal_transmission2()) != 0) {
+        _this->_impl_.transmission2_ = from._impl_.transmission2_;
+      }
+    }
+  }
+  if (BatchCheckHasBit(cached_has_bits, 0x00003f00U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000100U)) {
+      if (::absl::bit_cast<::uint32_t>(from._internal_transmission3()) != 0) {
+        _this->_impl_.transmission3_ = from._impl_.transmission3_;
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000200U)) {
       if (::absl::bit_cast<::uint32_t>(from._internal_distortionk1()) != 0) {
         _this->_impl_.distortionk1_ = from._impl_.distortionk1_;
       }
     }
-  }
-  if (BatchCheckHasBit(cached_has_bits, 0x00000f00U)) {
-    if (CheckHasBit(cached_has_bits, 0x00000100U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000400U)) {
       if (::absl::bit_cast<::uint32_t>(from._internal_distortionk2()) != 0) {
         _this->_impl_.distortionk2_ = from._impl_.distortionk2_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00000200U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000800U)) {
       if (::absl::bit_cast<::uint32_t>(from._internal_distortionk3()) != 0) {
         _this->_impl_.distortionk3_ = from._impl_.distortionk3_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00000400U)) {
+    if (CheckHasBit(cached_has_bits, 0x00001000U)) {
       if (::absl::bit_cast<::uint32_t>(from._internal_distortionp1()) != 0) {
         _this->_impl_.distortionp1_ = from._impl_.distortionp1_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00000800U)) {
+    if (CheckHasBit(cached_has_bits, 0x00002000U)) {
       if (::absl::bit_cast<::uint32_t>(from._internal_distortionp2()) != 0) {
         _this->_impl_.distortionp2_ = from._impl_.distortionp2_;
       }

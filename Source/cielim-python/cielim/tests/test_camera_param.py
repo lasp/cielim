@@ -72,7 +72,9 @@ def test_image_brightness(cielim_connection, scene_setup):
     )
 
     # Reduce transmission factor
-    scene.camera.lensModel.transmission = 0.25
+    scene.camera.lensModel.transmission1 = 0.25
+    scene.camera.lensModel.transmission2 = 0.25
+    scene.camera.lensModel.transmission3 = 0.25
 
     connector.send_frame(scene)
     low_transmission_image, _, _ = connector.request_image_for_camera_id(1, True, False)

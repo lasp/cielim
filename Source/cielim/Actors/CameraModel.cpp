@@ -61,7 +61,9 @@ ACameraModel::ACameraModel()
 	this->CameraParams.SensorWidth = 0.036f;
 	this->CameraParams.SensorHeight = 0.024f;
 	this->CameraParams.ExposureTime = 1e-3f;
-	this->CameraParams.Transmission = 1.0f;
+	this->CameraParams.Transmission1 = 1.0f;
+	this->CameraParams.Transmission2 = 1.0f;
+	this->CameraParams.Transmission3 = 1.0f;
 	this->CameraParams.Wavelength1 = 650.0f;
 	this->CameraParams.Wavelength2 = 550.0f;
 	this->CameraParams.Wavelength3 = 450.0f;
@@ -113,9 +115,17 @@ void ACameraModel::SetCameraParameters(const cielimMessage::CielimMessage &Cieli
 		if (LensModel.focallength() > 0.0f)
 			this->CameraParams.FocalLength = CameraModel.lensmodel().focallength();
 
-		// This will never allow transmission to go to zero so that empty field gives full transmission
-		if (LensModel.transmission() > 0.0f)
-			this->CameraParams.Transmission = FMath::Min(LensModel.transmission(), 1.0f);
+		// This will never allow transmission1 to go to zero so that empty field gives full transmission
+		if (LensModel.transmission1() > 0.0f)
+			this->CameraParams.Transmission1 = FMath::Min(LensModel.transmission1(), 1.0f);
+
+		// This will never allow transmission2 to go to zero so that empty field gives full transmission
+		if (LensModel.transmission2() > 0.0f)
+			this->CameraParams.Transmission2 = FMath::Min(LensModel.transmission2(), 1.0f);
+
+		// This will never allow transmission3 to go to zero so that empty field gives full transmission
+		if (LensModel.transmission3() > 0.0f)
+			this->CameraParams.Transmission3 = FMath::Min(LensModel.transmission3(), 1.0f);
 	}
 
 	if (bHasSensorModel)
