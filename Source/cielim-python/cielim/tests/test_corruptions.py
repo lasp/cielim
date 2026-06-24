@@ -180,6 +180,39 @@ def test_GaussianPSF(cielim_connection, scene_setup):
     )
 
 
+@pytest.mark.parametrize(
+    "dark_current, sigma",
+    [
+        (1000, 0),
+        (10000, 0),
+        (1, 100),
+        (1, 1000),
+        (10, 100),
+        (10, 1000),
+        (100, 100),
+        (100, 10000),
+    ],
+)
+def test_DarkCurrent(cielim_connection, scene_setup, dark_current, sigma):
+    """
+    Tests whether dark current is being added to the image.
+    """
+    connector = cielim_connection
+
+    scene = scene_setup
+
+    del scene.celestialBodies[0]
+    scene.camera.sensorModel.exposureTime = 1
+    scene.camera.sensorModel.darkCurrent = dark_current
+    scene.camera.sensorModel.darkCurrentStdDeviation = sigma
+
+    connector.send_init_request()
+    connector.send_frame(scene)
+    image, _, _ = connector.request_image_for_camera_id(1, True, False)
+
+    np.testing.assert_(image[..., :3].any(), "No noise was applied")
+
+
 def test_CosmicRays(cielim_connection, scene_setup):
     """
     Tests that comsic rays are being generated in the image.
