@@ -105,13 +105,14 @@ message SensorModel{
     double exposureTime = 3; // [s] Time with open shutter
     double readNoise = 4; // [e-] Read noise standard deviation in electrons
     bool shotNoise = 5; // [-] Model shot noise true or false
-    double darkCurrent = 6; // [e-/s] Dark current variance value in electrons per second (will be multiplied by exposure time)
-    double systemGain = 7; // [-] System gain between sensor current and pixel intensity
-    double sensorWidth = 8; // [m] Width of sensor
-    double sensorHeight = 9; // [m] Height of sensor
-    double fullWellCapacity = 10; // [e-] Amount of charge that can be stored within an individual pixel
-    double gamma = 11; // [-] Gamma correction factor
-    QuantumEfficiency qeCurve = 12; // [-] Quantum Efficiency curve information
+    float darkCurrent = 6; // [e-/s] Dark current rate in electrons per second
+    float darkCurrentStdDeviation = 7; // [e-/s] Dark current rate standard deviation in electrons per second
+    double systemGain = 8; // [-] System gain between sensor current and pixel intensity
+    double sensorWidth = 9; // [m] Width of sensor
+    double sensorHeight = 10; // [m] Height of sensor
+    double fullWellCapacity = 11; // [e-] Amount of charge that can be stored within an individual pixel
+    double gamma = 12; // [-] Gamma correction factor
+    QuantumEfficiency qeCurve = 13; // [-] Quantum Efficiency curve information
 }
 
 message AreaOfInterest{
