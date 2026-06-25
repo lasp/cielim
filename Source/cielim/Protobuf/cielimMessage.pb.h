@@ -1714,17 +1714,19 @@ class LensModel final : public ::google::protobuf::MessageLite
   // accessors -------------------------------------------------------
   enum : int {
     kFieldOfViewFieldNumber = 1,
-    kHorizontalVignettingFieldNumber = 6,
-    kVerticalVignettingFieldNumber = 7,
+    kHorizontalVignettingFieldNumber = 8,
+    kVerticalVignettingFieldNumber = 9,
     kFocalLengthFieldNumber = 2,
     kPointSpreadFunctionFieldNumber = 3,
     kApertureRadiusFieldNumber = 4,
-    kTransmissionFieldNumber = 5,
-    kDistortionK1FieldNumber = 8,
-    kDistortionK2FieldNumber = 9,
-    kDistortionK3FieldNumber = 10,
-    kDistortionP1FieldNumber = 11,
-    kDistortionP2FieldNumber = 12,
+    kTransmission1FieldNumber = 5,
+    kTransmission2FieldNumber = 6,
+    kTransmission3FieldNumber = 7,
+    kDistortionK1FieldNumber = 10,
+    kDistortionK2FieldNumber = 11,
+    kDistortionK3FieldNumber = 12,
+    kDistortionP1FieldNumber = 13,
+    kDistortionP2FieldNumber = 14,
   };
   // repeated double fieldOfView = 1;
   int fieldofview_size() const;
@@ -1744,7 +1746,7 @@ class LensModel final : public ::google::protobuf::MessageLite
   ::google::protobuf::RepeatedField<double>* PROTOBUF_NONNULL _internal_mutable_fieldofview();
 
   public:
-  // repeated double horizontalVignetting = 6;
+  // repeated double horizontalVignetting = 8;
   int horizontalvignetting_size() const;
   private:
   int _internal_horizontalvignetting_size() const;
@@ -1762,7 +1764,7 @@ class LensModel final : public ::google::protobuf::MessageLite
   ::google::protobuf::RepeatedField<double>* PROTOBUF_NONNULL _internal_mutable_horizontalvignetting();
 
   public:
-  // repeated double verticalVignetting = 7;
+  // repeated double verticalVignetting = 9;
   int verticalvignetting_size() const;
   private:
   int _internal_verticalvignetting_size() const;
@@ -1810,17 +1812,37 @@ class LensModel final : public ::google::protobuf::MessageLite
   void _internal_set_apertureradius(double value);
 
   public:
-  // double transmission = 5;
-  void clear_transmission() ;
-  double transmission() const;
-  void set_transmission(double value);
+  // float transmission1 = 5;
+  void clear_transmission1() ;
+  float transmission1() const;
+  void set_transmission1(float value);
 
   private:
-  double _internal_transmission() const;
-  void _internal_set_transmission(double value);
+  float _internal_transmission1() const;
+  void _internal_set_transmission1(float value);
 
   public:
-  // float distortionK1 = 8;
+  // float transmission2 = 6;
+  void clear_transmission2() ;
+  float transmission2() const;
+  void set_transmission2(float value);
+
+  private:
+  float _internal_transmission2() const;
+  void _internal_set_transmission2(float value);
+
+  public:
+  // float transmission3 = 7;
+  void clear_transmission3() ;
+  float transmission3() const;
+  void set_transmission3(float value);
+
+  private:
+  float _internal_transmission3() const;
+  void _internal_set_transmission3(float value);
+
+  public:
+  // float distortionK1 = 10;
   void clear_distortionk1() ;
   float distortionk1() const;
   void set_distortionk1(float value);
@@ -1830,7 +1852,7 @@ class LensModel final : public ::google::protobuf::MessageLite
   void _internal_set_distortionk1(float value);
 
   public:
-  // float distortionK2 = 9;
+  // float distortionK2 = 11;
   void clear_distortionk2() ;
   float distortionk2() const;
   void set_distortionk2(float value);
@@ -1840,7 +1862,7 @@ class LensModel final : public ::google::protobuf::MessageLite
   void _internal_set_distortionk2(float value);
 
   public:
-  // float distortionK3 = 10;
+  // float distortionK3 = 12;
   void clear_distortionk3() ;
   float distortionk3() const;
   void set_distortionk3(float value);
@@ -1850,7 +1872,7 @@ class LensModel final : public ::google::protobuf::MessageLite
   void _internal_set_distortionk3(float value);
 
   public:
-  // float distortionP1 = 11;
+  // float distortionP1 = 13;
   void clear_distortionp1() ;
   float distortionp1() const;
   void set_distortionp1(float value);
@@ -1860,7 +1882,7 @@ class LensModel final : public ::google::protobuf::MessageLite
   void _internal_set_distortionp1(float value);
 
   public:
-  // float distortionP2 = 12;
+  // float distortionP2 = 14;
   void clear_distortionp2() ;
   float distortionp2() const;
   void set_distortionp2(float value);
@@ -1874,7 +1896,7 @@ class LensModel final : public ::google::protobuf::MessageLite
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
-  static const ::google::protobuf::internal::TcParseTable<4, 12,
+  static const ::google::protobuf::internal::TcParseTable<4, 14,
                                    0, 0,
                                    2>
       _table_;
@@ -1902,7 +1924,9 @@ class LensModel final : public ::google::protobuf::MessageLite
     double focallength_;
     double pointspreadfunction_;
     double apertureradius_;
-    double transmission_;
+    float transmission1_;
+    float transmission2_;
+    float transmission3_;
     float distortionk1_;
     float distortionk2_;
     float distortionk3_;
@@ -6139,32 +6163,82 @@ inline void LensModel::_internal_set_apertureradius(double value) {
   _impl_.apertureradius_ = value;
 }
 
-// double transmission = 5;
-inline void LensModel::clear_transmission() {
+// float transmission1 = 5;
+inline void LensModel::clear_transmission1() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.transmission_ = 0;
+  _impl_.transmission1_ = 0;
   ClearHasBit(_impl_._has_bits_[0],
                   0x00000040U);
 }
-inline double LensModel::transmission() const {
-  // @@protoc_insertion_point(field_get:cielimMessage.LensModel.transmission)
-  return _internal_transmission();
+inline float LensModel::transmission1() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.LensModel.transmission1)
+  return _internal_transmission1();
 }
-inline void LensModel::set_transmission(double value) {
-  _internal_set_transmission(value);
+inline void LensModel::set_transmission1(float value) {
+  _internal_set_transmission1(value);
   SetHasBit(_impl_._has_bits_[0], 0x00000040U);
-  // @@protoc_insertion_point(field_set:cielimMessage.LensModel.transmission)
+  // @@protoc_insertion_point(field_set:cielimMessage.LensModel.transmission1)
 }
-inline double LensModel::_internal_transmission() const {
+inline float LensModel::_internal_transmission1() const {
   ::google::protobuf::internal::TSanRead(&_impl_);
-  return _impl_.transmission_;
+  return _impl_.transmission1_;
 }
-inline void LensModel::_internal_set_transmission(double value) {
+inline void LensModel::_internal_set_transmission1(float value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.transmission_ = value;
+  _impl_.transmission1_ = value;
 }
 
-// repeated double horizontalVignetting = 6;
+// float transmission2 = 6;
+inline void LensModel::clear_transmission2() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.transmission2_ = 0;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000080U);
+}
+inline float LensModel::transmission2() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.LensModel.transmission2)
+  return _internal_transmission2();
+}
+inline void LensModel::set_transmission2(float value) {
+  _internal_set_transmission2(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000080U);
+  // @@protoc_insertion_point(field_set:cielimMessage.LensModel.transmission2)
+}
+inline float LensModel::_internal_transmission2() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.transmission2_;
+}
+inline void LensModel::_internal_set_transmission2(float value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.transmission2_ = value;
+}
+
+// float transmission3 = 7;
+inline void LensModel::clear_transmission3() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.transmission3_ = 0;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000100U);
+}
+inline float LensModel::transmission3() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.LensModel.transmission3)
+  return _internal_transmission3();
+}
+inline void LensModel::set_transmission3(float value) {
+  _internal_set_transmission3(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000100U);
+  // @@protoc_insertion_point(field_set:cielimMessage.LensModel.transmission3)
+}
+inline float LensModel::_internal_transmission3() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.transmission3_;
+}
+inline void LensModel::_internal_set_transmission3(float value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.transmission3_ = value;
+}
+
+// repeated double horizontalVignetting = 8;
 inline int LensModel::_internal_horizontalvignetting_size() const {
   return _internal_horizontalvignetting().size();
 }
@@ -6214,7 +6288,7 @@ LensModel::_internal_mutable_horizontalvignetting() {
   return &_impl_.horizontalvignetting_;
 }
 
-// repeated double verticalVignetting = 7;
+// repeated double verticalVignetting = 9;
 inline int LensModel::_internal_verticalvignetting_size() const {
   return _internal_verticalvignetting().size();
 }
@@ -6264,12 +6338,12 @@ LensModel::_internal_mutable_verticalvignetting() {
   return &_impl_.verticalvignetting_;
 }
 
-// float distortionK1 = 8;
+// float distortionK1 = 10;
 inline void LensModel::clear_distortionk1() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.distortionk1_ = 0;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000080U);
+                  0x00000200U);
 }
 inline float LensModel::distortionk1() const {
   // @@protoc_insertion_point(field_get:cielimMessage.LensModel.distortionK1)
@@ -6277,7 +6351,7 @@ inline float LensModel::distortionk1() const {
 }
 inline void LensModel::set_distortionk1(float value) {
   _internal_set_distortionk1(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000080U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000200U);
   // @@protoc_insertion_point(field_set:cielimMessage.LensModel.distortionK1)
 }
 inline float LensModel::_internal_distortionk1() const {
@@ -6289,12 +6363,12 @@ inline void LensModel::_internal_set_distortionk1(float value) {
   _impl_.distortionk1_ = value;
 }
 
-// float distortionK2 = 9;
+// float distortionK2 = 11;
 inline void LensModel::clear_distortionk2() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.distortionk2_ = 0;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000100U);
+                  0x00000400U);
 }
 inline float LensModel::distortionk2() const {
   // @@protoc_insertion_point(field_get:cielimMessage.LensModel.distortionK2)
@@ -6302,7 +6376,7 @@ inline float LensModel::distortionk2() const {
 }
 inline void LensModel::set_distortionk2(float value) {
   _internal_set_distortionk2(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000100U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000400U);
   // @@protoc_insertion_point(field_set:cielimMessage.LensModel.distortionK2)
 }
 inline float LensModel::_internal_distortionk2() const {
@@ -6314,12 +6388,12 @@ inline void LensModel::_internal_set_distortionk2(float value) {
   _impl_.distortionk2_ = value;
 }
 
-// float distortionK3 = 10;
+// float distortionK3 = 12;
 inline void LensModel::clear_distortionk3() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.distortionk3_ = 0;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000200U);
+                  0x00000800U);
 }
 inline float LensModel::distortionk3() const {
   // @@protoc_insertion_point(field_get:cielimMessage.LensModel.distortionK3)
@@ -6327,7 +6401,7 @@ inline float LensModel::distortionk3() const {
 }
 inline void LensModel::set_distortionk3(float value) {
   _internal_set_distortionk3(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000200U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000800U);
   // @@protoc_insertion_point(field_set:cielimMessage.LensModel.distortionK3)
 }
 inline float LensModel::_internal_distortionk3() const {
@@ -6339,12 +6413,12 @@ inline void LensModel::_internal_set_distortionk3(float value) {
   _impl_.distortionk3_ = value;
 }
 
-// float distortionP1 = 11;
+// float distortionP1 = 13;
 inline void LensModel::clear_distortionp1() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.distortionp1_ = 0;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000400U);
+                  0x00001000U);
 }
 inline float LensModel::distortionp1() const {
   // @@protoc_insertion_point(field_get:cielimMessage.LensModel.distortionP1)
@@ -6352,7 +6426,7 @@ inline float LensModel::distortionp1() const {
 }
 inline void LensModel::set_distortionp1(float value) {
   _internal_set_distortionp1(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000400U);
+  SetHasBit(_impl_._has_bits_[0], 0x00001000U);
   // @@protoc_insertion_point(field_set:cielimMessage.LensModel.distortionP1)
 }
 inline float LensModel::_internal_distortionp1() const {
@@ -6364,12 +6438,12 @@ inline void LensModel::_internal_set_distortionp1(float value) {
   _impl_.distortionp1_ = value;
 }
 
-// float distortionP2 = 12;
+// float distortionP2 = 14;
 inline void LensModel::clear_distortionp2() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.distortionp2_ = 0;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000800U);
+                  0x00002000U);
 }
 inline float LensModel::distortionp2() const {
   // @@protoc_insertion_point(field_get:cielimMessage.LensModel.distortionP2)
@@ -6377,7 +6451,7 @@ inline float LensModel::distortionp2() const {
 }
 inline void LensModel::set_distortionp2(float value) {
   _internal_set_distortionp2(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000800U);
+  SetHasBit(_impl_._has_bits_[0], 0x00002000U);
   // @@protoc_insertion_point(field_set:cielimMessage.LensModel.distortionP2)
 }
 inline float LensModel::_internal_distortionp2() const {
