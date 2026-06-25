@@ -72,6 +72,7 @@ struct FImageCorruptionParams
 
 	// Dark Current
 	float DarkCurrent;
+	uint32 DarkCurrentPattern;
 	float DarkCurrentStdDeviation;
 
 	// Cosmic Rays

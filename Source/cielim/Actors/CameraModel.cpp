@@ -221,6 +221,8 @@ void ACameraModel::SetCameraParameters(const cielimMessage::CielimMessage &Cieli
 		if (SensorModel.darkcurrent() > 0.0f)
 			this->CorruptionParams.DarkCurrent = SensorModel.darkcurrent();
 
+		this->CorruptionParams.DarkCurrentPattern = SensorModel.darkcurrentpattern();
+
 		if (SensorModel.darkcurrentstddeviation() > 0.0f)
 			this->CorruptionParams.DarkCurrentStdDeviation = SensorModel.darkcurrentstddeviation();
 

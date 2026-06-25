@@ -264,6 +264,7 @@ void FCielimSceneViewExtension::QuETonemapPass(FRDGBuilder &GraphBuilder, const 
 	QuEParams->CurrentTime = static_cast<uint32>(FDateTime::UtcNow().ToUnixTimestamp());
 	QuEParams->EnableShotNoise = static_cast<uint32>(CorruptionParams.bEnableShotNoise);
 	QuEParams->DarkCurrent = CorruptionParams.DarkCurrent;
+	QuEParams->DarkCurrentPattern = CorruptionParams.DarkCurrentPattern;
 	const float Ratio = 4 * FMath::Square(CorruptionParams.DarkCurrentStdDeviation) /
 		FMath::Square(FMath::Max(CorruptionParams.DarkCurrent, 1e-6));
 	QuEParams->DarkCurrentLogSigma = FMath::Sqrt(FMath::Loge((1 + sqrt(1 + Ratio)) / 2));

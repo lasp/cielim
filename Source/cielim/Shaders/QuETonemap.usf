@@ -28,6 +28,7 @@ float CorrectionFactor;
 uint CurrentTime;
 uint EnableShotNoise; // 0 or 1
 float DarkCurrent; // electrons / second
+uint DarkCurrentPattern;
 float DarkCurrentLogSigma;
 float InvFullWellCapacity; // This is in # of electrons (inverse)
 
@@ -118,8 +119,8 @@ float4 MainPS(float4 UV : TEXCOORD0, float4 Position : SV_Position) : SV_Target0
 	 * All of these effects can only add electrons, not subtract. */
 
 	uint Seed1 = (uint(Position.x) * 1973u) ^ (uint(Position.y) * 9277u) ^ (CurrentTime * 2663u);
-	uint Seed2 = (uint(Position.x) * 6158u) ^ (uint(Position.y) * 4986u) ^ (CurrentTime * 1654u);
-	uint Seed3 = (uint(Position.x) * 2347u) ^ (uint(Position.y) * 8946u) ^ (CurrentTime * 3756u);
+	uint Seed2 = (uint(Position.x) * 6158u) ^ (uint(Position.y) * 4986u) ^ (DarkCurrentPattern * 1654u);
+	uint Seed3 = Seed2 ^ (CurrentTime * 3756u);
 
 	float4 RandGaussians = max(ComputeRandGaussians(Seed1), 0);
 
@@ -129,7 +130,7 @@ float4 MainPS(float4 UV : TEXCOORD0, float4 Position : SV_Position) : SV_Target0
 
 	// We model dark current as log-normal distribution with median=DarkCurrent and sigma=DarkCurrentStdDeviation
 
-	RandGaussians = ComputeRandGaussians(Seed2);
+	RandGaussians = ComputeRandGaussians(Seed2); // Dark current pattern should be fixed in time
 
 	float TotalDarkRateR = DarkCurrent * exp(RandGaussians.x * DarkCurrentLogSigma);
 	float DarkElectronsR = TotalDarkRateR * ExposureTime;
