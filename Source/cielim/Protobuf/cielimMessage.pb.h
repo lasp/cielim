@@ -2734,17 +2734,19 @@ class SensorModel final : public ::google::protobuf::MessageLite
   // accessors -------------------------------------------------------
   enum : int {
     kResolutionFieldNumber = 1,
-    kQeCurveFieldNumber = 12,
+    kQeCurveFieldNumber = 14,
     kRenderRateFieldNumber = 2,
     kExposureTimeFieldNumber = 3,
     kReadNoiseFieldNumber = 4,
-    kDarkCurrentFieldNumber = 6,
-    kSystemGainFieldNumber = 7,
-    kSensorWidthFieldNumber = 8,
-    kSensorHeightFieldNumber = 9,
-    kFullWellCapacityFieldNumber = 10,
-    kGammaFieldNumber = 11,
     kShotNoiseFieldNumber = 5,
+    kDarkCurrentFieldNumber = 6,
+    kDarkCurrentPatternFieldNumber = 7,
+    kDarkCurrentStdDeviationFieldNumber = 8,
+    kSystemGainFieldNumber = 9,
+    kSensorWidthFieldNumber = 10,
+    kSensorHeightFieldNumber = 11,
+    kFullWellCapacityFieldNumber = 12,
+    kGammaFieldNumber = 13,
   };
   // repeated int64 resolution = 1;
   int resolution_size() const;
@@ -2764,7 +2766,7 @@ class SensorModel final : public ::google::protobuf::MessageLite
   ::google::protobuf::RepeatedField<::int64_t>* PROTOBUF_NONNULL _internal_mutable_resolution();
 
   public:
-  // .cielimMessage.QuantumEfficiency qeCurve = 12;
+  // .cielimMessage.QuantumEfficiency qeCurve = 14;
   bool has_qecurve() const;
   void clear_qecurve() ;
   const ::cielimMessage::QuantumEfficiency& qecurve() const;
@@ -2809,66 +2811,6 @@ class SensorModel final : public ::google::protobuf::MessageLite
   void _internal_set_readnoise(double value);
 
   public:
-  // double darkCurrent = 6;
-  void clear_darkcurrent() ;
-  double darkcurrent() const;
-  void set_darkcurrent(double value);
-
-  private:
-  double _internal_darkcurrent() const;
-  void _internal_set_darkcurrent(double value);
-
-  public:
-  // double systemGain = 7;
-  void clear_systemgain() ;
-  double systemgain() const;
-  void set_systemgain(double value);
-
-  private:
-  double _internal_systemgain() const;
-  void _internal_set_systemgain(double value);
-
-  public:
-  // double sensorWidth = 8;
-  void clear_sensorwidth() ;
-  double sensorwidth() const;
-  void set_sensorwidth(double value);
-
-  private:
-  double _internal_sensorwidth() const;
-  void _internal_set_sensorwidth(double value);
-
-  public:
-  // double sensorHeight = 9;
-  void clear_sensorheight() ;
-  double sensorheight() const;
-  void set_sensorheight(double value);
-
-  private:
-  double _internal_sensorheight() const;
-  void _internal_set_sensorheight(double value);
-
-  public:
-  // double fullWellCapacity = 10;
-  void clear_fullwellcapacity() ;
-  double fullwellcapacity() const;
-  void set_fullwellcapacity(double value);
-
-  private:
-  double _internal_fullwellcapacity() const;
-  void _internal_set_fullwellcapacity(double value);
-
-  public:
-  // double gamma = 11;
-  void clear_gamma() ;
-  double gamma() const;
-  void set_gamma(double value);
-
-  private:
-  double _internal_gamma() const;
-  void _internal_set_gamma(double value);
-
-  public:
   // bool shotNoise = 5;
   void clear_shotnoise() ;
   bool shotnoise() const;
@@ -2879,11 +2821,91 @@ class SensorModel final : public ::google::protobuf::MessageLite
   void _internal_set_shotnoise(bool value);
 
   public:
+  // float darkCurrent = 6;
+  void clear_darkcurrent() ;
+  float darkcurrent() const;
+  void set_darkcurrent(float value);
+
+  private:
+  float _internal_darkcurrent() const;
+  void _internal_set_darkcurrent(float value);
+
+  public:
+  // uint32 darkCurrentPattern = 7;
+  void clear_darkcurrentpattern() ;
+  ::uint32_t darkcurrentpattern() const;
+  void set_darkcurrentpattern(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_darkcurrentpattern() const;
+  void _internal_set_darkcurrentpattern(::uint32_t value);
+
+  public:
+  // float darkCurrentStdDeviation = 8;
+  void clear_darkcurrentstddeviation() ;
+  float darkcurrentstddeviation() const;
+  void set_darkcurrentstddeviation(float value);
+
+  private:
+  float _internal_darkcurrentstddeviation() const;
+  void _internal_set_darkcurrentstddeviation(float value);
+
+  public:
+  // double systemGain = 9;
+  void clear_systemgain() ;
+  double systemgain() const;
+  void set_systemgain(double value);
+
+  private:
+  double _internal_systemgain() const;
+  void _internal_set_systemgain(double value);
+
+  public:
+  // double sensorWidth = 10;
+  void clear_sensorwidth() ;
+  double sensorwidth() const;
+  void set_sensorwidth(double value);
+
+  private:
+  double _internal_sensorwidth() const;
+  void _internal_set_sensorwidth(double value);
+
+  public:
+  // double sensorHeight = 11;
+  void clear_sensorheight() ;
+  double sensorheight() const;
+  void set_sensorheight(double value);
+
+  private:
+  double _internal_sensorheight() const;
+  void _internal_set_sensorheight(double value);
+
+  public:
+  // double fullWellCapacity = 12;
+  void clear_fullwellcapacity() ;
+  double fullwellcapacity() const;
+  void set_fullwellcapacity(double value);
+
+  private:
+  double _internal_fullwellcapacity() const;
+  void _internal_set_fullwellcapacity(double value);
+
+  public:
+  // double gamma = 13;
+  void clear_gamma() ;
+  double gamma() const;
+  void set_gamma(double value);
+
+  private:
+  double _internal_gamma() const;
+  void _internal_set_gamma(double value);
+
+  public:
   // @@protoc_insertion_point(class_scope:cielimMessage.SensorModel)
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
-  static const ::google::protobuf::internal::TcParseTable<4, 12,
+  static const ::google::protobuf::internal::TcParseTable<4, 14,
                                    1, 0,
                                    2>
       _table_;
@@ -2911,13 +2933,15 @@ class SensorModel final : public ::google::protobuf::MessageLite
     ::uint64_t renderrate_;
     double exposuretime_;
     double readnoise_;
-    double darkcurrent_;
+    bool shotnoise_;
+    float darkcurrent_;
+    ::uint32_t darkcurrentpattern_;
+    float darkcurrentstddeviation_;
     double systemgain_;
     double sensorwidth_;
     double sensorheight_;
     double fullwellcapacity_;
     double gamma_;
-    bool shotnoise_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -6597,7 +6621,7 @@ inline void SensorModel::clear_shotnoise() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.shotnoise_ = false;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000800U);
+                  0x00000020U);
 }
 inline bool SensorModel::shotnoise() const {
   // @@protoc_insertion_point(field_get:cielimMessage.SensorModel.shotNoise)
@@ -6605,7 +6629,7 @@ inline bool SensorModel::shotnoise() const {
 }
 inline void SensorModel::set_shotnoise(bool value) {
   _internal_set_shotnoise(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000800U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
   // @@protoc_insertion_point(field_set:cielimMessage.SensorModel.shotNoise)
 }
 inline bool SensorModel::_internal_shotnoise() const {
@@ -6617,37 +6641,87 @@ inline void SensorModel::_internal_set_shotnoise(bool value) {
   _impl_.shotnoise_ = value;
 }
 
-// double darkCurrent = 6;
+// float darkCurrent = 6;
 inline void SensorModel::clear_darkcurrent() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.darkcurrent_ = 0;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000020U);
+                  0x00000040U);
 }
-inline double SensorModel::darkcurrent() const {
+inline float SensorModel::darkcurrent() const {
   // @@protoc_insertion_point(field_get:cielimMessage.SensorModel.darkCurrent)
   return _internal_darkcurrent();
 }
-inline void SensorModel::set_darkcurrent(double value) {
+inline void SensorModel::set_darkcurrent(float value) {
   _internal_set_darkcurrent(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000040U);
   // @@protoc_insertion_point(field_set:cielimMessage.SensorModel.darkCurrent)
 }
-inline double SensorModel::_internal_darkcurrent() const {
+inline float SensorModel::_internal_darkcurrent() const {
   ::google::protobuf::internal::TSanRead(&_impl_);
   return _impl_.darkcurrent_;
 }
-inline void SensorModel::_internal_set_darkcurrent(double value) {
+inline void SensorModel::_internal_set_darkcurrent(float value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.darkcurrent_ = value;
 }
 
-// double systemGain = 7;
+// uint32 darkCurrentPattern = 7;
+inline void SensorModel::clear_darkcurrentpattern() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.darkcurrentpattern_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000080U);
+}
+inline ::uint32_t SensorModel::darkcurrentpattern() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.SensorModel.darkCurrentPattern)
+  return _internal_darkcurrentpattern();
+}
+inline void SensorModel::set_darkcurrentpattern(::uint32_t value) {
+  _internal_set_darkcurrentpattern(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000080U);
+  // @@protoc_insertion_point(field_set:cielimMessage.SensorModel.darkCurrentPattern)
+}
+inline ::uint32_t SensorModel::_internal_darkcurrentpattern() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.darkcurrentpattern_;
+}
+inline void SensorModel::_internal_set_darkcurrentpattern(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.darkcurrentpattern_ = value;
+}
+
+// float darkCurrentStdDeviation = 8;
+inline void SensorModel::clear_darkcurrentstddeviation() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.darkcurrentstddeviation_ = 0;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000100U);
+}
+inline float SensorModel::darkcurrentstddeviation() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.SensorModel.darkCurrentStdDeviation)
+  return _internal_darkcurrentstddeviation();
+}
+inline void SensorModel::set_darkcurrentstddeviation(float value) {
+  _internal_set_darkcurrentstddeviation(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000100U);
+  // @@protoc_insertion_point(field_set:cielimMessage.SensorModel.darkCurrentStdDeviation)
+}
+inline float SensorModel::_internal_darkcurrentstddeviation() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.darkcurrentstddeviation_;
+}
+inline void SensorModel::_internal_set_darkcurrentstddeviation(float value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.darkcurrentstddeviation_ = value;
+}
+
+// double systemGain = 9;
 inline void SensorModel::clear_systemgain() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.systemgain_ = 0;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000040U);
+                  0x00000200U);
 }
 inline double SensorModel::systemgain() const {
   // @@protoc_insertion_point(field_get:cielimMessage.SensorModel.systemGain)
@@ -6655,7 +6729,7 @@ inline double SensorModel::systemgain() const {
 }
 inline void SensorModel::set_systemgain(double value) {
   _internal_set_systemgain(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000040U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000200U);
   // @@protoc_insertion_point(field_set:cielimMessage.SensorModel.systemGain)
 }
 inline double SensorModel::_internal_systemgain() const {
@@ -6667,12 +6741,12 @@ inline void SensorModel::_internal_set_systemgain(double value) {
   _impl_.systemgain_ = value;
 }
 
-// double sensorWidth = 8;
+// double sensorWidth = 10;
 inline void SensorModel::clear_sensorwidth() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.sensorwidth_ = 0;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000080U);
+                  0x00000400U);
 }
 inline double SensorModel::sensorwidth() const {
   // @@protoc_insertion_point(field_get:cielimMessage.SensorModel.sensorWidth)
@@ -6680,7 +6754,7 @@ inline double SensorModel::sensorwidth() const {
 }
 inline void SensorModel::set_sensorwidth(double value) {
   _internal_set_sensorwidth(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000080U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000400U);
   // @@protoc_insertion_point(field_set:cielimMessage.SensorModel.sensorWidth)
 }
 inline double SensorModel::_internal_sensorwidth() const {
@@ -6692,12 +6766,12 @@ inline void SensorModel::_internal_set_sensorwidth(double value) {
   _impl_.sensorwidth_ = value;
 }
 
-// double sensorHeight = 9;
+// double sensorHeight = 11;
 inline void SensorModel::clear_sensorheight() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.sensorheight_ = 0;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000100U);
+                  0x00000800U);
 }
 inline double SensorModel::sensorheight() const {
   // @@protoc_insertion_point(field_get:cielimMessage.SensorModel.sensorHeight)
@@ -6705,7 +6779,7 @@ inline double SensorModel::sensorheight() const {
 }
 inline void SensorModel::set_sensorheight(double value) {
   _internal_set_sensorheight(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000100U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000800U);
   // @@protoc_insertion_point(field_set:cielimMessage.SensorModel.sensorHeight)
 }
 inline double SensorModel::_internal_sensorheight() const {
@@ -6717,12 +6791,12 @@ inline void SensorModel::_internal_set_sensorheight(double value) {
   _impl_.sensorheight_ = value;
 }
 
-// double fullWellCapacity = 10;
+// double fullWellCapacity = 12;
 inline void SensorModel::clear_fullwellcapacity() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.fullwellcapacity_ = 0;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000200U);
+                  0x00001000U);
 }
 inline double SensorModel::fullwellcapacity() const {
   // @@protoc_insertion_point(field_get:cielimMessage.SensorModel.fullWellCapacity)
@@ -6730,7 +6804,7 @@ inline double SensorModel::fullwellcapacity() const {
 }
 inline void SensorModel::set_fullwellcapacity(double value) {
   _internal_set_fullwellcapacity(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000200U);
+  SetHasBit(_impl_._has_bits_[0], 0x00001000U);
   // @@protoc_insertion_point(field_set:cielimMessage.SensorModel.fullWellCapacity)
 }
 inline double SensorModel::_internal_fullwellcapacity() const {
@@ -6742,12 +6816,12 @@ inline void SensorModel::_internal_set_fullwellcapacity(double value) {
   _impl_.fullwellcapacity_ = value;
 }
 
-// double gamma = 11;
+// double gamma = 13;
 inline void SensorModel::clear_gamma() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.gamma_ = 0;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000400U);
+                  0x00002000U);
 }
 inline double SensorModel::gamma() const {
   // @@protoc_insertion_point(field_get:cielimMessage.SensorModel.gamma)
@@ -6755,7 +6829,7 @@ inline double SensorModel::gamma() const {
 }
 inline void SensorModel::set_gamma(double value) {
   _internal_set_gamma(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000400U);
+  SetHasBit(_impl_._has_bits_[0], 0x00002000U);
   // @@protoc_insertion_point(field_set:cielimMessage.SensorModel.gamma)
 }
 inline double SensorModel::_internal_gamma() const {
@@ -6767,7 +6841,7 @@ inline void SensorModel::_internal_set_gamma(double value) {
   _impl_.gamma_ = value;
 }
 
-// .cielimMessage.QuantumEfficiency qeCurve = 12;
+// .cielimMessage.QuantumEfficiency qeCurve = 14;
 inline bool SensorModel::has_qecurve() const {
   bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000002U);
   PROTOBUF_ASSUME(!value || _impl_.qecurve_ != nullptr);

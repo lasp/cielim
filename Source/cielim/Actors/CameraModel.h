@@ -40,7 +40,6 @@ struct FCameraParams
 	FVector3f QuECurveG;
 	FVector3f QuECurveB;
 	float CorrectionFactor;
-	bool bEnableShotNoise;
 	float FullWellCapacity;
 	float Gamma;
 };
@@ -67,6 +66,14 @@ struct FImageCorruptionParams
 	// Gaussian PSF
 	uint32 KernelWidth;
 	float Sigma;
+
+	// Shot noise (on or off)
+	bool bEnableShotNoise;
+
+	// Dark Current
+	float DarkCurrent;
+	uint32 DarkCurrentPattern;
+	float DarkCurrentStdDeviation;
 
 	// Cosmic Rays
 	uint32 NumCosmicRays;

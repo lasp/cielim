@@ -71,7 +71,6 @@ ACameraModel::ACameraModel()
 	this->CameraParams.QuECurveG = FVector3f::One();
 	this->CameraParams.QuECurveB = FVector3f::One();
 	this->CameraParams.CorrectionFactor = 1.0f;
-	this->CameraParams.bEnableShotNoise = false;
 	this->CameraParams.FullWellCapacity = 50000.0f;
 	this->CameraParams.Gamma = 2.2f;
 }
@@ -140,8 +139,6 @@ void ACameraModel::SetCameraParameters(const cielimMessage::CielimMessage &Cieli
 
 		if (SensorModel.exposuretime() > 0.0f)
 			this->CameraParams.ExposureTime = CameraModel.sensormodel().exposuretime();
-
-		this->CameraParams.bEnableShotNoise = CameraModel.sensormodel().shotnoise();
 
 		if (SensorModel.fullwellcapacity() > 0.0f)
 			this->CameraParams.FullWellCapacity = CameraModel.sensormodel().fullwellcapacity();
@@ -219,8 +216,21 @@ void ACameraModel::SetCameraParameters(const cielimMessage::CielimMessage &Cieli
 	{
 		const auto SensorModel = CameraModel.sensormodel();
 
-		this->CorruptionParams.ReadNoiseSigma = SensorModel.readnoise();
-		this->CorruptionParams.SignalGain = SensorModel.systemgain();
+		this->CorruptionParams.bEnableShotNoise = CameraModel.sensormodel().shotnoise();
+
+		if (SensorModel.darkcurrent() > 0.0f)
+			this->CorruptionParams.DarkCurrent = SensorModel.darkcurrent();
+
+		this->CorruptionParams.DarkCurrentPattern = SensorModel.darkcurrentpattern();
+
+		if (SensorModel.darkcurrentstddeviation() > 0.0f)
+			this->CorruptionParams.DarkCurrentStdDeviation = SensorModel.darkcurrentstddeviation();
+
+		if (SensorModel.readnoise() > 0.0f)
+			this->CorruptionParams.ReadNoiseSigma = SensorModel.readnoise();
+
+		if (SensorModel.systemgain() > 0.0f)
+			this->CorruptionParams.SignalGain = SensorModel.systemgain();
 	}
 }
 

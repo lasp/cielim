@@ -95,7 +95,6 @@ void FCielimSceneViewExtension::PrePostProcessPass_RenderThread(FRDGBuilder &Gra
 		CameraParams.QuECurveG = FVector3f::One();
 		CameraParams.QuECurveB = FVector3f::One();
 		CameraParams.CorrectionFactor = 1.0f;
-		CameraParams.bEnableShotNoise = false;
 		CameraParams.FullWellCapacity = 50000.0f;
 		CameraParams.Gamma = 2.2f;
 
@@ -122,7 +121,7 @@ void FCielimSceneViewExtension::PrePostProcessPass_RenderThread(FRDGBuilder &Gra
 		Swap(TextureIn, TextureOut);
 	}
 
-	QuETonemapPass(GraphBuilder, CameraParams, TextureIn, TextureOut);
+	QuETonemapPass(GraphBuilder, CameraParams, CorruptionParams, TextureIn, TextureOut);
 	Swap(TextureIn, TextureOut);
 
 	// These passes operate on the signal from the sensor
@@ -229,6 +228,7 @@ void FCielimSceneViewExtension::DistantObjectsPass(FRDGBuilder &GraphBuilder, co
 }
 
 void FCielimSceneViewExtension::QuETonemapPass(FRDGBuilder &GraphBuilder, const FCameraParams &CameraParams,
+											   const FImageCorruptionParams &CorruptionParams,
 											   const FRDGTextureRef &TextureIn, const FRDGTextureRef &TextureOut)
 {
 	RDG_GPU_STAT_SCOPE(GraphBuilder, QuETonemapping);
@@ -262,7 +262,12 @@ void FCielimSceneViewExtension::QuETonemapPass(FRDGBuilder &GraphBuilder, const 
 	QuEParams->SimpsonFactor = FMath::Abs(CameraParams.Wavelength1 - CameraParams.Wavelength3) / 6.0f;
 	QuEParams->CorrectionFactor = CameraParams.CorrectionFactor;
 	QuEParams->CurrentTime = static_cast<uint32>(FDateTime::UtcNow().ToUnixTimestamp());
-	QuEParams->EnableShotNoise = static_cast<uint32>(CameraParams.bEnableShotNoise);
+	QuEParams->EnableShotNoise = static_cast<uint32>(CorruptionParams.bEnableShotNoise);
+	QuEParams->DarkCurrent = CorruptionParams.DarkCurrent;
+	QuEParams->DarkCurrentPattern = CorruptionParams.DarkCurrentPattern;
+	const float Ratio = 4 * FMath::Square(CorruptionParams.DarkCurrentStdDeviation) /
+		FMath::Square(FMath::Max(CorruptionParams.DarkCurrent, 1e-6));
+	QuEParams->DarkCurrentLogSigma = FMath::Sqrt(FMath::Loge((1 + sqrt(1 + Ratio)) / 2));
 	QuEParams->InvFullWellCapacity = 1.0f / FMath::Max(CameraParams.FullWellCapacity, 1e-6);
 	QuEParams->RenderTargets[0] = FRenderTargetBinding(TextureOut, ERenderTargetLoadAction::EClear);
 

@@ -41,7 +41,8 @@ private:
 								   const FRDGTextureRef &SceneDepth, const FRDGTextureRef &SceneColor);
 
 	static void QuETonemapPass(FRDGBuilder &GraphBuilder, const FCameraParams &CameraParams,
-							   const FRDGTextureRef &TextureIn, const FRDGTextureRef &TextureOut);
+							   const FImageCorruptionParams &CorruptionParams, const FRDGTextureRef &TextureIn,
+							   const FRDGTextureRef &TextureOut);
 
 	static void LensDistortionPass(FRDGBuilder &GraphBuilder, const FImageCorruptionParams &CorruptionParams,
 								   FRDGTextureRef &TextureIn, FRDGTextureRef &TextureOut);
