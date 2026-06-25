@@ -41,6 +41,108 @@ def scene_setup():
     return default_scene()
 
 
+@pytest.mark.parametrize(
+    "k1, k2, k3, p1, p2",
+    [
+        (0.5, 0.0, 0.0, 0.0, 0.0),
+        (-0.5, 0.0, 0.0, 0.0, 0.0),
+        (0.3, 0.1, 0.0, 0.0, 0.0),
+        (0.3, 0.2, 0.1, 0.0, 0.0),
+        (0.0, -0.3, 0.1, 0.0, 0.0),
+        (0.0, 0.3, -0.1, 0.0, 0.0),
+        (0.0, 0.0, 0.0, 0.3, 0.0),
+        (0.0, 0.0, 0.0, 0.0, 0.3),
+    ],
+)
+def test_LensDistortion(cielim_connection, scene_setup, k1, k2, k3, p1, p2):
+    """
+    Tests that lens distortion is distorting the image as expected.
+    """
+    connector = cielim_connection
+
+    scene = scene_setup
+
+    # Make spacecraft closer to plane
+    scene.spacecraft.position[:] = [0, 0, 3000]
+
+    connector.send_init_request()
+    connector.send_frame(scene)
+    base_image, _, _ = connector.request_image_for_camera_id(1, True, False)
+
+    # Apply distortions to base image
+
+    h, w = base_image.shape[:2]
+    aspect_ratio = w / h
+
+    # Create normalized UV coordinate grids [0, 1]
+    u = np.linspace(0, 1, w, dtype=np.float32)
+    v = np.linspace(0, 1, h, dtype=np.float32)
+    uu, vv = np.meshgrid(u, v)
+
+    # Shift to center [-0.5, 0.5] and apply aspect ratio to X
+    cx = (uu - 0.5) * aspect_ratio
+    cy = vv - 0.5
+
+    # Radial distances
+    r2 = cx * cx + cy * cy
+    r4 = r2 * r2
+    r6 = r2 * r4
+
+    # Radial distortion factor
+    radial = 1.0 + k1 * r2 + k2 * r4 + k3 * r6
+
+    # Tangential distortion offset
+    tx = 2.0 * p1 * cx * cy + p2 * (r2 + 2.0 * cx * cx)
+    ty = p1 * (r2 + 2.0 * cy * cy) + 2.0 * p2 * cx * cy
+
+    # Edge scale factors (to normalize distortion at image borders)
+    x_edge2 = (0.5 * aspect_ratio) ** 2
+    x_scale = 1.0 + k1 * x_edge2 + k2 * x_edge2**2 + k3 * x_edge2**3
+
+    y_edge2 = 0.5**2
+    y_scale = 1.0 + k1 * y_edge2 + k2 * y_edge2**2 + k3 * y_edge2**3
+
+    # Apply edge scaling before distortion
+    cx /= x_scale
+    cy /= y_scale
+
+    # Apply radial + tangential distortion
+    dx = cx * radial + tx
+    dy = cy * radial + ty
+
+    # Undo aspect ratio and shift back to [0, 1] UV space
+    dx /= aspect_ratio
+    distorted_u = dx + 0.5
+    distorted_v = dy + 0.5
+
+    # Convert UVs to pixel coordinates for remap
+    map_x = (distorted_u * w).astype(np.float32)
+    map_y = (distorted_v * h).astype(np.float32)
+
+    # Remap with black border fill
+    distorted_base = cv2.remap(
+        base_image, map_x, map_y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0)
+    )
+
+    scene.camera.lensModel.distortionK1 = k1
+    scene.camera.lensModel.distortionK2 = k2
+    scene.camera.lensModel.distortionK3 = k3
+    scene.camera.lensModel.distortionP1 = p1
+    scene.camera.lensModel.distortionP2 = p2
+
+    connector.send_init_request()
+    connector.send_frame(scene)
+    distorted_image, _, _ = connector.request_image_for_camera_id(1, True, False)
+
+    diff = np.abs(distorted_image.astype(np.int32) - distorted_base.astype(np.int32))
+    mismatch_fraction = np.mean(diff > 1)
+
+    # Some pixels will be off because cv can smooth edges (0.2% allowance)
+    assert mismatch_fraction < 0.002, (
+        f"Too many mismatched pixels: {mismatch_fraction:.2%} " f"(max diff: {diff.max()})"
+    )
+
+
 def test_GaussianPSF(cielim_connection, scene_setup):
     """
     Tests that Gaussian PSF is properly blurring the image using variance of laplacian.

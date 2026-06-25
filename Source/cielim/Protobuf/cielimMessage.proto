@@ -87,10 +87,14 @@ message LensModel{
     double focalLength = 2; // [m] Camera focal length
     double pointSpreadFunction = 3; // [pix] Kernel size of gaussian psf
     double apertureRadius = 4; // [m] Aperture radius of lens
-    repeated double horizontalVignetting = 5; // [-] Polynomial coefficients to form the curve of vignetting (values between 0 and 1) as a function of horizontal distance from camera center (degrees)
-    repeated double verticalVignetting = 6; // [-] Polynomial coefficients to form the curve of vignetting (values between 0 and 1) as a function of vertical distance from camera center (degrees)
-    repeated double distortion = 7; // [-] Polynomial coefficients to form the curve of distortion (values between 0 and 1) as a function of vertical distance from camera center (degrees)
-    double transmission = 8; // [-] Transmission rate of the lens (value between 0 and 1) assumed constant over all wavelengths
+    double transmission = 5; // [-] Transmission rate of the lens (value between 0 and 1) assumed constant over all wavelengths
+    repeated double horizontalVignetting = 6; // [-] Polynomial coefficients to form the curve of vignetting (values between 0 and 1) as a function of horizontal distance from camera center (degrees)
+    repeated double verticalVignetting = 7; // [-] Polynomial coefficients to form the curve of vignetting (values between 0 and 1) as a function of vertical distance from camera center (degrees)
+    float distortionK1 = 8; // [-] Polynomial coefficients to form the curve of distortion (dimensionless)
+    float distortionK2 = 9; // [-] Polynomial coefficients to form the curve of distortion (dimensionless)
+    float distortionK3 = 10; // [-] Polynomial coefficients to form the curve of distortion (dimensionless)
+    float distortionP1 = 11; // [-] Polynomial coefficients to form the curve of distortion (dimensionless)
+    float distortionP2 = 12; // [-] Polynomial coefficients to form the curve of distortion (dimensionless)
 }
 
 message SensorModel{

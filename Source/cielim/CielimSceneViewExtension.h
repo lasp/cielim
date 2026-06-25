@@ -43,6 +43,9 @@ private:
 	static void QuETonemapPass(FRDGBuilder &GraphBuilder, const FCameraParams &CameraParams,
 							   const FRDGTextureRef &TextureIn, const FRDGTextureRef &TextureOut);
 
+	static void LensDistortionPass(FRDGBuilder &GraphBuilder, const FImageCorruptionParams &CorruptionParams,
+								   FRDGTextureRef &TextureIn, FRDGTextureRef &TextureOut);
+
 	static void GaussianPSFPass(FRDGBuilder &GraphBuilder, const FImageCorruptionParams &CorruptionParams,
 								FRDGTextureRef &TextureIn, FRDGTextureRef &TextureOut);
 

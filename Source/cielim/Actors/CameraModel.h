@@ -54,6 +54,13 @@ struct FDiagnosticParams
 
 struct FImageCorruptionParams
 {
+	// Lens Distortion
+	float K1;
+	float K2;
+	float K3;
+	float P1;
+	float P2;
+
 	// Gaussian PSF
 	uint32 KernelWidth;
 	float Sigma;
