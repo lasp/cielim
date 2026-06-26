@@ -255,6 +255,7 @@ void ACameraModel::BeginPlay()
 	FlushRenderingCommands(); // Wait for GPU flush to finish
 }
 
+
 // Called every frame
 void ACameraModel::Tick(float DeltaTime) { Super::Tick(DeltaTime); }
 
@@ -283,71 +284,141 @@ void ACameraModel::GetImageData(TArray64<uint8> &ImageData)
 		break;
 
 	case cielimMessage::ImageFormat_Format_RAW_8:
-		ExportRaw8(Image, ImageData);
-		break;
+		{
+			TArray64<uint8> TempData;
+			ExtractImage(Image, this->CameraParams.bIsGrayscale, TempData);
+			ExportRaw8(TempData, ImageData);
+			break;
+		}
 
 	case cielimMessage::ImageFormat_Format_RAW_12:
-		ExportRaw12(Image, ImageData);
-		break;
+		{
+			TArray64<uint8> TempData;
+			ExtractImage(Image, this->CameraParams.bIsGrayscale, TempData);
+			ExportRaw12(TempData, ImageData);
+			break;
+		}
 
 	case cielimMessage::ImageFormat_Format_RAW_12_PACKED:
-		ExportRaw12Packed(Image, ImageData);
-		break;
+		{
+			TArray64<uint8> TempData;
+			ExtractImage(Image, this->CameraParams.bIsGrayscale, TempData);
+			ExportRaw12Packed(TempData, ImageData);
+			break;
+		}
 
 	case cielimMessage::ImageFormat_Format_RAW_16:
-		ExportRaw16(Image, ImageData);
-		break;
+		{
+			TArray64<uint8> TempData;
+			ExtractImage(Image, this->CameraParams.bIsGrayscale, TempData);
+			ImageData = MoveTemp(TempData);
+			break;
+		}
 
 	default:
 		break;
 	}
 }
 
-void ACameraModel::ExportRaw8(const FImage &Image, TArray64<uint8> &ImageData)
+void ACameraModel::ExtractImage(const FImage &Image, const bool bIsGrayscale, TArray64<uint8> &OutData)
 {
-	FImage FormattedImage;
-	Image.CopyTo(FormattedImage, ERawImageFormat::BGRA8, EGammaSpace::Linear);
+	const FFloat16 *SourceFloat16 = reinterpret_cast<const FFloat16 *>(Image.RawData.GetData());
 
-	ImageData = FormattedImage.RawData;
+	const int64 NumPixels = Image.GetNumPixels();
+
+	if (bIsGrayscale)
+	{
+		// Output image will hold single 16-bit channel per pixel
+		OutData.SetNumUninitialized(NumPixels * sizeof(uint16));
+
+		uint16 *Destination = reinterpret_cast<uint16 *>(OutData.GetData());
+
+		for (int64 i = 0; i < NumPixels; i++)
+		{
+			// We extract here only the R color channel
+
+			const float RFloatValue = FMath::Clamp(SourceFloat16[i * 4].GetFloat(), 0.f, 1.f);
+
+			const uint16 RIntValue = static_cast<uint16>(RFloatValue * 65535.0f);
+
+			Destination[i] = RIntValue;
+		}
+	}
+	else
+	{
+		// Output image will hold 16-bit RGB channels per pixel
+		OutData.SetNumUninitialized(NumPixels * sizeof(uint16) * 3);
+
+		uint16 *Destination = reinterpret_cast<uint16 *>(OutData.GetData());
+
+		for (int64 i = 0; i < NumPixels; i++)
+		{
+			// We extract here the RGB color channels, no alpha channel
+
+			const float RFloatValue = FMath::Clamp(SourceFloat16[i * 4 + 0].GetFloat(), 0.f, 1.f);
+			const float GFloatValue = FMath::Clamp(SourceFloat16[i * 4 + 1].GetFloat(), 0.f, 1.f);
+			const float BFloatValue = FMath::Clamp(SourceFloat16[i * 4 + 2].GetFloat(), 0.f, 1.f);
+
+			const uint16 RIntValue = static_cast<uint16>(RFloatValue * 65535.0f);
+			const uint16 GIntValue = static_cast<uint16>(GFloatValue * 65535.0f);
+			const uint16 BIntValue = static_cast<uint16>(BFloatValue * 65535.0f);
+
+			Destination[i * 3] = RIntValue;
+			Destination[i * 3 + 1] = GIntValue;
+			Destination[i * 3 + 2] = BIntValue;
+		}
+	}
 }
 
-void ACameraModel::ExportRaw12(const FImage &Image, TArray64<uint8> &ImageData)
+void ACameraModel::ExportRaw8(const TArray64<uint8> &InData, TArray64<uint8> &OutData)
 {
-	FImage FormattedImage;
-	Image.CopyTo(FormattedImage, ERawImageFormat::RGBA16, EGammaSpace::Linear);
-
 	// Number of uint16 values (1 per color channel)
-	const uint32 NumSamples = FormattedImage.RawData.Num() / sizeof(uint16);
+	const uint64 NumSamples = InData.Num() / sizeof(uint16);
+
+	// We only need 1 byte per sample
+	OutData.SetNumUninitialized(NumSamples);
+
+	const uint8 *ImageDataSource = InData.GetData();
+	uint8 *ImageDataDestination = OutData.GetData();
+
+	for (uint64 i = 0; i < NumSamples; i++)
+	{
+		// Just copy the most significant byte to the new array
+		ImageDataDestination[i] = ImageDataSource[i * 2 + 1];
+	}
+}
+
+void ACameraModel::ExportRaw12(const TArray64<uint8> &InData, TArray64<uint8> &OutData)
+{
+	// Number of uint16 values (1 per color channel)
+	const uint64 NumSamples = InData.Num() / sizeof(uint16);
 
 	// Set number of uint8 values in byte data array
-	ImageData.SetNumUninitialized(NumSamples * 2);
+	OutData.SetNumUninitialized(NumSamples * 2);
 
-	const uint16 *ImageDataSource = reinterpret_cast<const uint16 *>(FormattedImage.RawData.GetData());
-	uint16 *ImageDataDestination = reinterpret_cast<uint16 *>(ImageData.GetData());
+	const uint16 *ImageDataSource = reinterpret_cast<const uint16 *>(InData.GetData());
+	uint16 *ImageDataDestination = reinterpret_cast<uint16 *>(OutData.GetData());
 
-	for (uint32 i = 0; i < NumSamples; i++)
+	for (uint64 i = 0; i < NumSamples; i++)
 	{
 		// Zero out the 4 least significant bits
 		ImageDataDestination[i] = (ImageDataSource[i] >> 4) << 4;
 	}
 }
 
-void ACameraModel::ExportRaw12Packed(const FImage &Image, TArray64<uint8> &ImageData)
+void ACameraModel::ExportRaw12Packed(const TArray64<uint8> &InData, TArray64<uint8> &OutData)
 {
-	FImage FormattedImage;
-	Image.CopyTo(FormattedImage, ERawImageFormat::RGBA16, EGammaSpace::Linear);
-
 	// Number of uint16 values (1 per color channel)
-	const uint32 NumSamples = FormattedImage.RawData.Num() / sizeof(uint16);
-	const uint32 NumSamplePairs = (NumSamples + 1) / 2; // Round pairs up in the case of odd number of samples
+	const uint64 NumSamples = InData.Num() / sizeof(uint16);
+	const uint64 NumSamplePairs = (NumSamples + 1) / 2; // Round pairs up in the case of odd number of samples
 
 	// 2 color channels are packed into 3 bytes
-	ImageData.SetNumUninitialized(NumSamplePairs * 3);
+	OutData.SetNumUninitialized(NumSamplePairs * 3);
 
-	const uint16 *ImageDataSource = reinterpret_cast<const uint16 *>(FormattedImage.RawData.GetData());
-	uint8 *ImageDataDestination = ImageData.GetData();
+	const uint16 *ImageDataSource = reinterpret_cast<const uint16 *>(InData.GetData());
+	uint8 *ImageDataDestination = OutData.GetData();
 
-	for (uint32 i = 0; i < NumSamplePairs; i++)
+	for (uint64 i = 0; i < NumSamplePairs; i++)
 	{
 		// Scale each 16-bit source sample down to 12-bit
 		const uint16 SampleA = ImageDataSource[i * 2 + 0] >> 4;
@@ -362,14 +433,6 @@ void ACameraModel::ExportRaw12Packed(const FImage &Image, TArray64<uint8> &Image
 		// Byte 2: Most significant 8 bits of B (11..4)
 		ImageDataDestination[i * 3 + 2] = (SampleB >> 4) & 0xFF;
 	}
-}
-
-void ACameraModel::ExportRaw16(const FImage &Image, TArray64<uint8> &ImageData)
-{
-	FImage FormattedImage;
-	Image.CopyTo(FormattedImage, ERawImageFormat::RGBA16, EGammaSpace::Linear);
-
-	ImageData = FormattedImage.RawData;
 }
 
 void ACameraModel::GetDiagnosticData(imageDiagnostics::DiagnosticData &Diagnostics)
