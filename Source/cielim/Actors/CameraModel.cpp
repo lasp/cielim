@@ -73,6 +73,7 @@ ACameraModel::ACameraModel()
 	this->CameraParams.CorrectionFactor = 1.0f;
 	this->CameraParams.FullWellCapacity = 50000.0f;
 	this->CameraParams.Gamma = 2.2f;
+	this->CameraParams.bIsGrayscale = false;
 }
 
 void ACameraModel::SetCameraParameters(const cielimMessage::CielimMessage &CielimMessage)
@@ -157,6 +158,8 @@ void ACameraModel::SetCameraParameters(const cielimMessage::CielimMessage &Cieli
 			CameraParams.QuECurveG.Set(QuECurve.greenvalue1(), QuECurve.greenvalue2(), QuECurve.greenvalue3());
 			CameraParams.QuECurveB.Set(QuECurve.bluevalue1(), QuECurve.bluevalue2(), QuECurve.bluevalue3());
 		}
+
+		this->CameraParams.bIsGrayscale = SensorModel.isgrayscale();
 	}
 
 	if (bHasImageFormat)

@@ -42,6 +42,7 @@ struct FCameraParams
 	float CorrectionFactor;
 	float FullWellCapacity;
 	float Gamma;
+	bool bIsGrayscale;
 };
 
 struct FDiagnosticParams
