@@ -97,6 +97,7 @@ void FCielimSceneViewExtension::PrePostProcessPass_RenderThread(FRDGBuilder &Gra
 		CameraParams.CorrectionFactor = 1.0f;
 		CameraParams.FullWellCapacity = 50000.0f;
 		CameraParams.Gamma = 2.2f;
+		CameraParams.bIsGrayscale = false;
 
 		CorruptionParams.KernelWidth = 7;
 		CorruptionParams.Sigma = 0.25f;
@@ -268,6 +269,7 @@ void FCielimSceneViewExtension::QuETonemapPass(FRDGBuilder &GraphBuilder, const 
 	const float Ratio = 4 * FMath::Square(CorruptionParams.DarkCurrentStdDeviation) /
 		FMath::Square(FMath::Max(CorruptionParams.DarkCurrent, 1e-6));
 	QuEParams->DarkCurrentLogSigma = FMath::Sqrt(FMath::Loge((1 + sqrt(1 + Ratio)) / 2));
+	QuEParams->GrayscaleToggle = static_cast<uint32>(CameraParams.bIsGrayscale);
 	QuEParams->InvFullWellCapacity = 1.0f / FMath::Max(CameraParams.FullWellCapacity, 1e-6);
 	QuEParams->RenderTargets[0] = FRenderTargetBinding(TextureOut, ERenderTargetLoadAction::EClear);
 
@@ -364,6 +366,7 @@ void FCielimSceneViewExtension::ReadNoisePass(FRDGBuilder &GraphBuilder, const F
 	RnParams->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
 	RnParams->CurrentTime = static_cast<uint32>(FDateTime::UtcNow().ToUnixTimestamp());
 	RnParams->ReadNoiseSigma = CorruptionParams.ReadNoiseSigma / FMath::Max(CameraParams.FullWellCapacity, 1e-6);
+	RnParams->GrayscaleToggle = static_cast<uint32>(CameraParams.bIsGrayscale);
 	RnParams->RenderTargets[0] = FRenderTargetBinding(TextureOut, ERenderTargetLoadAction::EClear);
 
 	const TShaderMapRef<FReadNoise> ReadNoiseShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));

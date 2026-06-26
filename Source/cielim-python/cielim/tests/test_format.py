@@ -68,7 +68,7 @@ def test_Format(cielim_connection, scene_setup, test_name):
         connector.send_frame(scene)
         data, _, _ = connector.request_image_for_camera_id(1, True, format_raw=True)
 
-        test_image = np.frombuffer(data, dtype=np.uint8).reshape((2000, 2000, 4))
+        test_image = np.frombuffer(data, dtype=np.uint8).reshape((2000, 2000, 3))
 
         max_value = 255
 
@@ -78,7 +78,7 @@ def test_Format(cielim_connection, scene_setup, test_name):
         connector.send_frame(scene)
         data, _, _ = connector.request_image_for_camera_id(1, True, format_raw=True)
 
-        test_image = (np.frombuffer(data, dtype=np.uint16) >> 4 & 0x0FFF).reshape((2000, 2000, 4))
+        test_image = (np.frombuffer(data, dtype=np.uint16) >> 4 & 0x0FFF).reshape((2000, 2000, 3))
 
         max_value = 4095
 
@@ -88,7 +88,7 @@ def test_Format(cielim_connection, scene_setup, test_name):
         connector.send_frame(scene)
         data, _, _ = connector.request_image_for_camera_id(1, True, format_raw=True)
 
-        num_channels = 2000 * 2000 * 4
+        num_channels = 2000 * 2000 * 3
         num_pairs = (num_channels + 1) // 2
         raw = np.frombuffer(data, dtype=np.uint8).reshape((num_pairs, 3))
         b0 = raw[:, 0].astype(np.uint16)
@@ -99,7 +99,7 @@ def test_Format(cielim_connection, scene_setup, test_name):
         samples = np.empty(num_pairs * 2, dtype=np.uint16)
         samples[0::2] = sample_a
         samples[1::2] = sample_b
-        test_image = (samples[:num_channels]).astype(np.uint16).reshape((2000, 2000, 4))
+        test_image = (samples[:num_channels]).astype(np.uint16).reshape((2000, 2000, 3))
 
         max_value = 4095
 
@@ -109,7 +109,7 @@ def test_Format(cielim_connection, scene_setup, test_name):
         connector.send_frame(scene)
         data, _, _ = connector.request_image_for_camera_id(1, True, format_raw=True)
 
-        test_image = np.frombuffer(data, dtype=np.uint16).reshape((2000, 2000, 4))
+        test_image = np.frombuffer(data, dtype=np.uint16).reshape((2000, 2000, 3))
 
         max_value = 65535
 

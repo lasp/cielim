@@ -39,6 +39,7 @@ class FQuETonemap : public FGlobalShader
 	SHADER_PARAMETER(float, DarkCurrent)
 	SHADER_PARAMETER(uint32, DarkCurrentPattern)
 	SHADER_PARAMETER(float, DarkCurrentLogSigma)
+	SHADER_PARAMETER(uint32, GrayscaleToggle)
 	SHADER_PARAMETER(float, InvFullWellCapacity)
 	RENDER_TARGET_BINDING_SLOTS()
 	END_SHADER_PARAMETER_STRUCT()

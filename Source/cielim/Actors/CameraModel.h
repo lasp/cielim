@@ -42,6 +42,7 @@ struct FCameraParams
 	float CorrectionFactor;
 	float FullWellCapacity;
 	float Gamma;
+	bool bIsGrayscale;
 };
 
 struct FDiagnosticParams
@@ -163,17 +164,17 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
+	// Extract needed image channels from float image and converts to uint16
+	static void ExtractImage(const FImage &Image, bool bIsGrayscale, TArray64<uint8> &OutData);
+
 	// Packs image data into raw 8 bit format
-	static void ExportRaw8(const FImage &Image, TArray64<uint8> &ImageData);
+	static void ExportRaw8(const TArray64<uint8> &InData, TArray64<uint8> &OutData);
 
 	// Packs image data into raw 12 bit unpacked format
-	static void ExportRaw12(const FImage &Image, TArray64<uint8> &ImageData);
+	static void ExportRaw12(const TArray64<uint8> &InData, TArray64<uint8> &OutData);
 
 	// Packs image data into raw 12 bit packed format
-	static void ExportRaw12Packed(const FImage &Image, TArray64<uint8> &ImageData);
-
-	// Packs image data into raw 16 bit unpacked format
-	static void ExportRaw16(const FImage &Image, TArray64<uint8> &ImageData);
+	static void ExportRaw12Packed(const TArray64<uint8> &InData, TArray64<uint8> &OutData);
 
 	/* Apply gamma correction to the render target; this is done separate from the main post-process pipeline to
 	 * allow for the retrieval of a diagnostic image in linear color space. */

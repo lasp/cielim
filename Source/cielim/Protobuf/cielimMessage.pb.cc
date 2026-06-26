@@ -346,11 +346,12 @@ inline constexpr SensorModel::Impl_::Impl_(
         renderrate_{::uint64_t{0u}},
         exposuretime_{0},
         readnoise_{0},
-        shotnoise_{false},
         darkcurrent_{0},
         darkcurrentpattern_{0u},
-        darkcurrentstddeviation_{0},
         systemgain_{0},
+        darkcurrentstddeviation_{0},
+        shotnoise_{false},
+        isgrayscale_{false},
         sensorwidth_{0},
         sensorheight_{0},
         fullwellcapacity_{0},
@@ -5136,16 +5137,16 @@ SensorModel::GetClassData() const {
   return SensorModel_class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<4, 14, 1, 0, 2>
+const ::_pbi::TcParseTable<4, 15, 1, 0, 2>
 SensorModel::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(SensorModel, _impl_._has_bits_),
     0, // no _extensions_
-    14, 120,  // max_field_number, fast_idx_mask
+    15, 120,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294950912,  // skipmap
+    4294934528,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    14,  // num_field_entries
+    15,  // num_field_entries
     1,  // num_aux_entries
     offsetof(decltype(_table_), aux_entries),
     SensorModel_class_data_.base(),
@@ -5174,15 +5175,15 @@ SensorModel::_table_ = {
       PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.readnoise_)}},
     // bool shotNoise = 5;
     {::_pbi::TcParser::FastV8S1,
-     {40, 5, 0,
+     {40, 9, 0,
       PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.shotnoise_)}},
     // float darkCurrent = 6;
     {::_pbi::TcParser::FastF32S1,
-     {53, 6, 0,
+     {53, 5, 0,
       PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.darkcurrent_)}},
     // uint32 darkCurrentPattern = 7;
     {::_pbi::TcParser::FastV32S1,
-     {56, 7, 0,
+     {56, 6, 0,
       PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.darkcurrentpattern_)}},
     // float darkCurrentStdDeviation = 8;
     {::_pbi::TcParser::FastF32S1,
@@ -5190,29 +5191,32 @@ SensorModel::_table_ = {
       PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.darkcurrentstddeviation_)}},
     // double systemGain = 9;
     {::_pbi::TcParser::FastF64S1,
-     {73, 9, 0,
+     {73, 7, 0,
       PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.systemgain_)}},
     // double sensorWidth = 10;
     {::_pbi::TcParser::FastF64S1,
-     {81, 10, 0,
+     {81, 11, 0,
       PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.sensorwidth_)}},
     // double sensorHeight = 11;
     {::_pbi::TcParser::FastF64S1,
-     {89, 11, 0,
+     {89, 12, 0,
       PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.sensorheight_)}},
     // double fullWellCapacity = 12;
     {::_pbi::TcParser::FastF64S1,
-     {97, 12, 0,
+     {97, 13, 0,
       PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.fullwellcapacity_)}},
     // double gamma = 13;
     {::_pbi::TcParser::FastF64S1,
-     {105, 13, 0,
+     {105, 14, 0,
       PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.gamma_)}},
     // .cielimMessage.QuantumEfficiency qeCurve = 14;
     {::_pbi::TcParser::FastMtS1,
      {114, 1, 0,
       PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.qecurve_)}},
-    {::_pbi::TcParser::MiniParse, {}},
+    // bool isGrayscale = 15;
+    {::_pbi::TcParser::FastV8S1,
+     {120, 10, 0,
+      PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.isgrayscale_)}},
   }}, {{
     65535, 65535
   }}, {{
@@ -5225,25 +5229,27 @@ SensorModel::_table_ = {
     // double readNoise = 4;
     {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.readnoise_), _Internal::kHasBitsOffset + 4, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
     // bool shotNoise = 5;
-    {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.shotnoise_), _Internal::kHasBitsOffset + 5, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
+    {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.shotnoise_), _Internal::kHasBitsOffset + 9, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
     // float darkCurrent = 6;
-    {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.darkcurrent_), _Internal::kHasBitsOffset + 6, 0, (0 | ::_fl::kFcOptional | ::_fl::kFloat)},
+    {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.darkcurrent_), _Internal::kHasBitsOffset + 5, 0, (0 | ::_fl::kFcOptional | ::_fl::kFloat)},
     // uint32 darkCurrentPattern = 7;
-    {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.darkcurrentpattern_), _Internal::kHasBitsOffset + 7, 0, (0 | ::_fl::kFcOptional | ::_fl::kUInt32)},
+    {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.darkcurrentpattern_), _Internal::kHasBitsOffset + 6, 0, (0 | ::_fl::kFcOptional | ::_fl::kUInt32)},
     // float darkCurrentStdDeviation = 8;
     {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.darkcurrentstddeviation_), _Internal::kHasBitsOffset + 8, 0, (0 | ::_fl::kFcOptional | ::_fl::kFloat)},
     // double systemGain = 9;
-    {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.systemgain_), _Internal::kHasBitsOffset + 9, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+    {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.systemgain_), _Internal::kHasBitsOffset + 7, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
     // double sensorWidth = 10;
-    {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.sensorwidth_), _Internal::kHasBitsOffset + 10, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+    {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.sensorwidth_), _Internal::kHasBitsOffset + 11, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
     // double sensorHeight = 11;
-    {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.sensorheight_), _Internal::kHasBitsOffset + 11, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+    {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.sensorheight_), _Internal::kHasBitsOffset + 12, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
     // double fullWellCapacity = 12;
-    {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.fullwellcapacity_), _Internal::kHasBitsOffset + 12, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+    {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.fullwellcapacity_), _Internal::kHasBitsOffset + 13, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
     // double gamma = 13;
-    {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.gamma_), _Internal::kHasBitsOffset + 13, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+    {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.gamma_), _Internal::kHasBitsOffset + 14, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
     // .cielimMessage.QuantumEfficiency qeCurve = 14;
     {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.qecurve_), _Internal::kHasBitsOffset + 1, 0, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
+    // bool isGrayscale = 15;
+    {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.isgrayscale_), _Internal::kHasBitsOffset + 10, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
   }},
   {{
       {::_pbi::TcParser::GetTable<::cielimMessage::QuantumEfficiency>()},
@@ -5270,10 +5276,10 @@ PROTOBUF_NOINLINE void SensorModel::Clear() {
   }
   if (BatchCheckHasBit(cached_has_bits, 0x000000fcU)) {
     ::memset(&_impl_.renderrate_, 0, static_cast<::size_t>(
-        reinterpret_cast<char*>(&_impl_.darkcurrentpattern_) -
-        reinterpret_cast<char*>(&_impl_.renderrate_)) + sizeof(_impl_.darkcurrentpattern_));
+        reinterpret_cast<char*>(&_impl_.systemgain_) -
+        reinterpret_cast<char*>(&_impl_.renderrate_)) + sizeof(_impl_.systemgain_));
   }
-  if (BatchCheckHasBit(cached_has_bits, 0x00003f00U)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x00007f00U)) {
     ::memset(&_impl_.darkcurrentstddeviation_, 0, static_cast<::size_t>(
         reinterpret_cast<char*>(&_impl_.gamma_) -
         reinterpret_cast<char*>(&_impl_.darkcurrentstddeviation_)) + sizeof(_impl_.gamma_));
@@ -5340,7 +5346,7 @@ PROTOBUF_NOINLINE void SensorModel::Clear() {
   }
 
   // bool shotNoise = 5;
-  if (CheckHasBit(cached_has_bits, 0x00000020U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000200U)) {
     if (this_._internal_shotnoise() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteBoolToArray(
@@ -5349,7 +5355,7 @@ PROTOBUF_NOINLINE void SensorModel::Clear() {
   }
 
   // float darkCurrent = 6;
-  if (CheckHasBit(cached_has_bits, 0x00000040U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000020U)) {
     if (::absl::bit_cast<::uint32_t>(this_._internal_darkcurrent()) != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteFloatToArray(
@@ -5358,7 +5364,7 @@ PROTOBUF_NOINLINE void SensorModel::Clear() {
   }
 
   // uint32 darkCurrentPattern = 7;
-  if (CheckHasBit(cached_has_bits, 0x00000080U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000040U)) {
     if (this_._internal_darkcurrentpattern() != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteUInt32ToArray(
@@ -5376,7 +5382,7 @@ PROTOBUF_NOINLINE void SensorModel::Clear() {
   }
 
   // double systemGain = 9;
-  if (CheckHasBit(cached_has_bits, 0x00000200U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000080U)) {
     if (::absl::bit_cast<::uint64_t>(this_._internal_systemgain()) != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteDoubleToArray(
@@ -5385,7 +5391,7 @@ PROTOBUF_NOINLINE void SensorModel::Clear() {
   }
 
   // double sensorWidth = 10;
-  if (CheckHasBit(cached_has_bits, 0x00000400U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000800U)) {
     if (::absl::bit_cast<::uint64_t>(this_._internal_sensorwidth()) != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteDoubleToArray(
@@ -5394,7 +5400,7 @@ PROTOBUF_NOINLINE void SensorModel::Clear() {
   }
 
   // double sensorHeight = 11;
-  if (CheckHasBit(cached_has_bits, 0x00000800U)) {
+  if (CheckHasBit(cached_has_bits, 0x00001000U)) {
     if (::absl::bit_cast<::uint64_t>(this_._internal_sensorheight()) != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteDoubleToArray(
@@ -5403,7 +5409,7 @@ PROTOBUF_NOINLINE void SensorModel::Clear() {
   }
 
   // double fullWellCapacity = 12;
-  if (CheckHasBit(cached_has_bits, 0x00001000U)) {
+  if (CheckHasBit(cached_has_bits, 0x00002000U)) {
     if (::absl::bit_cast<::uint64_t>(this_._internal_fullwellcapacity()) != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteDoubleToArray(
@@ -5412,7 +5418,7 @@ PROTOBUF_NOINLINE void SensorModel::Clear() {
   }
 
   // double gamma = 13;
-  if (CheckHasBit(cached_has_bits, 0x00002000U)) {
+  if (CheckHasBit(cached_has_bits, 0x00004000U)) {
     if (::absl::bit_cast<::uint64_t>(this_._internal_gamma()) != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteDoubleToArray(
@@ -5425,6 +5431,15 @@ PROTOBUF_NOINLINE void SensorModel::Clear() {
     target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
         14, *this_._impl_.qecurve_, this_._impl_.qecurve_->GetCachedSize(), target,
         stream);
+  }
+
+  // bool isGrayscale = 15;
+  if (CheckHasBit(cached_has_bits, 0x00000400U)) {
+    if (this_._internal_isgrayscale() != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteBoolToArray(
+          15, this_._internal_isgrayscale(), target);
+    }
   }
 
   if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
@@ -5484,59 +5499,65 @@ PROTOBUF_NOINLINE void SensorModel::Clear() {
         total_size += 9;
       }
     }
-    // bool shotNoise = 5;
-    if (CheckHasBit(cached_has_bits, 0x00000020U)) {
-      if (this_._internal_shotnoise() != 0) {
-        total_size += 2;
-      }
-    }
     // float darkCurrent = 6;
-    if (CheckHasBit(cached_has_bits, 0x00000040U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000020U)) {
       if (::absl::bit_cast<::uint32_t>(this_._internal_darkcurrent()) != 0) {
         total_size += 5;
       }
     }
     // uint32 darkCurrentPattern = 7;
-    if (CheckHasBit(cached_has_bits, 0x00000080U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000040U)) {
       if (this_._internal_darkcurrentpattern() != 0) {
         total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(
             this_._internal_darkcurrentpattern());
       }
     }
+    // double systemGain = 9;
+    if (CheckHasBit(cached_has_bits, 0x00000080U)) {
+      if (::absl::bit_cast<::uint64_t>(this_._internal_systemgain()) != 0) {
+        total_size += 9;
+      }
+    }
   }
-  if (BatchCheckHasBit(cached_has_bits, 0x00003f00U)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x00007f00U)) {
     // float darkCurrentStdDeviation = 8;
     if (CheckHasBit(cached_has_bits, 0x00000100U)) {
       if (::absl::bit_cast<::uint32_t>(this_._internal_darkcurrentstddeviation()) != 0) {
         total_size += 5;
       }
     }
-    // double systemGain = 9;
+    // bool shotNoise = 5;
     if (CheckHasBit(cached_has_bits, 0x00000200U)) {
-      if (::absl::bit_cast<::uint64_t>(this_._internal_systemgain()) != 0) {
-        total_size += 9;
+      if (this_._internal_shotnoise() != 0) {
+        total_size += 2;
+      }
+    }
+    // bool isGrayscale = 15;
+    if (CheckHasBit(cached_has_bits, 0x00000400U)) {
+      if (this_._internal_isgrayscale() != 0) {
+        total_size += 2;
       }
     }
     // double sensorWidth = 10;
-    if (CheckHasBit(cached_has_bits, 0x00000400U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000800U)) {
       if (::absl::bit_cast<::uint64_t>(this_._internal_sensorwidth()) != 0) {
         total_size += 9;
       }
     }
     // double sensorHeight = 11;
-    if (CheckHasBit(cached_has_bits, 0x00000800U)) {
+    if (CheckHasBit(cached_has_bits, 0x00001000U)) {
       if (::absl::bit_cast<::uint64_t>(this_._internal_sensorheight()) != 0) {
         total_size += 9;
       }
     }
     // double fullWellCapacity = 12;
-    if (CheckHasBit(cached_has_bits, 0x00001000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00002000U)) {
       if (::absl::bit_cast<::uint64_t>(this_._internal_fullwellcapacity()) != 0) {
         total_size += 9;
       }
     }
     // double gamma = 13;
-    if (CheckHasBit(cached_has_bits, 0x00002000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00004000U)) {
       if (::absl::bit_cast<::uint64_t>(this_._internal_gamma()) != 0) {
         total_size += 9;
       }
@@ -5592,48 +5613,53 @@ void SensorModel::MergeImpl(::google::protobuf::MessageLite& to_msg,
       }
     }
     if (CheckHasBit(cached_has_bits, 0x00000020U)) {
-      if (from._internal_shotnoise() != 0) {
-        _this->_impl_.shotnoise_ = from._impl_.shotnoise_;
-      }
-    }
-    if (CheckHasBit(cached_has_bits, 0x00000040U)) {
       if (::absl::bit_cast<::uint32_t>(from._internal_darkcurrent()) != 0) {
         _this->_impl_.darkcurrent_ = from._impl_.darkcurrent_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00000080U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000040U)) {
       if (from._internal_darkcurrentpattern() != 0) {
         _this->_impl_.darkcurrentpattern_ = from._impl_.darkcurrentpattern_;
       }
     }
+    if (CheckHasBit(cached_has_bits, 0x00000080U)) {
+      if (::absl::bit_cast<::uint64_t>(from._internal_systemgain()) != 0) {
+        _this->_impl_.systemgain_ = from._impl_.systemgain_;
+      }
+    }
   }
-  if (BatchCheckHasBit(cached_has_bits, 0x00003f00U)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x00007f00U)) {
     if (CheckHasBit(cached_has_bits, 0x00000100U)) {
       if (::absl::bit_cast<::uint32_t>(from._internal_darkcurrentstddeviation()) != 0) {
         _this->_impl_.darkcurrentstddeviation_ = from._impl_.darkcurrentstddeviation_;
       }
     }
     if (CheckHasBit(cached_has_bits, 0x00000200U)) {
-      if (::absl::bit_cast<::uint64_t>(from._internal_systemgain()) != 0) {
-        _this->_impl_.systemgain_ = from._impl_.systemgain_;
+      if (from._internal_shotnoise() != 0) {
+        _this->_impl_.shotnoise_ = from._impl_.shotnoise_;
       }
     }
     if (CheckHasBit(cached_has_bits, 0x00000400U)) {
+      if (from._internal_isgrayscale() != 0) {
+        _this->_impl_.isgrayscale_ = from._impl_.isgrayscale_;
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000800U)) {
       if (::absl::bit_cast<::uint64_t>(from._internal_sensorwidth()) != 0) {
         _this->_impl_.sensorwidth_ = from._impl_.sensorwidth_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00000800U)) {
+    if (CheckHasBit(cached_has_bits, 0x00001000U)) {
       if (::absl::bit_cast<::uint64_t>(from._internal_sensorheight()) != 0) {
         _this->_impl_.sensorheight_ = from._impl_.sensorheight_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00001000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00002000U)) {
       if (::absl::bit_cast<::uint64_t>(from._internal_fullwellcapacity()) != 0) {
         _this->_impl_.fullwellcapacity_ = from._impl_.fullwellcapacity_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00002000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00004000U)) {
       if (::absl::bit_cast<::uint64_t>(from._internal_gamma()) != 0) {
         _this->_impl_.gamma_ = from._impl_.gamma_;
       }

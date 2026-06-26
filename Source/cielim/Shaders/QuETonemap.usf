@@ -30,6 +30,7 @@ uint EnableShotNoise; // 0 or 1
 float DarkCurrent; // electrons / second
 uint DarkCurrentPattern;
 float DarkCurrentLogSigma;
+uint GrayscaleToggle;
 float InvFullWellCapacity; // This is in # of electrons (inverse)
 
 // RNG is a version of the process described in:
@@ -153,7 +154,10 @@ float4 MainPS(float4 UV : TEXCOORD0, float4 Position : SV_Position) : SV_Target0
 
 	// Set final output color to NumElectrons / FWC clamped to [0-1]
 
-	float3 Color = saturate(float3(NumElectronsR, NumElectronsG, NumElectronsB) * InvFullWellCapacity);
+	float3 Color = float3(NumElectronsR, NumElectronsG, NumElectronsB);
+	float3 Grayscale = float3(NumElectronsR, NumElectronsR, NumElectronsR); // Grayscale uses the R channel values
 
-	return float4(Color, TotalRadiance.a);
+	float3 Final = saturate(lerp(Color, Grayscale, GrayscaleToggle) * InvFullWellCapacity);
+
+	return float4(Final, TotalRadiance.a);
 }

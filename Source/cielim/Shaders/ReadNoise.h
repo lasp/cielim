@@ -22,6 +22,7 @@ class FReadNoise : public FGlobalShader
 	SHADER_PARAMETER_SAMPLER(SamplerState, InputSampler)
 	SHADER_PARAMETER(uint32, CurrentTime)
 	SHADER_PARAMETER(float, ReadNoiseSigma)
+	SHADER_PARAMETER(uint32, GrayscaleToggle)
 	RENDER_TARGET_BINDING_SLOTS()
 	END_SHADER_PARAMETER_STRUCT()
 };

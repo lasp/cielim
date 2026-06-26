@@ -84,7 +84,7 @@ class Connector:
             if format_raw:
                 image = buf
             else:
-                image = cv2.imdecode(buf, cv2.IMREAD_UNCHANGED)  # Format PNG image data for viewing with OpenCV (BGRA)
+                image = cv2.imdecode(buf, cv2.IMREAD_COLOR)  # Format PNG image data for viewing with OpenCV (BGRA)
 
         diagnostics = imageDiagnostics.DiagnosticData()
         diagnostics.ParseFromString(diagnostics_serialized)

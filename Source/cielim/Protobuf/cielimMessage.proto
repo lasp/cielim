@@ -114,6 +114,7 @@ message SensorModel{
     double fullWellCapacity = 12; // [e-] Amount of charge that can be stored within an individual pixel
     double gamma = 13; // [-] Gamma correction factor
     QuantumEfficiency qeCurve = 14; // [-] Quantum Efficiency curve information
+    bool isGrayscale = 15; // [-] Determines if images are grayscale or not
 }
 
 message AreaOfInterest{
