@@ -2748,6 +2748,8 @@ class SensorModel final : public ::google::protobuf::MessageLite
     kSensorHeightFieldNumber = 11,
     kFullWellCapacityFieldNumber = 12,
     kGammaFieldNumber = 13,
+    kStuckPixelRateFieldNumber = 16,
+    kDeadPixelRateFieldNumber = 17,
   };
   // repeated int64 resolution = 1;
   int resolution_size() const;
@@ -2912,11 +2914,31 @@ class SensorModel final : public ::google::protobuf::MessageLite
   void _internal_set_gamma(double value);
 
   public:
+  // float stuckPixelRate = 16;
+  void clear_stuckpixelrate() ;
+  float stuckpixelrate() const;
+  void set_stuckpixelrate(float value);
+
+  private:
+  float _internal_stuckpixelrate() const;
+  void _internal_set_stuckpixelrate(float value);
+
+  public:
+  // float deadPixelRate = 17;
+  void clear_deadpixelrate() ;
+  float deadpixelrate() const;
+  void set_deadpixelrate(float value);
+
+  private:
+  float _internal_deadpixelrate() const;
+  void _internal_set_deadpixelrate(float value);
+
+  public:
   // @@protoc_insertion_point(class_scope:cielimMessage.SensorModel)
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
-  static const ::google::protobuf::internal::TcParseTable<4, 15,
+  static const ::google::protobuf::internal::TcParseTable<5, 17,
                                    1, 0,
                                    2>
       _table_;
@@ -2954,6 +2976,8 @@ class SensorModel final : public ::google::protobuf::MessageLite
     double sensorheight_;
     double fullwellcapacity_;
     double gamma_;
+    float stuckpixelrate_;
+    float deadpixelrate_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -6975,6 +6999,56 @@ inline bool SensorModel::_internal_isgrayscale() const {
 inline void SensorModel::_internal_set_isgrayscale(bool value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.isgrayscale_ = value;
+}
+
+// float stuckPixelRate = 16;
+inline void SensorModel::clear_stuckpixelrate() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.stuckpixelrate_ = 0;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00008000U);
+}
+inline float SensorModel::stuckpixelrate() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.SensorModel.stuckPixelRate)
+  return _internal_stuckpixelrate();
+}
+inline void SensorModel::set_stuckpixelrate(float value) {
+  _internal_set_stuckpixelrate(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00008000U);
+  // @@protoc_insertion_point(field_set:cielimMessage.SensorModel.stuckPixelRate)
+}
+inline float SensorModel::_internal_stuckpixelrate() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.stuckpixelrate_;
+}
+inline void SensorModel::_internal_set_stuckpixelrate(float value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.stuckpixelrate_ = value;
+}
+
+// float deadPixelRate = 17;
+inline void SensorModel::clear_deadpixelrate() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.deadpixelrate_ = 0;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00010000U);
+}
+inline float SensorModel::deadpixelrate() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.SensorModel.deadPixelRate)
+  return _internal_deadpixelrate();
+}
+inline void SensorModel::set_deadpixelrate(float value) {
+  _internal_set_deadpixelrate(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00010000U);
+  // @@protoc_insertion_point(field_set:cielimMessage.SensorModel.deadPixelRate)
+}
+inline float SensorModel::_internal_deadpixelrate() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.deadpixelrate_;
+}
+inline void SensorModel::_internal_set_deadpixelrate(float value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.deadpixelrate_ = value;
 }
 
 // -------------------------------------------------------------------
