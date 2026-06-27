@@ -368,6 +368,7 @@ void FCielimSceneViewExtension::ReadNoisePass(FRDGBuilder &GraphBuilder, const F
 	RnParams->CurrentTime = static_cast<uint32>(FDateTime::UtcNow().ToUnixTimestamp());
 	RnParams->ReadNoiseSigma = CorruptionParams.ReadNoiseSigma / FMath::Max(CameraParams.FullWellCapacity, 1e-6);
 	RnParams->GrayscaleToggle = static_cast<uint32>(CameraParams.bIsGrayscale);
+	RnParams->PixelDefectPattern = CorruptionParams.PixelDefectPattern;
 	RnParams->StuckPixelRate = CorruptionParams.StuckPixelRate;
 	RnParams->DeadPixelRate = CorruptionParams.DeadPixelRate;
 	RnParams->RenderTargets[0] = FRenderTargetBinding(TextureOut, ERenderTargetLoadAction::EClear);

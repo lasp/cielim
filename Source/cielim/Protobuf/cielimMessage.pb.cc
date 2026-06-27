@@ -356,6 +356,7 @@ inline constexpr SensorModel::Impl_::Impl_(
         sensorheight_{0},
         fullwellcapacity_{0},
         gamma_{0},
+        pixeldefectpattern_{0u},
         stuckpixelrate_{0},
         deadpixelrate_{0} {}
 
@@ -5139,16 +5140,16 @@ SensorModel::GetClassData() const {
   return SensorModel_class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<5, 17, 1, 0, 2>
+const ::_pbi::TcParseTable<5, 18, 1, 0, 2>
 SensorModel::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(SensorModel, _impl_._has_bits_),
     0, // no _extensions_
-    17, 248,  // max_field_number, fast_idx_mask
+    18, 248,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294836224,  // skipmap
+    4294705152,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    17,  // num_field_entries
+    18,  // num_field_entries
     1,  // num_aux_entries
     offsetof(decltype(_table_), aux_entries),
     SensorModel_class_data_.base(),
@@ -5219,15 +5220,18 @@ SensorModel::_table_ = {
     {::_pbi::TcParser::FastV8S1,
      {120, 10, 0,
       PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.isgrayscale_)}},
-    // float stuckPixelRate = 16;
-    {::_pbi::TcParser::FastF32S2,
-     {389, 15, 0,
-      PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.stuckpixelrate_)}},
-    // float deadPixelRate = 17;
+    // uint32 pixelDefectPattern = 16;
+    {::_pbi::TcParser::FastV32S2,
+     {384, 15, 0,
+      PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.pixeldefectpattern_)}},
+    // float stuckPixelRate = 17;
     {::_pbi::TcParser::FastF32S2,
      {397, 16, 0,
+      PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.stuckpixelrate_)}},
+    // float deadPixelRate = 18;
+    {::_pbi::TcParser::FastF32S2,
+     {405, 17, 0,
       PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.deadpixelrate_)}},
-    {::_pbi::TcParser::MiniParse, {}},
     {::_pbi::TcParser::MiniParse, {}},
     {::_pbi::TcParser::MiniParse, {}},
     {::_pbi::TcParser::MiniParse, {}},
@@ -5274,10 +5278,12 @@ SensorModel::_table_ = {
     {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.qecurve_), _Internal::kHasBitsOffset + 1, 0, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
     // bool isGrayscale = 15;
     {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.isgrayscale_), _Internal::kHasBitsOffset + 10, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
-    // float stuckPixelRate = 16;
-    {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.stuckpixelrate_), _Internal::kHasBitsOffset + 15, 0, (0 | ::_fl::kFcOptional | ::_fl::kFloat)},
-    // float deadPixelRate = 17;
-    {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.deadpixelrate_), _Internal::kHasBitsOffset + 16, 0, (0 | ::_fl::kFcOptional | ::_fl::kFloat)},
+    // uint32 pixelDefectPattern = 16;
+    {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.pixeldefectpattern_), _Internal::kHasBitsOffset + 15, 0, (0 | ::_fl::kFcOptional | ::_fl::kUInt32)},
+    // float stuckPixelRate = 17;
+    {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.stuckpixelrate_), _Internal::kHasBitsOffset + 16, 0, (0 | ::_fl::kFcOptional | ::_fl::kFloat)},
+    // float deadPixelRate = 18;
+    {PROTOBUF_FIELD_OFFSET(SensorModel, _impl_.deadpixelrate_), _Internal::kHasBitsOffset + 17, 0, (0 | ::_fl::kFcOptional | ::_fl::kFloat)},
   }},
   {{
       {::_pbi::TcParser::GetTable<::cielimMessage::QuantumEfficiency>()},
@@ -5309,10 +5315,14 @@ PROTOBUF_NOINLINE void SensorModel::Clear() {
   }
   if (BatchCheckHasBit(cached_has_bits, 0x0000ff00U)) {
     ::memset(&_impl_.darkcurrentstddeviation_, 0, static_cast<::size_t>(
-        reinterpret_cast<char*>(&_impl_.stuckpixelrate_) -
-        reinterpret_cast<char*>(&_impl_.darkcurrentstddeviation_)) + sizeof(_impl_.stuckpixelrate_));
+        reinterpret_cast<char*>(&_impl_.pixeldefectpattern_) -
+        reinterpret_cast<char*>(&_impl_.darkcurrentstddeviation_)) + sizeof(_impl_.pixeldefectpattern_));
   }
-  _impl_.deadpixelrate_ = 0;
+  if (BatchCheckHasBit(cached_has_bits, 0x00030000U)) {
+    ::memset(&_impl_.stuckpixelrate_, 0, static_cast<::size_t>(
+        reinterpret_cast<char*>(&_impl_.deadpixelrate_) -
+        reinterpret_cast<char*>(&_impl_.stuckpixelrate_)) + sizeof(_impl_.deadpixelrate_));
+  }
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::std::string>();
 }
@@ -5471,21 +5481,30 @@ PROTOBUF_NOINLINE void SensorModel::Clear() {
     }
   }
 
-  // float stuckPixelRate = 16;
+  // uint32 pixelDefectPattern = 16;
   if (CheckHasBit(cached_has_bits, 0x00008000U)) {
-    if (::absl::bit_cast<::uint32_t>(this_._internal_stuckpixelrate()) != 0) {
+    if (this_._internal_pixeldefectpattern() != 0) {
       target = stream->EnsureSpace(target);
-      target = ::_pbi::WireFormatLite::WriteFloatToArray(
-          16, this_._internal_stuckpixelrate(), target);
+      target = ::_pbi::WireFormatLite::WriteUInt32ToArray(
+          16, this_._internal_pixeldefectpattern(), target);
     }
   }
 
-  // float deadPixelRate = 17;
+  // float stuckPixelRate = 17;
   if (CheckHasBit(cached_has_bits, 0x00010000U)) {
+    if (::absl::bit_cast<::uint32_t>(this_._internal_stuckpixelrate()) != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteFloatToArray(
+          17, this_._internal_stuckpixelrate(), target);
+    }
+  }
+
+  // float deadPixelRate = 18;
+  if (CheckHasBit(cached_has_bits, 0x00020000U)) {
     if (::absl::bit_cast<::uint32_t>(this_._internal_deadpixelrate()) != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteFloatToArray(
-          17, this_._internal_deadpixelrate(), target);
+          18, this_._internal_deadpixelrate(), target);
     }
   }
 
@@ -5609,16 +5628,23 @@ PROTOBUF_NOINLINE void SensorModel::Clear() {
         total_size += 9;
       }
     }
-    // float stuckPixelRate = 16;
+    // uint32 pixelDefectPattern = 16;
     if (CheckHasBit(cached_has_bits, 0x00008000U)) {
+      if (this_._internal_pixeldefectpattern() != 0) {
+        total_size += 2 + ::_pbi::WireFormatLite::UInt32Size(
+                                        this_._internal_pixeldefectpattern());
+      }
+    }
+  }
+  if (BatchCheckHasBit(cached_has_bits, 0x00030000U)) {
+    // float stuckPixelRate = 17;
+    if (CheckHasBit(cached_has_bits, 0x00010000U)) {
       if (::absl::bit_cast<::uint32_t>(this_._internal_stuckpixelrate()) != 0) {
         total_size += 6;
       }
     }
-  }
-   {
-    // float deadPixelRate = 17;
-    if (CheckHasBit(cached_has_bits, 0x00010000U)) {
+    // float deadPixelRate = 18;
+    if (CheckHasBit(cached_has_bits, 0x00020000U)) {
       if (::absl::bit_cast<::uint32_t>(this_._internal_deadpixelrate()) != 0) {
         total_size += 6;
       }
@@ -5726,14 +5752,21 @@ void SensorModel::MergeImpl(::google::protobuf::MessageLite& to_msg,
       }
     }
     if (CheckHasBit(cached_has_bits, 0x00008000U)) {
+      if (from._internal_pixeldefectpattern() != 0) {
+        _this->_impl_.pixeldefectpattern_ = from._impl_.pixeldefectpattern_;
+      }
+    }
+  }
+  if (BatchCheckHasBit(cached_has_bits, 0x00030000U)) {
+    if (CheckHasBit(cached_has_bits, 0x00010000U)) {
       if (::absl::bit_cast<::uint32_t>(from._internal_stuckpixelrate()) != 0) {
         _this->_impl_.stuckpixelrate_ = from._impl_.stuckpixelrate_;
       }
     }
-  }
-  if (CheckHasBit(cached_has_bits, 0x00010000U)) {
-    if (::absl::bit_cast<::uint32_t>(from._internal_deadpixelrate()) != 0) {
-      _this->_impl_.deadpixelrate_ = from._impl_.deadpixelrate_;
+    if (CheckHasBit(cached_has_bits, 0x00020000U)) {
+      if (::absl::bit_cast<::uint32_t>(from._internal_deadpixelrate()) != 0) {
+        _this->_impl_.deadpixelrate_ = from._impl_.deadpixelrate_;
+      }
     }
   }
   _this->_impl_._has_bits_[0] |= cached_has_bits;

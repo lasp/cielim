@@ -115,8 +115,9 @@ message SensorModel{
     double gamma = 13; // [-] Gamma correction factor
     QuantumEfficiency qeCurve = 14; // [-] Quantum Efficiency curve information
     bool isGrayscale = 15; // [-] Determines if images are grayscale or not
-    float stuckPixelRate = 16; // [-] Probability of a stuck pixel, e.g. 0.01 = 1%
-    float deadPixelRate = 17; // [-] Probability of a dead pixel, e.g. 0.01 = 1%
+    uint32 pixelDefectPattern = 16; // [-] Seed used to generate pixel defect pattern
+    float stuckPixelRate = 17; // [-] Probability of a stuck pixel, e.g. 0.01 = 1%
+    float deadPixelRate = 18; // [-] Probability of a dead pixel, e.g. 0.01 = 1%
 }
 
 message AreaOfInterest{

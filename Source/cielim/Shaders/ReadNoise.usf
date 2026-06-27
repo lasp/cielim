@@ -15,6 +15,7 @@ SamplerState InputSampler;
 uint CurrentTime;
 float ReadNoiseSigma;
 uint GrayscaleToggle;
+uint PixelDefectPattern;
 float StuckPixelRate;
 float DeadPixelRate;
 
@@ -33,8 +34,8 @@ float4 MainPS(float4 UV : TEXCOORD0, float4 Position : SV_Position) : SV_Target0
 
 	// Determine if the pixel should be stuck or dead
 
-	uint Seed2 = (uint(Position.x) * 4215u) ^ (uint(Position.y) * 4891u) ^ (CurrentTime * 5168u);
-	uint Seed3 = (uint(Position.x) * 1658u) ^ (uint(Position.y) * 7519u) ^ (CurrentTime * 3581u);
+	uint Seed2 = (uint(Position.x) * 4215u) ^ (uint(Position.y) * 4891u) ^ (PixelDefectPattern * 5168u);
+	uint Seed3 = (uint(Position.x) * 1658u) ^ (uint(Position.y) * 7519u) ^ (PixelDefectPattern * 3581u);
 
 	float StuckPixel = ComputeRandUniform(Seed2);
 	float DeadPixel = ComputeRandUniform(Seed3);
