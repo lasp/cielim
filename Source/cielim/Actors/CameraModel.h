@@ -85,6 +85,10 @@ struct FImageCorruptionParams
 	// Read Noise
 	float ReadNoiseSigma;
 
+	// Pixel defects
+	float StuckPixelRate;
+	float DeadPixelRate;
+
 	// Signal Gain
 	float SignalGain;
 };

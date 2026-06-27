@@ -232,6 +232,12 @@ void ACameraModel::SetCameraParameters(const cielimMessage::CielimMessage &Cieli
 		if (SensorModel.readnoise() > 0.0f)
 			this->CorruptionParams.ReadNoiseSigma = SensorModel.readnoise();
 
+		if (SensorModel.stuckpixelrate() > 0.0f)
+			this->CorruptionParams.StuckPixelRate = SensorModel.stuckpixelrate();
+
+		if (SensorModel.deadpixelrate() > 0.0f)
+			this->CorruptionParams.DeadPixelRate = SensorModel.deadpixelrate();
+
 		if (SensorModel.systemgain() > 0.0f)
 			this->CorruptionParams.SignalGain = SensorModel.systemgain();
 	}
