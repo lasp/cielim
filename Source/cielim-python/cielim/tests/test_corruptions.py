@@ -265,6 +265,57 @@ def test_ReadNoise(cielim_connection, scene_setup, read_noise):
 
 
 @pytest.mark.parametrize(
+    "stuck_rate, dead_rate",
+    [
+        (0.000005, 0),  # a few pixels
+        (0, 0.000005),
+        (0.000005, 0.000005),
+        (0.000025, 0),  # about a dozen pixels
+        (0, 0.000025),
+        (0.000025, 0.000025),
+    ],
+)
+def test_PixelDefect(cielim_connection, scene_setup, stuck_rate, dead_rate):
+    """
+    Tests stuck and dead pixels can be added to image.
+    """
+    connector = cielim_connection
+
+    scene = scene_setup
+
+    scene.spacecraft.position[:] = [0, 0, 1000]  # Make spacecraft closer to plane to fill screen
+    scene.camera.sensorModel.exposureTime = 4e-5  # Reduce exposure time so image is gray
+    scene.camera.sensorModel.stuckPixelRate = stuck_rate
+    scene.camera.sensorModel.deadPixelRate = dead_rate
+
+    connector.send_init_request()
+    connector.send_frame(scene)
+    image, _, _ = connector.request_image_for_camera_id(1, 1)
+
+    is_white = (image == [255, 255, 255]).all(axis=-1)
+    is_black = (image == [0, 0, 0]).all(axis=-1)
+
+    total_pixels = image.shape[0] * image.shape[1]
+
+    white_pixels_rate = np.sum(is_white) / total_pixels
+    black_pixels_rate = np.sum(is_black) / total_pixels
+
+    np.testing.assert_allclose(
+        white_pixels_rate,
+        stuck_rate,
+        rtol=0.5,
+        err_msg=f"Got white pixel rate of {white_pixels_rate * 100:.5f}%, expected ~{stuck_rate * 100}%",
+    )
+
+    np.testing.assert_allclose(
+        black_pixels_rate,
+        dead_rate,
+        rtol=0.5,
+        err_msg=f"Got black pixel rate of {black_pixels_rate * 100:.5f}%, expected ~{dead_rate * 100}%",
+    )
+
+
+@pytest.mark.parametrize(
     "signal_gain",
     [0.8, 0.75, 0.5, 0.25],
 )
