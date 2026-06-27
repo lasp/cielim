@@ -196,6 +196,7 @@ def test_GaussianPSF(cielim_connection, scene_setup):
 def test_DarkCurrent(cielim_connection, scene_setup, dark_current, sigma):
     """
     Tests whether dark current is being added to the image.
+    See RandomFuncs.ush for RNG implementation.
     """
     connector = cielim_connection
 
@@ -238,6 +239,7 @@ def test_CosmicRays(cielim_connection, scene_setup):
 def test_ReadNoise(cielim_connection, scene_setup, read_noise):
     """
     Tests read noise is being generated with the expected standard deviation.
+    See RandomFuncs.ush for RNG implementation.
     """
     connector = cielim_connection
 
@@ -278,6 +280,7 @@ def test_ReadNoise(cielim_connection, scene_setup, read_noise):
 def test_PixelDefect(cielim_connection, scene_setup, stuck_rate, dead_rate):
     """
     Tests stuck and dead pixels can be added to image.
+    See RandomFuncs.ush for RNG implementation.
     """
     connector = cielim_connection
 
