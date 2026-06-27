@@ -38,7 +38,10 @@ public:
 private:
 	static void DistantObjectsPass(FRDGBuilder &GraphBuilder, const FSceneView &View, const FVector3f &SolarDirection,
 								   const FVector3f &SolarIrradiance, const TArray<FDistantObject> &DistantObjects,
-								   const FRDGTextureRef &SceneDepth, const FRDGTextureRef &SceneColor);
+								   const FRDGTextureRef &SceneDepth, const FRDGTextureRef &RenderTarget);
+
+	static void CompositeAddPass(FRDGBuilder &GraphBuilder, const FRDGTextureRef &SceneTexture,
+								 const FRDGTextureRef &DistantTexture, const FRDGTextureRef &Output);
 
 	static void QuETonemapPass(FRDGBuilder &GraphBuilder, const FCameraParams &CameraParams,
 							   const FImageCorruptionParams &CorruptionParams, const FRDGTextureRef &TextureIn,
