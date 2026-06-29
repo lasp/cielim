@@ -23,8 +23,8 @@ from astropy.io import fits
 from matplotlib import pyplot as plt
 
 import cielim
+from cielim import qe_curve_fit as qefit
 from cielim import rigid_body_kinematics as rbk
-from cielim import scene
 
 # from context import qe_curve_fit
 
@@ -67,65 +67,54 @@ def _get_exposure_time():
     return exposure_time_list
 
 
-def scene_setup():
-    protobuf_message = cielim.CielimMessage()
+def scene_setup() -> cielim.Scene:
+    scene = cielim.Scene()
 
-    body = protobuf_message.celestialBodies.add()
-    body.bodyName = "deimos"
-    [body.position.append(item) for item in [0, 0, 0]]
-    [body.velocity.append(item) for item in [0, 0, 0]]
-    [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
+    scene.set_spacecraft_params(name="hope_sat", position=(0, 0, -1000000), velocity=(0, 1000, 0))
 
-    body.model.shapeModel = "deimos_normalized"  # we use bennu shape so far, need to replace it with deimos
-    body.model.refModel.brdfModel = "Regolith"
-    body.model.meanRadius = 6.2 * 1e3  # radius in meter of deimos
-    body.model.geometricAlbedo = 0.12  # effective albedo of deimos
-    # NOTE: this is calculated by taking average albedo (~0.07) and dividing by the average pixel (~0.58) of the albedo map
-    # This is done so that average color of the shape model matches the real world average albedo
+    scene.set_camera_params(name="hope_sat")
 
-    sun = protobuf_message.celestialBodies.add()
-    sun.bodyName = "sun"
-    [sun.position.append(item) for item in [0, 0, -10000]]
-    [sun.attitude.append(item) for item in [0, 0, 0]]
+    scene.set_lens_params(
+        fov=(25.8 * np.pi / 180, 19.3 * np.pi / 180),
+        focal_length=0.0506,
+        aperture_radius=0.006024,  # focal length / f#
+    )
 
-    protobuf_message.camera.cameraId = 1
-    protobuf_message.camera.parentName = "hope_sat"
-    protobuf_message.camera.sensorModel.exposureTime = 1e-3
+    scene.set_sensor_params(
+        resolution=(4096, 3072),
+        exposure=1e-3,
+        sensor_dims=(0.022528, 0.016896),  # 4096 * 5.5 mu meter, 3072 * 5.5 mu meter
+        well_capacity=13500,  # dynamic range = 13500 electrons full well,
+    )
 
-    # newly set parameters
-    protobuf_message.camera.sensorModel.systemGain = 1
-    protobuf_message.camera.sensorModel.sensorWidth = 0.022528  # 4096 * 5.5 mu meter
-    protobuf_message.camera.sensorModel.sensorHeight = 0.016896  # 3072 * 5.5 mu meter
-    protobuf_message.camera.sensorModel.fullWellCapacity = 13500  # dynamic range = 13500 electrons full well
-    protobuf_message.camera.lensModel.focalLength = 50.6 / 1000.0
-    protobuf_message.camera.lensModel.pointSpreadFunction = 1.0
-    protobuf_message.camera.lensModel.apertureRadius = 0.006024  # focal length / f#
+    scene.set_corruption_params(psf_sigma=1)
 
-    [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [25.8 * np.pi / 180, 19.3 * np.pi / 180]]
-    [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.cameraPositionInBody.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.sensorModel.resolution.append(item) for item in [4096, 3072]]
+    scene.set_celestial_body_params(0, position=(0, 0, -10000))
 
-    protobuf_message.spacecraft.spacecraftName = "hope_sat"
-    [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -1000000]]
-    [protobuf_message.spacecraft.velocity.append(item) for item in [0, 1000, 0]]
-    [protobuf_message.spacecraft.attitude.append(item) for item in [0, 0, 0]]
-    return protobuf_message
+    index = scene.add_celestial_body("deimos")
+
+    # NOTE: albedo is calculated by taking average albedo (~0.07) and dividing by the average pixel (~0.58) of the albedo map.
+    # This is done so that average color of the shape model matches the real world average albedo.
+
+    scene.set_celestial_body_params(
+        index, albedo=0.12, mesh_shape="deimos_normalized", mesh_brdf="Regolith", mesh_radius=6.2 * 1e3
+    )
+
+    return scene
 
 
 def spice_scenario():
-    scene_frame = scene.Scene()
-    scene_frame.set_existing_message(scene_setup())
+    scene = scene_setup()
 
-    message = scene_frame.get_scene()
     qe_file_path = (
         Path(__file__).resolve().parent.parent.parent / "cielim-python/support-data/deimos-spice/qe-mod-5.csv"
     )
+
     solid_angle = np.pi * 0.005**2 / (0.16**2)  # steradians
     pixel_area = (0.022528 * 0.016896) / (4096 * 3072)  # m^2
     f635_window = [625, 645]
-    scene_frame.set_qe_curve_fit(str(qe_file_path), solid_angle, pixel_area, f635_window)
-    scene_frame.set_existing_message(message)
+
+    qefit.set_qe_curve_fit(scene.get_scene(), str(qe_file_path), solid_angle, pixel_area, f635_window)
 
     # Load SPICE kernels using a meta-kernel with RELATIVE paths.
     # We temporarily chdir to the repo root so 'support-data/…' resolves correctly.
@@ -180,8 +169,6 @@ def spice_scenario():
         # NOTE: we do the transformation "twice" in order to generate images close to the EMM mission
         # However, this should be done "once" in theory. Future work should investigate this.
 
-        message = scene_frame.get_scene()
-
         BN_object = spice.pxform("J2000", "IAU_DEIMOS", time)
 
         TB = np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]])  # manual correction to inertial frame
@@ -189,23 +176,16 @@ def spice_scenario():
 
         print("get DCM of deimos, det(DCM): ", np.linalg.det(BN_object))
 
-        message.celestialBodies[0].ClearField("attitude")
-        [message.celestialBodies[0].attitude.append(item) for item in BN_object.flatten().tolist()]
+        scene.set_celestial_body_params(0, position=tuple(sun_pos * 1e3))
+        scene.set_celestial_body_params(1, attitude=tuple(BN_object.flatten().tolist()))
 
-        message.spacecraft.ClearField("position")
-        message.spacecraft.ClearField("attitude")
-        [message.spacecraft.position.append(item) for item in position * 1e3]
-        [message.spacecraft.attitude.append(item) for item in rbk.dcm_to_mrp(BN)]
-
-        message.celestialBodies[1].ClearField("position")
-        [message.celestialBodies[1].position.append(item) for item in sun_pos * 1e3]
+        scene.set_spacecraft_params(position=tuple(position * 1e3), attitude=tuple(rbk.dcm_to_mrp(BN)))
 
         # update exposure time per image
-        message.camera.sensorModel.exposureTime = exposure_time_list[idx]
-        print(f"exposure time: {message.camera.sensorModel.exposureTime:.4f} sec")
+        scene.set_sensor_params(exposure=exposure_time_list[idx])
+        print(f"exposure time: {scene.get_scene().camera.sensorModel.exposureTime:.4f} sec")
 
-        scene_frame.set_existing_message(message)
-        connector.send_frame(scene_frame.get_scene())
+        connector.send_frame(scene.get_scene())
 
         print(f"Generating image for time {time_range_str[idx]}")
 

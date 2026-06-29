@@ -7,6 +7,7 @@ import zmq
 
 from .cielimMessage_pb2 import CielimMessage
 from .imageDiagnostics_pb2 import DiagnosticData
+from .scene import Scene
 
 
 class Connector:
@@ -40,37 +41,25 @@ class Connector:
         # Send initial dummy scene with white sphere, otherwise first image will be blank
         # TODO: Find a way to fix this Cielim-side
 
-        dummy_scene = CielimMessage()
+        dummy_scene = Scene()
 
-        body = dummy_scene.celestialBodies.add()
-        body.bodyName = "2000269"
-        [body.position.append(item) for item in [0, 0, 0]]
-        [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
-        body.model.shapeModel = "sphere_normalized"
-        body.model.geometricAlbedo = 1
-        body.model.refModel.brdfModel = "Regolith"
-        body.model.meanRadius = 1000
+        # 180 degree rotation about the y-axis, facing towards the origin
+        dummy_scene.set_spacecraft_params(position=(0, 0, 2000), attitude=(0, 1, 0))
 
-        sun = dummy_scene.celestialBodies.add()
-        sun.bodyName = "sun"
-        [sun.position.append(item) for item in [0, 0, -1.496e11]]
-        [sun.attitude.append(item) for item in [0, 0, 0]]
+        index = dummy_scene.add_celestial_body("asteroid1")
+        dummy_scene.set_celestial_body_params(
+            index, mesh_shape="sphere_normalized", mesh_brdf="Lambertian", mesh_radius=1000
+        )
 
-        dummy_scene.camera.cameraId = 1
-        dummy_scene.camera.parentName = "cielim_sat"
-        dummy_scene.camera.sensorModel.exposureTime = 0.001
-        [dummy_scene.camera.lensModel.fieldOfView.append(item) for item in [20 * np.pi / 180, 15 * np.pi / 180]]
-        [dummy_scene.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
-        [dummy_scene.camera.cameraPositionInBody.append(item) for item in [0, 0, 0]]
-        [dummy_scene.camera.sensorModel.resolution.append(item) for item in [2000, 1500]]
-
-        dummy_scene.spacecraft.spacecraftName = "cielim_sat"
-        [dummy_scene.spacecraft.position.append(item) for item in [0, 0, -8000]]
-        [dummy_scene.spacecraft.attitude.append(item) for item in [0, 0, 0]]
+        index = dummy_scene.add_celestial_body("asteroid2")
+        dummy_scene.set_celestial_body_params(
+            index, position=(0, 0, 200), mesh_shape="sphere_normalized", mesh_brdf="Regolith", mesh_radius=100
+        )
 
         self.send_init_request()
-        self.send_frame(dummy_scene)
+        self.send_frame(dummy_scene.get_scene())
         self.request_image_for_camera_id(1, True, False)
+
         self.send_init_request()  # Reset scene
 
     def _safe_recv_multipart(self):

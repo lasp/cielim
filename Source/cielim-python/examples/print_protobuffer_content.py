@@ -12,7 +12,7 @@ def print_protobuffer_content(file_dir, file_name):
     file_path = file_dir + file_name
 
     with open(file_path, "rb") as file_handle:
-        message = delimited_protobuf.read(file_handle, cielim.CielimMessage)
+        message = delimited_protobuf.read(file_handle, cielim.cielimProto.CielimMessage)
 
     output_name = os.path.join(current_file_path, os.path.splitext(file_name)[0] + "_decoded.txt")
 

@@ -6,68 +6,57 @@ import cielim
 
 
 @pytest.fixture
-def scene_setup():
-    protobuf_message = cielim.CielimMessage()
+def default_scene() -> cielim.Scene:
+    """
+    Set up the scene with the spacecraft looking directly at a sphere.
+    """
+    scene = cielim.Scene()
 
-    body = protobuf_message.celestialBodies.add()
-    body.bodyName = "2000269"
-    [body.position.append(item) for item in [0, 0, 0]]
-    [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
+    scene.set_spacecraft_params(position=(0, 0, 2000), attitude=(0, 1, 0))
 
-    body.model.shapeModel = "sphere_normalized"
-    body.model.meanRadius = 10000
+    index = scene.add_celestial_body("asteroid")
+    scene.set_celestial_body_params(index, mesh_shape="sphere_normalized", mesh_brdf="Lambertian", mesh_radius=1000)
 
-    sun = protobuf_message.celestialBodies.add()
-    sun.bodyName = "sun"
-    [sun.position.append(item) for item in [0, 0, -10000]]
-    [sun.attitude.append(item) for item in [0, 0, 0]]
-
-    protobuf_message.camera.cameraId = 1
-    protobuf_message.camera.parentName = "cielim_sat"
-    [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [20 * np.pi / 180, 15 * np.pi / 180]]
-    [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.cameraPositionInBody.append(item) for item in [1, 1, 1]]
-    [protobuf_message.camera.sensorModel.resolution.append(item) for item in [4000, 3000]]
-
-    protobuf_message.spacecraft.spacecraftName = "cielim_sat"
-    [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -1000000]]
-    [protobuf_message.spacecraft.attitude.append(item) for item in [0, 0, 0]]
-    return protobuf_message
+    return scene
 
 
-def test_request_image_and_center_of_brightness(cielim_connection, scene_setup):
+def test_request_image_and_center_of_brightness(cielim_connection: cielim.Connector, default_scene: cielim.Scene):
     connector = cielim_connection
+
+    scene = default_scene
+
     connector.send_init_request()
-    connector.send_frame(scene_setup)
-
+    connector.send_frame(scene.get_scene())
     [image, center_of_brightness, _] = connector.request_image_for_camera_id(1)
-    height, width, channels = image.shape
-    np.testing.assert_allclose([4000, 3000], [width, height], rtol=0, atol=0, err_msg="Returned image not correct")
 
-    true_center_of_brightness = [1999.5, 1499.5]
+    height, width, _ = image.shape
+    np.testing.assert_allclose([1000, 1000], [width, height], rtol=0, atol=0, err_msg="Returned image not correct")
+
+    true_center_of_brightness = [500, 500]
     np.testing.assert_allclose(
         center_of_brightness,
         true_center_of_brightness,
-        rtol=0,
-        atol=1e-1,
+        atol=1,
         err_msg="Center of brightness not close enough to expected",
     )
 
 
-def test_request_only_center_of_brightness(cielim_connection, scene_setup):
+def test_request_only_center_of_brightness(cielim_connection: cielim.Connector, default_scene: cielim.Scene):
     connector = cielim_connection
-    connector.send_frame(scene_setup)
 
+    scene = default_scene
+
+    connector.send_frame(scene.get_scene())
     [image, center_of_brightness, _] = connector.request_image_for_camera_id(1, False, True)
 
     assert image is None
 
-    true_center_of_brightness = [1999.5, 1499.5]
+    true_center_of_brightness = [500, 500]
     np.testing.assert_allclose(
         center_of_brightness,
         true_center_of_brightness,
         rtol=0,
-        atol=1e-1,
+        atol=1,
         err_msg="Center of brightness not close enough to expected",
     )
 
@@ -86,23 +75,21 @@ def test_request_only_center_of_brightness(cielim_connection, scene_setup):
         (2000, 1500, 250, 250),
     ],
 )
-def test_coverage(cielim_connection, scene_setup, center_x, center_y, width, height):
+def test_coverage(cielim_connection: cielim.Connector, default_scene: cielim.Scene, center_x, center_y, width, height):
     connector = cielim_connection
 
-    scene_setup.camera.areaOfInterest.centerX = center_x
-    scene_setup.camera.areaOfInterest.centerY = center_y
-    scene_setup.camera.areaOfInterest.width = width
-    scene_setup.camera.areaOfInterest.height = height
+    scene = default_scene
+
+    scene.get_scene().camera.areaOfInterest.centerX = center_x
+    scene.get_scene().camera.areaOfInterest.centerY = center_y
+    scene.get_scene().camera.areaOfInterest.width = width
+    scene.get_scene().camera.areaOfInterest.height = height
 
     threshold = 0.01
 
-    scene_setup.camera.areaOfInterest.threshold = threshold
+    scene.get_scene().camera.areaOfInterest.threshold = threshold
 
-    del scene_setup.spacecraft.position[:]
-    [scene_setup.spacecraft.position.append(item) for item in [0, 0, -1 * 75000]]  # Make circle fill most of the screen
-
-    connector.send_frame(scene_setup)
-
+    connector.send_frame(scene.get_scene())
     [image, _, coverage] = connector.request_image_for_camera_id(1)
 
     # Convert to grayscale

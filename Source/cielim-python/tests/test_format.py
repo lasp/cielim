@@ -4,38 +4,19 @@ import pytest
 import cielim
 
 
-def default_scene():
-    protobuf_message = cielim.CielimMessage()
-
-    body = protobuf_message.celestialBodies.add()
-    body.bodyName = "2000269"
-    [body.position.append(item) for item in [0, 0, 0]]
-    [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
-    body.model.shapeModel = "sphere_normalized"
-    body.model.meanRadius = 10000
-
-    sun = protobuf_message.celestialBodies.add()
-    sun.bodyName = "sun"
-    [sun.position.append(item) for item in [0, 0, -0.5 * 1.496e11]]
-    [sun.attitude.append(item) for item in [0, 0, 0]]
-
-    protobuf_message.camera.cameraId = 1
-    protobuf_message.camera.parentName = "cielim_sat"
-    [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [20 * np.pi / 180, 20 * np.pi / 180]]
-    [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.cameraPositionInBody.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.sensorModel.resolution.append(item) for item in [2000, 2000]]
-
-    protobuf_message.spacecraft.spacecraftName = "cielim_sat"
-    [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -100000]]
-    [protobuf_message.spacecraft.attitude.append(item) for item in [0, 0, 0]]
-
-    return protobuf_message
-
-
 @pytest.fixture
-def scene_setup():
-    return default_scene()
+def default_scene() -> cielim.Scene:
+    """
+    Set up the scene with the spacecraft looking directly at a sphere.
+    """
+    scene = cielim.Scene()
+
+    scene.set_spacecraft_params(position=(0, 0, 2000), attitude=(0, 1, 0))
+
+    index = scene.add_celestial_body("asteroid")
+    scene.set_celestial_body_params(index, mesh_shape="sphere_normalized", mesh_brdf="Lambertian", mesh_radius=1000)
+
+    return scene
 
 
 @pytest.mark.parametrize(
@@ -47,47 +28,49 @@ def scene_setup():
         ("RAW 16-bit"),
     ],
 )
-def test_Format(cielim_connection, scene_setup, test_name):
+def test_Format(cielim_connection: cielim.Connector, default_scene: cielim.Scene, test_name):
     """
     Tests raw image data is properly formatted.
     """
     connector = cielim_connection
 
-    scene = scene_setup
+    scene = default_scene
 
     connector.send_init_request()
-    connector.send_frame(scene)
+    connector.send_frame(scene.get_scene())
     baseline_image, _, _ = connector.request_image_for_camera_id(1, True, False)
+
+    height, width, _ = baseline_image.shape
 
     # Refer to CameraModel.cpp for raw format generation algorithms
 
     if test_name == "RAW 8-bit":
-        scene.camera.imageFormat.format = cielim.cielimProto.ImageFormat.RAW_8
+        scene.set_camera_params(image_format=cielim.cielimProto.ImageFormat.RAW_8)
 
-        connector.send_frame(scene)
+        connector.send_frame(scene.get_scene())
         data, _, _ = connector.request_image_for_camera_id(1, True, False, format_raw=True)
 
-        test_image = np.frombuffer(data, dtype=np.uint8).reshape((2000, 2000, 3))
+        test_image = np.frombuffer(data, dtype=np.uint8).reshape((width, height, 3))
 
         max_value = 255
 
     elif test_name == "RAW 12-bit":
-        scene.camera.imageFormat.format = cielim.cielimProto.ImageFormat.RAW_12
+        scene.set_camera_params(image_format=cielim.cielimProto.ImageFormat.RAW_12)
 
-        connector.send_frame(scene)
+        connector.send_frame(scene.get_scene())
         data, _, _ = connector.request_image_for_camera_id(1, True, False, format_raw=True)
 
-        test_image = (np.frombuffer(data, dtype=np.uint16) >> 4 & 0x0FFF).reshape((2000, 2000, 3))
+        test_image = (np.frombuffer(data, dtype=np.uint16) >> 4 & 0x0FFF).reshape((width, height, 3))
 
         max_value = 4095
 
     elif test_name == "RAW 12-bit packed":
-        scene.camera.imageFormat.format = cielim.cielimProto.ImageFormat.RAW_12_PACKED
+        scene.set_camera_params(image_format=cielim.cielimProto.ImageFormat.RAW_12_PACKED)
 
-        connector.send_frame(scene)
+        connector.send_frame(scene.get_scene())
         data, _, _ = connector.request_image_for_camera_id(1, True, False, format_raw=True)
 
-        num_channels = 2000 * 2000 * 3
+        num_channels = width * height * 3
         num_pairs = (num_channels + 1) // 2
         raw = np.frombuffer(data, dtype=np.uint8).reshape((num_pairs, 3))
         b0 = raw[:, 0].astype(np.uint16)
@@ -98,17 +81,17 @@ def test_Format(cielim_connection, scene_setup, test_name):
         samples = np.empty(num_pairs * 2, dtype=np.uint16)
         samples[0::2] = sample_a
         samples[1::2] = sample_b
-        test_image = (samples[:num_channels]).astype(np.uint16).reshape((2000, 2000, 3))
+        test_image = (samples[:num_channels]).astype(np.uint16).reshape((width, height, 3))
 
         max_value = 4095
 
     else:
-        scene.camera.imageFormat.format = cielim.cielimProto.ImageFormat.RAW_16
+        scene.set_camera_params(image_format=cielim.cielimProto.ImageFormat.RAW_16)
 
-        connector.send_frame(scene)
+        connector.send_frame(scene.get_scene())
         data, _, _ = connector.request_image_for_camera_id(1, True, False, format_raw=True)
 
-        test_image = np.frombuffer(data, dtype=np.uint16).reshape((2000, 2000, 3))
+        test_image = np.frombuffer(data, dtype=np.uint16).reshape((width, height, 3))
 
         max_value = 65535
 

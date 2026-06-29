@@ -5,59 +5,21 @@ import pytest
 import cielim
 
 
-def default_scene():
-    protobuf_message = cielim.CielimMessage()
-
-    body = protobuf_message.celestialBodies.add()
-    body.bodyName = "2000269"
-    [body.position.append(item) for item in [0, 0, 0]]
-    [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
-
-    body.model.shapeModel = "sphere_normalized"
-    body.model.meanRadius = 500
-    [body.model.principalAxisDistortion.append(item) for item in [1, 1, 1]]
-
-    sun = protobuf_message.celestialBodies.add()
-    sun.bodyName = "sun"
-    [sun.position.append(item) for item in [-2000000, 100000, -1000000]]
-    [sun.attitude.append(item) for item in [0, 0, 0]]
-
-    protobuf_message.camera.cameraId = 1
-    protobuf_message.camera.parentName = "cielim_sat"
-    [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [15 * np.pi / 180, 10 * np.pi / 180]]
-    [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.cameraPositionInBody.append(item) for item in [0, 0, -1]]
-    [protobuf_message.camera.sensorModel.resolution.append(item) for item in [4000, 3000]]
-
-    protobuf_message.spacecraft.spacecraftName = "cielim_sat"
-    [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -1e5]]
-    [protobuf_message.spacecraft.attitude.append(item) for item in [0, 0, 0]]
-    return protobuf_message
-
-
 @pytest.fixture
-def scene_setup():
-    return default_scene()
+def default_scene() -> cielim.Scene:
+    """
+    Set up the scene with the spacecraft looking directly at a sphere with the sun lighting left half.
+    """
+    scene = cielim.Scene()
 
+    scene.set_spacecraft_params(position=(0, 0, 2000), attitude=(0, 1, 0))
 
-def get_baseline_cob(connector):
-    scene = default_scene()
+    scene.set_celestial_body_params(0, position=(1.496e11, 0, 0))
 
-    del scene.celestialBodies[0].model.principalAxisDistortion[:]
-    [scene.celestialBodies[0].model.principalAxisDistortion.append(val) for val in [1, 1, 1]]
+    index = scene.add_celestial_body("asteroid")
+    scene.set_celestial_body_params(index, mesh_shape="sphere_normalized", mesh_brdf="Lambertian", mesh_radius=1000)
 
-    connector.send_frame(scene)
-    image, _, _ = connector.request_image_for_camera_id(1, True, False)
-
-    if len(image.shape) == 3:
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-    moments = cv2.moments(image)
-    assert moments["m00"] != 0, "No brightness detected in baseline scene."
-
-    cob_x = int(moments["m10"] / moments["m00"])
-    cob_y = int(moments["m01"] / moments["m00"])
-    return (cob_x, cob_y)
+    return scene
 
 
 @pytest.mark.parametrize(
@@ -67,18 +29,31 @@ def get_baseline_cob(connector):
         ("Distort Y", [1, 1.5, 1]),
     ],
 )
-def test_body_scaling(cielim_connection, scene_setup, test_name, distortion):
+def test_body_scaling(cielim_connection: cielim.Connector, default_scene: cielim.Scene, test_name, distortion):
     """
-    This remote procedure call test distorts the asteroid's principal axes and checks for appropriate movement of CoB.
+    Tests that the center of brightness (CoB) shifts appropriately when the principal axes of the asteroid are distorted.
     """
     connector = cielim_connection
+
+    scene = default_scene
+
     connector.send_init_request()
+    connector.send_frame(scene.get_scene())
+    base_image, _, _ = cielim_connection.request_image_for_camera_id(1, True, False)
 
-    scene = scene_setup
-    del scene.celestialBodies[0].model.principalAxisDistortion[:]
-    [scene.celestialBodies[0].model.principalAxisDistortion.append(val) for val in distortion]
+    if len(base_image.shape) == 3:
+        base_image = cv2.cvtColor(base_image, cv2.COLOR_BGR2GRAY)
 
-    connector.send_frame(scene)
+    moments = cv2.moments(base_image)
+    assert moments["m00"] != 0, "No brightness detected in baseline scene."
+
+    base_cob_x = int(moments["m10"] / moments["m00"])
+    base_cob_y = int(moments["m01"] / moments["m00"])
+
+    scene.set_celestial_body_params(1, mesh_distortions=distortion)
+
+    connector.send_init_request()
+    connector.send_frame(scene.get_scene())
     image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     if len(image.shape) == 3:
@@ -89,17 +64,12 @@ def test_body_scaling(cielim_connection, scene_setup, test_name, distortion):
 
     cob_x = int(moments["m10"] / moments["m00"])
     cob_y = int(moments["m01"] / moments["m00"])
-    cob = (cob_x, cob_y)
 
-    connector.send_init_request()
-    sphere_cob = get_baseline_cob(cielim_connection)
-
-    diff = np.array(cob) - np.array(sphere_cob)
-    diff_total = np.linalg.norm(diff)
+    diff = np.array((cob_x, cob_y)) - np.array((base_cob_x, base_cob_y))
     diff_x = abs(diff[0])
     diff_y = abs(diff[1])
 
     if test_name == "Distort X":
         np.testing.assert_(diff_x >= 5, msg=f"{test_name}: X shift too small (= {diff_x:.2f}px).")
     elif test_name == "Distort Y":
-        np.testing.assert_(diff_y <= 1, msg=f"{test_name}: Y shift too large (= {diff_y:.2f}px), expected is 0")
+        np.testing.assert_(diff_y <= 1, msg=f"{test_name}: Y shift too large (= {diff_y:.2f}px), expected is 0.")

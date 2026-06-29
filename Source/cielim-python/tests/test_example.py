@@ -1,53 +1,31 @@
 import numpy as np
-import pytest
 
 import cielim
-from cielim import scene
 
 
-@pytest.fixture
-def scene_setup():
-    protobuf_message = cielim.CielimMessage()
+def test_example(cielim_connection):
+    """
+    Example test function to demonstrate how to use the Cielim Python library.
+    """
+    connector = cielim_connection  # See conftest.py for the fixture that provides this connection
 
-    body = protobuf_message.celestialBodies.add()
-    body.bodyName = "2000269"
-    [body.position.append(item) for item in [0, 0, 0]]
-    [body.velocity.append(item) for item in [0, 0, 0]]
-    [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
+    scene = cielim.Scene()
 
-    body.model.shapeModel = "bennu_normalized"
-    body.model.meanRadius = 10000
+    scene.set_sensor_params(resolution=(1250, 1000))
 
-    sun = protobuf_message.celestialBodies.add()
-    sun.bodyName = "sun"
-    [sun.position.append(item) for item in [0, 0, -10000]]
-    [sun.attitude.append(item) for item in [0, 0, 0]]
+    scene.set_spacecraft_params(position=(0, 0, 2000), attitude=(0, 1, 0))
 
-    protobuf_message.camera.cameraId = 1
-    protobuf_message.camera.parentName = "cielim_sat"
-    [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [20 * np.pi / 180, 15 * np.pi / 180]]
-    [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.cameraPositionInBody.append(item) for item in [1, 1, 1]]
-    [protobuf_message.camera.sensorModel.resolution.append(item) for item in [4000, 3000]]
+    index = scene.add_celestial_body("asteroid")
+    scene.set_celestial_body_params(
+        index, mesh_shape="sphere_normalized", mesh_brdf="Lambertian", mesh_radius=1000
+    )  # Position, attitude, and velocity default to 0.
 
-    protobuf_message.spacecraft.spacecraftName = "cielim_sat"
-    [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -1000000]]
-    [protobuf_message.spacecraft.velocity.append(item) for item in [0, 1000, 0]]
-    [protobuf_message.spacecraft.attitude.append(item) for item in [0, 0, 0]]
-    return protobuf_message
-
-
-def test_example(cielim_connection, scene_setup):
-
-    connector = cielim_connection
     connector.send_init_request()
-    scene_frame = scene.Scene()
-    scene_frame.set_existing_message(scene_setup)
+    connector.send_frame(scene.get_scene())
+    [image, _, _] = connector.request_image_for_camera_id(1, True, False)
 
-    times = [0, 1, 2]
-    for time in times:
-        scene_frame.propagate_and_stare(time)
-        connector.send_frame(scene_frame.get_scene())
-        [image, _, _] = connector.request_image_for_camera_id(1, True, False)
-        height, width, _ = image.shape
-        np.testing.assert_allclose([4000, 3000], [width, height], rtol=0, atol=0, err_msg="Returned image not correct")
+    height, width, _ = image.shape
+
+    np.testing.assert_allclose(
+        [width, height], [1250, 1000], rtol=0, atol=0, err_msg="Image does not have correct dimensions."
+    )

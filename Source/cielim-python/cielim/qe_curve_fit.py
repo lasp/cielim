@@ -6,6 +6,8 @@ import pandas as pd
 from scipy.integrate import simpson
 from scipy.optimize import basinhopping
 
+from .cielimMessage_pb2 import CielimMessage
+
 # Constants
 CONST_AU = 1.495978707e11  # Astronomical Unit in meters
 CONST_C = 299792458  # Speed of light, m/s
@@ -303,6 +305,42 @@ def qe_curve_fit(
         print(fit_wavelengths, fit_qe)
 
     return fit_wavelengths, fit_qe
+
+
+def set_qe_curve_fit(
+    message: CielimMessage,
+    qe_data_path: str,
+    solid_angle: float,
+    pixel_area: float,
+    wavelength_window: list | None = None,
+) -> None:
+    """
+    Sets the wavelengths and QE values in the CielimMessage based on a QE curve fit from a CSV file.
+
+    Args:
+        message (CielimMessage): The CielimMessage to update.
+        qe_data_path (str): Path to the QE CSV file.
+        solid_angle (float): Solid angle in steradians.
+        pixel_area (float): Pixel area in square meters.
+        wavelength_window (list, optional): Two-element list specifying the wavelength range to consider (in nm). Defaults to None (use full range).
+    """
+    fit_wavelengths, fit_values = qe_curve_fit(
+        qe_data_path, solid_angle, pixel_area, wavelength_window=wavelength_window, show_plots=False
+    )
+
+    message.renderParameters.wavelength1 = fit_wavelengths[0]
+    message.renderParameters.wavelength2 = fit_wavelengths[1]
+    message.renderParameters.wavelength3 = fit_wavelengths[2]
+
+    message.camera.sensorModel.qeCurve.redValue1 = fit_values[0]
+    message.camera.sensorModel.qeCurve.greenValue1 = fit_values[0]
+    message.camera.sensorModel.qeCurve.blueValue1 = fit_values[0]
+    message.camera.sensorModel.qeCurve.redValue2 = fit_values[1]
+    message.camera.sensorModel.qeCurve.greenValue2 = fit_values[1]
+    message.camera.sensorModel.qeCurve.blueValue2 = fit_values[1]
+    message.camera.sensorModel.qeCurve.redValue3 = fit_values[2]
+    message.camera.sensorModel.qeCurve.greenValue3 = fit_values[2]
+    message.camera.sensorModel.qeCurve.blueValue3 = fit_values[2]
 
 
 if __name__ == "__main__":

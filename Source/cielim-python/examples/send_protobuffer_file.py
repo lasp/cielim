@@ -128,6 +128,10 @@ if __name__ == "__main__":
         sorted_frames = sorted(frames, key=extract_index)
 
         first_frame = cv2.imread(os.path.join(image_folder, sorted_frames[0]))
+
+        if first_frame is None:
+            raise TypeError(f"Video frames could not be found at {os.path.join(image_folder, sorted_frames[0])}")
+
         height, width, _ = first_frame.shape
         video_out = cv2.VideoWriter(
             f"{file_name_base}.mp4", cv2.VideoWriter.fourcc(*"mp4v"), args.video, (width, height)
@@ -135,6 +139,10 @@ if __name__ == "__main__":
 
         for frame_name in sorted_frames:
             frame = cv2.imread(os.path.join(image_folder, frame_name))
+
+            if frame is None:
+                raise TypeError("Frame could not be found")
+
             video_out.write(frame)
 
         video_out.release()

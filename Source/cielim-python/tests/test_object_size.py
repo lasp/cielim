@@ -5,77 +5,66 @@ import pytest
 import cielim
 
 
-def default_scene():
-    protobuf_message = cielim.CielimMessage()
-
-    body = protobuf_message.celestialBodies.add()
-    body.bodyName = "2000269"
-    [body.position.append(item) for item in [0, 0, 0]]
-    [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
-
-    body.model.shapeModel = "sphere_normalized"
-    body.model.meanRadius = 10000
-
-    sun = protobuf_message.celestialBodies.add()
-    sun.bodyName = "sun"
-    [sun.position.append(item) for item in [0, 0, -2000000]]
-    [sun.attitude.append(item) for item in [0, 0, 0]]
-
-    protobuf_message.camera.cameraId = 1
-    protobuf_message.camera.parentName = "cielim_sat"
-    [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [20 * np.pi / 180, 15 * np.pi / 180]]
-    [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.cameraPositionInBody.append(item) for item in [1, 1, 1]]
-    [protobuf_message.camera.sensorModel.resolution.append(item) for item in [4000, 3000]]
-
-    protobuf_message.spacecraft.spacecraftName = "cielim_sat"
-    [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -1000000]]
-    [protobuf_message.spacecraft.attitude.append(item) for item in [0, 0, 0]]
-    return protobuf_message
-
-
 @pytest.fixture
-def scene_setup():
-    return default_scene()
+def default_scene() -> cielim.Scene:
+    """
+    Set up the scene with the spacecraft looking directly at a sphere.
+    """
+    scene = cielim.Scene()
+
+    # Rotate so +x is right, +y is up, and +z is out of the page
+    scene.set_spacecraft_params(position=(0, 0, 50000), attitude=(1, 0, 0))
+
+    scene.set_lens_params(fov=(5 * np.pi / 180, 5 * np.pi / 180))  # Zoom in to make image close to orthogonal
+
+    index = scene.add_celestial_body("asteroid")
+    scene.set_celestial_body_params(index, mesh_shape="sphere_normalized", mesh_brdf="Regolith", mesh_radius=1000)
+
+    return scene
 
 
 @pytest.mark.parametrize(
     "test_name, shift",
     [
         ("No movement", [0, 0, 0]),
-        ("Move Closer", [0, 0, -80000]),
-        ("Move Away", [0, 0, 80000]),
-        ("Move Away & Down", [0, 10000, 500000]),
-        ("Move Closer & Right", [10000, 0, -500000]),
-        ("Move Closer, Right & Up", [10000, -10000, -500000]),
-        ("Move Away, Left & Down", [-10000, 10000, 500000]),
+        ("Move Closer", [0, 0, 10000]),
+        ("Move Away", [0, 0, -10000]),
+        ("Move Away & Down", [0, -500, -10000]),
+        ("Move Closer & Right", [500, 0, 10000]),
+        ("Move Closer, Right & Up", [500, 500, 10000]),
+        ("Move Away, Left & Down", [-500, -500, -10000]),
     ],
 )
-def test_asteroid_size(cielim_connection, scene_setup, test_name, shift):
+def test_asteroid_size(cielim_connection: cielim.Connector, default_scene: cielim.Scene, test_name, shift):
     """
-    This Remote Procedure call tests the asteroid size in pixels when its distance (Z) and slight position (X, Y) change.
+    Tests the asteroid size in pixels when its distance (Z) and slight position (X, Y) change.
     Parameters: Changing asteroid Z (closer/away) and slight X/Y shift, verifying pixel size.
     """
     connector = cielim_connection
+
+    scene = default_scene
+
+    initial_position = scene.get_scene().celestialBodies[1].position[:3]
+
     connector.send_init_request()
-    scene = scene_setup
-    initial_position = scene.celestialBodies[0].position[:3]
+    connector.send_frame(scene.get_scene())
+    baseline_image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
-    connector.send_frame(scene)
-    asteroid_image, _, _ = connector.request_image_for_camera_id(1, True, False)
+    camera_fov_horizontal = scene.get_scene().camera.lensModel.fieldOfView[0]
+    camera_fov_vertical = scene.get_scene().camera.lensModel.fieldOfView[1]
+    image_height, image_width, _ = baseline_image.shape
 
-    if len(asteroid_image.shape) == 3:
-        asteroid_image = cv2.cvtColor(asteroid_image, cv2.COLOR_BGR2GRAY)
+    if len(baseline_image.shape) == 3:
+        baseline_image = cv2.cvtColor(baseline_image, cv2.COLOR_BGR2GRAY)
 
-    contours, _ = cv2.findContours(asteroid_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(baseline_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     largest_contour = max(contours, key=cv2.contourArea)
-    (x, y), radius = cv2.minEnclosingCircle(largest_contour)
 
     shifted = [initial_position[i] + shift[i] for i in range(3)]
-    scene.celestialBodies[0].ClearField("position")
-    [scene.celestialBodies[0].position.append(item) for item in shifted]
 
-    connector.send_frame(scene)
+    scene.set_celestial_body_params(1, position=tuple(shifted))
+
+    connector.send_frame(scene.get_scene())
     moved_image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     if len(moved_image.shape) == 3:
@@ -86,14 +75,12 @@ def test_asteroid_size(cielim_connection, scene_setup, test_name, shift):
     (moved_x, moved_y), moved_radius = cv2.minEnclosingCircle(largest_contour)
     asteroid_size_pixels = 2 * moved_radius
 
-    mean_radius = scene.celestialBodies[0].model.meanRadius
-    spacecraft_position = np.array(scene.spacecraft.position)
-    asteroid_position = np.array(scene.celestialBodies[0].position)
+    spacecraft_position = np.array(scene.get_scene().spacecraft.position)
+    mean_radius = scene.get_scene().celestialBodies[1].model.meanRadius
+    asteroid_position = np.array(scene.get_scene().celestialBodies[1].position)
     distance = np.linalg.norm(spacecraft_position - asteroid_position)
 
     expected_angular_size_rad = 2 * np.arcsin(mean_radius / distance)
-    camera_fov_horizontal = 20 * np.pi / 180
-    image_width = 4000
 
     expected_asteroid_size_pixels = (expected_angular_size_rad / camera_fov_horizontal) * image_width
 

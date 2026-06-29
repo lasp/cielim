@@ -5,62 +5,42 @@ import pytest
 import cielim
 
 
-def default_scene():
-
-    protobuf_message = cielim.CielimMessage()
-
-    body = protobuf_message.celestialBodies.add()
-    body.bodyName = "2000269"
-    [body.position.append(item) for item in [0, 0, 0]]
-    [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
-    body.model.shapeModel = "Sphere"
-    body.model.meanRadius = 10000
-
-    sun = protobuf_message.celestialBodies.add()
-    sun.bodyName = "sun"
-    [sun.position.append(item) for item in [0, 0, -2000000]]
-    [sun.attitude.append(item) for item in [0, 0, 0]]
-
-    protobuf_message.camera.cameraId = 1
-    protobuf_message.camera.parentName = "cielim_sat"
-    [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [30 * np.pi / 180, 25 * np.pi / 180]]
-    [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.cameraPositionInBody.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.sensorModel.resolution.append(item) for item in [4000, 3000]]
-
-    protobuf_message.spacecraft.spacecraftName = "cielim_sat"
-    [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -50000]]
-    [protobuf_message.spacecraft.attitude.append(item) for item in [0, 0, 0]]
-
-    return protobuf_message
-
-
 @pytest.fixture
-def scene_setup():
-    return default_scene()
+def default_scene() -> cielim.Scene:
+    """
+    Set up the scene with the spacecraft looking directly at a sphere.
+    """
+    scene = cielim.Scene()
+
+    scene.set_spacecraft_params(position=(0, 0, 2000), attitude=(0, 1, 0))
+
+    index = scene.add_celestial_body("asteroid")
+    scene.set_celestial_body_params(index, mesh_shape="Sphere", mesh_brdf="Lambertian", mesh_radius=1000)
+
+    return scene
 
 
-def test_PerlinNoise(cielim_connection, scene_setup):
+def test_PerlinNoise(cielim_connection: cielim.Connector, default_scene: cielim.Scene):
     """
     Tests whether perlin noise is applied by comparing a base image to one with mesh deformation.
     """
     connector = cielim_connection
 
-    scene = scene_setup
+    scene = default_scene
 
     connector.send_init_request()
-    connector.send_frame(scene)
+    connector.send_frame(scene.get_scene())
     base_image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     # Apply a lot of noise so that the circle becomes spikey
 
-    scene.celestialBodies[0].model.perlinNoise.octaveCount = 3
-    scene.celestialBodies[0].model.perlinNoise.baseFrequency = 0.1
-    scene.celestialBodies[0].model.perlinNoise.baseAmplitude = 400.0
-    scene.celestialBodies[0].model.perlinNoise.persistence = 0.5
+    scene.get_scene().celestialBodies[1].model.perlinNoise.octaveCount = 3
+    scene.get_scene().celestialBodies[1].model.perlinNoise.baseFrequency = 0.1
+    scene.get_scene().celestialBodies[1].model.perlinNoise.baseAmplitude = 400.0
+    scene.get_scene().celestialBodies[1].model.perlinNoise.persistence = 0.5
 
     connector.send_init_request()
-    connector.send_frame(scene)
+    connector.send_frame(scene.get_scene())
     noise_image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     # Compare image shapes

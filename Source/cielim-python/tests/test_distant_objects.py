@@ -64,7 +64,7 @@ def compute_transition_distance(width=WIDTH, height=HEIGHT, phase_angle_deg=0, o
 
 def default_scene(camera_distance, width=WIDTH, height=HEIGHT):
     """Create a protobuf scene matching asteroid_departure.py at the given camera distance."""
-    protobuf_message = cielim.CielimMessage()
+    protobuf_message = cielim.cielimProto.CielimMessage()
 
     body = protobuf_message.celestialBodies.add()
     body.bodyName = "asteroid"

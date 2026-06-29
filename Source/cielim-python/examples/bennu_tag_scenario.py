@@ -9,8 +9,8 @@ from astropy.io import fits
 from matplotlib import pyplot as plt
 
 import cielim
+from cielim import qe_curve_fit as qefit
 from cielim import rigid_body_kinematics as rbk
-from cielim import scene
 
 # ---- Paths (portable) ----
 current_file_path = os.path.dirname(__file__)
@@ -45,7 +45,7 @@ def _get_exposure_time():
     time_list = []
     for p in sorted(FITS_DIR.iterdir()):
         if p.is_file() and p.suffix.lower() in {".fits"}:
-            exposure_time_list.append(_fits_to_png(p))
+            exposure_time_list.append(_fits_to_png(str(p)))
             year = str(p).split("/")[-1][0:4]
             month = str(p).split("/")[-1][4:6]
             day = str(p).split("/")[-1][6:8]
@@ -56,72 +56,57 @@ def _get_exposure_time():
     return exposure_time_list, time_list
 
 
-def scene_setup():
-    protobuf_message = cielim.CielimMessage()
+def scene_setup() -> cielim.Scene:
+    scene = cielim.Scene()
 
-    body = protobuf_message.celestialBodies.add()
-    body.bodyName = "bennu"
-    [body.position.append(item) for item in [0, 0, 0]]
-    [body.velocity.append(item) for item in [0, 0, 0]]
-    [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
+    scene.set_spacecraft_params(name="osiris_rex", position=(0, 0, -1000000), velocity=(0, 1000, 0))
+
+    scene.set_camera_params(name="osiris_rex")
+
+    scene.set_lens_params(
+        fov=(44 * np.pi / 180, 32 * np.pi / 180),
+        focal_length=0.0076,
+        aperture_radius=0.0076 / 3.5 / 2,  # focal length / f# / 2
+    )
+
+    scene.set_sensor_params(
+        resolution=(2592, 1944),
+        exposure=1e-3,
+        sensor_dims=(2592 * 2.2 * 10 ** (-6), 1944 * 2.2 * 10 ** (-6)),
+        well_capacity=7000,
+    )
+
+    scene.set_corruption_params(psf_sigma=1, read_noise=6.7)
+
+    scene.set_celestial_body_params(0, position=(0, 0, -10000))
+
+    index = scene.add_celestial_body("bennu")
+
+    # NOTE: Effective albedo is calculated by taking average albedo (~0.044) and dividing by the average pixel (in linear RGB) 0.234745 of the albedo map
+    # This is done so that average color of the shape model matches the real world average albedo
 
     if os.path.exists(str(ROOT) + "/../../Content/AsteroidMeshes/bennu_medfi_normalized.uasset"):
-        body.model.shapeModel = "bennu_medfi_normalized"
-        body.model.geometricAlbedo = 0.044 / 0.234745  # effective albedo of bennu
-        # NOTE: this is calculated by taking average albedo (~0.044) and dividing by the average pixel (in linear RGB) 0.234745 of the albedo map
-        # This is done so that average color of the shape model matches the real world average albedo
+        scene.set_celestial_body_params(index, albedo=0.044 / 0.234745, mesh_shape="bennu_medfi_normalized")
     else:
-        body.model.shapeModel = "bennu_normalized"
-        body.model.geometricAlbedo = 0.044  # effective albedo of bennu
+        scene.set_celestial_body_params(index, albedo=0.044, mesh_shape="bennu_normalized")
 
-    body.model.refModel.brdfModel = "Regolith"
-    body.model.meanRadius = 246  # radius in meter of bennu
+    scene.set_celestial_body_params(index, mesh_brdf="Regolith", mesh_radius=246)
 
-    sun = protobuf_message.celestialBodies.add()
-    sun.bodyName = "sun"
-    [sun.position.append(item) for item in [0, 0, -10000]]
-    [sun.attitude.append(item) for item in [0, 0, 0]]
-
-    protobuf_message.camera.cameraId = 1
-    protobuf_message.camera.parentName = "osiris_rex"
-    protobuf_message.camera.sensorModel.exposureTime = 1e-3
-
-    # newly set parameters
-    protobuf_message.camera.sensorModel.systemGain = 1
-    protobuf_message.camera.sensorModel.readNoise = 6.7
-    protobuf_message.camera.sensorModel.sensorWidth = 2592 * 2.2 * 10 ** (-6)
-    protobuf_message.camera.sensorModel.sensorHeight = 1944 * 2.2 * 10 ** (-6)
-    protobuf_message.camera.sensorModel.fullWellCapacity = 7000
-    protobuf_message.camera.lensModel.focalLength = 7.6 / 1000
-    protobuf_message.camera.lensModel.pointSpreadFunction = 1.0
-    protobuf_message.camera.lensModel.apertureRadius = (
-        protobuf_message.camera.lensModel.focalLength / 3.5 / 2
-    )  # focal length / f# / 2
-
-    [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [44 * np.pi / 180, 32 * np.pi / 180]]
-    [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.cameraPositionInBody.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.sensorModel.resolution.append(item) for item in [2592, 1944]]
-
-    protobuf_message.spacecraft.spacecraftName = "osiris_rex"
-    [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -1000000]]
-    [protobuf_message.spacecraft.velocity.append(item) for item in [0, 1000, 0]]
-    [protobuf_message.spacecraft.attitude.append(item) for item in [0, 0, 0]]
-    return protobuf_message
+    return scene
 
 
-def tag_scenario(number_of_images: int = None):
-    scene_frame = scene.Scene()
-    scene_frame.set_existing_message(scene_setup())
+def tag_scenario(number_of_images: int | None = None):
+    scene = scene_setup()
 
-    message = scene_frame.get_scene()
     qe_file_path = (
         Path(__file__).resolve().parent.parent.parent / "cielim-python/support-data/bennu-tag-spice/navcam_qe_curve.csv"
     )
+
     solid_angle = np.pi
     pixel_area = 2.2 * 2.2 * 10 ** (-12)  # m^2
-    scene_frame.set_qe_curve_fit(str(qe_file_path), solid_angle, pixel_area)
-    scene_frame.set_existing_message(message)
+
+    qefit.set_qe_curve_fit(scene.get_scene(), str(qe_file_path), solid_angle, pixel_area)
+
     instrument_id = "ORX_NAVCAM2"
 
     # Load SPICE kernels using a meta-kernel with RELATIVE paths.
@@ -275,29 +260,20 @@ def tag_scenario(number_of_images: int = None):
         BN = spice.pxform("J2000", instrument_id, time)  # instrument as body frame
         BN = C_img_cam @ BN
 
-        message = scene_frame.get_scene()
-
         BN_object = spice.pxform("J2000", "IAU_BENNU", time)
-        TB = rbk.euler321_to_dcm([np.pi / 2, 0, 0])  # manual correction to inertial frame
+        TB = rbk.euler321_to_dcm(np.array([np.pi / 2, 0, 0]))  # manual correction to inertial frame
         BN_object = np.dot(TB, BN_object)
 
-        message.celestialBodies[0].ClearField("attitude")
-        [message.celestialBodies[0].attitude.append(item) for item in BN_object.flatten().tolist()]
+        scene.set_celestial_body_params(0, position=tuple(sun_pos * 1e3))
+        scene.set_celestial_body_params(1, attitude=tuple(BN_object.flatten().tolist()))
 
-        message.spacecraft.ClearField("position")
-        message.spacecraft.ClearField("attitude")
-        [message.spacecraft.position.append(item) for item in position * 1e3]
-        [message.spacecraft.attitude.append(item) for item in rbk.dcm_to_mrp(BN)]
-
-        message.celestialBodies[1].ClearField("position")
-        [message.celestialBodies[1].position.append(item) for item in sun_pos * 1e3]
+        scene.set_spacecraft_params(position=tuple(position * 1e3), attitude=tuple(rbk.dcm_to_mrp(BN)))
 
         # update exposure time per image
-        message.camera.sensorModel.exposureTime = exposure_time_list[idx]
-        print(f"exposure time: {message.camera.sensorModel.exposureTime:.4f} sec")
+        scene.set_sensor_params(exposure=exposure_time_list[idx])
+        print(f"exposure time: {scene.get_scene().camera.sensorModel.exposureTime:.4f} sec")
 
-        scene_frame.set_existing_message(message)
-        connector.send_frame(scene_frame.get_scene())
+        connector.send_frame(scene.get_scene())
 
         print(f"Generating image for time {time_list[idx]}")
 

@@ -5,61 +5,40 @@ import pytest
 import cielim
 
 
-def default_scene():
-
-    protobuf_message = cielim.CielimMessage()
-
-    body = protobuf_message.celestialBodies.add()
-    body.bodyName = "2000269"
-    [body.position.append(item) for item in [0, 0, 0]]
-    [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
-    body.model.shapeModel = "sphere_normalized"
-    body.model.meanRadius = 10000
-
-    sun = protobuf_message.celestialBodies.add()
-    sun.bodyName = "sun"
-    [sun.position.append(item) for item in [0, 0, -0.5 * 1.496e11]]
-    [sun.attitude.append(item) for item in [0, 0, 0]]
-
-    protobuf_message.camera.cameraId = 1
-    protobuf_message.camera.parentName = "cielim_sat"
-    [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [20 * np.pi / 180, 15 * np.pi / 180]]
-    [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.cameraPositionInBody.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.sensorModel.resolution.append(item) for item in [4000, 3000]]
-
-    protobuf_message.spacecraft.spacecraftName = "cielim_sat"
-    [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -100000]]
-    [protobuf_message.spacecraft.attitude.append(item) for item in [0, 0, 0]]
-
-    return protobuf_message
-
-
 @pytest.fixture
-def scene_setup():
-    return default_scene()
+def default_scene() -> cielim.Scene:
+    """
+    Set up the scene with the spacecraft looking directly at a sphere.
+    """
+    scene = cielim.Scene()
+
+    scene.set_spacecraft_params(position=(0, 0, 2000), attitude=(0, 1, 0))
+
+    index = scene.add_celestial_body("asteroid")
+    scene.set_celestial_body_params(index, mesh_shape="sphere_normalized", mesh_brdf="Lambertian", mesh_radius=1000)
+
+    return scene
 
 
-def test_image_brightness(cielim_connection, scene_setup):
+def test_image_brightness(cielim_connection: cielim.Connector, default_scene: cielim.Scene):
     """
     Tests that reducing exposure time, transmission factor, and QE reduces image brightness.
     """
     connector = cielim_connection
 
-    scene = scene_setup
+    scene = default_scene
 
     connector.send_init_request()
-    connector.send_frame(scene)
+    connector.send_frame(scene.get_scene())
     image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     base_mean = np.mean(image_gray)
 
-    # Reduce the exposure
-    scene.camera.sensorModel.exposureTime = 2e-4
+    scene.set_sensor_params(exposure=1e-4)  # Reduce exposure time
 
     # connector.send_init_request()
-    connector.send_frame(scene)
+    connector.send_frame(scene.get_scene())
     low_exposure_image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     low_exposure_image_gray = cv2.cvtColor(low_exposure_image, cv2.COLOR_BGR2GRAY)
@@ -69,12 +48,9 @@ def test_image_brightness(cielim_connection, scene_setup):
         low_exposure_mean, base_mean, err_msg="Brightness did not decrease with lower exposure."
     )
 
-    # Reduce transmission factor
-    scene.camera.lensModel.transmission1 = 0.25
-    scene.camera.lensModel.transmission2 = 0.25
-    scene.camera.lensModel.transmission3 = 0.25
+    scene.set_lens_params(transmission=(0.25, 0.25, 0.25))  # Reduce transmission factor
 
-    connector.send_frame(scene)
+    connector.send_frame(scene.get_scene())
     low_transmission_image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     low_transmission_image_gray = cv2.cvtColor(low_transmission_image, cv2.COLOR_BGR2GRAY)
@@ -84,19 +60,12 @@ def test_image_brightness(cielim_connection, scene_setup):
         low_transmission_mean, low_exposure_mean, err_msg="Brightness did not decrease with lower transmission."
     )
 
-    # Reduce the quantum efficiency
-    scene.camera.sensorModel.qeCurve.redValue1 = 0.35
-    scene.camera.sensorModel.qeCurve.redValue2 = 0.35
-    scene.camera.sensorModel.qeCurve.redValue3 = 0.35
-    scene.camera.sensorModel.qeCurve.greenValue1 = 0.35
-    scene.camera.sensorModel.qeCurve.greenValue2 = 0.35
-    scene.camera.sensorModel.qeCurve.greenValue3 = 0.35
-    scene.camera.sensorModel.qeCurve.blueValue1 = 0.35
-    scene.camera.sensorModel.qeCurve.blueValue2 = 0.35
-    scene.camera.sensorModel.qeCurve.blueValue3 = 0.35
+    scene.set_sensor_params(
+        qe_chan1=(0.25, 0.25, 0.25), qe_chan2=(0.25, 0.25, 0.25), qe_chan3=(0.25, 0.25, 0.25)
+    )  # Reduce QE
 
     # connector.send_init_request()
-    connector.send_frame(scene)
+    connector.send_frame(scene.get_scene())
     low_qe_image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     low_qe_image_gray = cv2.cvtColor(low_qe_image, cv2.COLOR_BGR2GRAY)
@@ -117,23 +86,21 @@ def test_image_brightness(cielim_connection, scene_setup):
         ("Tall FOV", 5 * np.pi / 180, 20 * np.pi / 180),
     ],
 )
-def test_camera_fov(cielim_connection, scene_setup, test_name, fov_x_deg, fov_y_deg):
+def test_camera_fov(cielim_connection: cielim.Connector, default_scene: cielim.Scene, test_name, fov_x_deg, fov_y_deg):
     """
     Tests that the object in the scene is the correct apparent size given the x and y fov values.
     Does not account for perspective distortion.
     """
     connector = cielim_connection
 
-    scene = scene_setup
-    del scene.camera.lensModel.fieldOfView[:]
-    [scene.camera.lensModel.fieldOfView.append(val) for val in [fov_x_deg, fov_y_deg]]
+    scene = default_scene
 
-    # Move sphere back so it doesn't overflow screen
-    del scene.spacecraft.position[:]
-    [scene.spacecraft.position.append(val) for val in [0, 0, -1000000]]
+    scene.set_lens_params(fov=(fov_x_deg, fov_y_deg))
+
+    scene.set_spacecraft_params(position=(0, 0, 100000))  # Move spacecraft back to avoid overflow
 
     connector.send_init_request()
-    connector.send_frame(scene)
+    connector.send_frame(scene.get_scene())
     image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     if len(image.shape) == 3:
@@ -146,15 +113,14 @@ def test_camera_fov(cielim_connection, scene_setup, test_name, fov_x_deg, fov_y_
 
     connector.send_init_request()  # Make sure scene is cleared
 
-    mean_radius = scene.celestialBodies[0].model.meanRadius
-    spacecraft_position = np.array(scene.spacecraft.position)
-    asteroid_position = np.array(scene.celestialBodies[0].position)
+    mean_radius = scene.get_scene().celestialBodies[1].model.meanRadius
+    spacecraft_position = np.array(scene.get_scene().spacecraft.position)
+    asteroid_position = np.array(scene.get_scene().celestialBodies[1].position)
     distance = np.linalg.norm(spacecraft_position - asteroid_position)
 
     expected_angular_size_rad = 2 * np.arcsin(mean_radius / distance)
 
-    image_width = 4000  # Given in default_scene
-    image_height = 3000
+    image_height, image_width = image.shape
 
     expected_asteroid_w_pixels = (expected_angular_size_rad / fov_x_deg) * image_width
     expected_asteroid_h_pixels = (expected_angular_size_rad / fov_y_deg) * image_height
@@ -176,24 +142,6 @@ def test_camera_fov(cielim_connection, scene_setup, test_name, fov_x_deg, fov_y_
     )
 
 
-def get_baseline_bounds(connector):
-    scene = default_scene()
-
-    connector.send_init_request()
-    connector.send_frame(scene)
-    image, _, _ = connector.request_image_for_camera_id(1, True, False)
-
-    if len(image.shape) == 3:
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-    contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-    largest_contour = max(contours, key=cv2.contourArea)
-    _, _, w, h = cv2.boundingRect(largest_contour)
-
-    return (w, h)
-
-
 @pytest.mark.parametrize(
     "test_name, resolution_w, resolution_h",
     [
@@ -201,19 +149,38 @@ def get_baseline_bounds(connector):
         ("Low resolution", 700, 700),
     ],
 )
-def test_camera_resolution(cielim_connection, scene_setup, test_name, resolution_w, resolution_h):
+def test_camera_resolution(
+    cielim_connection: cielim.Connector, default_scene: cielim.Scene, test_name, resolution_w, resolution_h
+):
     """
     Tests that the relative apparent image size is constant across different resolutions by comparing
-    the side lengths of the bounding box surrounding the object in the scene to a baseline at 4k x 3k.
+    the side lengths of the bounding box surrounding the object in the scene.
     """
     connector = cielim_connection
 
-    scene = scene_setup
-    del scene.camera.sensorModel.resolution[:]
-    [scene.camera.sensorModel.resolution.append(val) for val in [resolution_w, resolution_h]]
+    scene = default_scene
 
     connector.send_init_request()
-    connector.send_frame(scene)
+    connector.send_frame(scene.get_scene())
+    base_image, _, _ = connector.request_image_for_camera_id(1, True, False)
+
+    if len(base_image.shape) == 3:
+        base_image = cv2.cvtColor(base_image, cv2.COLOR_BGR2GRAY)
+
+    contours, _ = cv2.findContours(base_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    largest_contour = max(contours, key=cv2.contourArea)
+    _, _, w_base, h_base = cv2.boundingRect(largest_contour)
+
+    image_height, image_width = base_image.shape
+
+    w_ratio_to_res_baseline = w_base / image_width
+    h_ratio_to_res_baseline = h_base / image_height
+
+    scene.set_sensor_params(resolution=(resolution_w, resolution_h))
+
+    connector.send_init_request()
+    connector.send_frame(scene.get_scene())
     image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     if len(image.shape) == 3:
@@ -226,13 +193,6 @@ def test_camera_resolution(cielim_connection, scene_setup, test_name, resolution
 
     w_ratio_to_res = w / resolution_w
     h_ratio_to_res = h / resolution_h
-
-    image_width = 4000  # Given in default_scene
-    image_height = 3000
-
-    baseline_w, baseline_h = get_baseline_bounds(cielim_connection)
-    w_ratio_to_res_baseline = baseline_w / image_width
-    h_ratio_to_res_baseline = baseline_h / image_height
 
     connector.send_init_request()  # Make sure scene is cleared
 
