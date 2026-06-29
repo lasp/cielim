@@ -2748,6 +2748,9 @@ class SensorModel final : public ::google::protobuf::MessageLite
     kSensorHeightFieldNumber = 11,
     kFullWellCapacityFieldNumber = 12,
     kGammaFieldNumber = 13,
+    kPixelDefectPatternFieldNumber = 16,
+    kStuckPixelRateFieldNumber = 17,
+    kDeadPixelRateFieldNumber = 18,
   };
   // repeated int64 resolution = 1;
   int resolution_size() const;
@@ -2912,11 +2915,41 @@ class SensorModel final : public ::google::protobuf::MessageLite
   void _internal_set_gamma(double value);
 
   public:
+  // uint32 pixelDefectPattern = 16;
+  void clear_pixeldefectpattern() ;
+  ::uint32_t pixeldefectpattern() const;
+  void set_pixeldefectpattern(::uint32_t value);
+
+  private:
+  ::uint32_t _internal_pixeldefectpattern() const;
+  void _internal_set_pixeldefectpattern(::uint32_t value);
+
+  public:
+  // float stuckPixelRate = 17;
+  void clear_stuckpixelrate() ;
+  float stuckpixelrate() const;
+  void set_stuckpixelrate(float value);
+
+  private:
+  float _internal_stuckpixelrate() const;
+  void _internal_set_stuckpixelrate(float value);
+
+  public:
+  // float deadPixelRate = 18;
+  void clear_deadpixelrate() ;
+  float deadpixelrate() const;
+  void set_deadpixelrate(float value);
+
+  private:
+  float _internal_deadpixelrate() const;
+  void _internal_set_deadpixelrate(float value);
+
+  public:
   // @@protoc_insertion_point(class_scope:cielimMessage.SensorModel)
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
-  static const ::google::protobuf::internal::TcParseTable<4, 15,
+  static const ::google::protobuf::internal::TcParseTable<5, 18,
                                    1, 0,
                                    2>
       _table_;
@@ -2954,6 +2987,9 @@ class SensorModel final : public ::google::protobuf::MessageLite
     double sensorheight_;
     double fullwellcapacity_;
     double gamma_;
+    ::uint32_t pixeldefectpattern_;
+    float stuckpixelrate_;
+    float deadpixelrate_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -6975,6 +7011,81 @@ inline bool SensorModel::_internal_isgrayscale() const {
 inline void SensorModel::_internal_set_isgrayscale(bool value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.isgrayscale_ = value;
+}
+
+// uint32 pixelDefectPattern = 16;
+inline void SensorModel::clear_pixeldefectpattern() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.pixeldefectpattern_ = 0u;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00008000U);
+}
+inline ::uint32_t SensorModel::pixeldefectpattern() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.SensorModel.pixelDefectPattern)
+  return _internal_pixeldefectpattern();
+}
+inline void SensorModel::set_pixeldefectpattern(::uint32_t value) {
+  _internal_set_pixeldefectpattern(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00008000U);
+  // @@protoc_insertion_point(field_set:cielimMessage.SensorModel.pixelDefectPattern)
+}
+inline ::uint32_t SensorModel::_internal_pixeldefectpattern() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.pixeldefectpattern_;
+}
+inline void SensorModel::_internal_set_pixeldefectpattern(::uint32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.pixeldefectpattern_ = value;
+}
+
+// float stuckPixelRate = 17;
+inline void SensorModel::clear_stuckpixelrate() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.stuckpixelrate_ = 0;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00010000U);
+}
+inline float SensorModel::stuckpixelrate() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.SensorModel.stuckPixelRate)
+  return _internal_stuckpixelrate();
+}
+inline void SensorModel::set_stuckpixelrate(float value) {
+  _internal_set_stuckpixelrate(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00010000U);
+  // @@protoc_insertion_point(field_set:cielimMessage.SensorModel.stuckPixelRate)
+}
+inline float SensorModel::_internal_stuckpixelrate() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.stuckpixelrate_;
+}
+inline void SensorModel::_internal_set_stuckpixelrate(float value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.stuckpixelrate_ = value;
+}
+
+// float deadPixelRate = 18;
+inline void SensorModel::clear_deadpixelrate() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.deadpixelrate_ = 0;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00020000U);
+}
+inline float SensorModel::deadpixelrate() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.SensorModel.deadPixelRate)
+  return _internal_deadpixelrate();
+}
+inline void SensorModel::set_deadpixelrate(float value) {
+  _internal_set_deadpixelrate(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00020000U);
+  // @@protoc_insertion_point(field_set:cielimMessage.SensorModel.deadPixelRate)
+}
+inline float SensorModel::_internal_deadpixelrate() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.deadpixelrate_;
+}
+inline void SensorModel::_internal_set_deadpixelrate(float value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.deadpixelrate_ = value;
 }
 
 // -------------------------------------------------------------------

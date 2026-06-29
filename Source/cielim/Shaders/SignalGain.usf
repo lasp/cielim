@@ -17,5 +17,5 @@ float4 MainPS(float4 UV : TEXCOORD0) : SV_Target0
 {
 	float4 InputColor = InputTexture.Sample(InputSampler, UV.xy);
 
-	return float4(InputColor.rgb * SignalGain, InputColor.a);
+	return saturate(float4(InputColor.rgb * SignalGain, InputColor.a));
 }

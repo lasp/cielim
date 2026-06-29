@@ -129,7 +129,8 @@ void FCielimSceneViewExtension::PrePostProcessPass_RenderThread(FRDGBuilder &Gra
 
 	if (!CameraParams.bIsDiagnosticRun)
 	{
-		if (CorruptionParams.ReadNoiseSigma > 0.0f)
+		if (CorruptionParams.ReadNoiseSigma > 0.0f || CorruptionParams.StuckPixelRate > 0.0f ||
+			CorruptionParams.DeadPixelRate > 0.0f)
 		{
 			ReadNoisePass(GraphBuilder, CameraParams, CorruptionParams, TextureIn, TextureOut);
 			Swap(TextureIn, TextureOut);
@@ -367,6 +368,9 @@ void FCielimSceneViewExtension::ReadNoisePass(FRDGBuilder &GraphBuilder, const F
 	RnParams->CurrentTime = static_cast<uint32>(FDateTime::UtcNow().ToUnixTimestamp());
 	RnParams->ReadNoiseSigma = CorruptionParams.ReadNoiseSigma / FMath::Max(CameraParams.FullWellCapacity, 1e-6);
 	RnParams->GrayscaleToggle = static_cast<uint32>(CameraParams.bIsGrayscale);
+	RnParams->PixelDefectPattern = CorruptionParams.PixelDefectPattern;
+	RnParams->StuckPixelRate = CorruptionParams.StuckPixelRate;
+	RnParams->DeadPixelRate = CorruptionParams.DeadPixelRate;
 	RnParams->RenderTargets[0] = FRenderTargetBinding(TextureOut, ERenderTargetLoadAction::EClear);
 
 	const TShaderMapRef<FReadNoise> ReadNoiseShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));

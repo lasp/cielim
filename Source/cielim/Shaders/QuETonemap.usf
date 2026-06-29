@@ -7,6 +7,7 @@
 //=======================================================================================================//
 
 #include "/Engine/Public/Platform.ush"
+#include "/CielimShaders/RandomFuncs.ush"
 
 Texture2D InputTexture;
 SamplerState InputSampler;
@@ -32,58 +33,6 @@ uint DarkCurrentPattern;
 float DarkCurrentLogSigma;
 uint GrayscaleToggle;
 float InvFullWellCapacity; // This is in # of electrons (inverse)
-
-// RNG is a version of the process described in:
-// https://developer.nvidia.com/gpugems/gpugems3/part-vi-gpu-computing/chapter-37-efficient-random-number-generation-and-application
-
-// https://www.reedbeta.com/blog/hash-functions-for-gpu-rendering/
-uint PcgHash(uint Input)
-{
-	uint State = Input * 747796405u + 2891336453u;
-	uint Word = (State >> ((State >> 28u) + 4u) ^ State) * 277803737u;
-	return (Word >> 22u) ^ Word;
-}
-
-uint CombinedTausworthe(inout uint Z, int S1, int S2, int S3, uint M)
-{
-	uint b = (Z << S1 ^ Z) >> S2;
-	return Z = (Z & M) << S3 ^ b;
-}
-
-float UniformRNG(uint Z1, uint Z2, uint Z3, inout uint Z4)
-{
-	uint Step1 = CombinedTausworthe(Z1, 13, 19, 12, 4294967294u);
-	uint Step2 = CombinedTausworthe(Z2, 2, 25, 4, 4294967288u);
-	uint Step3 = CombinedTausworthe(Z3, 3, 11, 17, 4294967280u);
-	Z4 = Z4 * 1664525 + 1013904223u;
-	return 2.3283064365387e-10 * float(Step1 ^ Step2 ^ Step3 ^ Z4);
-}
-
-float2 BoxMuller(float U1, float U2)
-{
-	U1 = max(U1, 1e-6);
-	float R = sqrt(-2 * log(U1));
-	float Theta = 6.28318 * U2;
-	return float2(R * sin(Theta), R * cos(Theta));
-}
-
-float4 ComputeRandGaussians(uint Seed)
-{
-	uint Z1 = PcgHash(Seed + 1);
-	uint Z2 = PcgHash(Seed + 2);
-	uint Z3 = PcgHash(Seed + 3);
-	uint Z4 = PcgHash(Seed + 4);
-
-	float U1 = UniformRNG(Z1, Z2, Z3, Z4);
-	float U2 = UniformRNG(Z2, Z4, Z3, Z1);
-	float U3 = UniformRNG(Z3, Z1, Z2, Z4);
-	float U4 = UniformRNG(Z4, Z3, Z1, Z2);
-
-	float2 RandGaussian1 = BoxMuller(U1, U2);
-	float2 RandGaussian2 = BoxMuller(U3, U4);
-
-	return float4(RandGaussian1.x, RandGaussian1.y, RandGaussian2.x, RandGaussian2.y);
-}
 
 float4 MainPS(float4 UV : TEXCOORD0, float4 Position : SV_Position) : SV_Target0
 {

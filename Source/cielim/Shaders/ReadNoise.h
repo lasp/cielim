@@ -23,6 +23,9 @@ class FReadNoise : public FGlobalShader
 	SHADER_PARAMETER(uint32, CurrentTime)
 	SHADER_PARAMETER(float, ReadNoiseSigma)
 	SHADER_PARAMETER(uint32, GrayscaleToggle)
+	SHADER_PARAMETER(uint32, PixelDefectPattern)
+	SHADER_PARAMETER(float, StuckPixelRate)
+	SHADER_PARAMETER(float, DeadPixelRate)
 	RENDER_TARGET_BINDING_SLOTS()
 	END_SHADER_PARAMETER_STRUCT()
 };
