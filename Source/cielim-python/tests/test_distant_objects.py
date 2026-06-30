@@ -11,13 +11,15 @@ import cielim
 show_plots = os.environ.get("show_plots", "False") == "True"
 
 # Scene constants matching asteroid_departure.py
-FOV_X = 20 * np.pi / 180
-FOV_Y = 15 * np.pi / 180
-WIDTH = 2000
-HEIGHT = 1500
-MEAN_RADIUS = 1000
-ALBEDO = 1.0
-SUN_POSITION = [0, 0, -1.496e11]
+fov_x = 20 * np.pi / 180
+fov_y = 15 * np.pi / 180
+width = 2000
+height = 1500
+mean_radius = 1000
+albedo = 1.0
+sun_position = [0, 0, -1.496e11]
+sun_index = 0
+asteroid_index = 1
 
 
 def compute_coverage(radius, distance, fov_x, fov_y, width, height):
@@ -51,54 +53,109 @@ def _pixel_size_threshold(phase_angle_deg, on_grid=False):
     return float(np.clip(3.0 / crescent_factor, 4.0, 15.0))
 
 
-def compute_transition_distance(width=WIDTH, height=HEIGHT, phase_angle_deg=0, on_grid=False):
+def compute_transition_distance(width=width, height=height, phase_angle_deg=0, on_grid=False):
     """Approximate distance where IsCelestialBodyResolvable switches to distant rendering."""
-    bounds_radius = MEAN_RADIUS * np.sqrt(3)
-    proj_m00 = 1.0 / np.tan(FOV_X / 2)
-    proj_m11 = 1.0 / np.tan(FOV_Y / 2)
+    bounds_radius = mean_radius * np.sqrt(3)
+    proj_m00 = 1.0 / np.tan(fov_x / 2)
+    proj_m11 = 1.0 / np.tan(fov_y / 2)
     screen_multiple = max(0.5 * proj_m00, 0.5 * proj_m11)
     max_dim = max(width, height)
     threshold = _pixel_size_threshold(phase_angle_deg, on_grid=on_grid)
     return screen_multiple * bounds_radius * max_dim * 2 / threshold
 
 
-def default_scene(camera_distance, width=WIDTH, height=HEIGHT):
-    """Create a protobuf scene matching asteroid_departure.py at the given camera distance."""
-    protobuf_message = cielim.cielimProto.CielimMessage()
+def default_scene(camera_distance, width=width, height=height):
+    """Create a Scene matching asteroid_departure.py at the given camera distance.
 
-    body = protobuf_message.celestialBodies.add()
-    body.bodyName = "asteroid"
-    [body.position.append(item) for item in [0, 0, 0]]
-    [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
-    body.model.shapeModel = "sphere_normalized"
-    body.model.meanRadius = MEAN_RADIUS
-    body.model.geometricAlbedo = ALBEDO
-    body.model.refModel.brdfModel = "Regolith"
+    Returns a ``cielim.Scene`` (send it via ``render_frame``). The Scene constructor already sets the
+    camera id/name, body-frame MRPs, and spacecraft name; only the fields this test cares about are
+    overridden here. The Scene's default sun (index 0) is moved behind the camera to front-light +Z.
+    """
+    scene = cielim.Scene()
+    scene.set_celestial_body_params(sun_index, position=tuple(sun_position))
 
-    sun = protobuf_message.celestialBodies.add()
-    sun.bodyName = "sun"
-    [sun.position.append(item) for item in SUN_POSITION]
-    [sun.attitude.append(item) for item in [0, 0, 0]]
+    # Asteroid (index 1): a normalized sphere mesh.
+    scene.add_celestial_body("asteroid")
+    scene.set_celestial_body_params(
+        asteroid_index,
+        mesh_shape="sphere_normalized",
+        mesh_radius=mean_radius,
+        albedo=albedo,
+        mesh_brdf="Regolith",
+    )
 
-    protobuf_message.camera.cameraId = 1
-    protobuf_message.camera.parentName = "cielim_sat"
-    [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [FOV_X, FOV_Y]]
-    protobuf_message.camera.lensModel.pointSpreadFunction = 0
-    [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.cameraPositionInBody.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.sensorModel.resolution.append(item) for item in [width, height]]
-    protobuf_message.camera.sensorModel.exposureTime = 0.001
+    scene.set_lens_params(fov=(fov_x, fov_y))
+    scene.set_sensor_params(resolution=(width, height), exposure=0.001)
+    scene.set_spacecraft_params(position=(0, 0, -camera_distance))
+    return scene
 
-    protobuf_message.spacecraft.spacecraftName = "cielim_sat"
-    [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -camera_distance]]
-    [protobuf_message.spacecraft.attitude.append(item) for item in [0, 0, 0]]
 
-    return protobuf_message
+def add_body(scene, name, position, mean_radius=mean_radius, albedo=albedo, brdf="Regolith"):
+    """Append a celestial body with a spherical mesh model at the given world position.
+
+    Returns the index of the added body in the scene's celestialBodies list.
+    """
+    index = scene.add_celestial_body(name)
+    scene.set_celestial_body_params(
+        index,
+        position=position,
+        mesh_shape="sphere_normalized",
+        mesh_radius=mean_radius,
+        albedo=albedo,
+        mesh_brdf=brdf,
+    )
+    return index
+
+
+def scene_with_bodies(camera_distance, bodies, exposure_time=0.001, width=width, height=height):
+    """Build a Scene with the given bodies plus a sun, matching default_scene's camera setup.
+
+    `bodies` is a list of dicts: {"name", "position", optional "mean_radius"/"albedo"/"brdf"}.
+    """
+    scene = cielim.Scene()
+    scene.set_celestial_body_params(sun_index, position=tuple(sun_position))  # move the default sun behind +Z
+
+    for b in bodies:
+        add_body(
+            scene,
+            b["name"],
+            b["position"],
+            mean_radius=b.get("mean_radius", mean_radius),
+            albedo=b.get("albedo", albedo),
+            brdf=b.get("brdf", "Regolith"),
+        )
+
+    scene.set_lens_params(fov=(fov_x, fov_y))
+    scene.set_sensor_params(resolution=(width, height), exposure=exposure_time)
+    scene.set_spacecraft_params(position=(0, 0, -camera_distance))
+    return scene
+
+
+def predict_pixel(position, camera_distance):
+    """Predict the (px, py) screen pixel of a world position (camera at [0,0,-camera_distance], +Z)."""
+    x, y, z = position
+    d = z + camera_distance
+    ndc_x = (x / d) / np.tan(fov_x / 2)
+    ndc_y = (y / d) / np.tan(fov_y / 2)
+    px = width / 2 * (1 + ndc_x)
+    py = height / 2 * (1 - ndc_y)  # image row 0 is at the top, so +Y world maps to a smaller row
+    return px, py
+
+
+def has_bright_spot(gray, px, py, window=40, thresh=50):
+    """True if any pixel within `window` of (px, py) exceeds `thresh`."""
+    h, w = gray.shape[:2]
+    cx, cy = round(px), round(py)
+    x0, x1 = max(0, cx - window), min(w, cx + window)
+    y0, y1 = max(0, cy - window), min(h, cy + window)
+    if x0 >= x1 or y0 >= y1:
+        return False
+    return int(np.max(gray[y0:y1, x0:x1])) > thresh
 
 
 def render_frame(connector, scene):
-    """Send a frame and return (image, cob, coverage) for camera 1."""
-    connector.send_frame(scene)
+    """Send a frame (a cielim.Scene) and return (image, cob, coverage) for camera 1."""
+    connector.send_frame(scene.get_scene())
     image, cob, coverage = connector.request_image_for_camera_id(1)
     return image, cob, coverage
 
@@ -197,8 +254,8 @@ def test_distant_object_position(cielim_connection, test_name, camera_distance):
     render_frame(connector, scene)  # warm-up
     image, cob, _ = render_frame(connector, scene)
 
-    expected_x = WIDTH / 2.0
-    expected_y = HEIGHT / 2.0
+    expected_x = width / 2.0
+    expected_y = height / 2.0
 
     np.testing.assert_allclose(
         [cob[0], cob[1]],
@@ -373,7 +430,7 @@ def test_distant_object_brightness(cielim_connection, test_name, object_z_shift,
     connector.send_init_request()
 
     scene = default_scene(BASELINE_DISTANCE)
-    scene.camera.sensorModel.exposureTime = exposure_time
+    scene.set_sensor_params(exposure=exposure_time)
     render_frame(connector, scene)  # warm-up
 
     # Baseline measurement
@@ -382,16 +439,15 @@ def test_distant_object_brightness(cielim_connection, test_name, object_z_shift,
     assert baseline_brightness > 0, "Baseline brightness must be non-zero"
 
     # Shift object along +Z to increase distance
-    scene.celestialBodies[0].ClearField("position")
-    [scene.celestialBodies[0].position.append(item) for item in [0, 0, object_z_shift]]
+    scene.set_celestial_body_params(asteroid_index, position=(0, 0, object_z_shift))
 
     image, _, _ = render_frame(connector, scene)
     shifted_brightness = measure_brightness(image)
 
     # Expected coverage ratio
-    baseline_coverage = compute_coverage(MEAN_RADIUS, BASELINE_DISTANCE, FOV_X, FOV_Y, WIDTH, HEIGHT)
+    baseline_coverage = compute_coverage(mean_radius, BASELINE_DISTANCE, fov_x, fov_y, width, height)
     shifted_distance = BASELINE_DISTANCE + object_z_shift
-    shifted_coverage = compute_coverage(MEAN_RADIUS, shifted_distance, FOV_X, FOV_Y, WIDTH, HEIGHT)
+    shifted_coverage = compute_coverage(mean_radius, shifted_distance, fov_x, fov_y, width, height)
     expected_ratio = shifted_coverage / baseline_coverage
 
     actual_ratio = shifted_brightness / baseline_brightness
@@ -413,19 +469,18 @@ def test_distant_object_brightness(cielim_connection, test_name, object_z_shift,
 
 
 def scene_with_phase_angle(
-    camera_distance, phase_angle_deg, brdf_model="Regolith", exposure_time=None, width=WIDTH, height=HEIGHT
+    camera_distance, phase_angle_deg, brdf_model="Regolith", exposure_time=None, width=width, height=height
 ):
-    """Create a scene at the given phase angle by rotating the sun position."""
+    """Create a Scene at the given phase angle by rotating the sun position."""
     alpha = np.radians(phase_angle_deg)
     sun_dist = 1.496e11
-    sun_pos = [sun_dist * np.sin(alpha), 0, -sun_dist * np.cos(alpha)]
+    sun_pos = (sun_dist * np.sin(alpha), 0.0, -sun_dist * np.cos(alpha))
 
     scene = default_scene(camera_distance, width, height)
-    scene.celestialBodies[0].model.refModel.brdfModel = brdf_model
-    scene.celestialBodies[1].ClearField("position")
-    [scene.celestialBodies[1].position.append(item) for item in sun_pos]
+    scene.set_celestial_body_params(asteroid_index, mesh_brdf=brdf_model)
+    scene.set_celestial_body_params(sun_index, position=sun_pos)
     if exposure_time is not None:
-        scene.camera.sensorModel.exposureTime = exposure_time
+        scene.set_sensor_params(exposure=exposure_time)
     return scene
 
 
@@ -495,7 +550,7 @@ def test_intensity_continuity(cielim_connection, test_name, brdf_model, phase_an
 
     if show_plots:
         crop = 6
-        cy, cx = HEIGHT // 2, WIDTH // 2
+        cy, cx = height // 2, width // 2
         fig, axes = plt.subplots(1, 2, figsize=(10, 4))
         for ax, img, val, label in [
             (axes[0], image_before, max_before, "Mesh"),
@@ -773,7 +828,7 @@ def test_exposure_scaling(cielim_connection, brdf_model):
 
         # Image strip — central crop at each exposure.
         crop = 8
-        cy, cx = HEIGHT // 2, WIDTH // 2
+        cy, cx = height // 2, width // 2
         fig, axes = plt.subplots(1, len(exposures), figsize=(1.6 * len(exposures), 2.5))
         for ax, img, exp, b in zip(axes, images, exposures, brightnesses):
             region = img[cy - crop : cy + crop, cx - crop : cx + crop]
@@ -797,6 +852,164 @@ def test_exposure_scaling(cielim_connection, brdf_model):
         f"{exposures[0]:g} → {exposures[-1]:g}: "
         f"{brightnesses[0]:.1f} → {brightnesses[-1]:.1f} "
         f"(all samples: {[f'{b:.1f}' for b in brightnesses]})"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Test 9: Multi-body scene — distant bodies (in/out of frame) plus a rasterized mesh
+# ---------------------------------------------------------------------------
+
+
+def test_multibody_with_rasterized(cielim_connection):
+    """Several distant bodies (some in frame, some out) plus a rasterized mesh must render.
+
+    This is the regression for the original black-frame bug: off-screen / behind-camera
+    distant objects coexisting with a rasterized body used to corrupt the whole frame.
+    """
+    connector = cielim_connection
+    camera_distance = 0  # camera at world origin looking +Z; sun at -Z front-lights +Z bodies
+
+    # All bodies on the X axis (y=0) so only the predicted column matters; row stays centered.
+    # Distant bodies sit at 20e6 (~3x the ~6.6e6 mesh transition): safely sub-pixel yet still bright.
+    rasterized = [0, 0, 2e6]  # D=2e6 < transition -> rasterized mesh, screen center
+    distant_right = [1.41e6, 0, 20e6]  # ndc_x ~ +0.4 -> in frame
+    distant_left = [-1.41e6, 0, 20e6]  # ndc_x ~ -0.4 -> in frame
+    distant_offscreen = [5.29e6, 0, 20e6]  # ndc_x ~ 1.5 -> off screen
+    behind_camera = [0, 0, -1e7]  # D < 0 -> behind the camera, culled
+
+    scene = scene_with_bodies(
+        camera_distance,
+        [
+            {"name": "rasterized", "position": rasterized},
+            {"name": "distant_right", "position": distant_right},
+            {"name": "distant_left", "position": distant_left},
+            {"name": "distant_offscreen", "position": distant_offscreen},
+            {"name": "behind_camera", "position": behind_camera},
+        ],
+    )
+
+    connector.send_init_request()
+    render_frame(connector, scene)  # warm-up
+    image, _, _ = render_frame(connector, scene)
+
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
+    cy = height // 2
+    px_r, _ = predict_pixel(distant_right, camera_distance)
+    px_l, _ = predict_pixel(distant_left, camera_distance)
+    px_off, _ = predict_pixel(distant_offscreen, camera_distance)
+
+    print(
+        f"\n[multibody] peak={int(np.max(gray))} "
+        f"center={int(np.max(crop_center(gray, 20)))} "
+        f"right@{int(px_r)}={int(np.max(gray[cy - 40 : cy + 40, int(px_r) - 40 : int(px_r) + 40]))} "
+        f"left@{int(px_l)}={int(np.max(gray[cy - 40 : cy + 40, int(px_l) - 40 : int(px_l) + 40]))}"
+    )
+
+    if show_plots:
+        # Full frame with the predicted body positions marked, so a failed assertion can be
+        # read against where each body was expected to land.
+        fig, ax = plt.subplots(figsize=(10, 7.5))
+        ax.imshow(gray, cmap="gray", interpolation="nearest", vmin=0, vmax=255)
+        for px, py, label, color in [
+            (width / 2, cy, "rasterized (center)", "lime"),
+            (px_r, cy, "distant_right", "cyan"),
+            (px_l, cy, "distant_left", "magenta"),
+            (px_off, cy, "distant_offscreen", "orange"),
+        ]:
+            ax.scatter([px], [py], s=160, facecolors="none", edgecolors=color, linewidths=1.5)
+            ax.annotate(label, (px, py), color=color, fontsize=8, xytext=(6, 6), textcoords="offset points")
+        ax.set_title(f"Multi-body frame — peak={int(np.max(gray))}")
+        plt.tight_layout()
+        plt.show()
+
+    # 1. The frame is not black — this mix used to black the whole image.
+    assert int(np.max(gray)) > 50, "Frame is black — multi-body + rasterized regression"
+    # 2. The rasterized mesh renders at screen center.
+    assert has_bright_spot(gray, width / 2, cy), "Rasterized body missing at center"
+    # 3. Both in-frame distant bodies render near their predicted columns.
+    assert has_bright_spot(gray, px_r, cy), "In-frame distant body (right) missing"
+    assert has_bright_spot(gray, px_l, cy), "In-frame distant body (left) missing"
+
+
+# ---------------------------------------------------------------------------
+# Test 10: Occlusion — a rasterized body hides a distant object behind it
+# ---------------------------------------------------------------------------
+
+
+def test_distant_object_occluded_by_mesh(cielim_connection):
+    """A distant object directly behind a nearer rasterized body must be occluded by it
+    (depth-tested out), not added on top through the additive composite.
+
+    The occluder is given a low albedo so it renders DIM while still writing depth (depth is
+    independent of albedo). A bright distant object behind it then gives a stark contrast:
+    occluded -> center stays at the dim mesh level; bled through -> center jumps to the bright
+    distant level. Brightness is measured in linear space to undo sRGB gamma so the contrast
+    isn't compressed.
+    """
+    connector = cielim_connection
+    camera_distance = 0
+
+    occluder = [0, 0, 2e6]  # D=2e6 < transition -> rasterized mesh at center (writes depth)
+    distant = [0, 0, 20e6]  # D=20e6 > transition -> distant object at center, behind the occluder
+
+    def center_brightness(bodies):
+        scene = scene_with_bodies(camera_distance, bodies)
+        connector.send_init_request()
+        render_frame(connector, scene)  # warm-up
+        image, _, _ = render_frame(connector, scene)
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
+        brightness = (float(np.max(crop_center(gray, 20))) / 255.0) ** SRGB_GAMMA  # linearized
+        return brightness, gray
+
+    b_distant, gray_distant = center_brightness([{"name": "distant", "position": distant, "albedo": 1.0}])
+    b_mesh, gray_mesh = center_brightness([{"name": "occluder", "position": occluder, "albedo": 0.05}])
+    b_both, gray_both = center_brightness(
+        [
+            {"name": "occluder", "position": occluder, "albedo": 0.05},
+            {"name": "distant", "position": distant, "albedo": 1.0},
+        ]
+    )
+
+    print(f"\n[occlusion] distant_only={b_distant:.4f} mesh_only={b_mesh:.4f} both={b_both:.4f}")
+
+    if show_plots:
+        # Central crops of the three scenarios. Occlusion is working when "both" looks like
+        # "mesh only" (distant hidden); a bleed-through shows up as "both" matching "distant only".
+        crop = 20
+        cy0, cx0 = height // 2, width // 2
+        fig, axes = plt.subplots(1, 3, figsize=(12, 4.5))
+        for ax, g, b, label in [
+            (axes[0], gray_distant, b_distant, "distant only"),
+            (axes[1], gray_mesh, b_mesh, "mesh only (occluder)"),
+            (axes[2], gray_both, b_both, "both (should == mesh)"),
+        ]:
+            region = g[cy0 - crop : cy0 + crop, cx0 - crop : cx0 + crop]
+            ax.imshow(region, cmap="gray", interpolation="nearest", vmin=0, vmax=255)
+            ax.set_title(f"{label}\nlinear b={b:.4f}", fontsize=10)
+            ax.set_xticks([])
+            ax.set_yticks([])
+        fig.suptitle("Occlusion — distant object behind a dim rasterized mesh", fontsize=13)
+        plt.tight_layout()
+        plt.show()
+
+    # Control: the distant object is clearly visible when nothing occludes it.
+    assert b_distant > 0.02, f"Distant object not visible unoccluded (b_distant={b_distant:.4f})"
+    # Precondition: the occluder must be the dimmer feature, else a bleed-through is undetectable.
+    assert b_mesh < 0.5 * b_distant, (
+        f"Occluder not dim enough vs distant; lower occluder albedo " f"(mesh={b_mesh:.4f}, distant={b_distant:.4f})"
+    )
+    # Occlusion: with the mesh in front, the bright distant object is hidden — the center stays
+    # near the dim mesh level, far below the distant brightness (additive bleed-through would
+    # push it up toward b_mesh + b_distant).
+    assert (
+        b_both < 0.5 * b_distant
+    ), f"Distant object bled through the occluder: both={b_both:.4f}, distant={b_distant:.4f}"
+    np.testing.assert_allclose(
+        b_both,
+        b_mesh,
+        rtol=0.3,
+        atol=0.02,
+        err_msg=f"Occluded center should match mesh-only: both={b_both:.4f}, mesh={b_mesh:.4f}",
     )
 
 
