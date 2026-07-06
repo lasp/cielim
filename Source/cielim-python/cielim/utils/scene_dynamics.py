@@ -3,7 +3,7 @@ from numpy import ndarray
 
 from . import orbital_motion
 from . import rigid_body_kinematics as rbk
-from .scene import Scene
+from ..scene import Scene
 
 
 def set_orbital_elements(

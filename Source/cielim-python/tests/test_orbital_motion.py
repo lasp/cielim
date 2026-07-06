@@ -1,6 +1,6 @@
 import numpy as np
 
-from cielim import orbital_motion
+from cielim.utils import orbital_motion
 
 
 def test_rv_oe():

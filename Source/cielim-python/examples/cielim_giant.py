@@ -17,8 +17,8 @@ from matplotlib import pyplot as plt
 from PIL import Image
 
 import cielim
-from cielim import qe_curve_fit as qefit
-from cielim import rigid_body_kinematics as rbk
+from cielim.utils import qe_curve_fit as qefit
+from cielim.utils import rigid_body_kinematics as rbk
 
 
 HERE = Path(__file__).resolve()

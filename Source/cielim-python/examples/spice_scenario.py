@@ -7,7 +7,7 @@ import numpy as np
 import spiceypy as spice
 
 import cielim
-from cielim import rigid_body_kinematics as rbk
+from cielim.utils import rigid_body_kinematics as rbk
 
 current_file_path = os.path.dirname(__file__)
 

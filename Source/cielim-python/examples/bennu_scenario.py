@@ -9,8 +9,8 @@ from astropy.io import fits
 from matplotlib import pyplot as plt
 
 import cielim
-from cielim import qe_curve_fit as qefit
-from cielim import rigid_body_kinematics as rbk
+from cielim.utils import qe_curve_fit as qefit
+from cielim.utils import rigid_body_kinematics as rbk
 
 # ---- Paths (portable) ----
 current_file_path = os.path.dirname(__file__)

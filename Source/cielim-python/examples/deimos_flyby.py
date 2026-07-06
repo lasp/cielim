@@ -23,8 +23,8 @@ from astropy.io import fits
 from matplotlib import pyplot as plt
 
 import cielim
-from cielim import qe_curve_fit as qefit
-from cielim import rigid_body_kinematics as rbk
+from cielim.utils import qe_curve_fit as qefit
+from cielim.utils import rigid_body_kinematics as rbk
 
 # from context import qe_curve_fit
 

@@ -7,9 +7,9 @@ import numpy as np
 from numpy import ndarray
 
 import cielim
-from cielim import orbital_motion
-from cielim import rigid_body_kinematics as rbk
-from cielim import scene_dynamics
+from cielim.utils import orbital_motion
+from cielim.utils import rigid_body_kinematics as rbk
+from cielim.utils import scene_dynamics
 
 current_file_path = os.path.dirname(__file__)
 

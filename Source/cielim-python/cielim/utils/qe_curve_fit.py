@@ -6,7 +6,7 @@ import pandas as pd
 from scipy.integrate import simpson
 from scipy.optimize import basinhopping
 
-from .cielimMessage_pb2 import CielimMessage
+from ..cielimMessage_pb2 import CielimMessage
 
 # Constants
 CONST_AU = 1.495978707e11  # Astronomical Unit in meters

@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from cielim import image_comparison_toolkit as image_comparison
+from cielim.utils import image_comparison_toolkit as image_comparison
 
 
 @pytest.fixture

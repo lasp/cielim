@@ -1,6 +1,6 @@
 import numpy as np
 
-from cielim import rigid_body_kinematics as rbk
+from cielim.utils import rigid_body_kinematics as rbk
 
 
 def test_dcm():

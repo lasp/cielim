@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 from PIL import Image
 
-from cielim import image_comparison_toolkit as image_comparison
+from cielim.utils import image_comparison_toolkit as image_comparison
 
 HERE = Path(__file__).resolve().parent
 CIELIM_ROOT = HERE.parent

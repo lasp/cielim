@@ -5,8 +5,8 @@ import cv2
 import numpy as np
 
 import cielim
-from cielim import rigid_body_kinematics as rbk
 from cielim import variable_map
+from cielim.utils import rigid_body_kinematics as rbk
 
 current_file_path = os.path.dirname(__file__)
 
