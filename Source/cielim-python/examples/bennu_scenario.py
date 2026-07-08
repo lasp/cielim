@@ -1,14 +1,16 @@
-import os, contextlib
+import contextlib
+import os
 from pathlib import Path
+
+import cv2
 import numpy as np
 import spiceypy as spice
-import cv2
-import context
-from driver import *
-from launcher import *
-from context import cielimMessage_pb2
-from context import scene
-from context import rigid_body_kinematics as rbk
+from astropy.io import fits
+from matplotlib import pyplot as plt
+
+import cielim
+from cielim.utils import qe_curve_fit as qefit
+from cielim.utils import rigid_body_kinematics as rbk
 
 # ---- Paths (portable) ----
 current_file_path = os.path.dirname(__file__)
@@ -29,11 +31,6 @@ def cd(path: Path):
         os.chdir(str(prev))
 
 
-import astropy
-from astropy.io import fits
-import matplotlib.pyplot as plt
-
-
 def _fits_to_png(filename: str) -> None:
     image_data = fits.open(filename)[0]
     image_data = np.nan_to_num(image_data)
@@ -43,11 +40,11 @@ def _fits_to_png(filename: str) -> None:
     return fits.open(filename)[0].header.cards["EXPOSEC"][1]
 
 
-def _fits_time(filename: str) -> None:
+def _fits_time(filename: str):
     return fits.open(filename)[0].header.cards["MIDOBS"][1]
 
 
-def _fits_sun_vec() -> None:
+def _fits_sun_vec():
     sun_vec_list = []
     for p in sorted(FITS_DIR.iterdir()):
         if p.is_file() and p.suffix.lower() in {".fits"}:
@@ -59,7 +56,7 @@ def _fits_sun_vec() -> None:
     return sun_vec_list
 
 
-def _get_instrument_attitudes() -> None:
+def _get_instrument_attitudes():
     attitudes = []
     for p in sorted(FITS_DIR.iterdir()):
         if p.is_file() and p.suffix.lower() in {".fits"}:
@@ -71,7 +68,7 @@ def _get_instrument_attitudes() -> None:
     return attitudes
 
 
-def _get_bennu_centers() -> None:
+def _get_bennu_centers():
     bennu_xy_list = []
     for p in sorted(FITS_DIR.iterdir()):
         if p.is_file() and p.suffix.lower() in {".fits"}:
@@ -86,69 +83,53 @@ def _get_exposure_time():
     time_list = []
     for p in sorted(FITS_DIR.iterdir()):
         if p.is_file() and p.suffix.lower() in {".fits"}:
-            exposure_time_list.append(_fits_to_png(p))
-            time_list.append(_fits_time(p))
+            exposure_time_list.append(_fits_to_png(str(p)))
+            time_list.append(_fits_time(str(p)))
     return exposure_time_list, time_list
 
 
-def scene_setup():
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+def scene_setup() -> cielim.Scene:
+    scene = cielim.Scene()
 
-    body = protobuf_message.celestialBodies.add()
-    body.bodyName = "bennu"
-    [body.position.append(item) for item in [0, 0, 0]]
-    [body.velocity.append(item) for item in [0, 0, 0]]
-    [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
+    scene.set_spacecraft_params(name="osiris_rex", position=(0, 0, -1000000), velocity=(0, 1000, 0))
 
-    body.model.shapeModel = "bennu_normalized"
-    body.model.geometricAlbedo = 0.044  # effective albedo of bennu
-    body.model.refModel.brdfModel = "Regolith"  # Bennu has better results with Lambertian
-    body.model.meanRadius = 246  # radius in meter of bennu
+    scene.set_camera_params(name="PolyCam")
 
-    sun = protobuf_message.celestialBodies.add()
-    sun.bodyName = "sun"
-    [sun.position.append(item) for item in [0, 0, -10000]]
-    [sun.attitude.append(item) for item in [0, 0, 0]]
+    # Camera params from here: (https://link.springer.com/article/10.1007/s11214-011-9745-4)
 
-    protobuf_message.camera.cameraId = 1
-    protobuf_message.camera.parentName = "PolyCam"
-    protobuf_message.camera.sensorModel.exposureTime = 1e-3
+    scene.set_lens_params(fov=(0.0138, 0.0138), focal_length=610 / 1000, aperture_radius=0.175 / 2)
 
-    # newly set parameters
-    # (https://link.springer.com/article/10.1007/s11214-011-9745-4)
-    protobuf_message.camera.sensorModel.systemGain = 1
-    protobuf_message.camera.sensorModel.readNoise = 3
-    protobuf_message.camera.sensorModel.sensorWidth = 6.5 * 1024 * 10 ** (-6)  # 8.5 um pixel pitch
-    protobuf_message.camera.sensorModel.sensorHeight = 8.5 * 1024 * 10 ** (-6)
-    protobuf_message.camera.sensorModel.fullWellCapacity = int(14500 / 4.5)  # Using sensor linearity
-    protobuf_message.camera.lensModel.focalLength = 610 / 1000
-    protobuf_message.camera.lensModel.pointSpreadFunction = 0
-    protobuf_message.camera.lensModel.apertureRadius = 0.175 / 2
+    scene.set_sensor_params(
+        resolution=(1024, 1024),
+        exposure=1e-3,
+        sensor_dims=(6.5 * 1024 * 10 ** (-6), 8.5 * 1024 * 10 ** (-6)),  # 8.5 um pixel pitch
+        well_capacity=int(14500 / 4.5),  # Using sensor linearity
+    )
 
-    [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [13.8 / 1000, 13.8 / 1000]]
-    [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.cameraPositionInBody.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.sensorModel.resolution.append(item) for item in [1024, 1024]]
+    scene.set_corruption_params(read_noise=3)
 
-    protobuf_message.spacecraft.spacecraftName = "osiris_rex"
-    [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -1000000]]
-    [protobuf_message.spacecraft.velocity.append(item) for item in [0, 1000, 0]]
-    [protobuf_message.spacecraft.attitude.append(item) for item in [0, 0, 0]]
-    return protobuf_message
+    scene.set_celestial_body_params(0, position=(0, 0, -10000))  # Sets the position of the sun
+
+    index = scene.add_celestial_body("bennu")
+    scene.set_celestial_body_params(
+        index, albedo=0.044, mesh_shape="bennu_normalized", mesh_brdf="Regolith", mesh_radius=246
+    )
+
+    return scene
 
 
-def bennu_scenario(number_of_images: int = None):
-    scene_frame = scene.Scene()
-    scene_frame.set_existing_message(scene_setup())
+def bennu_scenario(number_of_images: int | None = None):
+    scene = scene_setup()
 
-    message = scene_frame.get_scene()
     qe_file_path = (
         Path(__file__).resolve().parent.parent.parent / "cielim-python/support-data/bennu-spice/ocam_qe_curve.csv"
     )
+
     solid_angle = np.pi
     pixel_area = 2.2 * 2.2 * 10 ** (-12)  # m^2
-    scene_frame.set_qe_curve_fit(str(qe_file_path), solid_angle, pixel_area)
-    scene_frame.set_existing_message(message)
+
+    qefit.set_qe_curve_fit(scene.get_scene(), str(qe_file_path), solid_angle, pixel_area)
+
     instrument_id = "-64360"
 
     # Load SPICE kernels using a meta-kernel with RELATIVE paths.
@@ -206,8 +187,8 @@ def bennu_scenario(number_of_images: int = None):
     # Output dir
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    connector = Connector()
-    launcher = Launcher()
+    connector = cielim.Connector()
+    launcher = cielim.Launcher()
     connector.connect(launcher.launch())
     connector.send_init_request()
 
@@ -228,33 +209,26 @@ def bennu_scenario(number_of_images: int = None):
                 [-0.000210333996518, 0.001259527963573, 0.999999184674127],
             ]
         )  # instrument in body frame
+
         # sun_pos = np.dot(np.dot(CB, BN).T, sun_vec_list[idx])
         BN = C_img_cam @ np.dot(CB, BN)
         BN_object = spice.pxform("J2000", "IAU_BENNU", time)
 
-        message = scene_frame.get_scene()
-        message.celestialBodies[0].ClearField("attitude")
-        [message.celestialBodies[0].attitude.append(item) for item in BN_object.flatten().tolist()]
+        scene.set_celestial_body_params(0, position=tuple(sun_pos * 1e3))  # Move sun
+        scene.set_celestial_body_params(1, attitude=tuple(BN_object.flatten().tolist()))  # Rotate bennu
 
-        message.spacecraft.ClearField("position")
-        message.spacecraft.ClearField("attitude")
-        [message.spacecraft.position.append(item) for item in position * 1e3]
-        [message.spacecraft.attitude.append(item) for item in rbk.dcm_to_mrp(BN)]
-
-        message.celestialBodies[1].ClearField("position")
-        [message.celestialBodies[1].position.append(item) for item in sun_pos * 1e3]
+        scene.set_spacecraft_params(position=tuple(position * 1e3), attitude=tuple(rbk.dcm_to_mrp(BN)))
 
         # update exposure time per image
-        message.camera.sensorModel.exposureTime = exposure_time_list[idx]
-        print(f"exposure time: {message.camera.sensorModel.exposureTime:.4f} sec")
+        scene.set_sensor_params(exposure=exposure_time_list[idx])
+        print(f"exposure time: {scene.get_scene().camera.sensorModel.exposureTime:.4f} sec")
 
-        scene_frame.set_existing_message(message)
-        connector.send_frame(scene_frame.get_scene())
+        connector.send_frame(scene.get_scene())
 
         print(f"Generating image for time {time_list[idx]}")
         print(f"Phase angle {phase_angle}")
 
-        image, _, _ = connector.request_image_for_camera_id(1, 1)
+        image, _, _ = connector.request_image_for_camera_id(1, True, False)
         image = np.flip(image, 1)
         cv2.imwrite(os.path.join(current_file_path, f"images-bennu/bennu_image_{idx}.png"), image)
 

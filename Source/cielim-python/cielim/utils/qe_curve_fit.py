@@ -1,55 +1,45 @@
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.integrate import simpson
 from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+from scipy.integrate import simpson
 from scipy.optimize import basinhopping
 
+from ..cielimMessage_pb2 import CielimMessage
+
 # Constants
-h = 6.62607015e-34  # Planck constant, J·s
-c = 299792458  # Speed of light, m/s
-k_B = 1.380649e-23  # Boltzmann constant, J/K
-pi = 3.1415
+CONST_AU = 1.495978707e11  # Astronomical Unit in meters
+CONST_C = 299792458  # Speed of light, m/s
+CONST_H = 6.62607015e-34  # Planck constant, J·s
+CONST_K = 1.380649e-23  # Boltzmann constant, J/K
 
 
-def _solar_irradiance_planck_nm(
-    wavelength_nm, T=5772.0, R_sun=6.957e8, AU=1.495978707e11  # Sun's effective temp [K]  # Solar radius [m]
-):  # 1 astronomical unit [m]
+def _solar_irradiance_planck_nm(wavelengths: np.ndarray, temp: float = 5772.0, radius: float = 6.957e8) -> np.ndarray:
     """
     Compute solar spectral irradiance at 1 AU from a blackbody Sun.
 
-    Inputs
-    ------
-    wavelength_nm : array_like
-        Wavelengths in nanometers.
-    T : float
-        Blackbody temperature in Kelvin (default: 5772 K).
-    R_sun : float
-        Radius of the Sun in meters.
-    AU : float
-        Astronomical Unit in meters.
+    Args:
+        wavelengths (np.ndarray): Wavelengths in nanometers.
+        temp (float): Effective blackbody temperature of the sun in Kelvin.
+        radius (float): Radius of the Sun in meters.
 
-    Returns
-    -------
-    E_lambda_nm : np.ndarray
-        Spectral irradiance at 1 AU in W·m^-2·nm^-1, same shape as wavelength_nm.
+    Returns:
+        np.ndarray: Spectral irradiance at 1 AU in W·m^-2·nm^-1, same shape as wavelength.
     """
-    # Physical constants (SI)
-    global h, c, k_B
-
-    wl_nm = np.asarray(wavelength_nm, dtype=np.float64)
+    wl_nm = np.asarray(wavelengths, dtype=np.float64)
     wl_m = wl_nm * 1e-9  # convert nm -> m
 
     # Planck spectral radiance per unit wavelength (per meter): B_λ [W·m^-2·sr^-1·m^-1]
     # Use expm1 for numerical stability.
-    x = (h * c) / (wl_m * k_B * T)
-    B_lambda_per_m = (2.0 * h * c**2) / (wl_m**5) / np.expm1(x)
+    x = (CONST_H * CONST_C) / (wl_m * CONST_K * temp)
+    B_lambda_per_m = (2.0 * CONST_H * CONST_C**2) / (wl_m**5) / np.expm1(x)
 
     # Radiance -> surface flux per wavelength: F_λ = π B_λ  [W·m^-2·m^-1]
     F_lambda_per_m = np.pi * B_lambda_per_m
 
     # Geometric dilution to 1 AU: multiply by (R_sun / AU)^2
-    dilution = (R_sun / AU) ** 2
+    dilution = (radius / CONST_AU) ** 2
     E_lambda_per_m = F_lambda_per_m * dilution  # [W·m^-2·m^-1]
 
     # Convert per meter to per nanometer
@@ -61,24 +51,27 @@ def _solar_irradiance_planck_nm(
     return E_lambda_per_nm
 
 
-# Parse the data
-def load_qe_from_csv(csv_path) -> tuple[np.ndarray, np.ndarray]:
+def load_qe_from_csv(csv_path: str) -> tuple[np.ndarray, np.ndarray]:
     """
     Read QE curve from a CSV with two columns:
       - wavelength in nm
       - QE in electrons/photon
     Handles optional header rows and comment lines starting with '#'.
+
+    Args:
+        csv_path (str): Path to the CSV file.
+
     Returns:
-      wavelength_nm: (N,) float64
-      qe_e_per_photon: (N,) float64
+        tuple[np.ndarray, np.ndarray]: Wavelengths (nm) and QE values (electrons/photon).
     """
-    csv_path = Path(csv_path)
-    if not csv_path.exists():
+    path = Path(csv_path)
+
+    if not path.exists():
         raise FileNotFoundError(f"QE CSV not found: {csv_path}")
 
     # Read as two columns; allow an optional header row and comments.
     df = pd.read_csv(
-        csv_path,
+        path,
         comment="#",
         header=None,  # read everything first; we'll clean headers/non-numerics
         names=["wavelength_nm", "qe_e_per_photon"],
@@ -93,11 +86,32 @@ def load_qe_from_csv(csv_path) -> tuple[np.ndarray, np.ndarray]:
 
     # Ensure strictly increasing wavelength order (optional, but nice to have)
     order = np.argsort(wavelength_nm)
+
     return wavelength_nm[order], qe_e_per_photon[order]
 
 
-def qe_curve_fit(qe_file_path, solid_angle, pixel_area, wavelength_window=None, show_plots=True):
+def qe_curve_fit(
+    qe_file_path: str,
+    solid_angle: float,
+    pixel_area: float,
+    wavelength_window: list | None = None,
+    show_plots: bool = True,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    A function to fit a QE curve to three wavelengths that minimize the error in the integral of electrons per wavelength.
+
+    Args:
+        qe_file_path (str): Path to the QE CSV file.
+        solid_angle (float): Solid angle in steradians.
+        pixel_area (float): Pixel area in square meters.
+        wavelength_window (list, optional): Two-element list specifying the wavelength range to consider (in nm). Defaults to None (use full range).
+        show_plots (bool, optional): Whether to display plots of the QE curve and fit. Defaults to True.
+
+    Returns:
+        tuple[np.ndarray, np.ndarray]: Fitted wavelengths (nm) and corresponding QE values (electrons/photon).
+    """
     wavelength_nm, qe = load_qe_from_csv(qe_file_path)
+
     print("Generating a qe curve fit with data in " + str(qe_file_path))
 
     if wavelength_window is not None and len(wavelength_window) == 2:
@@ -108,16 +122,19 @@ def qe_curve_fit(qe_file_path, solid_angle, pixel_area, wavelength_window=None, 
         mask_high = wavelength_nm <= wavelength_window[1]
         wavelength_nm = wavelength_nm[mask_high]
         qe = qe[mask_high]
+
     # solar radiation intensity using black body radiation
     irr_wl_nm = np.copy(wavelength_nm)
+
     irr_interp = _solar_irradiance_planck_nm(irr_wl_nm)
+
     irr_val = np.copy(irr_interp)
 
     # Convert irradiance (W·m⁻²·nm⁻¹) to radiance (W·sr⁻¹·m⁻²·nm⁻¹) by dividing by pi
     radiance_per_nm = irr_interp / np.pi
 
     # Photon energy at each wavelength
-    photon_energy = h * c / (1e-9 * wavelength_nm)  # Joules
+    photon_energy = CONST_H * CONST_C / (1e-9 * wavelength_nm)  # Joules
 
     # Power per wavelength (W/nm)
     power_lambda = solid_angle * pixel_area * radiance_per_nm  # W/nm
@@ -127,6 +144,7 @@ def qe_curve_fit(qe_file_path, solid_angle, pixel_area, wavelength_window=None, 
 
     # Calculate electrons per wavelength
     electrons_lambda = photons_lambda * qe
+
     # Numerical integration using Simpson's rule
     mask = (wavelength_nm >= wavelength_nm[0]) & (wavelength_nm <= wavelength_nm[-1])
     integral_value = simpson(electrons_lambda[mask], wavelength_nm[mask])
@@ -146,7 +164,7 @@ def qe_curve_fit(qe_file_path, solid_angle, pixel_area, wavelength_window=None, 
         radiance_sample = irr_sample / np.pi  # W·m⁻²·sr⁻¹·nm⁻¹
 
         # Photon energy
-        photon_energy_sample = h * c / (1e-9 * sample_wl)  # Joules
+        photon_energy_sample = CONST_H * CONST_C / (1e-9 * sample_wl)  # Joules
 
         # Power per wavelength
         power_sample = solid_angle * pixel_area * radiance_sample  # W/nm
@@ -158,6 +176,7 @@ def qe_curve_fit(qe_file_path, solid_angle, pixel_area, wavelength_window=None, 
         electrons_sample = photons_sample * qe_sample
 
         # ---- Quadratic interpolant ----
+
         # Fit a quadratic polynomial (degree=2) through the three points
         coeffs = np.polyfit(sample_wl, electrons_sample, 2)  # returns [a, b, c]
         poly = np.poly1d(coeffs)
@@ -167,6 +186,7 @@ def qe_curve_fit(qe_file_path, solid_angle, pixel_area, wavelength_window=None, 
         electrons_fine = poly(wl_fine)
 
         # ---- Simpson's 1/3 rule ----
+
         # spacing is spacing between sample_wl points (should be uniform)
         spacing = sample_wl[2] - sample_wl[0]  # should be 200 nm here
         simpson_integral = (spacing / 6) * (electrons_sample[0] + 4 * electrons_sample[1] + electrons_sample[2])
@@ -199,7 +219,7 @@ def qe_curve_fit(qe_file_path, solid_angle, pixel_area, wavelength_window=None, 
 
     # Run basinhopping with SLSQP as the local optimizer
     minimizer_kwargs = {"method": "SLSQP", "bounds": bounds, "constraints": constrs}
-    result = basinhopping(fit_three_wavelengths, initial_guess, minimizer_kwargs=minimizer_kwargs, niter=100, seed=123)
+    result = basinhopping(fit_three_wavelengths, initial_guess, minimizer_kwargs=minimizer_kwargs, niter=100, rng=123)
 
     if show_plots:
         print(f"Optimal variables: {result.x}")
@@ -218,7 +238,7 @@ def qe_curve_fit(qe_file_path, solid_angle, pixel_area, wavelength_window=None, 
     radiance_sample = irr_sample / np.pi  # W·m⁻²·sr⁻¹·nm⁻¹
 
     # Photon energy
-    photon_energy_sample = h * c / (1e-9 * sample_wl)  # Joules
+    photon_energy_sample = CONST_H * CONST_C / (1e-9 * sample_wl)  # Joules
 
     # Power per wavelength
     power_sample = solid_angle * pixel_area * radiance_sample  # W/nm
@@ -230,6 +250,7 @@ def qe_curve_fit(qe_file_path, solid_angle, pixel_area, wavelength_window=None, 
     electrons_sample = photons_sample * qe_sample
 
     # ---- Quadratic interpolant ----
+
     # Fit a quadratic polynomial (degree=2) through the three points
     coeffs = np.polyfit(sample_wl, electrons_sample, 2)  # returns [a, b, c]
     poly = np.poly1d(coeffs)
@@ -239,6 +260,7 @@ def qe_curve_fit(qe_file_path, solid_angle, pixel_area, wavelength_window=None, 
     electrons_fine = poly(wl_fine)
 
     # ---- Simpson's 1/3 rule ----
+
     # spacing is spacing between sample_wl points (should be uniform)
     spacing = sample_wl[2] - sample_wl[0]  # should be 200 nm here
     simpson_integral = (spacing / 6) * (electrons_sample[0] + 4 * electrons_sample[1] + electrons_sample[2])
@@ -261,6 +283,7 @@ def qe_curve_fit(qe_file_path, solid_angle, pixel_area, wavelength_window=None, 
         print(f"Grayscale approx color: {corrected_estimate_color:.2f}")
 
     # ---- Plot ----
+
     plt.figure(figsize=(10, 6))
     plt.plot(wavelength_nm, electrons_lambda, "k--", alpha=0.3, label="Actual electrons per wavelength (ref)")
     plt.plot(wl_fine, electrons_fine, "b-", label="Quadratic interpolant (electrons)")
@@ -273,6 +296,7 @@ def qe_curve_fit(qe_file_path, solid_angle, pixel_area, wavelength_window=None, 
     plt.grid(True)
 
     fit_wavelengths = np.array(result.x)
+
     # interpolate to get the qe values (in the loaded qe_file_path: wavelength_nm, qe) corresponding to the fit_wavelengths
     fit_qe = np.interp(fit_wavelengths, wavelength_nm, qe)
 
@@ -283,13 +307,46 @@ def qe_curve_fit(qe_file_path, solid_angle, pixel_area, wavelength_window=None, 
     return fit_wavelengths, fit_qe
 
 
-def main():
-    # Parameters to modify
-    solid_angle = pi * 0.005**2 / (0.16**2)  # steradians
-    pixel_area = (0.022528 * 0.016896) / (4096 * 3072)  # m^2
-    qe_file_path = Path(__file__).resolve().parent.parent / "support-data/deimos-spice/qe-mod-5.csv"
-    qe_curve_fit(qe_file_path, solid_angle, pixel_area, show_plots=True)
+def set_qe_curve_fit(
+    message: CielimMessage,
+    qe_data_path: str,
+    solid_angle: float,
+    pixel_area: float,
+    wavelength_window: list | None = None,
+) -> None:
+    """
+    Sets the wavelengths and QE values in the CielimMessage based on a QE curve fit from a CSV file.
+
+    Args:
+        message (CielimMessage): The CielimMessage to update.
+        qe_data_path (str): Path to the QE CSV file.
+        solid_angle (float): Solid angle in steradians.
+        pixel_area (float): Pixel area in square meters.
+        wavelength_window (list, optional): Two-element list specifying the wavelength range to consider (in nm). Defaults to None (use full range).
+    """
+    fit_wavelengths, fit_values = qe_curve_fit(
+        qe_data_path, solid_angle, pixel_area, wavelength_window=wavelength_window, show_plots=False
+    )
+
+    message.renderParameters.wavelength1 = fit_wavelengths[0]
+    message.renderParameters.wavelength2 = fit_wavelengths[1]
+    message.renderParameters.wavelength3 = fit_wavelengths[2]
+
+    message.camera.sensorModel.qeCurve.redValue1 = fit_values[0]
+    message.camera.sensorModel.qeCurve.greenValue1 = fit_values[0]
+    message.camera.sensorModel.qeCurve.blueValue1 = fit_values[0]
+    message.camera.sensorModel.qeCurve.redValue2 = fit_values[1]
+    message.camera.sensorModel.qeCurve.greenValue2 = fit_values[1]
+    message.camera.sensorModel.qeCurve.blueValue2 = fit_values[1]
+    message.camera.sensorModel.qeCurve.redValue3 = fit_values[2]
+    message.camera.sensorModel.qeCurve.greenValue3 = fit_values[2]
+    message.camera.sensorModel.qeCurve.blueValue3 = fit_values[2]
 
 
 if __name__ == "__main__":
-    main()
+    # Parameters to modify
+    solid_angle = np.pi * 0.005**2 / (0.16**2)  # steradians
+    pixel_area = (0.022528 * 0.016896) / (4096 * 3072)  # m^2
+    qe_file_path = str(Path(__file__).resolve().parent.parent / "support-data/deimos-spice/qe-mod-5.csv")
+
+    qe_curve_fit(qe_file_path, solid_angle, pixel_area, show_plots=True)

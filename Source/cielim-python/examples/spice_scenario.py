@@ -1,13 +1,13 @@
-from context import driver, launcher
-from context import cielimMessage_pb2
-from context import scene
-from context import rigid_body_kinematics as rbk
-import numpy as np
-import spiceypy as spice
-import urllib.request
 import json
 import os
+import urllib.request
+
 import cv2
+import numpy as np
+import spiceypy as spice
+
+import cielim
+from cielim.utils import rigid_body_kinematics as rbk
 
 current_file_path = os.path.dirname(__file__)
 
@@ -35,48 +35,39 @@ def get_spice_data(filename):
     return directory + "/" + meta_kernel + ".txt"
 
 
-def scene_setup():
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+def scene_setup() -> cielim.Scene:
+    scene = cielim.Scene()
 
-    body = protobuf_message.celestialBodies.add()
-    body.bodyName = "2000269"
-    [body.position.append(item) for item in [0, 0, 0]]
-    [body.velocity.append(item) for item in [0, 0, 0]]
-    [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
+    scene.set_spacecraft_params(position=(0, 0, -1000000), velocity=(0, 1000, 0))
 
-    body.model.shapeModel = "bennu_normalized"
-    body.model.meanRadius = 58232 * 1e3
+    scene.set_lens_params(
+        fov=(5 * np.pi / 180, 3.75 * np.pi / 180),
+        focal_length=150e-3,
+        aperture_radius=150e-3 / 7.5 / 2,  # focal length / f# / 2
+    )
 
-    sun = protobuf_message.celestialBodies.add()
-    sun.bodyName = "sun"
-    [sun.position.append(item) for item in [0, 0, -10000]]
-    [sun.attitude.append(item) for item in [0, 0, 0]]
+    scene.set_sensor_params(resolution=(2000, 1500), exposure=1)
 
-    protobuf_message.camera.cameraId = 1
-    protobuf_message.camera.parentName = "cielim_sat"
-    protobuf_message.camera.sensorModel.exposureTime = 1
-    [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [5 * np.pi / 180, 3.75 * np.pi / 180]]
-    [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.cameraPositionInBody.append(item) for item in [1, 1, 1]]
-    [protobuf_message.camera.sensorModel.resolution.append(item) for item in [2000, 1500]]
+    scene.set_celestial_body_params(0, position=(0, 0, -10000))
 
-    protobuf_message.spacecraft.spacecraftName = "cielim_sat"
-    [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -1000000]]
-    [protobuf_message.spacecraft.velocity.append(item) for item in [0, 1000, 0]]
-    [protobuf_message.spacecraft.attitude.append(item) for item in [0, 0, 0]]
-    return protobuf_message
+    index = scene.add_celestial_body("2000269")
+
+    scene.set_celestial_body_params(
+        index, mesh_shape="bennu_normalized", mesh_brdf="Lambertian", mesh_radius=58232 * 1e3
+    )
+
+    return scene
 
 
 def spice_scenario():
-    scene_frame = scene.Scene()
-    scene_frame.set_existing_message(scene_setup())
+    scene = scene_setup()
 
     meta_data = get_spice_data(os.path.dirname(current_file_path) + "/support-data/cassini-spice.json")
     spice.furnsh(meta_data)
     instrument_id = "CASSINI_UVIS_FUV"
     # Define time range
-    start_et = spice.str2et("2004-05-15T00:00:00")
-    end_et = spice.str2et("2004-05-15T10:00:00")
+    start_et = float(spice.str2et("2004-05-15T00:00:00"))
+    end_et = float(spice.str2et("2004-05-15T10:00:00"))
     time_step = 300  # 5min
     et_range = np.arange(start_et, end_et, time_step)
 
@@ -84,22 +75,19 @@ def spice_scenario():
     directory_path = current_file_path + "/images-cassini-spice"
     os.makedirs(directory_path, exist_ok=True)
 
-    connector = driver.Connector()
-    launch = launcher.Launcher()
+    connector = cielim.Connector()
+    launch = cielim.Launcher()
     connector.connect(launch.launch())
     connector.send_init_request()
 
     for time in et_range:
         position, light_time = spice.spkpos("CASSINI", time, "J2000", "NONE", "SATURN BARYCENTER")
         BN = spice.pxform("J2000", instrument_id, time)
-        message = scene_frame.get_scene()
-        message.spacecraft.ClearField("position")
-        message.spacecraft.ClearField("attitude")
-        [message.spacecraft.position.append(item) for item in position * 1e3]
-        [message.spacecraft.attitude.append(item) for item in rbk.dcm_to_mrp(BN)]
-        scene_frame.set_existing_message(message)
-        connector.send_frame(scene_frame.get_scene())
-        [image, _, _] = connector.request_image_for_camera_id(1, 1)
+
+        scene.set_spacecraft_params(position=tuple(position * 1e3), attitude=tuple(rbk.dcm_to_mrp(BN)))
+
+        connector.send_frame(scene.get_scene())
+        [image, _, _] = connector.request_image_for_camera_id(1, True, False)
         cv2.imwrite(directory_path + "/cassini-" + str(time) + ".png", image)
 
     connector.disconnect()

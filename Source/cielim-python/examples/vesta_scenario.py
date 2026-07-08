@@ -1,14 +1,16 @@
-import os, contextlib
+import contextlib
+import os
 from pathlib import Path
+
+import cv2
 import numpy as np
 import spiceypy as spice
-import cv2
-import context
-from driver import *
-from launcher import *
-from context import cielimMessage_pb2
-from context import scene
-from context import rigid_body_kinematics as rbk
+from astropy.io import fits
+from matplotlib import pyplot as plt
+
+import cielim
+from cielim.utils import qe_curve_fit as qefit
+from cielim.utils import rigid_body_kinematics as rbk
 
 # ---- Paths (portable) ----
 current_file_path = os.path.dirname(__file__)
@@ -29,13 +31,8 @@ def cd(path: Path):
         os.chdir(str(prev))
 
 
-import astropy
-from astropy.io import fits
-import matplotlib.pyplot as plt
-
-
-def get_header(filename: str) -> dict:
-    with open(filename.with_suffix(".txt"), "r") as file:
+def get_header(filename: str) -> tuple:
+    with open(Path(filename).with_suffix(".txt"), "r") as file:
         content = file.read()
         quat_start_idx = content.find("QUATERNION")
         sun_start_idx = content.find("SC_SUN_POSITION_VECTOR")
@@ -83,8 +80,8 @@ def get_header_data():
     sun_list = []
     for p in sorted(FITS_DIR.iterdir()):
         if p.is_file() and p.suffix.lower() in {".fit"}:
-            _fits_to_png(p)
-            exp, time, pos, sun_pos, mrp = get_header(p)
+            _fits_to_png(str(p))
+            exp, time, pos, sun_pos, mrp = get_header(str(p))
             exposure_time_list.append(exp * 1e-3)
             time_list.append(time)
             position_list.append(-pos)
@@ -93,67 +90,53 @@ def get_header_data():
     return exposure_time_list, time_list, position_list, attitude_list, sun_list
 
 
-def scene_setup():
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+def scene_setup() -> cielim.Scene:
+    scene = cielim.Scene()
 
-    body = protobuf_message.celestialBodies.add()
-    body.bodyName = "vesta"
-    [body.position.append(item) for item in [0, 0, 0]]
-    [body.velocity.append(item) for item in [0, 0, 0]]
-    [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
+    scene.set_spacecraft_params(name="dawn", position=(0, 0, -1000000), velocity=(0, 1000, 0))
 
-    body.model.shapeModel = "vesta_normalized"
-    body.model.geometricAlbedo = 0.423  # effective albedo of vesta
-    body.model.refModel.brdfModel = "Regolith"  # vesta has better results with Lambertian
-    body.model.meanRadius = 262.7 * 1e3  # radius in meter of vesta
+    scene.set_camera_params(name="dawn")
 
-    sun = protobuf_message.celestialBodies.add()
-    sun.bodyName = "sun"
-    [sun.position.append(item) for item in [0, 0, -10000]]
-    [sun.attitude.append(item) for item in [0, 0, 0]]
-
-    protobuf_message.camera.cameraId = 1
-    protobuf_message.camera.parentName = "dawn"
-    protobuf_message.camera.sensorModel.exposureTime = 1e-3
-
-    # newly set parameters
     # (https://link.springer.com/article/10.1007/s11214-011-9745-4)
     # (https://www.teledynespaceimaging.com/en-us/Products_/Documents/ccd-datasheets/CCD47-20%20FSI%20NIMO%20Datasheet%20(v9).pdf)
-    protobuf_message.camera.sensorModel.systemGain = 1
-    protobuf_message.camera.sensorModel.readNoise = 18
-    protobuf_message.camera.sensorModel.sensorWidth = 13.3 * 10 ** (-3)  # 2592 * 2.2 um
-    protobuf_message.camera.sensorModel.sensorHeight = 13.3 * 10 ** (-3)  # 1944 * 2.2 um
-    protobuf_message.camera.sensorModel.fullWellCapacity = 120_000
-    protobuf_message.camera.lensModel.focalLength = 150 / 1000
-    protobuf_message.camera.lensModel.pointSpreadFunction = 1.0
-    protobuf_message.camera.lensModel.apertureRadius = (
-        protobuf_message.camera.lensModel.focalLength / 7.5 / 2
-    )  # focal length / f# / 2
 
-    [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [5.5 * np.pi / 180, 5.5 * np.pi / 180]]
-    [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.cameraPositionInBody.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.sensorModel.resolution.append(item) for item in [1024, 1024]]
+    scene.set_lens_params(
+        fov=(5.5 * np.pi / 180, 5.5 * np.pi / 180),
+        focal_length=0.150,
+        aperture_radius=0.150 / 7.5 / 2,  # focal length / f# / 2
+    )
 
-    protobuf_message.spacecraft.spacecraftName = "dawn"
-    [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -1000000]]
-    [protobuf_message.spacecraft.velocity.append(item) for item in [0, 1000, 0]]
-    [protobuf_message.spacecraft.attitude.append(item) for item in [0, 0, 0]]
-    return protobuf_message
+    scene.set_sensor_params(
+        resolution=(1024, 1024),
+        exposure=1e-3,
+        sensor_dims=(13.3 * 10 ** (-3), 13.3 * 10 ** (-3)),  # 2592 * 2.2 um, 1944 * 2.2 um
+        well_capacity=120_000,
+    )
+
+    scene.set_corruption_params(psf_sigma=1, read_noise=18)
+
+    scene.set_celestial_body_params(0, position=(0, 0, -10000))
+
+    index = scene.add_celestial_body("vesta")
+
+    scene.set_celestial_body_params(
+        index, albedo=0.423, mesh_shape="vesta_normalized", mesh_brdf="Regolith", mesh_radius=262.7 * 1e3
+    )
+
+    return scene
 
 
-def vesta_scenario(number_of_images: int = None):
-    scene_frame = scene.Scene()
-    scene_frame.set_existing_message(scene_setup())
+def vesta_scenario(number_of_images: int | None = None):
+    scene = scene_setup()
 
-    message = scene_frame.get_scene()
     qe_file_path = (
         Path(__file__).resolve().parent.parent.parent / "cielim-python/support-data/vesta-spice/f2_qe_curve.csv"
     )
+
     solid_angle = np.pi
     pixel_area = 2.2 * 2.2 * 10 ** (-12)  # m^2
-    scene_frame.set_qe_curve_fit(str(qe_file_path), solid_angle, pixel_area)
-    scene_frame.set_existing_message(message)
+
+    qefit.set_qe_curve_fit(scene.get_scene(), str(qe_file_path), solid_angle, pixel_area)
 
     # Load SPICE kernels using a meta-kernel with RELATIVE paths.
     # We temporarily chdir to the repo root so 'support-data/…' resolves correctly.
@@ -199,8 +182,8 @@ def vesta_scenario(number_of_images: int = None):
     # Output dir
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    connector = Connector()
-    launcher = Launcher()
+    connector = cielim.Connector()
+    launcher = cielim.Launcher()
     connector.connect(launcher.launch())
     connector.send_init_request()
 
@@ -215,33 +198,25 @@ def vesta_scenario(number_of_images: int = None):
         BN = np.dot(CB, BN)
         BN_object = spice.pxform("J2000", "IAU_VESTA", time)
 
-        message = scene_frame.get_scene()
-        message.celestialBodies[0].ClearField("attitude")
-        [message.celestialBodies[0].attitude.append(item) for item in BN_object.flatten().tolist()]
-
-        message.spacecraft.ClearField("position")
-        message.spacecraft.ClearField("attitude")
-        [message.spacecraft.position.append(item) for item in position * 1e3]
-        [message.spacecraft.attitude.append(item) for item in rbk.dcm_to_mrp(BN)]
-
-        print(f"Spacecraft position: {position * 1e3}")
-
-        message.celestialBodies[1].ClearField("position")
-        [message.celestialBodies[1].position.append(item) for item in sun_pos * 1e3]
+        scene.set_celestial_body_params(0, position=tuple(sun_pos * 1e3))
+        scene.set_celestial_body_params(1, attitude=tuple(BN_object.flatten().tolist()))
 
         print(f"Sun position: {sun_pos * 1e3}")
 
-        # update exposure time per image
-        message.camera.sensorModel.exposureTime = exposure_time_list[idx]
-        print(f"exposure time: {message.camera.sensorModel.exposureTime:.4f} sec")
+        scene.set_spacecraft_params(position=tuple(position * 1e3), attitude=tuple(rbk.dcm_to_mrp(BN)))
 
-        scene_frame.set_existing_message(message)
-        connector.send_frame(scene_frame.get_scene())
+        print(f"Spacecraft position: {position * 1e3}")
+
+        # update exposure time per image
+        scene.set_sensor_params(exposure=exposure_time_list[idx])
+        print(f"exposure time: {scene.get_scene().camera.sensorModel.exposureTime:.4f} sec")
+
+        connector.send_frame(scene.get_scene())
 
         print(f"Generating image for time {time_list[idx]}")
         print(f"Phase angle {phase_angle}")
 
-        image, _, _ = connector.request_image_for_camera_id(1, 1)
+        image, _, _ = connector.request_image_for_camera_id(1, True, False)
         image = np.flip(image, 0)
         cv2.imwrite(os.path.join(current_file_path, f"images-vesta/vesta_image_{idx}.png"), image)
 

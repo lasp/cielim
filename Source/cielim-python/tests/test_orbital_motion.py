@@ -1,6 +1,6 @@
-import context
-from orbital_motion import *
 import numpy as np
+
+from cielim.utils import orbital_motion
 
 
 def test_rv_oe():
@@ -8,8 +8,8 @@ def test_rv_oe():
     position = np.array([1e5, 1e6, 1e2])
     velocity = np.array([10, 20, 30])
 
-    elements = cartesian_to_orbital_elements(gravitational_parameter, position, velocity)
-    r, v = orbital_elements_to_cartesian(gravitational_parameter, elements)
+    elements = orbital_motion.cartesian_to_orbital_elements(gravitational_parameter, position, velocity)
+    r, v = orbital_motion.orbital_elements_to_cartesian(gravitational_parameter, elements)
     np.testing.assert_almost_equal(position, r, 8)
     np.testing.assert_almost_equal(velocity, v, 8)
 
@@ -19,7 +19,13 @@ def test_rv_oe():
     velocity = np.sqrt(gravitational_parameter / np.linalg.norm(position)) * np.cross(
         h, position / np.linalg.norm(position)
     )
-    elements = cartesian_to_orbital_elements(gravitational_parameter, position, velocity)
+    elements = orbital_motion.cartesian_to_orbital_elements(gravitational_parameter, position, velocity)
+
+    assert elements.semi_major_axis is not None
+    assert elements.eccentricity is not None
+    assert elements.inclination is not None
+    assert elements.true_anomaly is not None
+
     np.testing.assert_almost_equal(elements.semi_major_axis, np.linalg.norm(position), 8)
     np.testing.assert_almost_equal(elements.eccentricity, 0, 8)
     np.testing.assert_almost_equal(elements.inclination, 0, 8)
@@ -31,12 +37,12 @@ def test_equations_of_motion():
     pos = [1e5, 1e6, 1e2]
     vel = [10, 20, 30]
     state = np.array(pos + vel)
-    dstate_dt = point_mass_dynamics(time, state, 0)
+    dstate_dt = orbital_motion.point_mass_dynamics(np.array(time), state, 0)
     np.testing.assert_almost_equal(dstate_dt[:3], vel, 10)
     np.testing.assert_almost_equal(dstate_dt[3:], np.zeros(3), 10)
 
     gravitational_parameter = 1e10
-    dstate_dt = point_mass_dynamics(time, state, gravitational_parameter)
+    dstate_dt = orbital_motion.point_mass_dynamics(np.array(time), state, gravitational_parameter)
     np.testing.assert_almost_equal(dstate_dt[:3], vel, 10)
     np.testing.assert_almost_equal(
         np.linalg.norm(dstate_dt[3:]), gravitational_parameter / np.linalg.norm(pos) ** 2, 10
@@ -45,7 +51,7 @@ def test_equations_of_motion():
     times = list(range(0, 1001, 10))
     states = [state]
     for i in range(1, len(times)):
-        states.append(propagate_cartesian(gravitational_parameter, states[-1], times[i - 1], times[i]))
+        states.append(orbital_motion.propagate_cartesian(gravitational_parameter, states[-1], times[i - 1], times[i]))
 
     states = np.array(states)
     h = np.zeros([len(states[:, 0]), 3])

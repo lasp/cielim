@@ -1,28 +1,31 @@
+import contextlib
+import glob
+import io
+import os
+import re
 import sys
+from datetime import datetime
 from pathlib import Path
+
+import cv2
+import matplotlib
+
+matplotlib.use("Agg")  # Use non-interactive backend for matplotlib
+import numpy as np
+import spiceypy as spice
+from matplotlib import pyplot as plt
+from PIL import Image
+
+import cielim
+from cielim.utils import qe_curve_fit as qefit
+from cielim.utils import rigid_body_kinematics as rbk
+
 
 HERE = Path(__file__).resolve()
 CIELIM_ROOT = HERE.parents[1]
 
 sys.path.insert(0, str(CIELIM_ROOT / "cielim"))
 sys.path.insert(0, str(HERE.parent))
-
-import os, contextlib, re, io, glob
-import numpy as np
-import spiceypy as spice
-import cv2
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-from pathlib import Path
-from PIL import Image
-from datetime import datetime
-from driver import *
-from launcher import *
-from context import cielimMessage_pb2
-from context import scene
-from context import rigid_body_kinematics as rbk
 
 MK = CIELIM_ROOT / "support-data" / "vesta-spice" / "vesta-spice.txt"
 FIT_DIR = CIELIM_ROOT / "support-data" / "vesta-spice" / "opnav"
@@ -123,49 +126,37 @@ def make_cielim_frame(img: np.ndarray, timestamp: str, x1: int, x2: int, y1: int
     return Image.open(buf).copy().convert("RGB")
 
 
-def scene_setup() -> cielimMessage_pb2.CielimMessage:
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+def scene_setup() -> cielim.Scene:
+    scene = cielim.Scene()
 
-    vesta = protobuf_message.celestialBodies.add()
-    vesta.bodyName = "vesta"
-    [vesta.position.append(v) for v in [0, 0, 0]]
-    [vesta.velocity.append(v) for v in [0, 0, 0]]
-    [vesta.attitude.append(v) for v in np.eye(3).flatten().tolist()]
-    vesta.model.shapeModel = "vesta_normalized"
-    vesta.model.geometricAlbedo = 0.423
-    vesta.model.refModel.brdfModel = "Regolith"
-    vesta.model.meanRadius = 262.7 * 1e3
+    scene.set_spacecraft_params(name="dawn", position=(0, 0, -1000000), velocity=(0, 1000, 0))
 
-    sun = protobuf_message.celestialBodies.add()
-    sun.bodyName = "sun"
-    [sun.position.append(v) for v in [0, 0, -10000]]
-    [sun.attitude.append(v) for v in [0, 0, 0]]
+    scene.set_camera_params(name="dawn")
 
-    protobuf_message.camera.cameraId = 1
-    protobuf_message.camera.parentName = "dawn"
+    scene.set_lens_params(
+        fov=(5.5 * np.pi / 180, 5.5 * np.pi / 180),
+        focal_length=150e-3,
+        aperture_radius=150e-3 / 7.5 / 2,  # focal length / f# / 2
+    )
 
-    protobuf_message.camera.sensorModel.exposureTime = 1e-3
-    protobuf_message.camera.sensorModel.systemGain = 1
-    protobuf_message.camera.sensorModel.readNoise = 18
-    protobuf_message.camera.sensorModel.sensorWidth = 13.3e-3
-    protobuf_message.camera.sensorModel.sensorHeight = 13.3e-3
-    protobuf_message.camera.sensorModel.fullWellCapacity = 120_000
+    scene.set_sensor_params(
+        resolution=(1024, 1024),
+        exposure=1e-3,
+        sensor_dims=(13.3e-3, 13.3e-3),
+        well_capacity=120_000,
+    )
 
-    protobuf_message.camera.lensModel.focalLength = 150e-3
-    protobuf_message.camera.lensModel.pointSpreadFunction = 0.0
-    protobuf_message.camera.lensModel.apertureRadius = (150e-3) / 7.5 / 2
+    scene.set_corruption_params(read_noise=18)
 
-    [protobuf_message.camera.lensModel.fieldOfView.append(v) for v in [5.5 * np.pi / 180, 5.5 * np.pi / 180]]
-    [protobuf_message.camera.bodyFrameToCameraMrp.append(v) for v in [0, 0, 0]]
-    [protobuf_message.camera.cameraPositionInBody.append(v) for v in [0, 0, 0]]
-    [protobuf_message.camera.sensorModel.resolution.append(v) for v in [1024, 1024]]
+    scene.set_celestial_body_params(0, position=(0, 0, -10000))
 
-    protobuf_message.spacecraft.spacecraftName = "dawn"
-    [protobuf_message.spacecraft.position.append(v) for v in [0, 0, -1000000]]
-    [protobuf_message.spacecraft.velocity.append(v) for v in [0, 1000, 0]]
-    [protobuf_message.spacecraft.attitude.append(v) for v in [0, 0, 0]]
+    index = scene.add_celestial_body("vesta")
 
-    return protobuf_message
+    scene.set_celestial_body_params(
+        index, albedo=0.423, mesh_shape="vesta_normalized", mesh_brdf="Regolith", mesh_radius=262.7 * 1e3
+    )
+
+    return scene
 
 
 def create_comparison_gif() -> None:
@@ -281,15 +272,12 @@ def cielim_giant(number_of_images: int = None):
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    scene_frame = scene.Scene()
-    scene_frame.set_existing_message(scene_setup())
+    scene = scene_setup()
 
     if QE_FILE.exists():
-        message = scene_frame.get_scene()
         solid_angle = np.pi
         pixel_area = 14e-6 * 14e-6
-        scene_frame.set_qe_curve_fit(str(QE_FILE), solid_angle, pixel_area)
-        scene_frame.set_existing_message(message)
+        qefit.set_qe_curve_fit(scene.get_scene(), str(QE_FILE), solid_angle, pixel_area)
         print(f"QE curve loaded: {QE_FILE.name}")
     else:
         print(f"WARNING: QE file not found at {QE_FILE}")
@@ -298,8 +286,8 @@ def cielim_giant(number_of_images: int = None):
     with cd(CIELIM_ROOT):
         spice.furnsh(str(MK))
 
-    connector = Connector()
-    launcher = Launcher()
+    connector = cielim.Connector()
+    launcher = cielim.Launcher()
     connector.connect(launcher.launch())
     connector.send_init_request()
 
@@ -318,25 +306,16 @@ def cielim_giant(number_of_images: int = None):
 
         BN_vesta = spice.pxform("J2000", "IAU_VESTA", et)
 
-        message = scene_frame.get_scene()
+        scene.set_celestial_body_params(0, position=tuple((sun_pos_km * 1e3).tolist()))
+        scene.set_celestial_body_params(1, attitude=tuple(BN_vesta.flatten().tolist()))
 
-        message.celestialBodies[0].ClearField("attitude")
-        [message.celestialBodies[0].attitude.append(v) for v in BN_vesta.flatten().tolist()]
+        scene.set_spacecraft_params(position=tuple((sc_pos_km * 1e3).tolist()), attitude=tuple(rbk.dcm_to_mrp(BN)))
 
-        message.spacecraft.ClearField("position")
-        message.spacecraft.ClearField("attitude")
-        [message.spacecraft.position.append(v) for v in (sc_pos_km * 1e3).tolist()]
-        [message.spacecraft.attitude.append(v) for v in rbk.dcm_to_mrp(BN)]
+        scene.set_sensor_params(exposure=exposure_s)
 
-        message.celestialBodies[1].ClearField("position")
-        [message.celestialBodies[1].position.append(v) for v in (sun_pos_km * 1e3).tolist()]
+        connector.send_frame(scene.get_scene())
 
-        message.camera.sensorModel.exposureTime = exposure_s
-
-        scene_frame.set_existing_message(message)
-        connector.send_frame(scene_frame.get_scene())
-
-        image, _, _ = connector.request_image_for_camera_id(1, 1)
+        image, _, _ = connector.request_image_for_camera_id(1, True, False)
         image = np.flip(image, 0)
         cv2.imwrite(str(OUT_DIR / f"giant-cielim-vesta_{idx:03d}.png"), image)
 

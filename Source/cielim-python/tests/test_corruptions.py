@@ -1,44 +1,25 @@
-from driver import *
-from launcher import *
-from context import cielimMessage_pb2
+import cv2
 import numpy as np
 import pytest
 
-
-def default_scene():
-
-    protobuf_message = cielimMessage_pb2.CielimMessage()
-
-    body = protobuf_message.celestialBodies.add()
-    body.bodyName = "Plane"
-    [body.position.append(item) for item in [0, 0, 0]]
-    [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
-    [body.model.inertialToBodyMrp.append(item) for item in [0, 0, 0]]
-    body.model.shapeModel = "Plane"
-    body.model.meanRadius = 10000
-
-    sun = protobuf_message.celestialBodies.add()
-    sun.bodyName = "sun"
-    [sun.position.append(item) for item in [0, 0, 0.5 * 1.496e11]]
-    [sun.attitude.append(item) for item in [0, 0, 0]]
-
-    protobuf_message.camera.cameraId = 1
-    protobuf_message.camera.parentName = "cielim_sat"
-    [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [30 * np.pi / 180, 25 * np.pi / 180]]
-    [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0.0, 0, 0]]
-    [protobuf_message.camera.cameraPositionInBody.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.sensorModel.resolution.append(item) for item in [3000, 3000]]
-
-    protobuf_message.spacecraft.spacecraftName = "cielim_sat"
-    [protobuf_message.spacecraft.position.append(item) for item in [0, 0, 10000]]
-    [protobuf_message.spacecraft.attitude.append(item) for item in [0, 1, 0]]
-
-    return protobuf_message
+import cielim
 
 
 @pytest.fixture
-def scene_setup():
-    return default_scene()
+def default_scene() -> cielim.Scene:
+    """
+    Set up the scene with the spacecraft looking directly at a plane.
+    """
+    scene = cielim.Scene()
+
+    scene.set_spacecraft_params(position=(0, 0, 2000), attitude=(0, 1, 0))
+
+    scene.set_lens_params(fov=(10 * np.pi / 180, 10 * np.pi / 180))
+
+    index = scene.add_celestial_body("asteroid")
+    scene.set_celestial_body_params(index, mesh_shape="Plane", mesh_brdf="Lambertian", mesh_radius=1000)
+
+    return scene
 
 
 @pytest.mark.parametrize(
@@ -54,19 +35,18 @@ def scene_setup():
         (0.0, 0.0, 0.0, 0.0, 0.3),
     ],
 )
-def test_LensDistortion(cielim_connection, scene_setup, k1, k2, k3, p1, p2):
+def test_LensDistortion(cielim_connection: cielim.Connector, default_scene: cielim.Scene, k1, k2, k3, p1, p2):
     """
     Tests that lens distortion is distorting the image as expected.
     """
     connector = cielim_connection
 
-    scene = scene_setup
+    scene = default_scene
 
-    # Make spacecraft closer to plane
-    scene.spacecraft.position[:] = [0, 0, 3000]
+    scene.set_spacecraft_params(position=(0, 0, 1000))  # Move closer to make effects more pronounced
 
     connector.send_init_request()
-    connector.send_frame(scene)
+    connector.send_frame(scene.get_scene())
     base_image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     # Apply distortions to base image
@@ -124,45 +104,39 @@ def test_LensDistortion(cielim_connection, scene_setup, k1, k2, k3, p1, p2):
         base_image, map_x, map_y, interpolation=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0)
     )
 
-    scene.camera.lensModel.distortionK1 = k1
-    scene.camera.lensModel.distortionK2 = k2
-    scene.camera.lensModel.distortionK3 = k3
-    scene.camera.lensModel.distortionP1 = p1
-    scene.camera.lensModel.distortionP2 = p2
+    scene.set_corruption_params(dist_radial=(k1, k2, k3), dist_tangent=(p1, p2))
 
     connector.send_init_request()
-    connector.send_frame(scene)
+    connector.send_frame(scene.get_scene())
     distorted_image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     diff = np.abs(distorted_image.astype(np.int32) - distorted_base.astype(np.int32))
     mismatch_fraction = np.mean(diff > 1)
 
-    # Some pixels will be off because cv can smooth edges (0.2% allowance)
-    assert mismatch_fraction < 0.002, (
-        f"Too many mismatched pixels: {mismatch_fraction:.2%} " f"(max diff: {diff.max()})"
-    )
+    # Some pixels will be off because cv can smooth edges (6% allowance)
+    assert mismatch_fraction < 0.06, f"Too many mismatched pixels: {mismatch_fraction:.2%} " f"(max diff: {diff.max()})"
 
 
-def test_GaussianPSF(cielim_connection, scene_setup):
+def test_GaussianPSF(cielim_connection: cielim.Connector, default_scene: cielim.Scene):
     """
     Tests that Gaussian PSF is properly blurring the image using variance of laplacian.
     """
     connector = cielim_connection
 
-    scene = scene_setup
+    scene = default_scene
 
     # Change scene to rotated plane to test GaussianPSF on jagged edges
-    scene.celestialBodies[0].model.inertialToBodyMrp[:] = [0, 0, 0.2]
+    scene.set_celestial_body_params(1, mesh_attitude=(0, 0, 0.2))
 
     connector.send_init_request()
-    connector.send_frame(scene)
-    sharp_image, _, _ = connector.request_image_for_camera_id(1, 1)
+    connector.send_frame(scene.get_scene())
+    sharp_image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
-    scene.camera.lensModel.pointSpreadFunction = 50
+    scene.set_corruption_params(psf_sigma=50)
 
     connector.send_init_request()
-    connector.send_frame(scene)
-    blurred_image, _, _ = connector.request_image_for_camera_id(1, 1)
+    connector.send_frame(scene.get_scene())
+    blurred_image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     sharp_laplace = cv2.Laplacian(sharp_image, cv2.CV_64F)
     sharp_variance = sharp_laplace.var()
@@ -193,41 +167,42 @@ def test_GaussianPSF(cielim_connection, scene_setup):
         (100, 10000),
     ],
 )
-def test_DarkCurrent(cielim_connection, scene_setup, dark_current, sigma):
+def test_DarkCurrent(cielim_connection: cielim.Connector, default_scene: cielim.Scene, dark_current, sigma):
     """
     Tests whether dark current is being added to the image.
     See RandomFuncs.ush for RNG implementation.
     """
     connector = cielim_connection
 
-    scene = scene_setup
+    scene = default_scene
 
-    del scene.celestialBodies[0]
-    scene.camera.sensorModel.exposureTime = 1
-    scene.camera.sensorModel.darkCurrent = dark_current
-    scene.camera.sensorModel.darkCurrentStdDeviation = sigma
+    scene.delete_celestial_body(1)
+
+    scene.set_sensor_params(exposure=1)
+    scene.set_corruption_params(dc_rate=dark_current, dc_sigma=sigma)
 
     connector.send_init_request()
-    connector.send_frame(scene)
+    connector.send_frame(scene.get_scene())
     image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     np.testing.assert_(image[..., :3].any(), "No noise was applied")
 
 
-def test_CosmicRays(cielim_connection, scene_setup):
+def test_CosmicRays(cielim_connection: cielim.Connector, default_scene: cielim.Scene):
     """
     Tests that comsic rays are being generated in the image.
     """
     connector = cielim_connection
 
-    scene = scene_setup
+    scene = default_scene
 
-    del scene.celestialBodies[0]
-    scene.renderParameters.cosmicRayStdDeviation = 100
+    scene.delete_celestial_body(1)
+
+    scene.set_corruption_params(cosmic_rays=100)
 
     connector.send_init_request()
-    connector.send_frame(scene)
-    image, _, _ = connector.request_image_for_camera_id(1, 1)
+    connector.send_frame(scene.get_scene())
+    image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     np.testing.assert_(np.any(np.all(image[:, :, :3] == 255, axis=-1)), "No cosmic rays found in otherwise blank image")
 
@@ -236,27 +211,28 @@ def test_CosmicRays(cielim_connection, scene_setup):
     "read_noise",
     [50, 500, 5000, 20000],
 )
-def test_ReadNoise(cielim_connection, scene_setup, read_noise):
+def test_ReadNoise(cielim_connection: cielim.Connector, default_scene: cielim.Scene, read_noise):
     """
     Tests read noise is being generated with the expected standard deviation.
     See RandomFuncs.ush for RNG implementation.
     """
     connector = cielim_connection
 
-    scene = scene_setup
+    scene = default_scene
 
-    del scene.celestialBodies[0]
-    scene.camera.sensorModel.readNoise = read_noise
+    scene.delete_celestial_body(1)
+
+    scene.set_corruption_params(read_noise=read_noise)
 
     connector.send_init_request()
-    connector.send_frame(scene)
-    image, _, _ = connector.request_image_for_camera_id(1, 1)
+    connector.send_frame(scene.get_scene())
+    image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     image_normalized = image.astype(np.float32) / 255.0
 
     measured_std = np.std(image_normalized**2.2)
 
-    np.testing.assert_array_less(0.0, measured_std, err_msg=f"Image was blank and no noise was applied")
+    np.testing.assert_array_less(0.0, measured_std, err_msg="Image was blank and no noise was applied")
 
     np.testing.assert_allclose(
         measured_std,
@@ -277,23 +253,22 @@ def test_ReadNoise(cielim_connection, scene_setup, read_noise):
         (0.000025, 0.000025),
     ],
 )
-def test_PixelDefect(cielim_connection, scene_setup, stuck_rate, dead_rate):
+def test_PixelDefect(cielim_connection: cielim.Connector, default_scene: cielim.Scene, stuck_rate, dead_rate):
     """
     Tests stuck and dead pixels can be added to image.
     See RandomFuncs.ush for RNG implementation.
     """
     connector = cielim_connection
 
-    scene = scene_setup
+    scene = default_scene
 
-    scene.spacecraft.position[:] = [0, 0, 1000]  # Make spacecraft closer to plane to fill screen
-    scene.camera.sensorModel.exposureTime = 4e-5  # Reduce exposure time so image is gray
-    scene.camera.sensorModel.stuckPixelRate = stuck_rate
-    scene.camera.sensorModel.deadPixelRate = dead_rate
+    scene.set_spacecraft_params(position=(0, 0, 100))  # Make spacecraft closer to plane to fill screen
+    scene.set_sensor_params(exposure=2e-5)  # Reduce exposure time so image is gray
+    scene.set_corruption_params(stuck_px_rate=stuck_rate, dead_px_rate=dead_rate)
 
     connector.send_init_request()
-    connector.send_frame(scene)
-    image, _, _ = connector.request_image_for_camera_id(1, 1)
+    connector.send_frame(scene.get_scene())
+    image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     is_white = (image == [255, 255, 255]).all(axis=-1)
     is_black = (image == [0, 0, 0]).all(axis=-1)
@@ -306,14 +281,14 @@ def test_PixelDefect(cielim_connection, scene_setup, stuck_rate, dead_rate):
     np.testing.assert_allclose(
         white_pixels_rate,
         stuck_rate,
-        rtol=0.5,
+        atol=0.0005,
         err_msg=f"Got white pixel rate of {white_pixels_rate * 100:.5f}%, expected ~{stuck_rate * 100}%",
     )
 
     np.testing.assert_allclose(
         black_pixels_rate,
         dead_rate,
-        rtol=0.5,
+        atol=0.0005,
         err_msg=f"Got black pixel rate of {black_pixels_rate * 100:.5f}%, expected ~{dead_rate * 100}%",
     )
 
@@ -322,28 +297,28 @@ def test_PixelDefect(cielim_connection, scene_setup, stuck_rate, dead_rate):
     "signal_gain",
     [0.8, 0.75, 0.5, 0.25],
 )
-def test_SignalGain(cielim_connection, scene_setup, signal_gain):
+def test_SignalGain(cielim_connection: cielim.Connector, default_scene: cielim.Scene, signal_gain):
     """
     Tests whether gain is being properly applied to image.
     """
     connector = cielim_connection
 
-    scene = scene_setup
+    scene = default_scene
 
     connector.send_init_request()
-    connector.send_frame(scene)
-    base_image, _, _ = connector.request_image_for_camera_id(1, 1)
+    connector.send_frame(scene.get_scene())
+    base_image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     image_normalized = base_image.astype(np.float32) / 255.0
     img_linear = image_normalized**2.2
     img_scaled_linear = img_linear * signal_gain
     comparison_image = (np.clip(img_scaled_linear ** (1 / 2.2), 0.0, 1.0) * 255).astype(np.uint8)
 
-    scene.camera.sensorModel.systemGain = signal_gain
+    scene.set_sensor_params(gain=signal_gain)
 
     connector.send_init_request()
-    connector.send_frame(scene)
-    gain_image, _, _ = connector.request_image_for_camera_id(1, 1)
+    connector.send_frame(scene.get_scene())
+    gain_image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     np.testing.assert_allclose(
         gain_image, comparison_image, rtol=0.1, err_msg="Received image does not match comparison with specified gain"

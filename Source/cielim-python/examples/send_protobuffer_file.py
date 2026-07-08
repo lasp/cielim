@@ -1,7 +1,9 @@
-from context import driver, launcher
-import os
-import cv2
 import argparse
+import os
+
+import cv2
+
+import cielim
 
 current_file_path = os.path.dirname(__file__)
 
@@ -9,7 +11,7 @@ file_dir = os.path.dirname(os.path.dirname(os.path.dirname(current_file_path))) 
 test_dir = os.path.dirname(current_file_path) + "/support-data/protobufs/"
 
 if __name__ == "__main__":
-    connector = driver.Connector()
+    connector = cielim.Connector()
 
     parser = argparse.ArgumentParser(
         description="Send protobuf to Cielim using either a new Cielim or already running Cielim process"
@@ -50,7 +52,7 @@ if __name__ == "__main__":
     if args.host is not None:
         connector.connect(args.host)
     else:
-        launch = launcher.Launcher()
+        launch = cielim.Launcher()
         connector.connect(launch.launch())
 
     if args.filename is not None:
@@ -68,7 +70,7 @@ if __name__ == "__main__":
     else:
         file = test_dir + file_name
 
-    file_handler = driver.MessageFileHandler(file)
+    file_handler = cielim.CielimMessageFileHandler(file)
 
     idx = 0
     image = None
@@ -126,13 +128,21 @@ if __name__ == "__main__":
         sorted_frames = sorted(frames, key=extract_index)
 
         first_frame = cv2.imread(os.path.join(image_folder, sorted_frames[0]))
+
+        if first_frame is None:
+            raise TypeError(f"Video frames could not be found at {os.path.join(image_folder, sorted_frames[0])}")
+
         height, width, _ = first_frame.shape
         video_out = cv2.VideoWriter(
-            f"{file_name_base}.mp4", cv2.VideoWriter_fourcc(*"mp4v"), args.video, (width, height)
+            f"{file_name_base}.mp4", cv2.VideoWriter.fourcc(*"mp4v"), args.video, (width, height)
         )
 
         for frame_name in sorted_frames:
             frame = cv2.imread(os.path.join(image_folder, frame_name))
+
+            if frame is None:
+                raise TypeError("Frame could not be found")
+
             video_out.write(frame)
 
         video_out.release()

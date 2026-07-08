@@ -1,6 +1,6 @@
-import sys
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
@@ -142,6 +142,7 @@ def build_proto_files():
                     f"--proto_path={str(PROTO_ROOT)}",
                     f"--cpp_out={str(PROTO_ROOT)}",
                     f"--python_out={os.path.join(str(PROJECT_ROOT), 'Source', 'cielim-python', 'cielim')}",
+                    f"--pyi_out={os.path.join(str(PROJECT_ROOT), 'Source', 'cielim-python', 'cielim')}",
                     file.name,
                 ],
                 check=True,

@@ -1,15 +1,15 @@
 from abc import ABC, abstractmethod
 import numpy as np
 
-"""
-Variable mapping class:
- - provide the location of the data
- - create a map between specific data variables and parameters and cielim
- - define the abstract methods to get simulation data
- """
-
 
 class VariableMap(ABC):
+    """
+    Variable mapping class:
+    - provide the location of the data
+    - create a map between specific data variables and parameters and cielim
+    - define the abstract methods to get simulation data
+    """
+
     def __init__(self):
         self.variable_map = {}
         self.parameter_map = {}

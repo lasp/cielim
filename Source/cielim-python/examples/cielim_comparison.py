@@ -1,16 +1,16 @@
-from pathlib import Path
 import sys
+from pathlib import Path
+
 import cv2
 import numpy as np
 from PIL import Image
+
+from cielim.utils import image_comparison_toolkit as image_comparison
 
 HERE = Path(__file__).resolve().parent
 CIELIM_ROOT = HERE.parent
 
 sys.path.insert(0, str(CIELIM_ROOT))
-
-import context
-from image_comparison_toolkit import generate_plots
 
 BASE_DIR = CIELIM_ROOT / "support-data" / "giant-vesta"
 
@@ -83,7 +83,7 @@ if __name__ == "__main__":
         crop_c = crop_roi(img_c, pad_c)
         crop_g = crop_roi(img_g, pad_g)
 
-        generate_plots(
+        image_comparison.generate_plots(
             crop_c,
             crop_g,
             title1=cielim_img.stem,

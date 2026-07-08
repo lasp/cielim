@@ -1,12 +1,14 @@
-import os, shutil
-from pathlib import Path
 import importlib.util
-import pytest
-import sys
+import os
+import shutil
 import subprocess
-import numpy as np
+import sys
+from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+import numpy as np
+import pytest
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 EXAMPLES_DIR = PROJECT_ROOT / "examples"
 
 

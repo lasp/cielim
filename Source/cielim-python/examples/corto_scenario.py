@@ -4,10 +4,9 @@ import os
 import cv2
 import numpy as np
 
-from context import driver, launcher, variable_map
-from context import cielimMessage_pb2
-from context import scene
-from context import rigid_body_kinematics
+import cielim
+from cielim import variable_map
+from cielim.utils import rigid_body_kinematics as rbk
 
 current_file_path = os.path.dirname(__file__)
 
@@ -32,15 +31,15 @@ class CortoReader(variable_map.VariableMap):
         self.read_geometry_data()
         self.read_scene_data()
 
-    def get_number_of_simulations(self):
+    def get_number_of_simulations(self, variable_name):
         """
         Provide the number of simulations that are in the data
         """
         self.num_images = len(self.geometry_dict["body"]["position"])
         return self.num_images
 
-    def get_simulation_time(self):
-        pass
+    def get_simulation_time(self, variable_name):
+        return []
 
     def set_geometry_directory(self, path: str):
         """
@@ -68,14 +67,14 @@ class CortoReader(variable_map.VariableMap):
         with open(self.data_directory + self.scene_path, "r") as file:
             self.scene_dict = json.loads(file.read())
 
-    def get_simulation_variables(self, cielim_variable_name, run_number):
+    def get_simulation_variables(self, cielim_variable_name, run_number, time):
         """
         Extract a variable from a specific run
         Note: if the variable is not in the mapping dictionary, raise a KeyError
         """
         try:
             key = list(filter(lambda key: self.variable_map[key] == cielim_variable_name, self.variable_map))[0]
-        except:
+        except Exception:
             raise KeyError(cielim_variable_name + " was not in the map")
 
         components = key.split(".")
@@ -87,14 +86,14 @@ class CortoReader(variable_map.VariableMap):
 
         return data[run_number]
 
-    def get_simulation_parameters(self, cielim_parameter_name):
+    def get_simulation_parameters(self, cielim_parameter_name, run_number):
         """
         Extract a variable from a specific run
         Note: if the variable is not in the mapping dictionary, raise a KeyError
         """
         try:
             key = list(filter(lambda key: self.variable_map[key] == cielim_parameter_name, self.variable_map))[0]
-        except:
+        except Exception:
             raise KeyError(cielim_parameter_name + " was not in the map")
 
         components = key.split(".")
@@ -107,48 +106,34 @@ class CortoReader(variable_map.VariableMap):
         return data
 
 
-""" Default scene setup """
+def scene_setup() -> cielim.Scene:
+    scene = cielim.Scene()
 
+    scene.set_spacecraft_params(position=(0, 0, -1000000), velocity=(0, 1000, 0))
 
-def scene_setup():
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+    scene.set_lens_params(fov=(30 * np.pi / 180, 20 * np.pi / 180))
 
-    body = protobuf_message.celestialBodies.add()
-    body.bodyName = "bennu"
-    [body.position.append(item) for item in [0, 0, 0]]
-    [body.velocity.append(item) for item in [0, 0, 0]]
-    [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
+    scene.set_sensor_params(
+        resolution=(2000, 1500),
+        exposure=1,
+        sensor_dims=(13.3e-3, 13.3e-3),
+        well_capacity=120_000,
+    )
 
-    body.model.shapeModel = "bennu_normalized"
-    body.model.meanRadius = 246
-    body.model.refModel.brdfModel = "Regolith"
+    scene.set_celestial_body_params(0, position=(0, 0, -10000))
 
-    sun = protobuf_message.celestialBodies.add()
-    sun.bodyName = "sun"
-    [sun.position.append(item) for item in [0, 0, -10000]]
-    [sun.attitude.append(item) for item in [0, 0, 0]]
+    index = scene.add_celestial_body("bennu")
 
-    protobuf_message.camera.cameraId = 1
-    protobuf_message.camera.parentName = "cielim_sat"
-    protobuf_message.camera.sensorModel.exposureTime = 1
-    [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [30 * np.pi / 180, 20 * np.pi / 180]]
-    [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.cameraPositionInBody.append(item) for item in [1, 1, 1]]
-    [protobuf_message.camera.sensorModel.resolution.append(item) for item in [2000, 1500]]
+    scene.set_celestial_body_params(index, mesh_shape="bennu_normalized", mesh_brdf="Regolith", mesh_radius=246)
 
-    protobuf_message.spacecraft.spacecraftName = "cielim_sat"
-    [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -1000000]]
-    [protobuf_message.spacecraft.velocity.append(item) for item in [0, 1000, 0]]
-    [protobuf_message.spacecraft.attitude.append(item) for item in [0, 0, 0]]
-    return protobuf_message
+    return scene
 
 
 """ Example script to read and save images from a Corto scenario """
 
 
 def corto_scenario():
-    scene_frame = scene.Scene()
-    scene_frame.set_existing_message(scene_setup())
+    scene = scene_setup()
 
     reader = CortoReader()
     data_path = os.path.dirname(current_file_path) + "/support-data/corto-bennu-inputs/"
@@ -173,65 +158,56 @@ def corto_scenario():
     directory_path = current_file_path + "/images-corto"
     os.makedirs(directory_path, exist_ok=True)
 
-    connector = driver.Connector()
-    launch = launcher.Launcher()
+    connector = cielim.Connector()
+    launch = cielim.Launcher()
     connector.connect(launch.launch())
 
-    number_of_images = int(reader.get_number_of_simulations() / 1000)
+    number_of_images = int(reader.get_number_of_simulations("") / 1000)
     for image_number in range(number_of_images):
         print("Processing image " + str(image_number))
 
-        fov = reader.get_simulation_parameters("camera.lensModel.fieldOfView") * np.pi / 180
-        res_x = reader.get_simulation_parameters("camera.sensorModel.resolution_x")
-        res_y = reader.get_simulation_parameters("camera.sensorModel.resolution_y")
-        exposure = reader.get_simulation_parameters("camera.sensorModel.exposureTime")
+        fov = reader.get_simulation_parameters("camera.lensModel.fieldOfView", 0) * np.pi / 180
+        res_x = reader.get_simulation_parameters("camera.sensorModel.resolution_x", 0)
+        res_y = reader.get_simulation_parameters("camera.sensorModel.resolution_y", 0)
+        exposure = reader.get_simulation_parameters("camera.sensorModel.exposureTime", 0)
 
-        asteroid_position = reader.get_simulation_variables("asteroid.position", image_number)
-        asteroid_quaternion = reader.get_simulation_variables("asteroid.attitude", image_number)
+        asteroid_position = reader.get_simulation_variables("asteroid.position", image_number, 0)
+        asteroid_quaternion = reader.get_simulation_variables("asteroid.attitude", image_number, 0)
 
-        spacecraft_position = reader.get_simulation_variables("spacecraft.position", image_number)
-        spacecraft_quaternion = reader.get_simulation_variables("spacecraft.attitude", image_number)
+        spacecraft_position = reader.get_simulation_variables("spacecraft.position", image_number, 0)
+        spacecraft_quaternion = reader.get_simulation_variables("spacecraft.attitude", image_number, 0)
 
-        sun_position = reader.get_simulation_variables("sun.position", image_number)
+        sun_position = reader.get_simulation_variables("sun.position", image_number, 0)
 
         asteroid_ep = np.array([asteroid_quaternion[-1]] + asteroid_quaternion[:3])
-        asteroid_mrp = rigid_body_kinematics.quaternion_to_mrp(asteroid_ep)
-        asteroid_mrp = np.eye(3)
+        asteroid_mrp = rbk.quaternion_to_mrp(asteroid_ep)
+        # asteroid_mrp = np.eye(3)
 
         spacecraft_ep = np.array(spacecraft_quaternion)
-        spacecraft_mrp = rigid_body_kinematics.quaternion_to_mrp(spacecraft_ep)
+        spacecraft_mrp = rbk.quaternion_to_mrp(spacecraft_ep)
         TC = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
 
-        camera_mrp = rigid_body_kinematics.dcm_to_mrp(TC)
-        message = scene_frame.get_scene()
+        camera_mrp = rbk.dcm_to_mrp(TC)
 
-        message.camera.lensModel.ClearField("fieldOfView")
-        message.camera.sensorModel.ClearField("resolution")
-        message.camera.ClearField("bodyFrameToCameraMrp")
-        message.camera.sensorModel.exposureTime = exposure / 10000
-        [message.camera.sensorModel.resolution.append(item) for item in [res_x, res_y]]
-        [message.camera.lensModel.fieldOfView.append(item) for item in [fov, fov]]
-        [message.camera.bodyFrameToCameraMrp.append(item) for item in camera_mrp]
+        scene.set_celestial_body_params(
+            0, position=tuple(1.496e11 * np.array(sun_position) / np.linalg.norm(sun_position))
+        )
+        scene.set_celestial_body_params(
+            1, position=tuple(1000 * np.array(asteroid_position)), attitude=tuple(asteroid_mrp.flatten().tolist())
+        )
 
-        message.spacecraft.ClearField("position")
-        message.spacecraft.ClearField("attitude")
-        [message.spacecraft.position.append(item) for item in np.array(spacecraft_position) * 1000]
-        [message.spacecraft.attitude.append(item) for item in np.array(spacecraft_mrp)]
+        scene.set_spacecraft_params(
+            position=tuple(1000 * np.array(spacecraft_position)), attitude=tuple(np.array(spacecraft_mrp))
+        )
 
-        message.celestialBodies[0].ClearField("position")
-        message.celestialBodies[0].ClearField("attitude")
-        [message.celestialBodies[0].position.append(item) for item in np.array(asteroid_position) * 1000]
-        [message.celestialBodies[0].attitude.append(item) for item in asteroid_mrp.flatten()]
+        scene.set_camera_params(attitude=tuple(camera_mrp))
 
-        message.celestialBodies[1].ClearField("position")
-        [
-            message.celestialBodies[1].position.append(item)
-            for item in np.array(sun_position) / np.linalg.norm(sun_position) * 1.496e11
-        ]
+        scene.set_lens_params(fov=(fov, fov))
 
-        scene_frame.set_existing_message(message)
-        connector.send_frame(scene_frame.get_scene())
-        [image, _, _] = connector.request_image_for_camera_id(1, 1)
+        scene.set_sensor_params(resolution=(res_x, res_y), exposure=exposure / 10000)
+
+        connector.send_frame(scene.get_scene())
+        [image, _, _] = connector.request_image_for_camera_id(1, True, False)
         cv2.imwrite(directory_path + "/image-" + str(image_number) + ".png", image)
 
     connector.disconnect()

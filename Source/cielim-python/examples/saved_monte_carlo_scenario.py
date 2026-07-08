@@ -5,9 +5,8 @@ import pickle
 import cv2
 import numpy as np
 
-from context import driver, launcher, variable_map
-from context import cielimMessage_pb2
-from context import scene
+import cielim
+from cielim import variable_map
 
 current_file_path = os.path.dirname(__file__)
 
@@ -34,7 +33,7 @@ class BasiliskMCReader(variable_map.VariableMap):
                 with open(os.path.join(self.data_directory, variable_name), "rb") as file:
                     self.raw_data[variable_name] = pickle.load(file)
 
-    def get_number_of_simulations(self):
+    def get_number_of_simulations(self, variable_name):
         """
         Provide the number of simulations that are in the data
         """
@@ -42,7 +41,7 @@ class BasiliskMCReader(variable_map.VariableMap):
         self.num_runs = self.raw_data[first_key].columns.levshape[0]
         return self.num_runs
 
-    def get_simulation_time(self):
+    def get_simulation_time(self, variable_name):
         """
         Provide the simulation time vector in the data
         """
@@ -58,8 +57,8 @@ class BasiliskMCReader(variable_map.VariableMap):
             self.raw_parameters[run_number] = json.load(file)
 
         try:
-            parameter = self.parameter_map.keys()[self.parameter_map.values().index(cielim_parameter_name)]
-        except:
+            parameter = list(filter(lambda key: self.variable_map[key] == cielim_parameter_name, self.variable_map))[0]
+        except Exception:
             parameter = cielim_parameter_name
 
         return json.loads(self.raw_parameters[run_number][parameter])
@@ -71,7 +70,7 @@ class BasiliskMCReader(variable_map.VariableMap):
         """
         try:
             key = list(filter(lambda key: self.variable_map[key] == cielim_variable_name, self.variable_map))[0]
-        except:
+        except Exception:
             key = cielim_variable_name
 
         data = self.raw_data[key]
@@ -81,44 +80,29 @@ class BasiliskMCReader(variable_map.VariableMap):
 """ Default scene setup """
 
 
-def scene_setup():
-    protobuf_message = cielimMessage_pb2.CielimMessage()
+def scene_setup() -> cielim.Scene:
+    scene = cielim.Scene()
 
-    body = protobuf_message.celestialBodies.add()
-    body.bodyName = "2000269"
-    [body.position.append(item) for item in [0, 0, 0]]
-    [body.velocity.append(item) for item in [0, 0, 0]]
-    [body.attitude.append(item) for item in np.eye(3).flatten().tolist()]
+    scene.set_spacecraft_params(position=(0, 0, -1000000), velocity=(0, 1000, 0))
 
-    body.model.shapeModel = "bennu_normalized"
-    body.model.meanRadius = 500 * 1e3
+    scene.set_lens_params(fov=(30 * np.pi / 180, 20 * np.pi / 180))
 
-    sun = protobuf_message.celestialBodies.add()
-    sun.bodyName = "sun"
-    [sun.position.append(item) for item in [0, 0, -10000]]
-    [sun.attitude.append(item) for item in [0, 0, 0]]
+    scene.set_sensor_params(resolution=(2000, 1500), exposure=1)
 
-    protobuf_message.camera.cameraId = 1
-    protobuf_message.camera.parentName = "cielim_sat"
-    protobuf_message.camera.sensorModel.exposureTime = 1
-    [protobuf_message.camera.lensModel.fieldOfView.append(item) for item in [30 * np.pi / 180, 20 * np.pi / 180]]
-    [protobuf_message.camera.bodyFrameToCameraMrp.append(item) for item in [0, 0, 0]]
-    [protobuf_message.camera.cameraPositionInBody.append(item) for item in [1, 1, 1]]
-    [protobuf_message.camera.sensorModel.resolution.append(item) for item in [2000, 1500]]
+    scene.set_celestial_body_params(0, position=(0, 0, -10000))
 
-    protobuf_message.spacecraft.spacecraftName = "cielim_sat"
-    [protobuf_message.spacecraft.position.append(item) for item in [0, 0, -1000000]]
-    [protobuf_message.spacecraft.velocity.append(item) for item in [0, 1000, 0]]
-    [protobuf_message.spacecraft.attitude.append(item) for item in [0, 0, 0]]
-    return protobuf_message
+    index = scene.add_celestial_body("2000269")
+
+    scene.set_celestial_body_params(index, mesh_shape="bennu_normalized", mesh_brdf="Lambertian", mesh_radius=500 * 1e3)
+
+    return scene
 
 
 """ Example script to read and save images from a Basilisk MC scenario """
 
 
 def saved_monte_carlo_scenario():
-    scene_frame = scene.Scene()
-    scene_frame.set_existing_message(scene_setup())
+    scene = scene_setup()
 
     reader = BasiliskMCReader()
     data_path = os.path.dirname(current_file_path) + "/support-data/monte-carlo-sample/"
@@ -126,31 +110,30 @@ def saved_monte_carlo_scenario():
     reader.add_variable_mapping("scStateOutMsg.sigma_BN.data", "attitude")
     reader.add_variable_mapping("sNavTransMsg.r_BN_N.data", "position")
     reader.read_simulation_data()
+
     # prep file for saving
     directory_path = current_file_path + "/images-saved-monte-carlo"
     os.makedirs(directory_path, exist_ok=True)
 
-    connector = driver.Connector()
-    launch = launcher.Launcher()
+    connector = cielim.Connector()
+    launch = cielim.Launcher()
     connector.connect(launch.launch())
     connector.send_init_request()
 
     cadence = 60
-    for run_number in range(reader.get_number_of_simulations()):
+
+    for run_number in range(reader.get_number_of_simulations("")):
         r_BcB_B = reader.get_simulation_parameters("TaskList[0].TaskModels[0].hub.r_BcB_B", run_number)
-        for time in reader.get_simulation_time():
+
+        for time in reader.get_simulation_time(""):
             if np.round(time, 2) % cadence == 0:
                 position = reader.get_simulation_variables("position", run_number, time)
                 attitude = reader.get_simulation_variables("attitude", run_number, time)
 
-                message = scene_frame.get_scene()
-                message.spacecraft.ClearField("position")
-                message.spacecraft.ClearField("attitude")
-                [message.spacecraft.position.append(item) for item in position]
-                [message.spacecraft.attitude.append(item) for item in attitude]
-                scene_frame.set_existing_message(message)
-                connector.send_frame(scene_frame.get_scene())
-                [image, _, _] = connector.request_image_for_camera_id(1, 1)
+                scene.set_spacecraft_params(position=position, attitude=attitude)
+
+                connector.send_frame(scene.get_scene())
+                [image, _, _] = connector.request_image_for_camera_id(1, True, False)
                 cv2.imwrite(
                     directory_path + "/run-" + str(run_number) + "-time-" + str(np.round(time, 2)) + ".png", image
                 )

@@ -1,7 +1,8 @@
 import os
+
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import pyplot as plt
 
 current_file_path = os.path.dirname(__file__)
 
@@ -55,7 +56,7 @@ def data_analysis(show_plots=True):
     for filename in images:
         image_information = filename.split(".")[0].split("-")
         img = cv2.imread(os.path.join(folder, filename))
-        metric = analysis_function(img, top_left, size)
+        metric = analysis_function(np.array(img), top_left, size)
 
         if int(image_information[1]) == 0:
             time.append(float(image_information[3]) / 60)

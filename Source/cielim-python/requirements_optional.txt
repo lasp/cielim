@@ -1,0 +1,7 @@
+astropy==6.1.4
+matplotlib
+pandas
+pre-commit
+pytest
+scipy
+spiceypy==6.0.0

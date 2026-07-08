@@ -9,6 +9,9 @@ Intermediate
 # Packages installed with vcpkg
 vcpkg_installed/
 
+# Python package info directory
+*.egg-info
+
 # Protobuf bin files
 Content/FlybyData
 
