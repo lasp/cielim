@@ -17,6 +17,7 @@
 #include "Shaders/DistantObjects.h"
 #include "Shaders/GaussianPSF.h"
 #include "Shaders/LensDistortion.h"
+#include "Shaders/LensFlares.h"
 #include "Shaders/QuETonemap.h"
 #include "Shaders/ReadNoise.h"
 #include "Shaders/SignalGain.h"
@@ -26,6 +27,7 @@ DECLARE_GPU_STAT_NAMED(DistantObjects, TEXT("DistantObjects"));
 DECLARE_GPU_STAT_NAMED(QuETonemapping, TEXT("QuantumEfficiencyTonemapping"));
 DECLARE_GPU_STAT_NAMED(LensDistortion, TEXT("LensDistortion"));
 DECLARE_GPU_STAT_NAMED(GaussianPSF, TEXT("GaussianPSF"));
+DECLARE_GPU_STAT_NAMED(LensFlares, TEXT("LensFlares"));
 DECLARE_GPU_STAT_NAMED(CosmicRays, TEXT("CosmicRays"));
 DECLARE_GPU_STAT_NAMED(ReadNoise, TEXT("ReadNoise"));
 DECLARE_GPU_STAT_NAMED(SignalGain, TEXT("SignalGain"));
@@ -128,6 +130,17 @@ void FCielimSceneViewExtension::PrePostProcessPass_RenderThread(FRDGBuilder &Gra
 	if (CorruptionParams.KernelWidth > 0 && CorruptionParams.Sigma > 0.0f)
 	{
 		GaussianPSFPass(GraphBuilder, CorruptionParams, TextureIn, TextureOut);
+		Swap(TextureIn, TextureOut);
+	}
+
+	// Stray-light / lens-flare pass — opt-in per scene via StrayLightModel.enabled. Runs in the
+	// radiance domain (before the QuE tonemap) so its contribution scales with exposure. Skipped on
+	// diagnostic runs (like the sensor-noise passes below) so the flare, an additive artifact, does
+	// not contaminate the CoB / coverage measurements of the true scene signal.
+	if (CameraModel && CameraModel->StrayLightParams.bEnabled && !CameraParams.bIsDiagnosticRun)
+	{
+		LensFlarePass(GraphBuilder, View, CameraModel->SunPosition, CameraModel->SolarSpectralRadiance,
+					  CameraModel->StrayLightParams, CameraParams, TextureIn, TextureOut);
 		Swap(TextureIn, TextureOut);
 	}
 
@@ -312,7 +325,7 @@ void FCielimSceneViewExtension::QuETonemapPass(FRDGBuilder &GraphBuilder, const 
 
 void FCielimSceneViewExtension::LensDistortionPass(FRDGBuilder &GraphBuilder,
 												   const FImageCorruptionParams &CorruptionParams,
-												   FRDGTextureRef &TextureIn, FRDGTextureRef &TextureOut)
+												   const FRDGTextureRef &TextureIn, const FRDGTextureRef &TextureOut)
 {
 	RDG_GPU_STAT_SCOPE(GraphBuilder, LensDistortion);
 	RDG_EVENT_SCOPE(GraphBuilder, "LensDistortion");
@@ -381,6 +394,97 @@ void FCielimSceneViewExtension::GaussianPSFPass(FRDGBuilder &GraphBuilder,
 
 	AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply GaussianPSF V"), GMaxRHIFeatureLevel, Viewport, Viewport,
 					  GaussianPSFShaderV, PSFParamsV);
+}
+
+void FCielimSceneViewExtension::LensFlarePass(FRDGBuilder &GraphBuilder, const FSceneView &View,
+											  const FVector3f &SunPosition, const FVector3f &SolarRadiance,
+											  const FStrayLightParams &StrayLightParams,
+											  const FCameraParams &CameraParams, const FRDGTextureRef &TextureIn,
+											  const FRDGTextureRef &TextureOut)
+{
+	RDG_GPU_STAT_SCOPE(GraphBuilder, LensFlares);
+	RDG_EVENT_SCOPE(GraphBuilder, "LensFlares");
+
+	const FScreenPassTextureViewport Viewport(TextureIn);
+
+	const FMatrix44f ViewProjectionMatrix = FMatrix44f(View.ViewMatrices.GetViewProjectionMatrix());
+	const FMatrix44f ProjectionMatrix = FMatrix44f(View.ViewMatrices.GetProjectionMatrix());
+
+	// Sun position in clip space (direction from camera to sun, projected). Its xy/w give the sun's
+	// screen NDC (used below to place/remap the flare); the shader also uses w <= 0 to cull the flare
+	// when the sun is behind the camera.
+	const FVector3f CameraPosition = static_cast<FVector3f>(View.ViewLocation);
+	const FVector3f CamToSunDirection = (SunPosition - CameraPosition).GetSafeNormal();
+	const FVector4f SunClipPosition = ViewProjectionMatrix.TransformVector(CamToSunDirection);
+
+	// Sun angular radius as a fraction of the vertical half-FoV, so the core disc scales with how
+	// large the sun appears (M[1][1] = 1/tan(FoVy/2)).
+	constexpr float SunRadius = 6.957e8f; // meters
+	const float Distance = FMath::Abs((SunPosition - CameraPosition).Length());
+	const float SunAngularSize = FMath::Atan(SunRadius / Distance);
+	const float FovY_2 = FMath::Atan(1.0f / FMath::Max(ProjectionMatrix.M[1][1], 1e-6));
+	const float SunRadiusUV = SunAngularSize / FovY_2;
+
+	// Stray light is gated on the sun's OFF-BORESIGHT ANGLE, not on whether it projects inside the
+	// frame: a real lens flares from an off-frame sun (light scattering off the baffle/optics) out to
+	// a mechanical shield angle that is a lens property, independent of the sensor crop. The cutoff is
+	// the horizontal FoV half-angle plus the tunable BaffleShieldAngle.
+	const FVector3f Boresight = static_cast<FVector3f>(View.GetViewDirection()).GetSafeNormal();
+	const float SunAngle = FMath::Acos(FMath::Clamp(FVector3f::DotProduct(Boresight, CamToSunDirection), -1.0f, 1.0f));
+	const float FovX_2 = FMath::Atan(1.0f / FMath::Max(ProjectionMatrix.M[0][0], 1e-6));
+	const float CutoffAngle = FovX_2 + FMath::DegreesToRadians(StrayLightParams.BaffleShieldAngle);
+
+	// Visibility holds at 1 across the frame and most of the baffle region, then rolls off to 0 over
+	// the last StrayLightFadeFraction of that region for a soft shield edge.
+	constexpr float StrayLightFadeFraction = 0.25f;
+	const float FadeStart = FovX_2 + (1.0f - StrayLightFadeFraction) * (CutoffAngle - FovX_2);
+	const float StrayLightVisibility = 1.0f - FMath::SmoothStep(FadeStart, CutoffAngle, SunAngle);
+
+	// Flare position. Inside the frame we use the true projected sun so the core sits on the real disc.
+	// Once the sun leaves the frame the tan-magnified projection would fling the flare far off a narrow
+	// frame, so we keep only its screen-direction and remap the radial distance by angle: the sun-proxy
+	// drifts from the frame edge (|UV| = 0.5) out to MaxOffScreenSunUV at the cutoff, so the ghosts
+	// sweep across the frame and out as the sun nears the shield.
+	constexpr float MaxOffScreenSunUV = 1.5f;
+	const FVector2f SunNDC(SunClipPosition.X / SunClipPosition.W, SunClipPosition.Y / SunClipPosition.W);
+	FVector2f SunFlareUV = SunNDC * 0.5f;
+	if (SunAngle > FovX_2)
+	{
+		const float T = FMath::Clamp((SunAngle - FovX_2) / FMath::Max(CutoffAngle - FovX_2, 1e-6f), 0.0f, 1.0f);
+		SunFlareUV = SunNDC.GetSafeNormal() * FMath::Lerp(0.5f, MaxOffScreenSunUV, T);
+	}
+
+	FLensFlares::FParameters *FlaresParams = GraphBuilder.AllocParameters<FLensFlares::FParameters>();
+	FlaresParams->InputTexture = TextureIn;
+	FlaresParams->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
+	FlaresParams->SolarSpectralRadiance = SolarRadiance;
+	FlaresParams->SunClipPosition = SunClipPosition;
+	FlaresParams->SunFlareUV = SunFlareUV;
+	FlaresParams->StrayLightVisibility = StrayLightVisibility;
+	FlaresParams->StrayLightIntensity = StrayLightParams.Intensity;
+	FlaresParams->SunRadiusUV = SunRadiusUV;
+	FlaresParams->AspectRatio = Viewport.Rect.Width() / Viewport.Rect.Height();
+	FlaresParams->CoreSize = StrayLightParams.CoreSize;
+	FlaresParams->GhostSize = StrayLightParams.GhostSize;
+	FlaresParams->GhostTransmittance = StrayLightParams.GhostTransmittance;
+	FlaresParams->Ghost1RelativeSize = StrayLightParams.Ghost1RelativeSize;
+	FlaresParams->Ghost2RelativeSize = StrayLightParams.Ghost2RelativeSize;
+	FlaresParams->Ghost3RelativeSize = StrayLightParams.Ghost3RelativeSize;
+	FlaresParams->Ghost4RelativeSize = StrayLightParams.Ghost4RelativeSize;
+	FlaresParams->GhostBrightnessSizeExponent = StrayLightParams.GhostBrightnessSizeExponent;
+	FlaresParams->CoronaFalloffExponent = StrayLightParams.CoronaFalloffExponent;
+	FlaresParams->CoronaIntensity = StrayLightParams.CoronaIntensity;
+	FlaresParams->NumRays = StrayLightParams.NumRays;
+	FlaresParams->RaySharpness = StrayLightParams.RaySharpness;
+	FlaresParams->RayWeight = StrayLightParams.RayWeight;
+	FlaresParams->ExposureTime = CameraParams.ExposureTime;
+	FlaresParams->IsGrayscale = static_cast<uint32>(CameraParams.bIsGrayscale);
+	FlaresParams->RenderTargets[0] = FRenderTargetBinding(TextureOut, ERenderTargetLoadAction::EClear);
+
+	const TShaderMapRef<FLensFlares> LensFlareShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+
+	AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Apply Lens Flares"), GMaxRHIFeatureLevel, Viewport, Viewport,
+					  LensFlareShader, FlaresParams);
 }
 
 void FCielimSceneViewExtension::ReadNoisePass(FRDGBuilder &GraphBuilder, const FCameraParams &CameraParams,

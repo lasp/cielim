@@ -48,10 +48,15 @@ private:
 							   const FRDGTextureRef &TextureOut);
 
 	static void LensDistortionPass(FRDGBuilder &GraphBuilder, const FImageCorruptionParams &CorruptionParams,
-								   FRDGTextureRef &TextureIn, FRDGTextureRef &TextureOut);
+								   const FRDGTextureRef &TextureIn, const FRDGTextureRef &TextureOut);
 
 	static void GaussianPSFPass(FRDGBuilder &GraphBuilder, const FImageCorruptionParams &CorruptionParams,
 								FRDGTextureRef &TextureIn, FRDGTextureRef &TextureOut);
+
+	static void LensFlarePass(FRDGBuilder &GraphBuilder, const FSceneView &View, const FVector3f &SunPosition,
+							  const FVector3f &SolarRadiance, const FStrayLightParams &StrayLightParams,
+							  const FCameraParams &CameraParams, const FRDGTextureRef &TextureIn,
+							  const FRDGTextureRef &TextureOut);
 
 	static void ReadNoisePass(FRDGBuilder &GraphBuilder, const FCameraParams &CameraParams,
 							  const FImageCorruptionParams &CorruptionParams, const FRDGTextureRef &TextureIn,
