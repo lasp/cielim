@@ -2,6 +2,7 @@
   "name": "cielim",
   "version-string": "0.1.0",
   "dependencies": [
+    "spdlog",
     "zeromq",
     "cppzmq",
     "protobuf"
