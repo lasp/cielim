@@ -2,13 +2,13 @@
 
 ## Prerequisites
 
-### Unreal Engine 5.6
+### CMake
 
-Install Unreal Engine 5.6 via the Epic Games Launcher. The build script will check that the engine is installed in the default location ``/Users/Shared/Epic Games/UE_5.6`` (Mac) or ``C:/Program Files/Epic Games/UE_5.6`` (Windows). If the engine is not found in the default location, a location will need to be provided which is then recorded in ``build_config.json``.
+CMake (v3.28+) is required to build Cielim as well as a compiler (MSVC, GCC, Clang) and build generator (MSBuild, Ninja, other) that are of a recent enough version to support C++20 modules and C++23.
 
-### vcpkg
+### Vcpkg
 
-Cielim uses [vcpkg](https://vcpkg.io) in **manifest mode** to manage its C++ third-party dependencies (zeromq, cppzmq, protobuf). vcpkg must be installed separately and does **not** live inside this repository.
+Cielim uses [vcpkg](https://vcpkg.io) in **manifest mode** to manage its C++ third-party dependencies. Vcpkg must be installed separately and does **not** live inside this repository.
 
 1. Clone and bootstrap vcpkg once.
 
@@ -35,23 +35,18 @@ The build script ``build.py`` requires Python 3. No additional packages beyond t
 
 ## Building
 
-The project can be built from an IDE such as Rider or from the build script ``build.py``. When running the build script, options can be added to limit to just building, cooking assets / shaders, etc. These are elaborated in the Wiki pages for this repository.
+The project can be built from an IDE, from the build script ``build.py``, or by manually running CMake commands from the command line. Build artifacts and executables are built to ``<project_dir>/build/<preset>/``. When running the build script, options can be added to limit to just configuring, building, etc. These are elaborated in the Wiki pages for this repository.
 
    ```bash
-   python3 build.py           # Build, cook, and package executable
-   python3 build.py --build   # Only build files
+   python3 build.py           # Full clean build
+   python3 build.py --build   # Only build
    ```
 
-The script will:
+Build presets are defined in ``CMakePresets.json`` and user-specific presets can be defined in ``CMakeUserPresets.json``. A preset can be chosen by using the ``--preset`` flag with the build script. This will set the preset and save it in ``build_config.json``. If no preset is given, the script will use whatever preset is set in that file. If it doesn't have a preset saved or doesn't exist, the build script will use a default preset and save that in the build config file.
 
-1. Locate the Unreal Engine installation.
-2. Invoke ``RunUAT`` → ``BuildCookRun`` to build the editor target.
+Vcpkg runs in **manifest mode**: dependencies and version overrides are declared in ``vcpkg.json``. These will be built and installed to ``<project_dir>/build/<preset>/vcpkg_installed/<triplet>/`` automatically before CMake generates build files during configuration.
 
-As part of the Unreal Build Tool (UBT) **PreBuildSteps**, the python script ``vcpkg_install.py`` is called before the project source files are compiled which installs dependencies using vcpkg. Alternatively, this script can be called manually. If the dependencies are already installed, the script will do nothing.
-
-Vcpkg runs in **manifest mode**: dependencies and version overrides are declared in ``vcpkg.json``. If the packages are already up-to-date it exits in milliseconds. Libraries are installed to ``<ProjectDir>/vcpkg_installed/<triplet>/`` and are ignored by git.
-
-It is important that the toolchain version that vcpkg uses to build the dependencies **is the exact same** as the toolchain version used when building the project source files, otherwise you will experience linking errors. For example, if on Windows, vcpkg will say something like ``Compiler found: <path_to_MSVC>/<MSVC_version>/bin/Hostx64/x64/cl.exe``, and the Unreal Build Tool (UBT) will output something like ``Using Visual Studio 2022 <MSVC_version> toolchain``. If those two versions do not match exactly, you will get linking errors.
+It is important that the toolchain version that vcpkg uses to build the dependencies **is the exact same** as the toolchain version used when building the project source files, otherwise you may experience linking errors.
 
 ## Supported Platforms
 
@@ -61,27 +56,27 @@ It is important that the toolchain version that vcpkg uses to build the dependen
 | Linux | ``x64-linux`` | Static (.a) |
 | Windows | ``x64-windows-static-md`` | Static (.lib) |
 
-**Note**: Both arm64 and x64 architectures are supported for all platforms and the correct one is selected automatically.
+**Note**: Both arm64 and x64 architectures are supported for all platforms and the correct one is selected automatically. Vcpkg triplet can be manually chosen with a preset.
 
 ## Regenerating Protobuf Sources
 
-The generated files ``Source/cielim/Protobuf/cielimMessage.pb.{h,cc}`` and ``Source/cielim/Protobuf/imageDiagnostics.pb.{h,cc}`` must be regenerated whenever the corresponding ``.proto`` files change. Use the **same protoc version** as the linked library to avoid header/binary mismatches.
+Generated ``.pb.{h,cc}`` files must be regenerated whenever the corresponding ``.proto`` files change. Use the **same protoc version** as the linked library to avoid header/binary mismatches.
 
-After a successful vcpkg install, the matching protoc binary is available as a symlink in the installed tree. The generated files can then be rebuilt using the python script ``build_protobuf.py`` or manually.
+After a successful vcpkg install, the matching protoc binary is available in the vcpkg install directory. The generated files can then be rebuilt using the python script ``build_protobuf.py`` or manually.
 
    ```bash
-   PROTOC="vcpkg_installed/<triplet>/tools/protobuf/protoc"
-   PROTO_DIR="Source/cielim/Protobuf"
-   PROTO_DIR_PY="Source/cielim-python/cielim"
+   PROTOC="build/<preset>/vcpkg_installed/<triplet>/tools/protobuf/protoc"
+   PROTO_DIR="src/cielim/Protobuf"
+   PROTO_DIR_PY="src/cielim-python/cielim"
 
    $PROTOC --proto_path=$PROTO_DIR --cpp_out=$PROTO_DIR --python_out=$PROTO_DIR_PY cielimMessage.proto imageDiagnostics.proto
    ```
 
 ## Troubleshooting
 
-- ``VCPKG_ROOT is not set`` / linker errors for zmq or protobuf symbols:
+- ``VCPKG_ROOT is not set`` / linker errors dependency symbols:
 
-   Ensure ``VCPKG_ROOT`` is exported in your shell environment **before** launching the build. Also verify toolchain version match as described in the *Building* section of this document. If on MacOS, linking errors may also arise if CMake cannot locate your MacOS SDK version. This can be fixed by updating XCode / XCode Command Line Tools, or by manually exporting the `SDKROOT` environment variable.
+   Ensure ``VCPKG_ROOT`` is exported in your shell environment **before** launching the build. Also verify toolchain versions match as described in the *Building* section of this document. If on MacOS, linking errors may also arise if CMake cannot locate your MacOS SDK version. This can be fixed by updating XCode / XCode Command Line Tools, or by manually exporting the `SDKROOT` environment variable.
 
    ```bash
    export SDKROOT="$(xcrun --sdk macosx --show-sdk-path)"
@@ -93,4 +88,4 @@ After a successful vcpkg install, the matching protoc binary is available as a s
 
 - ``error: This file was generated by a newer version of protoc``:
 
-   The generated ``*.pb.h`` files are out of sync with the installed protobuf version. Regenerate them using the *Regenerating Protobuf Sources* instructions above.
+   The generated ``*.pb.{h,cc}`` files are out of sync with the installed protobuf version. Regenerate them using the *Regenerating Protobuf Sources* instructions above.

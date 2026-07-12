@@ -1,0 +1,52 @@
+{
+    "version": 6,
+    "configurePresets": [
+        {
+            "name": "develop",
+            "displayName": "Default development",
+            "description": "Sets build and install directory, as well as VCPKG toolchain.",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "develop-windows",
+            "displayName": "Windows development",
+            "description": "Set configuration for Windows x64 development.",
+            "inherits": "develop",
+            "cacheVariables": {
+                "VCPKG_TARGET_TRIPLET": "x64-windows-static-md"
+            }
+        },
+        {
+            "name": "mac-clang",
+            "displayName": "Mac development with Clang",
+            "description": "Set configuration for Mac arm64 development with Clang.",
+            "inherits": "develop",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/custom-ports",
+                "VCPKG_TARGET_TRIPLET": "arm64-osx-clang",
+                "VCPKG_HOST_TRIPLET": "arm64-osx-clang",
+                "CMAKE_C_COMPILER": "/opt/homebrew/opt/llvm/bin/clang",
+                "CMAKE_CXX_COMPILER": "/opt/homebrew/opt/llvm/bin/clang++"
+            }
+        },
+        {
+            "name": "linux-clang",
+            "displayName": "Linux development with Clang",
+            "description": "Set configuration for Linux x64 development with Clang.",
+            "inherits": "develop",
+            "generator": "Ninja",
+            "cacheVariables": {
+                "VCPKG_OVERLAY_TRIPLETS": "${sourceDir}/cmake/custom-ports",
+                "VCPKG_TARGET_TRIPLET": "x64-linux-clang",
+                "VCPKG_HOST_TRIPLET": "x64-linux-clang",
+                "CMAKE_C_COMPILER": "/usr/bin/clang",
+                "CMAKE_CXX_COMPILER": "/usr/bin/clang++"
+            }
+        }
+    ]
+}

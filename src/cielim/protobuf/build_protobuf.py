@@ -1,34 +1,44 @@
-import os
-import subprocess
-import sys
 from pathlib import Path
+import json
+import os
+import platform
+import subprocess
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 PROTO_ROOT = Path(__file__).resolve().parent
-
-sys.path.append(str(PROJECT_ROOT))
-
-from vcpkg_install import get_triplet
 
 TOP_BLOCK = r"""#if defined(_MSC_VER)
 #pragma warning(push)
 #pragma warning(disable: 4458 4702 4800)
 #endif
-
-#pragma push_macro("check")
-#pragma push_macro("verify")
-
-#undef check
-#undef verify
 """
 
-BOTTOM_BLOCK = r"""#pragma pop_macro("verify")
-#pragma pop_macro("check")
-
-#if defined(_MSC_VER)
+BOTTOM_BLOCK = r"""#if defined(_MSC_VER)
 #pragma warning(pop)
 #endif
 """
+
+
+def get_triplet():
+    system = platform.system().lower()  # Operating system name
+    machine = platform.machine().lower()  # System architecture name
+
+    if machine in ("x86_64", "amd64"):
+        architecture = "x64"
+    elif machine in ("arm64", "aarch64"):
+        architecture = "arm64"
+    else:
+        raise RuntimeError(f"Unsupported architecture: {machine}")
+
+    # All libraries are static and so only static triplets should be used
+    if system == "windows":
+        return f"{architecture}-windows-static-md"
+    elif system == "darwin":
+        return f"{architecture}-osx"
+    elif system == "linux":
+        return f"{architecture}-linux"
+    else:
+        raise RuntimeError(f"Unsupported platform: {system}")
 
 
 # Adds header and footer to .pb.h files to fix macro collisions with Unreal and ignore Protobuf internal warnings
@@ -120,6 +130,18 @@ def patch_pb_cc():
 
 
 def build_proto_files():
+    config_path = os.path.join(str(PROJECT_ROOT), "build_config.json")
+
+    if os.path.exists(config_path):
+        config = json.load(open(config_path, "r"))
+    else:
+        raise FileNotFoundError(f"Could not find build config at {config_path}")
+
+    if "preset" in config:
+        preset = config["preset"]
+    else:
+        raise RuntimeError("Preset could not be found in build config")
+
     triplet = get_triplet()
 
     if "windows" in triplet:
@@ -127,7 +149,9 @@ def build_proto_files():
     else:
         protoc_name = "protoc"
 
-    protoc_exec = os.path.join(str(PROJECT_ROOT), "vcpkg_installed", triplet, "tools", "protobuf", protoc_name)
+    protoc_exec = os.path.join(
+        str(PROJECT_ROOT), "build", preset, "vcpkg_installed", triplet, "tools", "protobuf", protoc_name
+    )
 
     if not os.path.exists(protoc_exec):
         raise FileNotFoundError(f"Could not find protoc executable at {protoc_exec}")
@@ -141,8 +165,8 @@ def build_proto_files():
                     protoc_exec,
                     f"--proto_path={str(PROTO_ROOT)}",
                     f"--cpp_out={str(PROTO_ROOT)}",
-                    f"--python_out={os.path.join(str(PROJECT_ROOT), 'Source', 'cielim-python', 'cielim')}",
-                    f"--pyi_out={os.path.join(str(PROJECT_ROOT), 'Source', 'cielim-python', 'cielim')}",
+                    f"--python_out={os.path.join(str(PROJECT_ROOT), 'src', 'cielim-python', 'cielim')}",
+                    f"--pyi_out={os.path.join(str(PROJECT_ROOT), 'src', 'cielim-python', 'cielim')}",
                     file.name,
                 ],
                 check=True,

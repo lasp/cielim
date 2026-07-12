@@ -1,0 +1,16 @@
+CompileFlags:
+  Add: [
+    -std=c++23,
+    -Wno-experimental-header-units, # Disable experimental module warnings
+    -Wall,
+    -Wextra,
+    -pedantic]
+  CompilationDatabase: build # Search cielim/build for compile_commands.json
+
+InlayHints:
+  DeducedTypes: Yes
+  ParameterNames: Yes
+
+Index:
+  Background: Build # Enable background parsing
+  StandardLibrary: Yes

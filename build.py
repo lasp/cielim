@@ -1,256 +1,146 @@
-import os
-import sys
-import glob
-import shutil
-import platform
-import subprocess
 import argparse
 import json
+import os
+import platform
+import shutil
+import subprocess
+import sys
 
-import vcpkg_install
-
-
-def build(platform_name, executable, debug_mode):
-    print(f"Building for {platform_name} {platform.machine()} as {debug_mode}...")
-
-    cielim_path = os.path.dirname(os.path.abspath(__file__))
-
-    # Ensure dependencies are installed before building
-    vcpkg_install.install_vcpkg_packages()
-
-    process = subprocess.Popen(
-        [
-            f"{executable}",
-            "BuildCookRun",
-            f"-project={os.path.join(cielim_path, 'cielim.uproject')}",
-            f"-platform={platform_name}",
-            f"-clientconfig={debug_mode}",
-            "-build",
-        ],
-        stdout=sys.stdout,
-        stderr=sys.stderr,
-    )
-
-    process.wait()
-
-
-def cook(platform_name, executable):
-    print(f"Cooking content for {platform_name} {platform.machine()}...")
-
-    cielim_path = os.path.dirname(os.path.abspath(__file__))
-
-    process = subprocess.Popen(
-        [
-            f"{executable}",
-            "BuildCookRun",
-            f"-project={os.path.join(cielim_path, 'cielim.uproject')}",
-            f"-platform={platform_name}",
-            "-cook",
-        ],
-        stdout=sys.stdout,
-        stderr=sys.stderr,
-    )
-
-    process.wait()
-
-
-def package(platform_name, executable, debug_mode):
-    print(f"Packaging for {platform_name} {platform.machine()} as {debug_mode}...")
-
-    cielim_path = os.path.dirname(os.path.abspath(__file__))
-
-    process = subprocess.Popen(
-        [
-            f"{executable}",
-            "BuildCookRun",
-            f"-project={os.path.join(cielim_path, 'cielim.uproject')}",
-            f"-platform={platform_name}",
-            f"-clientconfig={debug_mode}",
-            "-skipbuild",
-            "-skipcook",
-            "-stage",
-            "-pak",
-            "-package",
-            "-archive",
-            "-prereqs",
-            f"-archivedirectory={os.path.join(cielim_path, 'Binaries')}",
-        ],
-        stdout=sys.stdout,
-        stderr=sys.stderr,
-    )
-
-    process.wait()
-
-
-def fullBuildCookRun(platform_name, executable, debug_mode):
-    print(f"Doing full run for {platform_name} {platform.machine()} as {debug_mode}...")
-
-    cielim_path = os.path.dirname(os.path.abspath(__file__))
-
-    # Ensure dependencies are installed before building
-    vcpkg_install.install_vcpkg_packages()
-
-    process = subprocess.Popen(
-        [
-            f"{executable}",
-            "BuildCookRun",
-            f"-project={os.path.join(cielim_path, 'cielim.uproject')}",
-            f"-platform={platform_name}",
-            f"-clientconfig={debug_mode}",
-            "-build",
-            "-cook",
-            "-stage",
-            "-pak",
-            "-package",
-            "-archive",
-            "-prereqs",
-            f"-archivedirectory={os.path.join(cielim_path, 'Binaries')}",
-        ],
-        stdout=sys.stdout,
-        stderr=sys.stderr,
-    )
-
-    process.wait()
-
-
-def run_editor(unreal_path, args):
-    print("Running Cielim in Unreal Editor...")
-
-    cielim_path = os.path.dirname(os.path.abspath(__file__))
-
-    if os_name == "Darwin":
-        editor = "Engine/Binaries/Mac/UnrealEditor.app/Contents/MacOS/UnrealEditor"
-    elif os_name == "Windows":
-        editor = "Engine/Binaries/Win64/UnrealEditor.exe"
-    elif os_name == "Linux":
-        editor = "Engine/Binaries/Linux/UnrealEditor"
-    else:
-        editor = "NA"
-
-    process = subprocess.Popen(
-        [os.path.join(unreal_path, editor), os.path.join(cielim_path, "cielim.uproject")] + args,
-        stdout=sys.stdout,
-        stderr=sys.stderr,
-    )
-
-    process.wait()
+base_path = os.path.dirname(os.path.abspath(__file__))
 
 
 def clean():
     print("Cleaning build files...")
 
-    cielim_path = os.path.dirname(os.path.abspath(__file__))
-
-    folders_to_clean = ["Saved", "Binaries", "Intermediate", "DerivedDataCache", "vcpkg_installed"]
+    folders_to_clean = ["build"]
 
     for folder in folders_to_clean:
-        dir = os.path.join(cielim_path, folder)
+        dir = os.path.join(base_path, folder)
 
         if os.path.isdir(dir):
             shutil.rmtree(dir)
             print(f"Removed {folder}/")
         else:
-            print(f"{folder}/ already clean")
+            print(f"{folder}/ already cleaned")
+
+
+def configure(platform_name: str, preset: str):
+    print(f"Configuring build for {platform_name} as {preset}...")
+
+    # Generate build files and install vcpkg dependencies with CMake
+    process = subprocess.Popen(
+        [
+            "cmake",
+            "--preset",
+            f"{preset}",
+        ],
+        stdout=sys.stdout,
+        stderr=sys.stderr,
+    )
+
+    process.wait()
+
+    # Copy compile_commands.json to base build directory for Clangd
+
+    target_path = os.path.join(base_path, "build", preset, "compile_commands.json")
+    link_path = os.path.join(base_path, "build", "compile_commands.json")
+
+    if os.path.isfile(target_path):
+        if os.path.exists(link_path):
+            os.remove(link_path)
+        try:
+            os.symlink(target_path, link_path)
+        except PermissionError as e:
+            print(f"Skipped compile_commands.json symlink, permission denined: {e}")
+
+
+def build(platform_name: str, preset: str):
+    print(f"Building for {platform_name} as {preset}...")
+
+    # Build binaries with CMake
+    process = subprocess.Popen(
+        [
+            "cmake",
+            "--build",
+            f"{os.path.join(base_path, "build", preset)}",
+        ],
+        stdout=sys.stdout,
+        stderr=sys.stderr,
+    )
+
+    process.wait()
 
 
 if __name__ == "__main__":
-    os_name = platform.system()
+    if shutil.which("cmake") is None:
+        raise FileNotFoundError("CMake installation not detected")
 
-    print(f"Build platform: {os_name} {platform.machine()}")
+    system = platform.system().lower()  # Operating system name
+    machine = platform.machine().lower()  # System architecture name
 
-    unreal_path = None
+    if machine in ("x86_64", "amd64"):
+        architecture = "x64"
+    elif machine in ("arm64", "aarch64"):
+        architecture = "arm64"
+    else:
+        raise RuntimeError(f"Unsupported architecture: {machine}")
 
-    # Check if build_config.json already exists
+    if system == "windows":
+        platform_name = f"{architecture} Windows"
+    elif system == "darwin":
+        platform_name = f"{architecture} Mac"
+    elif system == "linux":
+        platform_name = f"{architecture} Linux"
+    else:
+        raise RuntimeError(f"Unsupported platform: {system}")
 
-    config = None
+    # Check arguments
 
+    parser = argparse.ArgumentParser(description="Add options for building Cielim")
+    parser.add_argument("-x", "--clean", action="store_true", help="Clean Cielim build files")
+    parser.add_argument("-c", "--config", action="store_true", help="Configure Cielim build files")
+    parser.add_argument("-b", "--build", action="store_true", help="Build Cielim")
+    parser.add_argument("-p", "--preset", type=str, default="", help="CMake preset to use for building")
+
+    args, remaining_args = parser.parse_known_args()
+
+    preset: str = args.preset
+
+    # Create build config if it doesn't exist
     if os.path.exists("build_config.json"):
         config = json.load(open("build_config.json", "r"))
     else:
         config = {}
 
-    # Check if unreal_path field is set and valid
-
-    if "unreal_path" in config and os.path.exists(os.path.join(config["unreal_path"], "Engine/Build/BatchFiles")):
-        unreal_path = config["unreal_path"]
-        print(f"Unreal path located from build config at {unreal_path}...")
-    else:
-        print("Build config not found or path invalid; checking default location")
-
-        # Check default locations
-
-        if os_name == "Darwin":
-            default_location = "/Users/Shared/Epic Games/UE_5*"
-        elif os_name == "Windows":
-            default_location = "C:/Program Files/Epic Games/UE_5*"
+    # If string is empty, check for build config, otherwise use defaults
+    if not preset:
+        if "preset" in config:
+            preset = config["preset"]
+        elif system == "windows":
+            preset = "develop-windows"
         else:
-            default_location = "~/UnrealEngine/UE_5*"
+            preset = "develop"
 
-        for dir in glob.glob(default_location):
-            if os.path.exists(os.path.join(dir, "Engine/Build/BatchFiles")):
-                unreal_path = dir
-                break
-
-        if unreal_path is None:
-            unreal_path = input("Input the absolute path to your Unreal Engine installation: ").strip()
-
-        # If the path is valid, save it to the config file
-
-        if os.path.exists(os.path.join(unreal_path, "Engine/Build/BatchFiles")):
-            print("Saving path to build_config.json...")
-            config["unreal_path"] = unreal_path
-            json.dump(config, open("build_config.json", "w"))
-        else:
-            print('Path provided was incorrect; expected something like ".../UnrealEngine/UE_5.6"')
-            exit()
-
-    # Get platform name and executable location
-
-    if os_name == "Darwin":
-        platform_name = "Mac"
-        executable = os.path.join(unreal_path, "Engine/Build/BatchFiles/RunUAT.sh")
-    elif os_name == "Windows":
-        platform_name = "Win64"
-        executable = os.path.join(unreal_path, "Engine/Build/BatchFiles/RunUAT.bat")
-    elif os_name == "Linux":
-        platform_name = "Linux"
-        executable = os.path.join(unreal_path, "Engine/Build/BatchFiles/RunUAT.sh")
-    else:
-        platform_name = "NA"
-        executable = "NA"
-
-    # Check arguments for build, cook, package, and debug mode
-
-    parser = argparse.ArgumentParser(description="Build, cook, and/or package Cielim")
-    parser.add_argument("-b", "--build", action="store_true", help="Build Cielim source code")
-    parser.add_argument("-c", "--cook", action="store_true", help="Cook content files for Cielim")
-    parser.add_argument("-p", "--package", action="store_true", help="Package Cielim as standalone executable")
-    parser.add_argument("-r", "--run", action="store_true", help="Run Cielim in Unreal Editor")
-    parser.add_argument("-d", "--debug", choices={"Development", "DebugGame", "Shipping"}, default="Development")
-    parser.add_argument("-x", "--clean", action="store_true", help="Clean Cielim build files")
-
-    args, remaining_args = parser.parse_known_args()
-
-    debug_mode = args.debug
+    # Save preset to build_config.json
+    if "preset" not in config or config["preset"] is not preset:
+        print(f"Saving preset {preset} to build_config.json...")
+        config["preset"] = preset
+        json.dump(config, open("build_config.json", "w"))
 
     ranAtLeastOnce = False
 
     if args.clean:
         clean()
         ranAtLeastOnce = True
+    if args.config:
+        configure(platform_name, preset)
+        ranAtLeastOnce = True
     if args.build:
-        build(platform_name, executable, debug_mode)
-        ranAtLeastOnce = True
-    if args.cook:
-        cook(platform_name, executable)
-        ranAtLeastOnce = True
-    if args.package:
-        package(platform_name, executable, debug_mode)
-        ranAtLeastOnce = True
-    if args.run:
-        run_editor(unreal_path, remaining_args)
+        build(platform_name, preset)
         ranAtLeastOnce = True
 
-    # If no command has been run, default to full run
-    if ranAtLeastOnce == False:
-        fullBuildCookRun(platform_name, executable, debug_mode)
+    # If no command has been run, default to full clean run
+    if not ranAtLeastOnce:
+        clean()
+        configure(platform_name, preset)
+        build(platform_name, preset)

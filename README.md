@@ -49,7 +49,7 @@ Coding standards, development workflow, and community guidelines
 ## Key Features
 
 * **Real-time and faster-than-real-time simulation** capability
-* **Reconfigurable interface** over a high-performance C/C++ core (Unreal Engine)
+* **Reconfigurable interface** over a high-performance C/C++ core
 * **Integrated unit testing and validation** support
 * **Hardware-in-the-loop compatibility** for system integration testing
 * **Cross-platform support** (Linux, Windows, macOS)
