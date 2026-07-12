@@ -20,7 +20,6 @@ import cielim
 from cielim.utils import qe_curve_fit as qefit
 from cielim.utils import rigid_body_kinematics as rbk
 
-
 HERE = Path(__file__).resolve()
 CIELIM_ROOT = HERE.parents[1]
 

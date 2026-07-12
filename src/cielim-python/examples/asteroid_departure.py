@@ -5,7 +5,6 @@ import numpy as np
 
 import cielim
 
-
 current_file_path = os.path.dirname(__file__)
 
 
