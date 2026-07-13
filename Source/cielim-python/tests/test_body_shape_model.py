@@ -1,4 +1,5 @@
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
@@ -24,7 +25,7 @@ def default_scene() -> cielim.Scene:
     return scene
 
 
-def _render_and_measure_cob(connector: cielim.Connector, scene: cielim.Scene, test_name: str):
+def _render_and_measure_cob(connector: cielim.Connector, scene: cielim.Scene, test_name: str, show_plots: bool = False):
     """
     Renders the scene and returns its center of brightness, validating resolution and illumination.
     """
@@ -49,7 +50,18 @@ def _render_and_measure_cob(connector: cielim.Connector, scene: cielim.Scene, te
     moments = cv2.moments(image)
     assert moments["m00"] != 0, f"{test_name}: no brightness detected."
 
-    return moments["m10"] / moments["m00"], moments["m01"] / moments["m00"]
+    cob_x, cob_y = moments["m10"] / moments["m00"], moments["m01"] / moments["m00"]
+
+    if show_plots:
+        plt.figure()
+        plt.imshow(image, cmap="gray")
+        plt.scatter(cob_x, cob_y, c="red", marker="x", label="center of brightness")
+        plt.title(test_name)
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+    return cob_x, cob_y
 
 
 # NOTE: expected_cob values are placeholders (baseline sphere's center) pending calibration against
@@ -68,6 +80,7 @@ def _render_and_measure_cob(connector: cielim.Connector, scene: cielim.Scene, te
 def test_center_of_brightness_shift(
     cielim_connection: cielim.Connector,
     default_scene: cielim.Scene,
+    show_plots: bool,
     test_name,
     shape_model,
     body_shift,
@@ -82,7 +95,7 @@ def test_center_of_brightness_shift(
     connector = cielim_connection
     scene = default_scene
 
-    base_cob_x, base_cob_y = _render_and_measure_cob(connector, scene, f"{test_name} (baseline)")
+    base_cob_x, base_cob_y = _render_and_measure_cob(connector, scene, f"{test_name} (baseline)", show_plots=show_plots)
 
     body = scene.get_celestial_body(1)
     initial_position = tuple(body.position)
@@ -94,7 +107,7 @@ def test_center_of_brightness_shift(
 
     scene.set_celestial_body_params(1, mesh_shape=shape_model, position=shifted_position)
 
-    cob_x, cob_y = _render_and_measure_cob(connector, scene, test_name)
+    cob_x, cob_y = _render_and_measure_cob(connector, scene, test_name, show_plots=show_plots)
 
     diff = np.linalg.norm(np.array((cob_x, cob_y)) - np.array((base_cob_x, base_cob_y)))
     np.testing.assert_(
@@ -135,7 +148,7 @@ def test_center_of_brightness_shift(
 
 
 def test_center_of_brightness_shift_invalid_shape_model(
-    cielim_connection: cielim.Connector, default_scene: cielim.Scene
+    cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool
 ):
     """
     An unknown shape model name silently falls back to the engine's default sphere mesh rather
@@ -153,7 +166,5 @@ def test_center_of_brightness_shift_invalid_shape_model(
         [cob_x, cob_y],
         [image_width / 2, image_height / 2],
         atol=60,
-        err_msg=(
-            f"invalid shape model: CoB {(cob_x, cob_y)} not centered — expected fallback-to-sphere render."
-        ),
+        err_msg=(f"invalid shape model: CoB {(cob_x, cob_y)} not centered — expected fallback-to-sphere render."),
     )

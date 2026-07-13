@@ -1,9 +1,33 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
 from cielim.utils import orbital_motion
 
 mu = 1e10
+
+
+def show_orbit(positions: np.ndarray, title: str, expected_positions: np.ndarray = None) -> None:
+    positions = np.atleast_2d(positions)
+    fig = plt.figure()
+    ax = fig.add_subplot(projection="3d")
+    ax.plot(positions[:, 0], positions[:, 1], positions[:, 2], marker="o", label="propagated")
+    if expected_positions is not None:
+        expected_positions = np.atleast_2d(expected_positions)
+        ax.plot(
+            expected_positions[:, 0],
+            expected_positions[:, 1],
+            expected_positions[:, 2],
+            linestyle="--",
+            label="expected",
+        )
+    ax.set_xlabel("x")
+    ax.set_ylabel("y")
+    ax.set_zlabel("z")
+    ax.set_title(title)
+    ax.legend()
+    plt.tight_layout()
+    plt.show()
 
 
 def make_elements(semi_major_axis, eccentricity, inclination, ascending_node, argument_periapsis, true_anomaly):
@@ -15,6 +39,7 @@ def make_elements(semi_major_axis, eccentricity, inclination, ascending_node, ar
     elements.argument_periapsis = argument_periapsis
     elements.true_anomaly = true_anomaly
     return elements
+
 
 ORBIT_TYPES = [
     ("circular", 7e5, 0.0, 0.5, 0.3, 0.0, 1.0, False),
@@ -86,7 +111,7 @@ def test_orbital_elements_round_trip(
         np.testing.assert_almost_equal(recovered_elements.inclination, i, 8, err_msg=f"{test_name}: inclination")
 
 
-def test_zero_g():
+def test_zero_g(show_plots: bool):
     """
     With no gravity, an object should just move in a straight line at constant speed
     this checks that holds true over several propagation steps, not just one.
@@ -101,11 +126,18 @@ def test_zero_g():
 
     times = np.linspace(0, 1000, 11)
     propagated = state
+    positions = [pos]
+    expected_positions = [pos]
     for i in range(1, len(times)):
         propagated = orbital_motion.propagate_cartesian(0.0, propagated, times[i - 1], times[i])
         expected_position = pos + vel * times[i]
+        positions.append(propagated[:3])
+        expected_positions.append(expected_position)
         np.testing.assert_allclose(propagated[:3], expected_position, rtol=1e-9)
         np.testing.assert_allclose(propagated[3:], vel, rtol=1e-9)
+
+    if show_plots:
+        show_orbit(np.array(positions), "zero-g straight-line motion", expected_positions=np.array(expected_positions))
 
 
 def test_gravity_acceleration():
@@ -126,7 +158,7 @@ def test_gravity_acceleration():
     np.testing.assert_almost_equal(np.dot(accel, -pos_hat), np.linalg.norm(accel), 10)
 
 
-def test_conservation_laws():
+def test_conservation_laws(show_plots: bool):
     """
     Checks that angular momentum and energy stay constant across several full orbits
      a short window wouldn't catch drift that only builds up over time.
@@ -148,6 +180,18 @@ def test_conservation_laws():
     h = np.cross(states[:, :3], states[:, 3:])
     energy = np.linalg.norm(states[:, 3:], axis=1) ** 2 / 2 - mu / np.linalg.norm(states[:, :3], axis=1)
 
+    if show_plots:
+        show_orbit(states[:, :3], "conservation_laws trajectory (2 orbits)")
+
+        plt.figure()
+        plt.plot(times, np.linalg.norm(h, axis=1), label="|angular momentum|")
+        plt.plot(times, energy, label="specific energy")
+        plt.xlabel("time")
+        plt.title("Conservation check (should be flat)")
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
     np.testing.assert_allclose(h[:, 0], h[0, 0], rtol=1e-10)
     np.testing.assert_allclose(h[:, 1], h[0, 1], rtol=1e-10)
     np.testing.assert_allclose(h[:, 2], h[0, 2], rtol=1e-10)
@@ -155,7 +199,7 @@ def test_conservation_laws():
     np.testing.assert_allclose(energy, energy[0])
 
 
-def test_orbit_closure():
+def test_orbit_closure(show_plots: bool):
     """
     Checks that after propagating for exactly one full orbit, the object ends up back where it started
     the simplest possible sanity check on the propagator.
@@ -170,11 +214,14 @@ def test_orbit_closure():
 
     final_state = orbital_motion.propagate_cartesian(mu, state, 0.0, period)
 
+    if show_plots:
+        show_orbit(np.array([pos, final_state[:3]]), "orbit closure (start vs. after 1 period)")
+
     np.testing.assert_allclose(final_state[:3], pos, rtol=1e-3, atol=15.0)
     np.testing.assert_allclose(final_state[3:], vel, rtol=1e-3, atol=1e-2)
 
 
-def test_circular_orbit_analytical():
+def test_circular_orbit_analytical(show_plots: bool):
     """
     For a circular orbit, there's an exact known formula for where the object should be at any time
     this checks the propagator's output against that formula directly,
@@ -190,6 +237,8 @@ def test_circular_orbit_analytical():
 
     propagated = state
     last_time = 0.0
+    propagated_positions = [pos]
+    expected_positions = [pos]
     for t in sample_times[1:]:
         propagated = orbital_motion.propagate_cartesian(mu, propagated, last_time, t)
         last_time = t
@@ -197,5 +246,15 @@ def test_circular_orbit_analytical():
         expected_position = r0 * np.array([np.cos(omega * t), np.sin(omega * t), 0.0])
         expected_velocity = r0 * omega * np.array([-np.sin(omega * t), np.cos(omega * t), 0.0])
 
+        propagated_positions.append(propagated[:3])
+        expected_positions.append(expected_position)
+
         np.testing.assert_allclose(propagated[:3], expected_position, rtol=1e-3, atol=250.0)
         np.testing.assert_allclose(propagated[3:], expected_velocity, rtol=1e-3, atol=0.05)
+
+    if show_plots:
+        show_orbit(
+            np.array(propagated_positions),
+            "circular orbit: propagated vs. analytical",
+            expected_positions=np.array(expected_positions),
+        )
