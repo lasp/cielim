@@ -21,16 +21,107 @@ def default_scene() -> cielim.Scene:
     return scene
 
 
+def photocenter_offset_angle(mean_radius: float, distance: float, phase_angle_rad: float) -> float:
+    """
+    Calculates how far the illuminated region's brightness-center shifts away from a Lambertian sphere's
+    true center as phase angle increases, converted to an angle
+    """
+    return np.arctan((4 * mean_radius) / (3 * np.pi * distance) * (1 - np.cos(phase_angle_rad)))
+
+
+def test_photocenter_offset_formula():
+    """
+     This test checks that the offset formula behaves correctly at its edges (zero when fully lit, grows
+    with phase angle, and matches a hand-computed value at 180°).
+    """
+    mean_radius = 1000.0
+    distance = 50000.0
+
+    # Full illumination (phase=0): no illuminated-region asymmetry, so no offset.
+    assert photocenter_offset_angle(mean_radius, distance, 0.0) == 0.0
+
+    # Monotonically increasing over the visible phase range.
+    phase_angles_rad = np.radians(np.linspace(0, 180, 19))
+    thetas = [photocenter_offset_angle(mean_radius, distance, p) for p in phase_angles_rad]
+    assert np.all(np.diff(thetas) > 0), "Photocenter offset is not monotonically increasing with phase angle"
+
+    # At 180 deg (new moon geometry), the offset is at its formula-implied maximum.
+    expected_max_theta = np.arctan(8 * mean_radius / (3 * np.pi * distance))
+    np.testing.assert_allclose(thetas[-1], expected_max_theta, rtol=1e-9)
+
+
+def test_phase_angle_new_moon(cielim_connection: cielim.Connector, default_scene: cielim.Scene):
+    """
+    At 180 deg phase (sun directly behind the target from the camera's viewpoint), the camera
+    should see only the unlit far hemisphere — the image should be near-black.
+    """
+    connector = cielim_connection
+
+    scene = default_scene
+
+    scene.set_celestial_body_params(0, position=(0, 0, -1.496e11))
+
+    connector.send_init_request()
+    connector.send_frame(scene.get_scene())
+    image, _, _ = connector.request_image_for_camera_id(1, True, False)
+
+    if len(image.shape) == 3:
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    mean_brightness = np.mean(image)
+    assert mean_brightness < 5, f"Image was not near-black at 180 deg phase (mean pixel value={mean_brightness:.2f})"
+
+
+def test_phase_angle_brightness_scaling(cielim_connection: cielim.Connector, default_scene: cielim.Scene):
+    """
+    Total reflected brightness (sum of pixel values, i.e. image moment m00) should decrease
+    monotonically as phase angle increases.
+    """
+    connector = cielim_connection
+
+    scene = default_scene
+
+    phase_angles_deg = [0, 45, 90, 135]
+    sun_positions = [
+        (0, 0, 1.496e11),
+        (1.496e11, 0, 1.496e11),
+        (1.496e11, 0, 0),
+        (1.496e11, 0, -1.496e11),
+    ]
+
+    brightnesses = []
+    for phase_angle_deg, sun_position in zip(phase_angles_deg, sun_positions):
+        scene.set_celestial_body_params(0, position=sun_position)
+
+        connector.send_init_request()
+        connector.send_frame(scene.get_scene())
+        image, _, _ = connector.request_image_for_camera_id(1, True, False)
+
+        if len(image.shape) == 3:
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        m00 = cv2.moments(image)["m00"]
+        assert m00 > 0, f"Image was blank at phase angle {phase_angle_deg} deg."
+        brightnesses.append(m00)
+
+    for i in range(1, len(brightnesses)):
+        max_prior = max(brightnesses[:i])
+        assert brightnesses[i] < max_prior, (
+            f"Brightness at {phase_angles_deg[i]} deg ({brightnesses[i]:.1f}) exceeds the peak of "
+            f"earlier phase angles ({max_prior:.1f})"
+        )
+
+
 @pytest.mark.parametrize(
     "test_name, sun_position, phase_angle",
     [
-        ("Full Illumination (0°)", [0, 0, 1.496e11], 0),
-        ("(45° Horizontal)", [1.496e11, 0, 1.496e11], 45),
-        ("Half Moon (90° Horizontal)", [1.496e11, 0, 0], 90),
-        ("(135° Horizontal)", [1.496e11, 0, -1.496e11], 135),
-        ("(45° Vertical)", [0, -1.496e11, 1.496e11], 45),
-        ("Half Moon (90° Vertical)", [0, -1.496e11, 0], 90),
-        ("(135° Vertical)", [0, -1.496e11, -1.496e11], 135),
+        ("Full Illumination (0°)", (0, 0, 1.496e11), 0),
+        ("(45° Horizontal)", (1.496e11, 0, 1.496e11), 45),
+        ("Half Moon (90° Horizontal)", (1.496e11, 0, 0), 90),
+        ("(135° Horizontal)", (1.496e11, 0, -1.496e11), 135),
+        ("(45° Vertical)", (0, -1.496e11, 1.496e11), 45),
+        ("Half Moon (90° Vertical)", (0, -1.496e11, 0), 90),
+        ("(135° Vertical)", (0, -1.496e11, -1.496e11), 135),
     ],
 )
 def test_phase_angle_scene(
@@ -55,7 +146,7 @@ def test_phase_angle_scene(
     distance = np.linalg.norm(spacecraft_position - asteroid_position)
     phase_angle_rad = np.radians(phase_angle)
 
-    theta = np.arctan((4 * mean_radius) / (3 * np.pi * distance) * (1 - np.cos(phase_angle_rad)))
+    theta = photocenter_offset_angle(mean_radius, distance, phase_angle_rad)
 
     camera_fov_horizontal = scene.get_scene().camera.lensModel.fieldOfView[0]
     camera_fov_vertical = scene.get_scene().camera.lensModel.fieldOfView[1]
@@ -79,14 +170,10 @@ def test_phase_angle_scene(
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     moments = cv2.moments(image)
-    if moments["m00"] != 0:
-        # TODO understand why it works with ceil but not round or floor
-        actual_cob_x = int(np.ceil(moments["m10"] / moments["m00"]))
-        # We subtract here to flip +y=down for image data to +y=up
-        actual_cob_y = image_height - int(np.ceil(moments["m01"] / moments["m00"]))
 
-    else:
-        actual_cob_x, actual_cob_y = image_width / 2, image_height / 2
+    assert moments["m00"] != 0, f"Image was blank — no illuminated body detected for test: {test_name}"
+    actual_cob_x = round(moments["m10"] / moments["m00"])
+    actual_cob_y = image_height - round(moments["m01"] / moments["m00"])
 
     np.testing.assert_allclose(
         [actual_cob_x, actual_cob_y],
