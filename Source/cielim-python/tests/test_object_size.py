@@ -1,8 +1,17 @@
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
 import cielim
+
+
+def show_render(image_gray: np.ndarray, title: str) -> None:
+    plt.figure()
+    plt.imshow(image_gray, cmap="gray", vmin=0, vmax=255)
+    plt.title(title)
+    plt.tight_layout()
+    plt.show()
 
 
 @pytest.fixture
@@ -35,7 +44,9 @@ def default_scene() -> cielim.Scene:
         ("Move Away, Left & Down", [-500, -500, -10000]),
     ],
 )
-def test_asteroid_size(cielim_connection: cielim.Connector, default_scene: cielim.Scene, test_name, shift):
+def test_asteroid_size(
+    cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, test_name, shift
+):
     """
     Tests the asteroid size in pixels when its distance (Z) and slight position (X, Y) change.
     Parameters: Changing asteroid Z (closer/away) and slight X/Y shift, verifying pixel size.
@@ -68,6 +79,9 @@ def test_asteroid_size(cielim_connection: cielim.Connector, default_scene: cieli
     _, baseline_radius = cv2.minEnclosingCircle(max(baseline_contours, key=cv2.contourArea))
     baseline_size_pixels = 2 * baseline_radius
 
+    if show_plots:
+        show_render(baseline_image, f"{test_name} (baseline, size={baseline_size_pixels:.1f}px)")
+
     baseline_distance = np.linalg.norm(spacecraft_position - np.array(initial_position))
     baseline_expected_angular_size_rad = 2 * np.arcsin(mean_radius / baseline_distance)
     baseline_expected_size_pixels = (baseline_expected_angular_size_rad / camera_fov_horizontal) * image_width
@@ -99,6 +113,9 @@ def test_asteroid_size(cielim_connection: cielim.Connector, default_scene: cieli
     _, moved_radius = cv2.minEnclosingCircle(max(moved_contours, key=cv2.contourArea))
     asteroid_size_pixels = 2 * moved_radius
 
+    if show_plots:
+        show_render(moved_image, f"{test_name} (size={asteroid_size_pixels:.1f}px)")
+
     asteroid_position = np.array(scene.get_scene().celestialBodies[1].position)
     distance = np.linalg.norm(spacecraft_position - asteroid_position)
 
@@ -127,7 +144,9 @@ def test_asteroid_size(cielim_connection: cielim.Connector, default_scene: cieli
     )
 
 
-def _measure_asteroid_diameter_pixels(connector: cielim.Connector, scene: cielim.Scene, test_name: str) -> float:
+def _measure_asteroid_diameter_pixels(
+    connector: cielim.Connector, scene: cielim.Scene, test_name: str, show_plots: bool = False
+) -> float:
     """Render the current scene and return the asteroid's apparent diameter in pixels."""
     connector.send_init_request()
     connector.send_frame(scene.get_scene())
@@ -142,10 +161,17 @@ def _measure_asteroid_diameter_pixels(connector: cielim.Connector, scene: cielim
     assert contours, f"No contours found in rendered image for test: {test_name}"
 
     _, radius = cv2.minEnclosingCircle(max(contours, key=cv2.contourArea))
-    return 2 * radius
+    diameter_pixels = 2 * radius
+
+    if show_plots:
+        show_render(image, f"{test_name} (size={diameter_pixels:.1f}px)")
+
+    return diameter_pixels
 
 
-def test_asteroid_size_distance_scaling(cielim_connection: cielim.Connector, default_scene: cielim.Scene):
+def test_asteroid_size_distance_scaling(
+    cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool
+):
     """
     Verifies apparent size scales as 1/distance (perspective projection) by rendering at four
     distances, each double the last, and checking that apparent size halves each time — a direct
@@ -167,7 +193,9 @@ def test_asteroid_size_distance_scaling(cielim_connection: cielim.Connector, def
     for distance in distances:
         scene.set_celestial_body_params(1, position=(0, 0, 0))
         scene.set_spacecraft_params(position=(0, 0, distance))
-        sizes_pixels.append(_measure_asteroid_diameter_pixels(connector, scene, f"distance={distance}"))
+        sizes_pixels.append(
+            _measure_asteroid_diameter_pixels(connector, scene, f"distance={distance}", show_plots=show_plots)
+        )
 
     for i in range(len(distances) - 1):
         np.testing.assert_allclose(
@@ -181,7 +209,7 @@ def test_asteroid_size_distance_scaling(cielim_connection: cielim.Connector, def
         )
 
 
-def test_asteroid_size_overflow(cielim_connection: cielim.Connector, default_scene: cielim.Scene):
+def test_asteroid_size_overflow(cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool):
     """
     Edge case: the asteroid moved close enough to fill (and exceed) the frame. Verifies the
     renderer clips gracefully — a bounding box within image bounds and touching an edge — rather
@@ -211,6 +239,9 @@ def test_asteroid_size_overflow(cielim_connection: cielim.Connector, default_sce
     assert contours, "No contours found in rendered image for the frame-filling overflow case."
 
     x, y, w, h = cv2.boundingRect(max(contours, key=cv2.contourArea))
+
+    if show_plots:
+        show_render(image, "frame-filling overflow")
 
     image_width, image_height = scene.get_scene().camera.sensorModel.resolution
 

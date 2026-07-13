@@ -1,8 +1,17 @@
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
 import cielim
+
+
+def show_render(image_gray: np.ndarray, title: str) -> None:
+    plt.figure()
+    plt.imshow(image_gray, cmap="gray", vmin=0, vmax=255)
+    plt.title(title)
+    plt.tight_layout()
+    plt.show()
 
 
 def moments_centroid(image_gray: np.ndarray, test_name: str) -> tuple[float, float]:
@@ -42,7 +51,9 @@ def default_scene() -> cielim.Scene:
         ("Move Diagonal", [1000, 1000, 0]),
     ],
 )
-def test_object_position(cielim_connection: cielim.Connector, default_scene: cielim.Scene, test_name, shift):
+def test_object_position(
+    cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, test_name, shift
+):
     """
     Tests the asteroid movement in image space when shifted in 3D (X, Y).
     Parameters: Changing asteroid position in meters and verifying pixel shift.
@@ -68,6 +79,9 @@ def test_object_position(cielim_connection: cielim.Connector, default_scene: cie
 
     baseline_x, baseline_y = moments_centroid(baseline_image, test_name)
 
+    if show_plots:
+        show_render(baseline_image, f"{test_name} (baseline)")
+
     np.testing.assert_allclose(
         [baseline_x, baseline_y],
         [image_width / 2, image_height / 2],
@@ -88,6 +102,9 @@ def test_object_position(cielim_connection: cielim.Connector, default_scene: cie
 
     moved_x, moved_y = moments_centroid(moved_image, test_name)
 
+    if show_plots:
+        show_render(moved_image, test_name)
+
     object_position = np.array(scene.get_scene().celestialBodies[1].position)
     distance = np.linalg.norm(spacecraft_position - object_position)
 
@@ -97,7 +114,6 @@ def test_object_position(cielim_connection: cielim.Connector, default_scene: cie
 
     actual_pixel_shift_x = moved_x - baseline_x
     actual_pixel_shift_y = moved_y - baseline_y
-
 
     np.testing.assert_allclose(
         [actual_pixel_shift_x, actual_pixel_shift_y],
@@ -115,7 +131,7 @@ def test_object_position(cielim_connection: cielim.Connector, default_scene: cie
     ],
 )
 def test_object_position_symmetry(
-    cielim_connection: cielim.Connector, default_scene: cielim.Scene, test_name, axis_shift
+    cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, test_name, axis_shift
 ):
     """
     Opposite shifts along the same axis should produce opposite, canceling pixel shifts a
@@ -127,21 +143,23 @@ def test_object_position_symmetry(
 
     initial_x, initial_y, initial_z = scene.get_scene().celestialBodies[1].position[:3]
 
-    def render_and_get_center(position):
+    def render_and_get_center(position, label):
         scene.set_celestial_body_params(1, position=position)
         connector.send_init_request()
         connector.send_frame(scene.get_scene())
         image, _, _ = connector.request_image_for_camera_id(1, True, False)
         if len(image.shape) == 3:
             image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        if show_plots:
+            show_render(image, f"{test_name} ({label})")
         return moments_centroid(image, test_name)
 
-    baseline_x, baseline_y = render_and_get_center((initial_x, initial_y, initial_z))
+    baseline_x, baseline_y = render_and_get_center((initial_x, initial_y, initial_z), "baseline")
     positive_x, positive_y = render_and_get_center(
-        (initial_x + axis_shift[0], initial_y + axis_shift[1], initial_z)
+        (initial_x + axis_shift[0], initial_y + axis_shift[1], initial_z), "positive"
     )
     negative_x, negative_y = render_and_get_center(
-        (initial_x - axis_shift[0], initial_y - axis_shift[1], initial_z)
+        (initial_x - axis_shift[0], initial_y - axis_shift[1], initial_z), "negative"
     )
 
     positive_shift = np.array([positive_x - baseline_x, positive_y - baseline_y])
@@ -165,7 +183,9 @@ def test_object_position_symmetry(
         ("Move Farther", -10000),
     ],
 )
-def test_object_distance(cielim_connection: cielim.Connector, default_scene: cielim.Scene, test_name, z_shift):
+def test_object_distance(
+    cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, test_name, z_shift
+):
     """
     Tests the effect of moving the asteroid along the boresight (Z) axis: its apparent center
     should stay put (a depth-only move causes no lateral pixel shift) while its apparent size
@@ -186,6 +206,9 @@ def test_object_distance(cielim_connection: cielim.Connector, default_scene: cie
 
     baseline_x, baseline_y = moments_centroid(baseline_image, test_name)
 
+    if show_plots:
+        show_render(baseline_image, f"{test_name} (baseline)")
+
     _, baseline_thresh = cv2.threshold(baseline_image, 127, 255, cv2.THRESH_BINARY)
     baseline_contours, _ = cv2.findContours(baseline_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -205,6 +228,9 @@ def test_object_distance(cielim_connection: cielim.Connector, default_scene: cie
         moved_image = cv2.cvtColor(moved_image, cv2.COLOR_BGR2GRAY)
 
     moved_x, moved_y = moments_centroid(moved_image, test_name)
+
+    if show_plots:
+        show_render(moved_image, test_name)
 
     _, moved_thresh = cv2.threshold(moved_image, 127, 255, cv2.THRESH_BINARY)
     moved_contours, _ = cv2.findContours(moved_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
