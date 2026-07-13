@@ -6,6 +6,10 @@
 
 CMake (v3.28+) is required to build Cielim as well as a compiler (MSVC, GCC, Clang) and build generator (MSBuild, Ninja, other) that are of a recent enough version to support C++20 modules and C++23.
 
+### Vulkan
+
+Cielim requires Vulkan 1.4 as well as AMD's [Vulkan Memory Allocator](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator). These must be installed locally and configured on a per-user basis with LunarG's [Vulkan SDK](https://vulkan.lunarg.com/sdk/home).
+
 ### Vcpkg
 
 Cielim uses [vcpkg](https://vcpkg.io) in **manifest mode** to manage its C++ third-party dependencies. Vcpkg must be installed separately and does **not** live inside this repository.
