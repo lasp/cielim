@@ -60,6 +60,46 @@ struct TimeStampDefaultTypeInternal {
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
     PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TimeStampDefaultTypeInternal _TimeStamp_default_instance_;
 
+inline constexpr StrayLightModel::Impl_::Impl_(
+    ::_pbi::ConstantInitialized) noexcept
+      : _cached_size_{0},
+        coresize_{0},
+        ghostsize_{0},
+        ghosttransmittance_{0},
+        ghost1relativesize_{0},
+        ghost2relativesize_{0},
+        ghost3relativesize_{0},
+        ghost4relativesize_{0},
+        ghostbrightnesssizeexponent_{0},
+        coronafalloffexponent_{0},
+        coronaintensity_{0},
+        baffleshieldangle_{0},
+        intensity_{0},
+        numrays_{0},
+        raysharpness_{0},
+        rayweight_{0},
+        enabled_{false} {}
+
+template <typename>
+PROTOBUF_CONSTEXPR StrayLightModel::StrayLightModel(::_pbi::ConstantInitialized)
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+    : ::google::protobuf::MessageLite(StrayLightModel_class_data_.base()),
+#else   // PROTOBUF_CUSTOM_VTABLE
+    : ::google::protobuf::MessageLite(),
+#endif  // PROTOBUF_CUSTOM_VTABLE
+      _impl_(::_pbi::ConstantInitialized()) {
+}
+struct StrayLightModelDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR StrayLightModelDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
+  ~StrayLightModelDefaultTypeInternal() {}
+  union {
+    StrayLightModel _instance;
+  };
+};
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 StrayLightModelDefaultTypeInternal _StrayLightModel_default_instance_;
+
 inline constexpr Spacecraft::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
       : _cached_size_{0},
@@ -89,40 +129,6 @@ struct SpacecraftDefaultTypeInternal {
 
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
     PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 SpacecraftDefaultTypeInternal _Spacecraft_default_instance_;
-
-inline constexpr RenderingModel::Impl_::Impl_(
-    ::_pbi::ConstantInitialized) noexcept
-      : _cached_size_{0},
-        rendering_(
-            &::google::protobuf::internal::fixed_address_empty_string,
-            ::_pbi::ConstantInitialized()),
-        wavelength1_{0},
-        wavelength2_{0},
-        wavelength3_{0},
-        cosmicraystddeviation_{0},
-        straylight_{0},
-        starfield_{false},
-        enablesmear_{false} {}
-
-template <typename>
-PROTOBUF_CONSTEXPR RenderingModel::RenderingModel(::_pbi::ConstantInitialized)
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-    : ::google::protobuf::MessageLite(RenderingModel_class_data_.base()),
-#else   // PROTOBUF_CUSTOM_VTABLE
-    : ::google::protobuf::MessageLite(),
-#endif  // PROTOBUF_CUSTOM_VTABLE
-      _impl_(::_pbi::ConstantInitialized()) {
-}
-struct RenderingModelDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR RenderingModelDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
-  ~RenderingModelDefaultTypeInternal() {}
-  union {
-    RenderingModel _instance;
-  };
-};
-
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
-    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 RenderingModelDefaultTypeInternal _RenderingModel_default_instance_;
 
 inline constexpr ReflectanceModel::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
@@ -379,6 +385,40 @@ struct SensorModelDefaultTypeInternal {
 
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
     PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 SensorModelDefaultTypeInternal _SensorModel_default_instance_;
+
+inline constexpr RenderingModel::Impl_::Impl_(
+    ::_pbi::ConstantInitialized) noexcept
+      : _cached_size_{0},
+        rendering_(
+            &::google::protobuf::internal::fixed_address_empty_string,
+            ::_pbi::ConstantInitialized()),
+        straylightmodel_{nullptr},
+        wavelength1_{0},
+        wavelength2_{0},
+        wavelength3_{0},
+        cosmicraystddeviation_{0},
+        starfield_{false},
+        enablesmear_{false} {}
+
+template <typename>
+PROTOBUF_CONSTEXPR RenderingModel::RenderingModel(::_pbi::ConstantInitialized)
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+    : ::google::protobuf::MessageLite(RenderingModel_class_data_.base()),
+#else   // PROTOBUF_CUSTOM_VTABLE
+    : ::google::protobuf::MessageLite(),
+#endif  // PROTOBUF_CUSTOM_VTABLE
+      _impl_(::_pbi::ConstantInitialized()) {
+}
+struct RenderingModelDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR RenderingModelDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
+  ~RenderingModelDefaultTypeInternal() {}
+  union {
+    RenderingModel _instance;
+  };
+};
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 RenderingModelDefaultTypeInternal _RenderingModel_default_instance_;
 
 inline constexpr MeshModel::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
@@ -1251,6 +1291,667 @@ void EpochDateTime::InternalSwap(EpochDateTime* PROTOBUF_RESTRICT PROTOBUF_NONNU
 
 // ===================================================================
 
+class StrayLightModel::_Internal {
+ public:
+  using HasBits =
+      decltype(::std::declval<StrayLightModel>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+      8 * PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_._has_bits_);
+};
+
+StrayLightModel::StrayLightModel(::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+    : ::google::protobuf::MessageLite(arena, StrayLightModel_class_data_.base()) {
+#else   // PROTOBUF_CUSTOM_VTABLE
+    : ::google::protobuf::MessageLite(arena) {
+#endif  // PROTOBUF_CUSTOM_VTABLE
+  SharedCtor(arena);
+  // @@protoc_insertion_point(arena_constructor:cielimMessage.StrayLightModel)
+}
+StrayLightModel::StrayLightModel(
+    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const StrayLightModel& from)
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+    : ::google::protobuf::MessageLite(arena, StrayLightModel_class_data_.base()),
+#else   // PROTOBUF_CUSTOM_VTABLE
+    : ::google::protobuf::MessageLite(arena),
+#endif  // PROTOBUF_CUSTOM_VTABLE
+      _impl_(from._impl_) {
+  _internal_metadata_.MergeFrom<::std::string>(
+      from._internal_metadata_);
+}
+PROTOBUF_NDEBUG_INLINE StrayLightModel::Impl_::Impl_(
+    [[maybe_unused]] ::google::protobuf::internal::InternalVisibility visibility,
+    [[maybe_unused]] ::google::protobuf::Arena* PROTOBUF_NULLABLE arena)
+      : _cached_size_{0} {}
+
+inline void StrayLightModel::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
+  new (&_impl_) Impl_(internal_visibility(), arena);
+  ::memset(reinterpret_cast<char*>(&_impl_) +
+               offsetof(Impl_, coresize_),
+           0,
+           offsetof(Impl_, enabled_) -
+               offsetof(Impl_, coresize_) +
+               sizeof(Impl_::enabled_));
+}
+StrayLightModel::~StrayLightModel() {
+  // @@protoc_insertion_point(destructor:cielimMessage.StrayLightModel)
+  SharedDtor(*this);
+}
+inline void StrayLightModel::SharedDtor(MessageLite& self) {
+  StrayLightModel& this_ = static_cast<StrayLightModel&>(self);
+  if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
+    this_.CheckHasBitConsistency();
+  }
+  this_._internal_metadata_.Delete<::std::string>();
+  ABSL_DCHECK(this_.GetArena() == nullptr);
+  this_._impl_.~Impl_();
+}
+
+inline void* PROTOBUF_NONNULL StrayLightModel::PlacementNew_(
+    const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+    ::google::protobuf::Arena* PROTOBUF_NULLABLE arena) {
+  return ::new (mem) StrayLightModel(arena);
+}
+constexpr auto StrayLightModel::InternalNewImpl_() {
+  return ::google::protobuf::internal::MessageCreator::ZeroInit(sizeof(StrayLightModel),
+                                            alignof(StrayLightModel));
+}
+constexpr auto StrayLightModel::InternalGenerateClassData_() {
+  return ::google::protobuf::internal::ClassDataLite<30>{
+      {
+          &_StrayLightModel_default_instance_._instance,
+          &_table_.header,
+          nullptr,  // OnDemandRegisterArenaDtor
+          nullptr,  // IsInitialized
+          &StrayLightModel::MergeImpl,
+          ::google::protobuf::MessageLite::GetNewImpl<StrayLightModel>(),
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+          &StrayLightModel::SharedDtor,
+          ::google::protobuf::MessageLite::GetClearImpl<StrayLightModel>(), &StrayLightModel::ByteSizeLong,
+              &StrayLightModel::_InternalSerialize,
+#endif  // PROTOBUF_CUSTOM_VTABLE
+          PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_._cached_size_),
+          true,
+      },
+      "cielimMessage.StrayLightModel",
+  };
+}
+
+PROTOBUF_CONSTINIT
+PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
+const ::google::protobuf::internal::ClassDataLite<30> StrayLightModel_class_data_ =
+    StrayLightModel::InternalGenerateClassData_();
+
+PROTOBUF_ATTRIBUTE_WEAK const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL
+StrayLightModel::GetClassData() const {
+  return StrayLightModel_class_data_.base();
+}
+PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
+const ::_pbi::TcParseTable<4, 16, 0, 0, 2>
+StrayLightModel::_table_ = {
+  {
+    PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_._has_bits_),
+    0, // no _extensions_
+    16, 120,  // max_field_number, fast_idx_mask
+    offsetof(decltype(_table_), field_lookup_table),
+    4294901760,  // skipmap
+    offsetof(decltype(_table_), field_entries),
+    16,  // num_field_entries
+    0,  // num_aux_entries
+    offsetof(decltype(_table_), field_names),  // no aux_entries
+    StrayLightModel_class_data_.base(),
+    nullptr,  // post_loop_handler
+    ::_pbi::TcParser::GenericFallbackLite,  // fallback
+    #ifdef PROTOBUF_PREFETCH_PARSE_TABLE
+    ::_pbi::TcParser::GetTable<::cielimMessage::StrayLightModel>(),  // to_prefetch
+    #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
+  }, {{
+    // double rayWeight = 16;
+    {::_pbi::TcParser::FastF64S2,
+     {385, 14, 0,
+      PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.rayweight_)}},
+    // bool enabled = 1;
+    {::_pbi::TcParser::FastV8S1,
+     {8, 15, 0,
+      PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.enabled_)}},
+    // double coreSize = 2;
+    {::_pbi::TcParser::FastF64S1,
+     {17, 0, 0,
+      PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.coresize_)}},
+    // double ghostSize = 3;
+    {::_pbi::TcParser::FastF64S1,
+     {25, 1, 0,
+      PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.ghostsize_)}},
+    // double ghostTransmittance = 4;
+    {::_pbi::TcParser::FastF64S1,
+     {33, 2, 0,
+      PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.ghosttransmittance_)}},
+    // double ghost1RelativeSize = 5;
+    {::_pbi::TcParser::FastF64S1,
+     {41, 3, 0,
+      PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.ghost1relativesize_)}},
+    // double ghost2RelativeSize = 6;
+    {::_pbi::TcParser::FastF64S1,
+     {49, 4, 0,
+      PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.ghost2relativesize_)}},
+    // double ghost3RelativeSize = 7;
+    {::_pbi::TcParser::FastF64S1,
+     {57, 5, 0,
+      PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.ghost3relativesize_)}},
+    // double ghost4RelativeSize = 8;
+    {::_pbi::TcParser::FastF64S1,
+     {65, 6, 0,
+      PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.ghost4relativesize_)}},
+    // double ghostBrightnessSizeExponent = 9;
+    {::_pbi::TcParser::FastF64S1,
+     {73, 7, 0,
+      PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.ghostbrightnesssizeexponent_)}},
+    // double coronaFalloffExponent = 10;
+    {::_pbi::TcParser::FastF64S1,
+     {81, 8, 0,
+      PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.coronafalloffexponent_)}},
+    // double coronaIntensity = 11;
+    {::_pbi::TcParser::FastF64S1,
+     {89, 9, 0,
+      PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.coronaintensity_)}},
+    // double baffleShieldAngle = 12;
+    {::_pbi::TcParser::FastF64S1,
+     {97, 10, 0,
+      PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.baffleshieldangle_)}},
+    // double intensity = 13;
+    {::_pbi::TcParser::FastF64S1,
+     {105, 11, 0,
+      PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.intensity_)}},
+    // double numRays = 14;
+    {::_pbi::TcParser::FastF64S1,
+     {113, 12, 0,
+      PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.numrays_)}},
+    // double raySharpness = 15;
+    {::_pbi::TcParser::FastF64S1,
+     {121, 13, 0,
+      PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.raysharpness_)}},
+  }}, {{
+    65535, 65535
+  }}, {{
+    // bool enabled = 1;
+    {PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.enabled_), _Internal::kHasBitsOffset + 15, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
+    // double coreSize = 2;
+    {PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.coresize_), _Internal::kHasBitsOffset + 0, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+    // double ghostSize = 3;
+    {PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.ghostsize_), _Internal::kHasBitsOffset + 1, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+    // double ghostTransmittance = 4;
+    {PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.ghosttransmittance_), _Internal::kHasBitsOffset + 2, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+    // double ghost1RelativeSize = 5;
+    {PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.ghost1relativesize_), _Internal::kHasBitsOffset + 3, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+    // double ghost2RelativeSize = 6;
+    {PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.ghost2relativesize_), _Internal::kHasBitsOffset + 4, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+    // double ghost3RelativeSize = 7;
+    {PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.ghost3relativesize_), _Internal::kHasBitsOffset + 5, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+    // double ghost4RelativeSize = 8;
+    {PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.ghost4relativesize_), _Internal::kHasBitsOffset + 6, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+    // double ghostBrightnessSizeExponent = 9;
+    {PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.ghostbrightnesssizeexponent_), _Internal::kHasBitsOffset + 7, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+    // double coronaFalloffExponent = 10;
+    {PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.coronafalloffexponent_), _Internal::kHasBitsOffset + 8, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+    // double coronaIntensity = 11;
+    {PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.coronaintensity_), _Internal::kHasBitsOffset + 9, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+    // double baffleShieldAngle = 12;
+    {PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.baffleshieldangle_), _Internal::kHasBitsOffset + 10, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+    // double intensity = 13;
+    {PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.intensity_), _Internal::kHasBitsOffset + 11, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+    // double numRays = 14;
+    {PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.numrays_), _Internal::kHasBitsOffset + 12, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+    // double raySharpness = 15;
+    {PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.raysharpness_), _Internal::kHasBitsOffset + 13, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+    // double rayWeight = 16;
+    {PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.rayweight_), _Internal::kHasBitsOffset + 14, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+  }},
+  // no aux_entries
+  {{
+  }},
+};
+PROTOBUF_NOINLINE void StrayLightModel::Clear() {
+// @@protoc_insertion_point(message_clear_start:cielimMessage.StrayLightModel)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void) cached_has_bits;
+
+  cached_has_bits = _impl_._has_bits_[0];
+  if (BatchCheckHasBit(cached_has_bits, 0x000000ffU)) {
+    ::memset(&_impl_.coresize_, 0, static_cast<::size_t>(
+        reinterpret_cast<char*>(&_impl_.ghostbrightnesssizeexponent_) -
+        reinterpret_cast<char*>(&_impl_.coresize_)) + sizeof(_impl_.ghostbrightnesssizeexponent_));
+  }
+  if (BatchCheckHasBit(cached_has_bits, 0x0000ff00U)) {
+    ::memset(&_impl_.coronafalloffexponent_, 0, static_cast<::size_t>(
+        reinterpret_cast<char*>(&_impl_.enabled_) -
+        reinterpret_cast<char*>(&_impl_.coronafalloffexponent_)) + sizeof(_impl_.enabled_));
+  }
+  _impl_._has_bits_.Clear();
+  _internal_metadata_.Clear<::std::string>();
+}
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+::uint8_t* PROTOBUF_NONNULL StrayLightModel::_InternalSerialize(
+    const ::google::protobuf::MessageLite& base, ::uint8_t* PROTOBUF_NONNULL target,
+    ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) {
+  const StrayLightModel& this_ = static_cast<const StrayLightModel&>(base);
+#else   // PROTOBUF_CUSTOM_VTABLE
+::uint8_t* PROTOBUF_NONNULL StrayLightModel::_InternalSerialize(
+    ::uint8_t* PROTOBUF_NONNULL target,
+    ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+  const StrayLightModel& this_ = *this;
+#endif  // PROTOBUF_CUSTOM_VTABLE
+  if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
+    this_.CheckHasBitConsistency();
+  }
+  // @@protoc_insertion_point(serialize_to_array_start:cielimMessage.StrayLightModel)
+  ::uint32_t cached_has_bits = 0;
+  (void)cached_has_bits;
+
+  cached_has_bits = this_._impl_._has_bits_[0];
+  // bool enabled = 1;
+  if (CheckHasBit(cached_has_bits, 0x00008000U)) {
+    if (this_._internal_enabled() != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteBoolToArray(
+          1, this_._internal_enabled(), target);
+    }
+  }
+
+  // double coreSize = 2;
+  if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+    if (::absl::bit_cast<::uint64_t>(this_._internal_coresize()) != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+          2, this_._internal_coresize(), target);
+    }
+  }
+
+  // double ghostSize = 3;
+  if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+    if (::absl::bit_cast<::uint64_t>(this_._internal_ghostsize()) != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+          3, this_._internal_ghostsize(), target);
+    }
+  }
+
+  // double ghostTransmittance = 4;
+  if (CheckHasBit(cached_has_bits, 0x00000004U)) {
+    if (::absl::bit_cast<::uint64_t>(this_._internal_ghosttransmittance()) != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+          4, this_._internal_ghosttransmittance(), target);
+    }
+  }
+
+  // double ghost1RelativeSize = 5;
+  if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+    if (::absl::bit_cast<::uint64_t>(this_._internal_ghost1relativesize()) != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+          5, this_._internal_ghost1relativesize(), target);
+    }
+  }
+
+  // double ghost2RelativeSize = 6;
+  if (CheckHasBit(cached_has_bits, 0x00000010U)) {
+    if (::absl::bit_cast<::uint64_t>(this_._internal_ghost2relativesize()) != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+          6, this_._internal_ghost2relativesize(), target);
+    }
+  }
+
+  // double ghost3RelativeSize = 7;
+  if (CheckHasBit(cached_has_bits, 0x00000020U)) {
+    if (::absl::bit_cast<::uint64_t>(this_._internal_ghost3relativesize()) != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+          7, this_._internal_ghost3relativesize(), target);
+    }
+  }
+
+  // double ghost4RelativeSize = 8;
+  if (CheckHasBit(cached_has_bits, 0x00000040U)) {
+    if (::absl::bit_cast<::uint64_t>(this_._internal_ghost4relativesize()) != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+          8, this_._internal_ghost4relativesize(), target);
+    }
+  }
+
+  // double ghostBrightnessSizeExponent = 9;
+  if (CheckHasBit(cached_has_bits, 0x00000080U)) {
+    if (::absl::bit_cast<::uint64_t>(this_._internal_ghostbrightnesssizeexponent()) != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+          9, this_._internal_ghostbrightnesssizeexponent(), target);
+    }
+  }
+
+  // double coronaFalloffExponent = 10;
+  if (CheckHasBit(cached_has_bits, 0x00000100U)) {
+    if (::absl::bit_cast<::uint64_t>(this_._internal_coronafalloffexponent()) != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+          10, this_._internal_coronafalloffexponent(), target);
+    }
+  }
+
+  // double coronaIntensity = 11;
+  if (CheckHasBit(cached_has_bits, 0x00000200U)) {
+    if (::absl::bit_cast<::uint64_t>(this_._internal_coronaintensity()) != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+          11, this_._internal_coronaintensity(), target);
+    }
+  }
+
+  // double baffleShieldAngle = 12;
+  if (CheckHasBit(cached_has_bits, 0x00000400U)) {
+    if (::absl::bit_cast<::uint64_t>(this_._internal_baffleshieldangle()) != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+          12, this_._internal_baffleshieldangle(), target);
+    }
+  }
+
+  // double intensity = 13;
+  if (CheckHasBit(cached_has_bits, 0x00000800U)) {
+    if (::absl::bit_cast<::uint64_t>(this_._internal_intensity()) != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+          13, this_._internal_intensity(), target);
+    }
+  }
+
+  // double numRays = 14;
+  if (CheckHasBit(cached_has_bits, 0x00001000U)) {
+    if (::absl::bit_cast<::uint64_t>(this_._internal_numrays()) != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+          14, this_._internal_numrays(), target);
+    }
+  }
+
+  // double raySharpness = 15;
+  if (CheckHasBit(cached_has_bits, 0x00002000U)) {
+    if (::absl::bit_cast<::uint64_t>(this_._internal_raysharpness()) != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+          15, this_._internal_raysharpness(), target);
+    }
+  }
+
+  // double rayWeight = 16;
+  if (CheckHasBit(cached_has_bits, 0x00004000U)) {
+    if (::absl::bit_cast<::uint64_t>(this_._internal_rayweight()) != 0) {
+      target = stream->EnsureSpace(target);
+      target = ::_pbi::WireFormatLite::WriteDoubleToArray(
+          16, this_._internal_rayweight(), target);
+    }
+  }
+
+  if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
+    target = stream->WriteRaw(
+        this_._internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString).data(),
+        static_cast<int>(this_._internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString).size()), target);
+  }
+  // @@protoc_insertion_point(serialize_to_array_end:cielimMessage.StrayLightModel)
+  return target;
+}
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+::size_t StrayLightModel::ByteSizeLong(const MessageLite& base) {
+  const StrayLightModel& this_ = static_cast<const StrayLightModel&>(base);
+#else   // PROTOBUF_CUSTOM_VTABLE
+::size_t StrayLightModel::ByteSizeLong() const {
+  const StrayLightModel& this_ = *this;
+#endif  // PROTOBUF_CUSTOM_VTABLE
+  // @@protoc_insertion_point(message_byte_size_start:cielimMessage.StrayLightModel)
+  ::size_t total_size = 0;
+
+  ::uint32_t cached_has_bits = 0;
+  // Prevent compiler warnings about cached_has_bits being unused
+  (void)cached_has_bits;
+
+  ::_pbi::Prefetch5LinesFrom7Lines(&this_);
+  cached_has_bits = this_._impl_._has_bits_[0];
+  if (BatchCheckHasBit(cached_has_bits, 0x000000ffU)) {
+    // double coreSize = 2;
+    if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+      if (::absl::bit_cast<::uint64_t>(this_._internal_coresize()) != 0) {
+        total_size += 9;
+      }
+    }
+    // double ghostSize = 3;
+    if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+      if (::absl::bit_cast<::uint64_t>(this_._internal_ghostsize()) != 0) {
+        total_size += 9;
+      }
+    }
+    // double ghostTransmittance = 4;
+    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
+      if (::absl::bit_cast<::uint64_t>(this_._internal_ghosttransmittance()) != 0) {
+        total_size += 9;
+      }
+    }
+    // double ghost1RelativeSize = 5;
+    if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+      if (::absl::bit_cast<::uint64_t>(this_._internal_ghost1relativesize()) != 0) {
+        total_size += 9;
+      }
+    }
+    // double ghost2RelativeSize = 6;
+    if (CheckHasBit(cached_has_bits, 0x00000010U)) {
+      if (::absl::bit_cast<::uint64_t>(this_._internal_ghost2relativesize()) != 0) {
+        total_size += 9;
+      }
+    }
+    // double ghost3RelativeSize = 7;
+    if (CheckHasBit(cached_has_bits, 0x00000020U)) {
+      if (::absl::bit_cast<::uint64_t>(this_._internal_ghost3relativesize()) != 0) {
+        total_size += 9;
+      }
+    }
+    // double ghost4RelativeSize = 8;
+    if (CheckHasBit(cached_has_bits, 0x00000040U)) {
+      if (::absl::bit_cast<::uint64_t>(this_._internal_ghost4relativesize()) != 0) {
+        total_size += 9;
+      }
+    }
+    // double ghostBrightnessSizeExponent = 9;
+    if (CheckHasBit(cached_has_bits, 0x00000080U)) {
+      if (::absl::bit_cast<::uint64_t>(this_._internal_ghostbrightnesssizeexponent()) != 0) {
+        total_size += 9;
+      }
+    }
+  }
+  if (BatchCheckHasBit(cached_has_bits, 0x0000ff00U)) {
+    // double coronaFalloffExponent = 10;
+    if (CheckHasBit(cached_has_bits, 0x00000100U)) {
+      if (::absl::bit_cast<::uint64_t>(this_._internal_coronafalloffexponent()) != 0) {
+        total_size += 9;
+      }
+    }
+    // double coronaIntensity = 11;
+    if (CheckHasBit(cached_has_bits, 0x00000200U)) {
+      if (::absl::bit_cast<::uint64_t>(this_._internal_coronaintensity()) != 0) {
+        total_size += 9;
+      }
+    }
+    // double baffleShieldAngle = 12;
+    if (CheckHasBit(cached_has_bits, 0x00000400U)) {
+      if (::absl::bit_cast<::uint64_t>(this_._internal_baffleshieldangle()) != 0) {
+        total_size += 9;
+      }
+    }
+    // double intensity = 13;
+    if (CheckHasBit(cached_has_bits, 0x00000800U)) {
+      if (::absl::bit_cast<::uint64_t>(this_._internal_intensity()) != 0) {
+        total_size += 9;
+      }
+    }
+    // double numRays = 14;
+    if (CheckHasBit(cached_has_bits, 0x00001000U)) {
+      if (::absl::bit_cast<::uint64_t>(this_._internal_numrays()) != 0) {
+        total_size += 9;
+      }
+    }
+    // double raySharpness = 15;
+    if (CheckHasBit(cached_has_bits, 0x00002000U)) {
+      if (::absl::bit_cast<::uint64_t>(this_._internal_raysharpness()) != 0) {
+        total_size += 9;
+      }
+    }
+    // double rayWeight = 16;
+    if (CheckHasBit(cached_has_bits, 0x00004000U)) {
+      if (::absl::bit_cast<::uint64_t>(this_._internal_rayweight()) != 0) {
+        total_size += 10;
+      }
+    }
+    // bool enabled = 1;
+    if (CheckHasBit(cached_has_bits, 0x00008000U)) {
+      if (this_._internal_enabled() != 0) {
+        total_size += 2;
+      }
+    }
+  }
+  if (ABSL_PREDICT_FALSE(this_._internal_metadata_.have_unknown_fields())) {
+    total_size += this_._internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString).size();
+  }
+  this_._impl_._cached_size_.Set(::_pbi::ToCachedSize(total_size));
+  return total_size;
+}
+
+void StrayLightModel::MergeImpl(::google::protobuf::MessageLite& to_msg,
+                            const ::google::protobuf::MessageLite& from_msg) {
+   auto* const _this =
+      static_cast<StrayLightModel*>(&to_msg);
+  auto& from = static_cast<const StrayLightModel&>(from_msg);
+  if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
+    from.CheckHasBitConsistency();
+  }
+  // @@protoc_insertion_point(class_specific_merge_from_start:cielimMessage.StrayLightModel)
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
+  (void)cached_has_bits;
+
+  cached_has_bits = from._impl_._has_bits_[0];
+  if (BatchCheckHasBit(cached_has_bits, 0x000000ffU)) {
+    if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+      if (::absl::bit_cast<::uint64_t>(from._internal_coresize()) != 0) {
+        _this->_impl_.coresize_ = from._impl_.coresize_;
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+      if (::absl::bit_cast<::uint64_t>(from._internal_ghostsize()) != 0) {
+        _this->_impl_.ghostsize_ = from._impl_.ghostsize_;
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
+      if (::absl::bit_cast<::uint64_t>(from._internal_ghosttransmittance()) != 0) {
+        _this->_impl_.ghosttransmittance_ = from._impl_.ghosttransmittance_;
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+      if (::absl::bit_cast<::uint64_t>(from._internal_ghost1relativesize()) != 0) {
+        _this->_impl_.ghost1relativesize_ = from._impl_.ghost1relativesize_;
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000010U)) {
+      if (::absl::bit_cast<::uint64_t>(from._internal_ghost2relativesize()) != 0) {
+        _this->_impl_.ghost2relativesize_ = from._impl_.ghost2relativesize_;
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000020U)) {
+      if (::absl::bit_cast<::uint64_t>(from._internal_ghost3relativesize()) != 0) {
+        _this->_impl_.ghost3relativesize_ = from._impl_.ghost3relativesize_;
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000040U)) {
+      if (::absl::bit_cast<::uint64_t>(from._internal_ghost4relativesize()) != 0) {
+        _this->_impl_.ghost4relativesize_ = from._impl_.ghost4relativesize_;
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000080U)) {
+      if (::absl::bit_cast<::uint64_t>(from._internal_ghostbrightnesssizeexponent()) != 0) {
+        _this->_impl_.ghostbrightnesssizeexponent_ = from._impl_.ghostbrightnesssizeexponent_;
+      }
+    }
+  }
+  if (BatchCheckHasBit(cached_has_bits, 0x0000ff00U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000100U)) {
+      if (::absl::bit_cast<::uint64_t>(from._internal_coronafalloffexponent()) != 0) {
+        _this->_impl_.coronafalloffexponent_ = from._impl_.coronafalloffexponent_;
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000200U)) {
+      if (::absl::bit_cast<::uint64_t>(from._internal_coronaintensity()) != 0) {
+        _this->_impl_.coronaintensity_ = from._impl_.coronaintensity_;
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000400U)) {
+      if (::absl::bit_cast<::uint64_t>(from._internal_baffleshieldangle()) != 0) {
+        _this->_impl_.baffleshieldangle_ = from._impl_.baffleshieldangle_;
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000800U)) {
+      if (::absl::bit_cast<::uint64_t>(from._internal_intensity()) != 0) {
+        _this->_impl_.intensity_ = from._impl_.intensity_;
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00001000U)) {
+      if (::absl::bit_cast<::uint64_t>(from._internal_numrays()) != 0) {
+        _this->_impl_.numrays_ = from._impl_.numrays_;
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00002000U)) {
+      if (::absl::bit_cast<::uint64_t>(from._internal_raysharpness()) != 0) {
+        _this->_impl_.raysharpness_ = from._impl_.raysharpness_;
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00004000U)) {
+      if (::absl::bit_cast<::uint64_t>(from._internal_rayweight()) != 0) {
+        _this->_impl_.rayweight_ = from._impl_.rayweight_;
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00008000U)) {
+      if (from._internal_enabled() != 0) {
+        _this->_impl_.enabled_ = from._impl_.enabled_;
+      }
+    }
+  }
+  _this->_impl_._has_bits_[0] |= cached_has_bits;
+  _this->_internal_metadata_.MergeFrom<::std::string>(
+      from._internal_metadata_);
+}
+
+void StrayLightModel::CopyFrom(const StrayLightModel& from) {
+  // @@protoc_insertion_point(class_specific_copy_from_start:cielimMessage.StrayLightModel)
+  if (&from == this) return;
+  Clear();
+  MergeFrom(from);
+}
+
+
+void StrayLightModel::InternalSwap(StrayLightModel* PROTOBUF_RESTRICT PROTOBUF_NONNULL other) {
+  using ::std::swap;
+  _internal_metadata_.InternalSwap(&other->_internal_metadata_);
+  swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
+  ::google::protobuf::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.enabled_)
+      + sizeof(StrayLightModel::_impl_.enabled_)
+      - PROTOBUF_FIELD_OFFSET(StrayLightModel, _impl_.coresize_)>(
+          reinterpret_cast<char*>(&_impl_.coresize_),
+          reinterpret_cast<char*>(&other->_impl_.coresize_));
+}
+
+// ===================================================================
+
 class RenderingModel::_Internal {
  public:
   using HasBits =
@@ -1289,6 +1990,10 @@ RenderingModel::RenderingModel(
   _internal_metadata_.MergeFrom<::std::string>(
       from._internal_metadata_);
   new (&_impl_) Impl_(internal_visibility(), arena, from._impl_, from);
+  ::uint32_t cached_has_bits = _impl_._has_bits_[0];
+  _impl_.straylightmodel_ = (CheckHasBit(cached_has_bits, 0x00000002U))
+                ? ::google::protobuf::MessageLite::CopyConstruct(arena, *from._impl_.straylightmodel_)
+                : nullptr;
   ::memcpy(reinterpret_cast<char*>(&_impl_) +
                offsetof(Impl_, wavelength1_),
            reinterpret_cast<const char*>(&from._impl_) +
@@ -1308,10 +2013,10 @@ PROTOBUF_NDEBUG_INLINE RenderingModel::Impl_::Impl_(
 inline void RenderingModel::SharedCtor(::_pb::Arena* PROTOBUF_NULLABLE arena) {
   new (&_impl_) Impl_(internal_visibility(), arena);
   ::memset(reinterpret_cast<char*>(&_impl_) +
-               offsetof(Impl_, wavelength1_),
+               offsetof(Impl_, straylightmodel_),
            0,
            offsetof(Impl_, enablesmear_) -
-               offsetof(Impl_, wavelength1_) +
+               offsetof(Impl_, straylightmodel_) +
                sizeof(Impl_::enablesmear_));
 }
 RenderingModel::~RenderingModel() {
@@ -1326,6 +2031,7 @@ inline void RenderingModel::SharedDtor(MessageLite& self) {
   this_._internal_metadata_.Delete<::std::string>();
   ABSL_DCHECK(this_.GetArena() == nullptr);
   this_._impl_.rendering_.Destroy();
+  delete this_._impl_.straylightmodel_;
   this_._impl_.~Impl_();
 }
 
@@ -1369,7 +2075,7 @@ RenderingModel::GetClassData() const {
   return RenderingModel_class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<3, 8, 0, 54, 2>
+const ::_pbi::TcParseTable<3, 8, 1, 54, 2>
 RenderingModel::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(RenderingModel, _impl_._has_bits_),
@@ -1379,8 +2085,8 @@ RenderingModel::_table_ = {
     4294967040,  // skipmap
     offsetof(decltype(_table_), field_entries),
     8,  // num_field_entries
-    0,  // num_aux_entries
-    offsetof(decltype(_table_), field_names),  // no aux_entries
+    1,  // num_aux_entries
+    offsetof(decltype(_table_), aux_entries),
     RenderingModel_class_data_.base(),
     nullptr,  // post_loop_handler
     ::_pbi::TcParser::GenericFallbackLite,  // fallback
@@ -1394,24 +2100,24 @@ RenderingModel::_table_ = {
       PROTOBUF_FIELD_OFFSET(RenderingModel, _impl_.enablesmear_)}},
     // double wavelength1 = 1;
     {::_pbi::TcParser::FastF64S1,
-     {9, 1, 0,
+     {9, 2, 0,
       PROTOBUF_FIELD_OFFSET(RenderingModel, _impl_.wavelength1_)}},
     // double wavelength2 = 2;
     {::_pbi::TcParser::FastF64S1,
-     {17, 2, 0,
+     {17, 3, 0,
       PROTOBUF_FIELD_OFFSET(RenderingModel, _impl_.wavelength2_)}},
     // double wavelength3 = 3;
     {::_pbi::TcParser::FastF64S1,
-     {25, 3, 0,
+     {25, 4, 0,
       PROTOBUF_FIELD_OFFSET(RenderingModel, _impl_.wavelength3_)}},
     // double cosmicRayStdDeviation = 4;
     {::_pbi::TcParser::FastF64S1,
-     {33, 4, 0,
+     {33, 5, 0,
       PROTOBUF_FIELD_OFFSET(RenderingModel, _impl_.cosmicraystddeviation_)}},
-    // double strayLight = 5;
-    {::_pbi::TcParser::FastF64S1,
-     {41, 5, 0,
-      PROTOBUF_FIELD_OFFSET(RenderingModel, _impl_.straylight_)}},
+    // .cielimMessage.StrayLightModel strayLightModel = 5;
+    {::_pbi::TcParser::FastMtS1,
+     {42, 1, 0,
+      PROTOBUF_FIELD_OFFSET(RenderingModel, _impl_.straylightmodel_)}},
     // bool starField = 6;
     {::_pbi::TcParser::FastV8S1,
      {48, 6, 0,
@@ -1424,15 +2130,15 @@ RenderingModel::_table_ = {
     65535, 65535
   }}, {{
     // double wavelength1 = 1;
-    {PROTOBUF_FIELD_OFFSET(RenderingModel, _impl_.wavelength1_), _Internal::kHasBitsOffset + 1, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+    {PROTOBUF_FIELD_OFFSET(RenderingModel, _impl_.wavelength1_), _Internal::kHasBitsOffset + 2, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
     // double wavelength2 = 2;
-    {PROTOBUF_FIELD_OFFSET(RenderingModel, _impl_.wavelength2_), _Internal::kHasBitsOffset + 2, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+    {PROTOBUF_FIELD_OFFSET(RenderingModel, _impl_.wavelength2_), _Internal::kHasBitsOffset + 3, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
     // double wavelength3 = 3;
-    {PROTOBUF_FIELD_OFFSET(RenderingModel, _impl_.wavelength3_), _Internal::kHasBitsOffset + 3, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+    {PROTOBUF_FIELD_OFFSET(RenderingModel, _impl_.wavelength3_), _Internal::kHasBitsOffset + 4, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
     // double cosmicRayStdDeviation = 4;
-    {PROTOBUF_FIELD_OFFSET(RenderingModel, _impl_.cosmicraystddeviation_), _Internal::kHasBitsOffset + 4, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
-    // double strayLight = 5;
-    {PROTOBUF_FIELD_OFFSET(RenderingModel, _impl_.straylight_), _Internal::kHasBitsOffset + 5, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+    {PROTOBUF_FIELD_OFFSET(RenderingModel, _impl_.cosmicraystddeviation_), _Internal::kHasBitsOffset + 5, 0, (0 | ::_fl::kFcOptional | ::_fl::kDouble)},
+    // .cielimMessage.StrayLightModel strayLightModel = 5;
+    {PROTOBUF_FIELD_OFFSET(RenderingModel, _impl_.straylightmodel_), _Internal::kHasBitsOffset + 1, 0, (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
     // bool starField = 6;
     {PROTOBUF_FIELD_OFFSET(RenderingModel, _impl_.starfield_), _Internal::kHasBitsOffset + 6, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
     // string rendering = 7;
@@ -1440,7 +2146,9 @@ RenderingModel::_table_ = {
     // bool enableSmear = 8;
     {PROTOBUF_FIELD_OFFSET(RenderingModel, _impl_.enablesmear_), _Internal::kHasBitsOffset + 7, 0, (0 | ::_fl::kFcOptional | ::_fl::kBool)},
   }},
-  // no aux_entries
+  {{
+      {::_pbi::TcParser::GetTable<::cielimMessage::StrayLightModel>()},
+  }},
   {{
     "\34\0\0\0\0\0\0\11\0\0\0\0\0\0\0\0"
     "cielimMessage.RenderingModel"
@@ -1455,10 +2163,16 @@ PROTOBUF_NOINLINE void RenderingModel::Clear() {
   (void) cached_has_bits;
 
   cached_has_bits = _impl_._has_bits_[0];
-  if (CheckHasBit(cached_has_bits, 0x00000001U)) {
-    _impl_.rendering_.ClearNonDefaultToEmpty();
+  if (BatchCheckHasBit(cached_has_bits, 0x00000003U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000001U)) {
+      _impl_.rendering_.ClearNonDefaultToEmpty();
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+      ABSL_DCHECK(_impl_.straylightmodel_ != nullptr);
+      _impl_.straylightmodel_->Clear();
+    }
   }
-  if (BatchCheckHasBit(cached_has_bits, 0x000000feU)) {
+  if (BatchCheckHasBit(cached_has_bits, 0x000000fcU)) {
     ::memset(&_impl_.wavelength1_, 0, static_cast<::size_t>(
         reinterpret_cast<char*>(&_impl_.enablesmear_) -
         reinterpret_cast<char*>(&_impl_.wavelength1_)) + sizeof(_impl_.enablesmear_));
@@ -1487,7 +2201,7 @@ PROTOBUF_NOINLINE void RenderingModel::Clear() {
 
   cached_has_bits = this_._impl_._has_bits_[0];
   // double wavelength1 = 1;
-  if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000004U)) {
     if (::absl::bit_cast<::uint64_t>(this_._internal_wavelength1()) != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteDoubleToArray(
@@ -1496,7 +2210,7 @@ PROTOBUF_NOINLINE void RenderingModel::Clear() {
   }
 
   // double wavelength2 = 2;
-  if (CheckHasBit(cached_has_bits, 0x00000004U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000008U)) {
     if (::absl::bit_cast<::uint64_t>(this_._internal_wavelength2()) != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteDoubleToArray(
@@ -1505,7 +2219,7 @@ PROTOBUF_NOINLINE void RenderingModel::Clear() {
   }
 
   // double wavelength3 = 3;
-  if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000010U)) {
     if (::absl::bit_cast<::uint64_t>(this_._internal_wavelength3()) != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteDoubleToArray(
@@ -1514,7 +2228,7 @@ PROTOBUF_NOINLINE void RenderingModel::Clear() {
   }
 
   // double cosmicRayStdDeviation = 4;
-  if (CheckHasBit(cached_has_bits, 0x00000010U)) {
+  if (CheckHasBit(cached_has_bits, 0x00000020U)) {
     if (::absl::bit_cast<::uint64_t>(this_._internal_cosmicraystddeviation()) != 0) {
       target = stream->EnsureSpace(target);
       target = ::_pbi::WireFormatLite::WriteDoubleToArray(
@@ -1522,13 +2236,11 @@ PROTOBUF_NOINLINE void RenderingModel::Clear() {
     }
   }
 
-  // double strayLight = 5;
-  if (CheckHasBit(cached_has_bits, 0x00000020U)) {
-    if (::absl::bit_cast<::uint64_t>(this_._internal_straylight()) != 0) {
-      target = stream->EnsureSpace(target);
-      target = ::_pbi::WireFormatLite::WriteDoubleToArray(
-          5, this_._internal_straylight(), target);
-    }
+  // .cielimMessage.StrayLightModel strayLightModel = 5;
+  if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+    target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
+        5, *this_._impl_.straylightmodel_, this_._impl_.straylightmodel_->GetCachedSize(), target,
+        stream);
   }
 
   // bool starField = 6;
@@ -1592,33 +2304,32 @@ PROTOBUF_NOINLINE void RenderingModel::Clear() {
                                         this_._internal_rendering());
       }
     }
-    // double wavelength1 = 1;
+    // .cielimMessage.StrayLightModel strayLightModel = 5;
     if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+      total_size += 1 +
+                    ::google::protobuf::internal::WireFormatLite::MessageSize(*this_._impl_.straylightmodel_);
+    }
+    // double wavelength1 = 1;
+    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
       if (::absl::bit_cast<::uint64_t>(this_._internal_wavelength1()) != 0) {
         total_size += 9;
       }
     }
     // double wavelength2 = 2;
-    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000008U)) {
       if (::absl::bit_cast<::uint64_t>(this_._internal_wavelength2()) != 0) {
         total_size += 9;
       }
     }
     // double wavelength3 = 3;
-    if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000010U)) {
       if (::absl::bit_cast<::uint64_t>(this_._internal_wavelength3()) != 0) {
         total_size += 9;
       }
     }
     // double cosmicRayStdDeviation = 4;
-    if (CheckHasBit(cached_has_bits, 0x00000010U)) {
-      if (::absl::bit_cast<::uint64_t>(this_._internal_cosmicraystddeviation()) != 0) {
-        total_size += 9;
-      }
-    }
-    // double strayLight = 5;
     if (CheckHasBit(cached_has_bits, 0x00000020U)) {
-      if (::absl::bit_cast<::uint64_t>(this_._internal_straylight()) != 0) {
+      if (::absl::bit_cast<::uint64_t>(this_._internal_cosmicraystddeviation()) != 0) {
         total_size += 9;
       }
     }
@@ -1650,6 +2361,7 @@ void RenderingModel::MergeImpl(::google::protobuf::MessageLite& to_msg,
   if constexpr (::_pbi::DebugHardenCheckHasBitConsistency()) {
     from.CheckHasBitConsistency();
   }
+  ::google::protobuf::Arena* arena = _this->GetArena();
   // @@protoc_insertion_point(class_specific_merge_from_start:cielimMessage.RenderingModel)
   ABSL_DCHECK_NE(&from, _this);
   ::uint32_t cached_has_bits = 0;
@@ -1667,28 +2379,31 @@ void RenderingModel::MergeImpl(::google::protobuf::MessageLite& to_msg,
       }
     }
     if (CheckHasBit(cached_has_bits, 0x00000002U)) {
+      ABSL_DCHECK(from._impl_.straylightmodel_ != nullptr);
+      if (_this->_impl_.straylightmodel_ == nullptr) {
+        _this->_impl_.straylightmodel_ = ::google::protobuf::MessageLite::CopyConstruct(arena, *from._impl_.straylightmodel_);
+      } else {
+        _this->_impl_.straylightmodel_->MergeFrom(*from._impl_.straylightmodel_);
+      }
+    }
+    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
       if (::absl::bit_cast<::uint64_t>(from._internal_wavelength1()) != 0) {
         _this->_impl_.wavelength1_ = from._impl_.wavelength1_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00000004U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000008U)) {
       if (::absl::bit_cast<::uint64_t>(from._internal_wavelength2()) != 0) {
         _this->_impl_.wavelength2_ = from._impl_.wavelength2_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00000008U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000010U)) {
       if (::absl::bit_cast<::uint64_t>(from._internal_wavelength3()) != 0) {
         _this->_impl_.wavelength3_ = from._impl_.wavelength3_;
       }
     }
-    if (CheckHasBit(cached_has_bits, 0x00000010U)) {
+    if (CheckHasBit(cached_has_bits, 0x00000020U)) {
       if (::absl::bit_cast<::uint64_t>(from._internal_cosmicraystddeviation()) != 0) {
         _this->_impl_.cosmicraystddeviation_ = from._impl_.cosmicraystddeviation_;
-      }
-    }
-    if (CheckHasBit(cached_has_bits, 0x00000020U)) {
-      if (::absl::bit_cast<::uint64_t>(from._internal_straylight()) != 0) {
-        _this->_impl_.straylight_ = from._impl_.straylight_;
       }
     }
     if (CheckHasBit(cached_has_bits, 0x00000040U)) {
@@ -1725,9 +2440,9 @@ void RenderingModel::InternalSwap(RenderingModel* PROTOBUF_RESTRICT PROTOBUF_NON
   ::google::protobuf::internal::memswap<
       PROTOBUF_FIELD_OFFSET(RenderingModel, _impl_.enablesmear_)
       + sizeof(RenderingModel::_impl_.enablesmear_)
-      - PROTOBUF_FIELD_OFFSET(RenderingModel, _impl_.wavelength1_)>(
-          reinterpret_cast<char*>(&_impl_.wavelength1_),
-          reinterpret_cast<char*>(&other->_impl_.wavelength1_));
+      - PROTOBUF_FIELD_OFFSET(RenderingModel, _impl_.straylightmodel_)>(
+          reinterpret_cast<char*>(&_impl_.straylightmodel_),
+          reinterpret_cast<char*>(&other->_impl_.straylightmodel_));
 }
 
 // ===================================================================

@@ -117,6 +117,10 @@ class Spacecraft;
 struct SpacecraftDefaultTypeInternal;
 extern SpacecraftDefaultTypeInternal _Spacecraft_default_instance_;
 extern const ::google::protobuf::internal::ClassDataLite<25> Spacecraft_class_data_;
+class StrayLightModel;
+struct StrayLightModelDefaultTypeInternal;
+extern StrayLightModelDefaultTypeInternal _StrayLightModel_default_instance_;
+extern const ::google::protobuf::internal::ClassDataLite<30> StrayLightModel_class_data_;
 class TimeStamp;
 struct TimeStampDefaultTypeInternal;
 extern TimeStampDefaultTypeInternal _TimeStamp_default_instance_;
@@ -358,6 +362,364 @@ class TimeStamp final : public ::google::protobuf::MessageLite
 extern const ::google::protobuf::internal::ClassDataLite<24> TimeStamp_class_data_;
 // -------------------------------------------------------------------
 
+class StrayLightModel final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:cielimMessage.StrayLightModel) */ {
+ public:
+  inline StrayLightModel() : StrayLightModel(nullptr) {}
+  ~StrayLightModel() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(StrayLightModel* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(StrayLightModel));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR StrayLightModel(::google::protobuf::internal::ConstantInitialized);
+
+  inline StrayLightModel(const StrayLightModel& from) : StrayLightModel(nullptr, from) {}
+  inline StrayLightModel(StrayLightModel&& from) noexcept
+      : StrayLightModel(nullptr, ::std::move(from)) {}
+  inline StrayLightModel& operator=(const StrayLightModel& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline StrayLightModel& operator=(StrayLightModel&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline ::std::string* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::std::string>();
+  }
+
+  static const StrayLightModel& default_instance() {
+    return *reinterpret_cast<const StrayLightModel*>(
+        &_StrayLightModel_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 2;
+  friend void swap(StrayLightModel& a, StrayLightModel& b) { a.Swap(&b); }
+  inline void Swap(StrayLightModel* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(StrayLightModel* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  StrayLightModel* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::MessageLite::DefaultConstruct<StrayLightModel>(arena);
+  }
+  void CopyFrom(const StrayLightModel& from);
+  void MergeFrom(const StrayLightModel& from) { StrayLightModel::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(StrayLightModel* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "cielimMessage.StrayLightModel"; }
+
+  explicit StrayLightModel(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  StrayLightModel(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const StrayLightModel& from);
+  StrayLightModel(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, StrayLightModel&& from) noexcept
+      : StrayLightModel(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kCoreSizeFieldNumber = 2,
+    kGhostSizeFieldNumber = 3,
+    kGhostTransmittanceFieldNumber = 4,
+    kGhost1RelativeSizeFieldNumber = 5,
+    kGhost2RelativeSizeFieldNumber = 6,
+    kGhost3RelativeSizeFieldNumber = 7,
+    kGhost4RelativeSizeFieldNumber = 8,
+    kGhostBrightnessSizeExponentFieldNumber = 9,
+    kCoronaFalloffExponentFieldNumber = 10,
+    kCoronaIntensityFieldNumber = 11,
+    kBaffleShieldAngleFieldNumber = 12,
+    kIntensityFieldNumber = 13,
+    kNumRaysFieldNumber = 14,
+    kRaySharpnessFieldNumber = 15,
+    kRayWeightFieldNumber = 16,
+    kEnabledFieldNumber = 1,
+  };
+  // double coreSize = 2;
+  void clear_coresize() ;
+  double coresize() const;
+  void set_coresize(double value);
+
+  private:
+  double _internal_coresize() const;
+  void _internal_set_coresize(double value);
+
+  public:
+  // double ghostSize = 3;
+  void clear_ghostsize() ;
+  double ghostsize() const;
+  void set_ghostsize(double value);
+
+  private:
+  double _internal_ghostsize() const;
+  void _internal_set_ghostsize(double value);
+
+  public:
+  // double ghostTransmittance = 4;
+  void clear_ghosttransmittance() ;
+  double ghosttransmittance() const;
+  void set_ghosttransmittance(double value);
+
+  private:
+  double _internal_ghosttransmittance() const;
+  void _internal_set_ghosttransmittance(double value);
+
+  public:
+  // double ghost1RelativeSize = 5;
+  void clear_ghost1relativesize() ;
+  double ghost1relativesize() const;
+  void set_ghost1relativesize(double value);
+
+  private:
+  double _internal_ghost1relativesize() const;
+  void _internal_set_ghost1relativesize(double value);
+
+  public:
+  // double ghost2RelativeSize = 6;
+  void clear_ghost2relativesize() ;
+  double ghost2relativesize() const;
+  void set_ghost2relativesize(double value);
+
+  private:
+  double _internal_ghost2relativesize() const;
+  void _internal_set_ghost2relativesize(double value);
+
+  public:
+  // double ghost3RelativeSize = 7;
+  void clear_ghost3relativesize() ;
+  double ghost3relativesize() const;
+  void set_ghost3relativesize(double value);
+
+  private:
+  double _internal_ghost3relativesize() const;
+  void _internal_set_ghost3relativesize(double value);
+
+  public:
+  // double ghost4RelativeSize = 8;
+  void clear_ghost4relativesize() ;
+  double ghost4relativesize() const;
+  void set_ghost4relativesize(double value);
+
+  private:
+  double _internal_ghost4relativesize() const;
+  void _internal_set_ghost4relativesize(double value);
+
+  public:
+  // double ghostBrightnessSizeExponent = 9;
+  void clear_ghostbrightnesssizeexponent() ;
+  double ghostbrightnesssizeexponent() const;
+  void set_ghostbrightnesssizeexponent(double value);
+
+  private:
+  double _internal_ghostbrightnesssizeexponent() const;
+  void _internal_set_ghostbrightnesssizeexponent(double value);
+
+  public:
+  // double coronaFalloffExponent = 10;
+  void clear_coronafalloffexponent() ;
+  double coronafalloffexponent() const;
+  void set_coronafalloffexponent(double value);
+
+  private:
+  double _internal_coronafalloffexponent() const;
+  void _internal_set_coronafalloffexponent(double value);
+
+  public:
+  // double coronaIntensity = 11;
+  void clear_coronaintensity() ;
+  double coronaintensity() const;
+  void set_coronaintensity(double value);
+
+  private:
+  double _internal_coronaintensity() const;
+  void _internal_set_coronaintensity(double value);
+
+  public:
+  // double baffleShieldAngle = 12;
+  void clear_baffleshieldangle() ;
+  double baffleshieldangle() const;
+  void set_baffleshieldangle(double value);
+
+  private:
+  double _internal_baffleshieldangle() const;
+  void _internal_set_baffleshieldangle(double value);
+
+  public:
+  // double intensity = 13;
+  void clear_intensity() ;
+  double intensity() const;
+  void set_intensity(double value);
+
+  private:
+  double _internal_intensity() const;
+  void _internal_set_intensity(double value);
+
+  public:
+  // double numRays = 14;
+  void clear_numrays() ;
+  double numrays() const;
+  void set_numrays(double value);
+
+  private:
+  double _internal_numrays() const;
+  void _internal_set_numrays(double value);
+
+  public:
+  // double raySharpness = 15;
+  void clear_raysharpness() ;
+  double raysharpness() const;
+  void set_raysharpness(double value);
+
+  private:
+  double _internal_raysharpness() const;
+  void _internal_set_raysharpness(double value);
+
+  public:
+  // double rayWeight = 16;
+  void clear_rayweight() ;
+  double rayweight() const;
+  void set_rayweight(double value);
+
+  private:
+  double _internal_rayweight() const;
+  void _internal_set_rayweight(double value);
+
+  public:
+  // bool enabled = 1;
+  void clear_enabled() ;
+  bool enabled() const;
+  void set_enabled(bool value);
+
+  private:
+  bool _internal_enabled() const;
+  void _internal_set_enabled(bool value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:cielimMessage.StrayLightModel)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<4, 16,
+                                   0, 0,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const StrayLightModel& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    double coresize_;
+    double ghostsize_;
+    double ghosttransmittance_;
+    double ghost1relativesize_;
+    double ghost2relativesize_;
+    double ghost3relativesize_;
+    double ghost4relativesize_;
+    double ghostbrightnesssizeexponent_;
+    double coronafalloffexponent_;
+    double coronaintensity_;
+    double baffleshieldangle_;
+    double intensity_;
+    double numrays_;
+    double raysharpness_;
+    double rayweight_;
+    bool enabled_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_cielimMessage_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataLite<30> StrayLightModel_class_data_;
+// -------------------------------------------------------------------
+
 class Spacecraft final : public ::google::protobuf::MessageLite
 /* @@protoc_insertion_point(class_definition:cielimMessage.Spacecraft) */ {
  public:
@@ -404,7 +766,7 @@ class Spacecraft final : public ::google::protobuf::MessageLite
     return *reinterpret_cast<const Spacecraft*>(
         &_Spacecraft_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 7;
+  static constexpr int kIndexInFileMessages = 8;
   friend void swap(Spacecraft& a, Spacecraft& b) { a.Swap(&b); }
   inline void Swap(Spacecraft* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -601,273 +963,6 @@ class Spacecraft final : public ::google::protobuf::MessageLite
 extern const ::google::protobuf::internal::ClassDataLite<25> Spacecraft_class_data_;
 // -------------------------------------------------------------------
 
-class RenderingModel final : public ::google::protobuf::MessageLite
-/* @@protoc_insertion_point(class_definition:cielimMessage.RenderingModel) */ {
- public:
-  inline RenderingModel() : RenderingModel(nullptr) {}
-  ~RenderingModel() PROTOBUF_FINAL;
-
-#if defined(PROTOBUF_CUSTOM_VTABLE)
-  void operator delete(RenderingModel* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
-    SharedDtor(*msg);
-    ::google::protobuf::internal::SizedDelete(msg, sizeof(RenderingModel));
-  }
-#endif
-
-  template <typename = void>
-  explicit PROTOBUF_CONSTEXPR RenderingModel(::google::protobuf::internal::ConstantInitialized);
-
-  inline RenderingModel(const RenderingModel& from) : RenderingModel(nullptr, from) {}
-  inline RenderingModel(RenderingModel&& from) noexcept
-      : RenderingModel(nullptr, ::std::move(from)) {}
-  inline RenderingModel& operator=(const RenderingModel& from) {
-    CopyFrom(from);
-    return *this;
-  }
-  inline RenderingModel& operator=(RenderingModel&& from) noexcept {
-    if (this == &from) return *this;
-    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
-      InternalSwap(&from);
-    } else {
-      CopyFrom(from);
-    }
-    return *this;
-  }
-
-  inline const ::std::string& unknown_fields() const
-      ABSL_ATTRIBUTE_LIFETIME_BOUND {
-    return _internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString);
-  }
-  inline ::std::string* PROTOBUF_NONNULL mutable_unknown_fields()
-      ABSL_ATTRIBUTE_LIFETIME_BOUND {
-    return _internal_metadata_.mutable_unknown_fields<::std::string>();
-  }
-
-  static const RenderingModel& default_instance() {
-    return *reinterpret_cast<const RenderingModel*>(
-        &_RenderingModel_default_instance_);
-  }
-  static constexpr int kIndexInFileMessages = 2;
-  friend void swap(RenderingModel& a, RenderingModel& b) { a.Swap(&b); }
-  inline void Swap(RenderingModel* PROTOBUF_NONNULL other) {
-    if (other == this) return;
-    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
-      InternalSwap(other);
-    } else {
-      ::google::protobuf::internal::GenericSwap(this, other);
-    }
-  }
-  void UnsafeArenaSwap(RenderingModel* PROTOBUF_NONNULL other) {
-    if (other == this) return;
-    ABSL_DCHECK(GetArena() == other->GetArena());
-    InternalSwap(other);
-  }
-
-  // implements Message ----------------------------------------------
-
-  RenderingModel* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
-    return ::google::protobuf::MessageLite::DefaultConstruct<RenderingModel>(arena);
-  }
-  void CopyFrom(const RenderingModel& from);
-  void MergeFrom(const RenderingModel& from) { RenderingModel::MergeImpl(*this, from); }
-
-  private:
-  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
-                        const ::google::protobuf::MessageLite& from_msg);
-
-  public:
-  bool IsInitialized() const {
-    return true;
-  }
-  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
-  #if defined(PROTOBUF_CUSTOM_VTABLE)
-  private:
-  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
-  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
-      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
-      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
-
-  public:
-  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
-  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
-      ::uint8_t* PROTOBUF_NONNULL target,
-      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
-    return _InternalSerialize(*this, target, stream);
-  }
-  #else   // PROTOBUF_CUSTOM_VTABLE
-  ::size_t ByteSizeLong() const final;
-  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
-      ::uint8_t* PROTOBUF_NONNULL target,
-      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
-  #endif  // PROTOBUF_CUSTOM_VTABLE
-  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
-
-  private:
-  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-  static void SharedDtor(MessageLite& self);
-  void InternalSwap(RenderingModel* PROTOBUF_NONNULL other);
- private:
-  template <typename T>
-  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
-  static ::absl::string_view FullMessageName() { return "cielimMessage.RenderingModel"; }
-
-  explicit RenderingModel(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-  RenderingModel(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const RenderingModel& from);
-  RenderingModel(
-      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, RenderingModel&& from) noexcept
-      : RenderingModel(arena) {
-    *this = ::std::move(from);
-  }
-  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
-  static void* PROTOBUF_NONNULL PlacementNew_(
-      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
-      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-  static constexpr auto InternalNewImpl_();
-
- public:
-  static constexpr auto InternalGenerateClassData_();
-
-  // nested types ----------------------------------------------------
-
-  // accessors -------------------------------------------------------
-  enum : int {
-    kRenderingFieldNumber = 7,
-    kWavelength1FieldNumber = 1,
-    kWavelength2FieldNumber = 2,
-    kWavelength3FieldNumber = 3,
-    kCosmicRayStdDeviationFieldNumber = 4,
-    kStrayLightFieldNumber = 5,
-    kStarFieldFieldNumber = 6,
-    kEnableSmearFieldNumber = 8,
-  };
-  // string rendering = 7;
-  void clear_rendering() ;
-  const ::std::string& rendering() const;
-  template <typename Arg_ = const ::std::string&, typename... Args_>
-  void set_rendering(Arg_&& arg, Args_... args);
-  ::std::string* PROTOBUF_NONNULL mutable_rendering();
-  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_rendering();
-  void set_allocated_rendering(::std::string* PROTOBUF_NULLABLE value);
-
-  private:
-  const ::std::string& _internal_rendering() const;
-  PROTOBUF_ALWAYS_INLINE void _internal_set_rendering(const ::std::string& value);
-  ::std::string* PROTOBUF_NONNULL _internal_mutable_rendering();
-
-  public:
-  // double wavelength1 = 1;
-  void clear_wavelength1() ;
-  double wavelength1() const;
-  void set_wavelength1(double value);
-
-  private:
-  double _internal_wavelength1() const;
-  void _internal_set_wavelength1(double value);
-
-  public:
-  // double wavelength2 = 2;
-  void clear_wavelength2() ;
-  double wavelength2() const;
-  void set_wavelength2(double value);
-
-  private:
-  double _internal_wavelength2() const;
-  void _internal_set_wavelength2(double value);
-
-  public:
-  // double wavelength3 = 3;
-  void clear_wavelength3() ;
-  double wavelength3() const;
-  void set_wavelength3(double value);
-
-  private:
-  double _internal_wavelength3() const;
-  void _internal_set_wavelength3(double value);
-
-  public:
-  // double cosmicRayStdDeviation = 4;
-  void clear_cosmicraystddeviation() ;
-  double cosmicraystddeviation() const;
-  void set_cosmicraystddeviation(double value);
-
-  private:
-  double _internal_cosmicraystddeviation() const;
-  void _internal_set_cosmicraystddeviation(double value);
-
-  public:
-  // double strayLight = 5;
-  void clear_straylight() ;
-  double straylight() const;
-  void set_straylight(double value);
-
-  private:
-  double _internal_straylight() const;
-  void _internal_set_straylight(double value);
-
-  public:
-  // bool starField = 6;
-  void clear_starfield() ;
-  bool starfield() const;
-  void set_starfield(bool value);
-
-  private:
-  bool _internal_starfield() const;
-  void _internal_set_starfield(bool value);
-
-  public:
-  // bool enableSmear = 8;
-  void clear_enablesmear() ;
-  bool enablesmear() const;
-  void set_enablesmear(bool value);
-
-  private:
-  bool _internal_enablesmear() const;
-  void _internal_set_enablesmear(bool value);
-
-  public:
-  // @@protoc_insertion_point(class_scope:cielimMessage.RenderingModel)
- private:
-  class _Internal;
-  friend class ::google::protobuf::internal::TcParser;
-  static const ::google::protobuf::internal::TcParseTable<3, 8,
-                                   0, 54,
-                                   2>
-      _table_;
-
-  friend class ::google::protobuf::MessageLite;
-  friend class ::google::protobuf::Arena;
-  template <typename T>
-  friend class ::google::protobuf::Arena::InternalHelper;
-  using InternalArenaConstructable_ = void;
-  using DestructorSkippable_ = void;
-  struct Impl_ {
-    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
-    inline explicit Impl_(
-        ::google::protobuf::internal::InternalVisibility visibility,
-        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
-    inline explicit Impl_(
-        ::google::protobuf::internal::InternalVisibility visibility,
-        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
-        const RenderingModel& from_msg);
-    ::google::protobuf::internal::HasBits<1> _has_bits_;
-    ::google::protobuf::internal::CachedSize _cached_size_;
-    ::google::protobuf::internal::ArenaStringPtr rendering_;
-    double wavelength1_;
-    double wavelength2_;
-    double wavelength3_;
-    double cosmicraystddeviation_;
-    double straylight_;
-    bool starfield_;
-    bool enablesmear_;
-    PROTOBUF_TSAN_DECLARE_MEMBER
-  };
-  union { Impl_ _impl_; };
-  friend struct ::TableStruct_cielimMessage_2eproto;
-};
-
-extern const ::google::protobuf::internal::ClassDataLite<29> RenderingModel_class_data_;
-// -------------------------------------------------------------------
-
 class ReflectanceModel final : public ::google::protobuf::MessageLite
 /* @@protoc_insertion_point(class_definition:cielimMessage.ReflectanceModel) */ {
  public:
@@ -914,7 +1009,7 @@ class ReflectanceModel final : public ::google::protobuf::MessageLite
     return *reinterpret_cast<const ReflectanceModel*>(
         &_ReflectanceModel_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 4;
+  static constexpr int kIndexInFileMessages = 5;
   friend void swap(ReflectanceModel& a, ReflectanceModel& b) { a.Swap(&b); }
   inline void Swap(ReflectanceModel* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -1129,7 +1224,7 @@ class QuantumEfficiency final : public ::google::protobuf::MessageLite
     return *reinterpret_cast<const QuantumEfficiency*>(
         &_QuantumEfficiency_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 8;
+  static constexpr int kIndexInFileMessages = 9;
   friend void swap(QuantumEfficiency& a, QuantumEfficiency& b) { a.Swap(&b); }
   inline void Swap(QuantumEfficiency* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -1415,7 +1510,7 @@ class PerlinNoise final : public ::google::protobuf::MessageLite
     return *reinterpret_cast<const PerlinNoise*>(
         &_PerlinNoise_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 3;
+  static constexpr int kIndexInFileMessages = 4;
   friend void swap(PerlinNoise& a, PerlinNoise& b) { a.Swap(&b); }
   inline void Swap(PerlinNoise* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -1629,7 +1724,7 @@ class LensModel final : public ::google::protobuf::MessageLite
     return *reinterpret_cast<const LensModel*>(
         &_LensModel_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 9;
+  static constexpr int kIndexInFileMessages = 10;
   friend void swap(LensModel& a, LensModel& b) { a.Swap(&b); }
   inline void Swap(LensModel* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -1987,7 +2082,7 @@ class ImageFormat final : public ::google::protobuf::MessageLite
     return *reinterpret_cast<const ImageFormat*>(
         &_ImageFormat_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 12;
+  static constexpr int kIndexInFileMessages = 13;
   friend void swap(ImageFormat& a, ImageFormat& b) { a.Swap(&b); }
   inline void Swap(ImageFormat* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -2423,7 +2518,7 @@ class AreaOfInterest final : public ::google::protobuf::MessageLite
     return *reinterpret_cast<const AreaOfInterest*>(
         &_AreaOfInterest_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 11;
+  static constexpr int kIndexInFileMessages = 12;
   friend void swap(AreaOfInterest& a, AreaOfInterest& b) { a.Swap(&b); }
   inline void Swap(AreaOfInterest* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -2649,7 +2744,7 @@ class SensorModel final : public ::google::protobuf::MessageLite
     return *reinterpret_cast<const SensorModel*>(
         &_SensorModel_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 10;
+  static constexpr int kIndexInFileMessages = 11;
   friend void swap(SensorModel& a, SensorModel& b) { a.Swap(&b); }
   inline void Swap(SensorModel* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -2999,6 +3094,278 @@ class SensorModel final : public ::google::protobuf::MessageLite
 extern const ::google::protobuf::internal::ClassDataLite<26> SensorModel_class_data_;
 // -------------------------------------------------------------------
 
+class RenderingModel final : public ::google::protobuf::MessageLite
+/* @@protoc_insertion_point(class_definition:cielimMessage.RenderingModel) */ {
+ public:
+  inline RenderingModel() : RenderingModel(nullptr) {}
+  ~RenderingModel() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(RenderingModel* PROTOBUF_NONNULL msg, ::std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(RenderingModel));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR RenderingModel(::google::protobuf::internal::ConstantInitialized);
+
+  inline RenderingModel(const RenderingModel& from) : RenderingModel(nullptr, from) {}
+  inline RenderingModel(RenderingModel&& from) noexcept
+      : RenderingModel(nullptr, ::std::move(from)) {}
+  inline RenderingModel& operator=(const RenderingModel& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline RenderingModel& operator=(RenderingModel&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::std::string& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::std::string>(::google::protobuf::internal::GetEmptyString);
+  }
+  inline ::std::string* PROTOBUF_NONNULL mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::std::string>();
+  }
+
+  static const RenderingModel& default_instance() {
+    return *reinterpret_cast<const RenderingModel*>(
+        &_RenderingModel_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 3;
+  friend void swap(RenderingModel& a, RenderingModel& b) { a.Swap(&b); }
+  inline void Swap(RenderingModel* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(RenderingModel* PROTOBUF_NONNULL other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  RenderingModel* PROTOBUF_NONNULL New(::google::protobuf::Arena* PROTOBUF_NULLABLE arena = nullptr) const {
+    return ::google::protobuf::MessageLite::DefaultConstruct<RenderingModel>(arena);
+  }
+  void CopyFrom(const RenderingModel& from);
+  void MergeFrom(const RenderingModel& from) { RenderingModel::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(::google::protobuf::MessageLite& to_msg,
+                        const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      const ::google::protobuf::MessageLite& msg, ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* PROTOBUF_NONNULL _InternalSerialize(
+      ::uint8_t* PROTOBUF_NONNULL target,
+      ::google::protobuf::io::EpsCopyOutputStream* PROTOBUF_NONNULL stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(RenderingModel* PROTOBUF_NONNULL other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "cielimMessage.RenderingModel"; }
+
+  explicit RenderingModel(::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  RenderingModel(::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const RenderingModel& from);
+  RenderingModel(
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, RenderingModel&& from) noexcept
+      : RenderingModel(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* PROTOBUF_NONNULL GetClassData() const PROTOBUF_FINAL;
+  static void* PROTOBUF_NONNULL PlacementNew_(
+      const void* PROTOBUF_NONNULL, void* PROTOBUF_NONNULL mem,
+      ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+  static constexpr auto InternalNewImpl_();
+
+ public:
+  static constexpr auto InternalGenerateClassData_();
+
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kRenderingFieldNumber = 7,
+    kStrayLightModelFieldNumber = 5,
+    kWavelength1FieldNumber = 1,
+    kWavelength2FieldNumber = 2,
+    kWavelength3FieldNumber = 3,
+    kCosmicRayStdDeviationFieldNumber = 4,
+    kStarFieldFieldNumber = 6,
+    kEnableSmearFieldNumber = 8,
+  };
+  // string rendering = 7;
+  void clear_rendering() ;
+  const ::std::string& rendering() const;
+  template <typename Arg_ = const ::std::string&, typename... Args_>
+  void set_rendering(Arg_&& arg, Args_... args);
+  ::std::string* PROTOBUF_NONNULL mutable_rendering();
+  [[nodiscard]] ::std::string* PROTOBUF_NULLABLE release_rendering();
+  void set_allocated_rendering(::std::string* PROTOBUF_NULLABLE value);
+
+  private:
+  const ::std::string& _internal_rendering() const;
+  PROTOBUF_ALWAYS_INLINE void _internal_set_rendering(const ::std::string& value);
+  ::std::string* PROTOBUF_NONNULL _internal_mutable_rendering();
+
+  public:
+  // .cielimMessage.StrayLightModel strayLightModel = 5;
+  bool has_straylightmodel() const;
+  void clear_straylightmodel() ;
+  const ::cielimMessage::StrayLightModel& straylightmodel() const;
+  [[nodiscard]] ::cielimMessage::StrayLightModel* PROTOBUF_NULLABLE release_straylightmodel();
+  ::cielimMessage::StrayLightModel* PROTOBUF_NONNULL mutable_straylightmodel();
+  void set_allocated_straylightmodel(::cielimMessage::StrayLightModel* PROTOBUF_NULLABLE value);
+  void unsafe_arena_set_allocated_straylightmodel(::cielimMessage::StrayLightModel* PROTOBUF_NULLABLE value);
+  ::cielimMessage::StrayLightModel* PROTOBUF_NULLABLE unsafe_arena_release_straylightmodel();
+
+  private:
+  const ::cielimMessage::StrayLightModel& _internal_straylightmodel() const;
+  ::cielimMessage::StrayLightModel* PROTOBUF_NONNULL _internal_mutable_straylightmodel();
+
+  public:
+  // double wavelength1 = 1;
+  void clear_wavelength1() ;
+  double wavelength1() const;
+  void set_wavelength1(double value);
+
+  private:
+  double _internal_wavelength1() const;
+  void _internal_set_wavelength1(double value);
+
+  public:
+  // double wavelength2 = 2;
+  void clear_wavelength2() ;
+  double wavelength2() const;
+  void set_wavelength2(double value);
+
+  private:
+  double _internal_wavelength2() const;
+  void _internal_set_wavelength2(double value);
+
+  public:
+  // double wavelength3 = 3;
+  void clear_wavelength3() ;
+  double wavelength3() const;
+  void set_wavelength3(double value);
+
+  private:
+  double _internal_wavelength3() const;
+  void _internal_set_wavelength3(double value);
+
+  public:
+  // double cosmicRayStdDeviation = 4;
+  void clear_cosmicraystddeviation() ;
+  double cosmicraystddeviation() const;
+  void set_cosmicraystddeviation(double value);
+
+  private:
+  double _internal_cosmicraystddeviation() const;
+  void _internal_set_cosmicraystddeviation(double value);
+
+  public:
+  // bool starField = 6;
+  void clear_starfield() ;
+  bool starfield() const;
+  void set_starfield(bool value);
+
+  private:
+  bool _internal_starfield() const;
+  void _internal_set_starfield(bool value);
+
+  public:
+  // bool enableSmear = 8;
+  void clear_enablesmear() ;
+  bool enablesmear() const;
+  void set_enablesmear(bool value);
+
+  private:
+  bool _internal_enablesmear() const;
+  void _internal_set_enablesmear(bool value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:cielimMessage.RenderingModel)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<3, 8,
+                                   1, 54,
+                                   2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena);
+    inline explicit Impl_(
+        ::google::protobuf::internal::InternalVisibility visibility,
+        ::google::protobuf::Arena* PROTOBUF_NULLABLE arena, const Impl_& from,
+        const RenderingModel& from_msg);
+    ::google::protobuf::internal::HasBits<1> _has_bits_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    ::google::protobuf::internal::ArenaStringPtr rendering_;
+    ::cielimMessage::StrayLightModel* PROTOBUF_NULLABLE straylightmodel_;
+    double wavelength1_;
+    double wavelength2_;
+    double wavelength3_;
+    double cosmicraystddeviation_;
+    bool starfield_;
+    bool enablesmear_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_cielimMessage_2eproto;
+};
+
+extern const ::google::protobuf::internal::ClassDataLite<29> RenderingModel_class_data_;
+// -------------------------------------------------------------------
+
 class MeshModel final : public ::google::protobuf::MessageLite
 /* @@protoc_insertion_point(class_definition:cielimMessage.MeshModel) */ {
  public:
@@ -3045,7 +3412,7 @@ class MeshModel final : public ::google::protobuf::MessageLite
     return *reinterpret_cast<const MeshModel*>(
         &_MeshModel_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 5;
+  static constexpr int kIndexInFileMessages = 6;
   friend void swap(MeshModel& a, MeshModel& b) { a.Swap(&b); }
   inline void Swap(MeshModel* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -3338,7 +3705,7 @@ class CelestialBody final : public ::google::protobuf::MessageLite
     return *reinterpret_cast<const CelestialBody*>(
         &_CelestialBody_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 6;
+  static constexpr int kIndexInFileMessages = 7;
   friend void swap(CelestialBody& a, CelestialBody& b) { a.Swap(&b); }
   inline void Swap(CelestialBody* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -3610,7 +3977,7 @@ class CameraModel final : public ::google::protobuf::MessageLite
     return *reinterpret_cast<const CameraModel*>(
         &_CameraModel_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 13;
+  static constexpr int kIndexInFileMessages = 14;
   friend void swap(CameraModel& a, CameraModel& b) { a.Swap(&b); }
   inline void Swap(CameraModel* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -3913,7 +4280,7 @@ class CielimMessage final : public ::google::protobuf::MessageLite
     return *reinterpret_cast<const CielimMessage*>(
         &_CielimMessage_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 14;
+  static constexpr int kIndexInFileMessages = 15;
   friend void swap(CielimMessage& a, CielimMessage& b) { a.Swap(&b); }
   inline void Swap(CielimMessage* PROTOBUF_NONNULL other) {
     if (other == this) return;
@@ -4358,6 +4725,410 @@ inline void EpochDateTime::_internal_set_seconds(double value) {
 
 // -------------------------------------------------------------------
 
+// StrayLightModel
+
+// bool enabled = 1;
+inline void StrayLightModel::clear_enabled() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.enabled_ = false;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00008000U);
+}
+inline bool StrayLightModel::enabled() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.StrayLightModel.enabled)
+  return _internal_enabled();
+}
+inline void StrayLightModel::set_enabled(bool value) {
+  _internal_set_enabled(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00008000U);
+  // @@protoc_insertion_point(field_set:cielimMessage.StrayLightModel.enabled)
+}
+inline bool StrayLightModel::_internal_enabled() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.enabled_;
+}
+inline void StrayLightModel::_internal_set_enabled(bool value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.enabled_ = value;
+}
+
+// double coreSize = 2;
+inline void StrayLightModel::clear_coresize() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.coresize_ = 0;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000001U);
+}
+inline double StrayLightModel::coresize() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.StrayLightModel.coreSize)
+  return _internal_coresize();
+}
+inline void StrayLightModel::set_coresize(double value) {
+  _internal_set_coresize(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000001U);
+  // @@protoc_insertion_point(field_set:cielimMessage.StrayLightModel.coreSize)
+}
+inline double StrayLightModel::_internal_coresize() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.coresize_;
+}
+inline void StrayLightModel::_internal_set_coresize(double value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.coresize_ = value;
+}
+
+// double ghostSize = 3;
+inline void StrayLightModel::clear_ghostsize() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.ghostsize_ = 0;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000002U);
+}
+inline double StrayLightModel::ghostsize() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.StrayLightModel.ghostSize)
+  return _internal_ghostsize();
+}
+inline void StrayLightModel::set_ghostsize(double value) {
+  _internal_set_ghostsize(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  // @@protoc_insertion_point(field_set:cielimMessage.StrayLightModel.ghostSize)
+}
+inline double StrayLightModel::_internal_ghostsize() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.ghostsize_;
+}
+inline void StrayLightModel::_internal_set_ghostsize(double value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.ghostsize_ = value;
+}
+
+// double ghostTransmittance = 4;
+inline void StrayLightModel::clear_ghosttransmittance() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.ghosttransmittance_ = 0;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000004U);
+}
+inline double StrayLightModel::ghosttransmittance() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.StrayLightModel.ghostTransmittance)
+  return _internal_ghosttransmittance();
+}
+inline void StrayLightModel::set_ghosttransmittance(double value) {
+  _internal_set_ghosttransmittance(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  // @@protoc_insertion_point(field_set:cielimMessage.StrayLightModel.ghostTransmittance)
+}
+inline double StrayLightModel::_internal_ghosttransmittance() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.ghosttransmittance_;
+}
+inline void StrayLightModel::_internal_set_ghosttransmittance(double value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.ghosttransmittance_ = value;
+}
+
+// double ghost1RelativeSize = 5;
+inline void StrayLightModel::clear_ghost1relativesize() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.ghost1relativesize_ = 0;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000008U);
+}
+inline double StrayLightModel::ghost1relativesize() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.StrayLightModel.ghost1RelativeSize)
+  return _internal_ghost1relativesize();
+}
+inline void StrayLightModel::set_ghost1relativesize(double value) {
+  _internal_set_ghost1relativesize(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  // @@protoc_insertion_point(field_set:cielimMessage.StrayLightModel.ghost1RelativeSize)
+}
+inline double StrayLightModel::_internal_ghost1relativesize() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.ghost1relativesize_;
+}
+inline void StrayLightModel::_internal_set_ghost1relativesize(double value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.ghost1relativesize_ = value;
+}
+
+// double ghost2RelativeSize = 6;
+inline void StrayLightModel::clear_ghost2relativesize() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.ghost2relativesize_ = 0;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000010U);
+}
+inline double StrayLightModel::ghost2relativesize() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.StrayLightModel.ghost2RelativeSize)
+  return _internal_ghost2relativesize();
+}
+inline void StrayLightModel::set_ghost2relativesize(double value) {
+  _internal_set_ghost2relativesize(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
+  // @@protoc_insertion_point(field_set:cielimMessage.StrayLightModel.ghost2RelativeSize)
+}
+inline double StrayLightModel::_internal_ghost2relativesize() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.ghost2relativesize_;
+}
+inline void StrayLightModel::_internal_set_ghost2relativesize(double value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.ghost2relativesize_ = value;
+}
+
+// double ghost3RelativeSize = 7;
+inline void StrayLightModel::clear_ghost3relativesize() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.ghost3relativesize_ = 0;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000020U);
+}
+inline double StrayLightModel::ghost3relativesize() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.StrayLightModel.ghost3RelativeSize)
+  return _internal_ghost3relativesize();
+}
+inline void StrayLightModel::set_ghost3relativesize(double value) {
+  _internal_set_ghost3relativesize(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
+  // @@protoc_insertion_point(field_set:cielimMessage.StrayLightModel.ghost3RelativeSize)
+}
+inline double StrayLightModel::_internal_ghost3relativesize() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.ghost3relativesize_;
+}
+inline void StrayLightModel::_internal_set_ghost3relativesize(double value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.ghost3relativesize_ = value;
+}
+
+// double ghost4RelativeSize = 8;
+inline void StrayLightModel::clear_ghost4relativesize() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.ghost4relativesize_ = 0;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000040U);
+}
+inline double StrayLightModel::ghost4relativesize() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.StrayLightModel.ghost4RelativeSize)
+  return _internal_ghost4relativesize();
+}
+inline void StrayLightModel::set_ghost4relativesize(double value) {
+  _internal_set_ghost4relativesize(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000040U);
+  // @@protoc_insertion_point(field_set:cielimMessage.StrayLightModel.ghost4RelativeSize)
+}
+inline double StrayLightModel::_internal_ghost4relativesize() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.ghost4relativesize_;
+}
+inline void StrayLightModel::_internal_set_ghost4relativesize(double value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.ghost4relativesize_ = value;
+}
+
+// double ghostBrightnessSizeExponent = 9;
+inline void StrayLightModel::clear_ghostbrightnesssizeexponent() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.ghostbrightnesssizeexponent_ = 0;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000080U);
+}
+inline double StrayLightModel::ghostbrightnesssizeexponent() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.StrayLightModel.ghostBrightnessSizeExponent)
+  return _internal_ghostbrightnesssizeexponent();
+}
+inline void StrayLightModel::set_ghostbrightnesssizeexponent(double value) {
+  _internal_set_ghostbrightnesssizeexponent(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000080U);
+  // @@protoc_insertion_point(field_set:cielimMessage.StrayLightModel.ghostBrightnessSizeExponent)
+}
+inline double StrayLightModel::_internal_ghostbrightnesssizeexponent() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.ghostbrightnesssizeexponent_;
+}
+inline void StrayLightModel::_internal_set_ghostbrightnesssizeexponent(double value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.ghostbrightnesssizeexponent_ = value;
+}
+
+// double coronaFalloffExponent = 10;
+inline void StrayLightModel::clear_coronafalloffexponent() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.coronafalloffexponent_ = 0;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000100U);
+}
+inline double StrayLightModel::coronafalloffexponent() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.StrayLightModel.coronaFalloffExponent)
+  return _internal_coronafalloffexponent();
+}
+inline void StrayLightModel::set_coronafalloffexponent(double value) {
+  _internal_set_coronafalloffexponent(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000100U);
+  // @@protoc_insertion_point(field_set:cielimMessage.StrayLightModel.coronaFalloffExponent)
+}
+inline double StrayLightModel::_internal_coronafalloffexponent() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.coronafalloffexponent_;
+}
+inline void StrayLightModel::_internal_set_coronafalloffexponent(double value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.coronafalloffexponent_ = value;
+}
+
+// double coronaIntensity = 11;
+inline void StrayLightModel::clear_coronaintensity() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.coronaintensity_ = 0;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000200U);
+}
+inline double StrayLightModel::coronaintensity() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.StrayLightModel.coronaIntensity)
+  return _internal_coronaintensity();
+}
+inline void StrayLightModel::set_coronaintensity(double value) {
+  _internal_set_coronaintensity(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000200U);
+  // @@protoc_insertion_point(field_set:cielimMessage.StrayLightModel.coronaIntensity)
+}
+inline double StrayLightModel::_internal_coronaintensity() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.coronaintensity_;
+}
+inline void StrayLightModel::_internal_set_coronaintensity(double value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.coronaintensity_ = value;
+}
+
+// double baffleShieldAngle = 12;
+inline void StrayLightModel::clear_baffleshieldangle() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.baffleshieldangle_ = 0;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000400U);
+}
+inline double StrayLightModel::baffleshieldangle() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.StrayLightModel.baffleShieldAngle)
+  return _internal_baffleshieldangle();
+}
+inline void StrayLightModel::set_baffleshieldangle(double value) {
+  _internal_set_baffleshieldangle(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000400U);
+  // @@protoc_insertion_point(field_set:cielimMessage.StrayLightModel.baffleShieldAngle)
+}
+inline double StrayLightModel::_internal_baffleshieldangle() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.baffleshieldangle_;
+}
+inline void StrayLightModel::_internal_set_baffleshieldangle(double value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.baffleshieldangle_ = value;
+}
+
+// double intensity = 13;
+inline void StrayLightModel::clear_intensity() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.intensity_ = 0;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00000800U);
+}
+inline double StrayLightModel::intensity() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.StrayLightModel.intensity)
+  return _internal_intensity();
+}
+inline void StrayLightModel::set_intensity(double value) {
+  _internal_set_intensity(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00000800U);
+  // @@protoc_insertion_point(field_set:cielimMessage.StrayLightModel.intensity)
+}
+inline double StrayLightModel::_internal_intensity() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.intensity_;
+}
+inline void StrayLightModel::_internal_set_intensity(double value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.intensity_ = value;
+}
+
+// double numRays = 14;
+inline void StrayLightModel::clear_numrays() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.numrays_ = 0;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00001000U);
+}
+inline double StrayLightModel::numrays() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.StrayLightModel.numRays)
+  return _internal_numrays();
+}
+inline void StrayLightModel::set_numrays(double value) {
+  _internal_set_numrays(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00001000U);
+  // @@protoc_insertion_point(field_set:cielimMessage.StrayLightModel.numRays)
+}
+inline double StrayLightModel::_internal_numrays() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.numrays_;
+}
+inline void StrayLightModel::_internal_set_numrays(double value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.numrays_ = value;
+}
+
+// double raySharpness = 15;
+inline void StrayLightModel::clear_raysharpness() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.raysharpness_ = 0;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00002000U);
+}
+inline double StrayLightModel::raysharpness() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.StrayLightModel.raySharpness)
+  return _internal_raysharpness();
+}
+inline void StrayLightModel::set_raysharpness(double value) {
+  _internal_set_raysharpness(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00002000U);
+  // @@protoc_insertion_point(field_set:cielimMessage.StrayLightModel.raySharpness)
+}
+inline double StrayLightModel::_internal_raysharpness() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.raysharpness_;
+}
+inline void StrayLightModel::_internal_set_raysharpness(double value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.raysharpness_ = value;
+}
+
+// double rayWeight = 16;
+inline void StrayLightModel::clear_rayweight() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.rayweight_ = 0;
+  ClearHasBit(_impl_._has_bits_[0],
+                  0x00004000U);
+}
+inline double StrayLightModel::rayweight() const {
+  // @@protoc_insertion_point(field_get:cielimMessage.StrayLightModel.rayWeight)
+  return _internal_rayweight();
+}
+inline void StrayLightModel::set_rayweight(double value) {
+  _internal_set_rayweight(value);
+  SetHasBit(_impl_._has_bits_[0], 0x00004000U);
+  // @@protoc_insertion_point(field_set:cielimMessage.StrayLightModel.rayWeight)
+}
+inline double StrayLightModel::_internal_rayweight() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.rayweight_;
+}
+inline void StrayLightModel::_internal_set_rayweight(double value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.rayweight_ = value;
+}
+
+// -------------------------------------------------------------------
+
 // RenderingModel
 
 // double wavelength1 = 1;
@@ -4365,7 +5136,7 @@ inline void RenderingModel::clear_wavelength1() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.wavelength1_ = 0;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000002U);
+                  0x00000004U);
 }
 inline double RenderingModel::wavelength1() const {
   // @@protoc_insertion_point(field_get:cielimMessage.RenderingModel.wavelength1)
@@ -4373,7 +5144,7 @@ inline double RenderingModel::wavelength1() const {
 }
 inline void RenderingModel::set_wavelength1(double value) {
   _internal_set_wavelength1(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
   // @@protoc_insertion_point(field_set:cielimMessage.RenderingModel.wavelength1)
 }
 inline double RenderingModel::_internal_wavelength1() const {
@@ -4390,7 +5161,7 @@ inline void RenderingModel::clear_wavelength2() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.wavelength2_ = 0;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000004U);
+                  0x00000008U);
 }
 inline double RenderingModel::wavelength2() const {
   // @@protoc_insertion_point(field_get:cielimMessage.RenderingModel.wavelength2)
@@ -4398,7 +5169,7 @@ inline double RenderingModel::wavelength2() const {
 }
 inline void RenderingModel::set_wavelength2(double value) {
   _internal_set_wavelength2(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000004U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
   // @@protoc_insertion_point(field_set:cielimMessage.RenderingModel.wavelength2)
 }
 inline double RenderingModel::_internal_wavelength2() const {
@@ -4415,7 +5186,7 @@ inline void RenderingModel::clear_wavelength3() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.wavelength3_ = 0;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000008U);
+                  0x00000010U);
 }
 inline double RenderingModel::wavelength3() const {
   // @@protoc_insertion_point(field_get:cielimMessage.RenderingModel.wavelength3)
@@ -4423,7 +5194,7 @@ inline double RenderingModel::wavelength3() const {
 }
 inline void RenderingModel::set_wavelength3(double value) {
   _internal_set_wavelength3(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000008U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
   // @@protoc_insertion_point(field_set:cielimMessage.RenderingModel.wavelength3)
 }
 inline double RenderingModel::_internal_wavelength3() const {
@@ -4440,7 +5211,7 @@ inline void RenderingModel::clear_cosmicraystddeviation() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
   _impl_.cosmicraystddeviation_ = 0;
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000010U);
+                  0x00000020U);
 }
 inline double RenderingModel::cosmicraystddeviation() const {
   // @@protoc_insertion_point(field_get:cielimMessage.RenderingModel.cosmicRayStdDeviation)
@@ -4448,7 +5219,7 @@ inline double RenderingModel::cosmicraystddeviation() const {
 }
 inline void RenderingModel::set_cosmicraystddeviation(double value) {
   _internal_set_cosmicraystddeviation(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000010U);
+  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
   // @@protoc_insertion_point(field_set:cielimMessage.RenderingModel.cosmicRayStdDeviation)
 }
 inline double RenderingModel::_internal_cosmicraystddeviation() const {
@@ -4460,29 +5231,103 @@ inline void RenderingModel::_internal_set_cosmicraystddeviation(double value) {
   _impl_.cosmicraystddeviation_ = value;
 }
 
-// double strayLight = 5;
-inline void RenderingModel::clear_straylight() {
+// .cielimMessage.StrayLightModel strayLightModel = 5;
+inline bool RenderingModel::has_straylightmodel() const {
+  bool value = CheckHasBit(_impl_._has_bits_[0], 0x00000002U);
+  PROTOBUF_ASSUME(!value || _impl_.straylightmodel_ != nullptr);
+  return value;
+}
+inline void RenderingModel::clear_straylightmodel() {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.straylight_ = 0;
+  if (_impl_.straylightmodel_ != nullptr) _impl_.straylightmodel_->Clear();
   ClearHasBit(_impl_._has_bits_[0],
-                  0x00000020U);
+                  0x00000002U);
 }
-inline double RenderingModel::straylight() const {
-  // @@protoc_insertion_point(field_get:cielimMessage.RenderingModel.strayLight)
-  return _internal_straylight();
-}
-inline void RenderingModel::set_straylight(double value) {
-  _internal_set_straylight(value);
-  SetHasBit(_impl_._has_bits_[0], 0x00000020U);
-  // @@protoc_insertion_point(field_set:cielimMessage.RenderingModel.strayLight)
-}
-inline double RenderingModel::_internal_straylight() const {
+inline const ::cielimMessage::StrayLightModel& RenderingModel::_internal_straylightmodel() const {
   ::google::protobuf::internal::TSanRead(&_impl_);
-  return _impl_.straylight_;
+  const ::cielimMessage::StrayLightModel* p = _impl_.straylightmodel_;
+  return p != nullptr ? *p : reinterpret_cast<const ::cielimMessage::StrayLightModel&>(::cielimMessage::_StrayLightModel_default_instance_);
 }
-inline void RenderingModel::_internal_set_straylight(double value) {
+inline const ::cielimMessage::StrayLightModel& RenderingModel::straylightmodel() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:cielimMessage.RenderingModel.strayLightModel)
+  return _internal_straylightmodel();
+}
+inline void RenderingModel::unsafe_arena_set_allocated_straylightmodel(
+    ::cielimMessage::StrayLightModel* PROTOBUF_NULLABLE value) {
   ::google::protobuf::internal::TSanWrite(&_impl_);
-  _impl_.straylight_ = value;
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.straylightmodel_);
+  }
+  _impl_.straylightmodel_ = reinterpret_cast<::cielimMessage::StrayLightModel*>(value);
+  if (value != nullptr) {
+    SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:cielimMessage.RenderingModel.strayLightModel)
+}
+inline ::cielimMessage::StrayLightModel* PROTOBUF_NULLABLE RenderingModel::release_straylightmodel() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  ::cielimMessage::StrayLightModel* released = _impl_.straylightmodel_;
+  _impl_.straylightmodel_ = nullptr;
+  if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
+    auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    if (GetArena() == nullptr) {
+      delete old;
+    }
+  } else {
+    if (GetArena() != nullptr) {
+      released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    }
+  }
+  return released;
+}
+inline ::cielimMessage::StrayLightModel* PROTOBUF_NULLABLE RenderingModel::unsafe_arena_release_straylightmodel() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:cielimMessage.RenderingModel.strayLightModel)
+
+  ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  ::cielimMessage::StrayLightModel* temp = _impl_.straylightmodel_;
+  _impl_.straylightmodel_ = nullptr;
+  return temp;
+}
+inline ::cielimMessage::StrayLightModel* PROTOBUF_NONNULL RenderingModel::_internal_mutable_straylightmodel() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.straylightmodel_ == nullptr) {
+    auto* p = ::google::protobuf::MessageLite::DefaultConstruct<::cielimMessage::StrayLightModel>(GetArena());
+    _impl_.straylightmodel_ = reinterpret_cast<::cielimMessage::StrayLightModel*>(p);
+  }
+  return _impl_.straylightmodel_;
+}
+inline ::cielimMessage::StrayLightModel* PROTOBUF_NONNULL RenderingModel::mutable_straylightmodel()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  ::cielimMessage::StrayLightModel* _msg = _internal_mutable_straylightmodel();
+  // @@protoc_insertion_point(field_mutable:cielimMessage.RenderingModel.strayLightModel)
+  return _msg;
+}
+inline void RenderingModel::set_allocated_straylightmodel(::cielimMessage::StrayLightModel* PROTOBUF_NULLABLE value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (message_arena == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.straylightmodel_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = value->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    SetHasBit(_impl_._has_bits_[0], 0x00000002U);
+  } else {
+    ClearHasBit(_impl_._has_bits_[0], 0x00000002U);
+  }
+
+  _impl_.straylightmodel_ = reinterpret_cast<::cielimMessage::StrayLightModel*>(value);
+  // @@protoc_insertion_point(field_set_allocated:cielimMessage.RenderingModel.strayLightModel)
 }
 
 // bool starField = 6;
