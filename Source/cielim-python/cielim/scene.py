@@ -334,6 +334,96 @@ class Scene(object):
         if dead_px_rate is not None and dead_px_rate >= 0:
             self.cielim_message.camera.sensorModel.deadPixelRate = dead_px_rate
 
+    def set_stray_light_params(
+        self,
+        enabled: bool | None = None,
+        intensity: float | None = None,
+        core_size: float | None = None,
+        ghost_size: float | None = None,
+        ghost_transmittance: float | None = None,
+        ghost_relative_sizes: tuple[float, float, float, float] | None = None,
+        ghost_brightness_size_exponent: float | None = None,
+        corona_falloff_exponent: float | None = None,
+        corona_intensity: float | None = None,
+        num_rays: float | None = None,
+        ray_sharpness: float | None = None,
+        ray_weight: float | None = None,
+        baffle_shield_angle: float | None = None,
+    ) -> None:
+        """
+        Set stray-light / lens-flare model parameters (protobuf ``StrayLightModel``).
+
+        Opt-in: the pass only renders when ``enabled`` is True. Overall flare intensity scales with
+        the sensor exposure time, and grayscale vs chromatic is driven by the image setting
+        (``set_camera_params(grayscale=...)``), not here.
+
+        Args:
+            enabled (bool, optional): Master on/off for the stray-light / lens-flare pass.
+            intensity (float, optional): Overall flare brightness as a fraction of the direct solar
+                radiance (baffle/optics throughput); scales the whole flare. 1.0 = as bright as the
+                sun's disk (default); real optics are far dimmer (~1e-3..1e-6).
+            core_size (float, optional): Sun core disc size (larger = wider disc).
+            ghost_size (float, optional): Global ghost size scale.
+            ghost_transmittance (float, optional): Global ghost brightness scale.
+            ghost_relative_sizes (tuple[float, float, float, float], optional): Per-ghost size scales
+                for ghosts 1-4.
+            ghost_brightness_size_exponent (float, optional): Couples ghost brightness to inverse size
+                (2 = area-conserving; larger makes smaller ghosts brighter).
+            corona_falloff_exponent (float, optional): Wide-corona falloff exponent (higher = tighter).
+            corona_intensity (float, optional): Wide-corona brightness relative to the core
+                (lower = fainter corona, so the ghosts read).
+            num_rays (float, optional): Number of evenly-spaced symmetric rays radiating from the
+                sun (even = mirror-symmetric across the boresight).
+            ray_sharpness (float, optional): Angular sharpness of the rays (higher = narrower rays).
+            ray_weight (float, optional): Strength of the symmetric rays relative to the random streaks.
+            baffle_shield_angle (float, optional): Extra angle (deg) beyond the FoV half-angle out to
+                which the off-boresight sun still casts stray light (cutoff = FoV/2 + this). 0 means
+                stray light only appears while the sun is inside the frame.
+        """
+        stray_light = self.cielim_message.renderParameters.strayLightModel
+
+        if enabled is not None:
+            stray_light.enabled = enabled
+
+        if intensity is not None and intensity > 0:
+            stray_light.intensity = intensity
+
+        if core_size is not None and core_size > 0:
+            stray_light.coreSize = core_size
+
+        if ghost_size is not None and ghost_size > 0:
+            stray_light.ghostSize = ghost_size
+
+        if ghost_transmittance is not None and ghost_transmittance > 0:
+            stray_light.ghostTransmittance = ghost_transmittance
+
+        if ghost_relative_sizes is not None and all(f > 0 for f in ghost_relative_sizes):
+            stray_light.ghost1RelativeSize = ghost_relative_sizes[0]
+            stray_light.ghost2RelativeSize = ghost_relative_sizes[1]
+            stray_light.ghost3RelativeSize = ghost_relative_sizes[2]
+            stray_light.ghost4RelativeSize = ghost_relative_sizes[3]
+
+        if ghost_brightness_size_exponent is not None and ghost_brightness_size_exponent > 0:
+            stray_light.ghostBrightnessSizeExponent = ghost_brightness_size_exponent
+
+        if corona_falloff_exponent is not None and corona_falloff_exponent > 0:
+            stray_light.coronaFalloffExponent = corona_falloff_exponent
+
+        if corona_intensity is not None and corona_intensity > 0:
+            stray_light.coronaIntensity = corona_intensity
+
+        if num_rays is not None and num_rays > 0:
+            stray_light.numRays = num_rays
+
+        if ray_sharpness is not None and ray_sharpness > 0:
+            stray_light.raySharpness = ray_sharpness
+
+        if ray_weight is not None and ray_weight > 0:
+            stray_light.rayWeight = ray_weight
+
+        if baffle_shield_angle is not None and baffle_shield_angle >= 0:
+            stray_light.baffleShieldAngle = baffle_shield_angle
+
     def add_celestial_body(self, name: str) -> int:
         """
         Adds a celestial body to the scene.
