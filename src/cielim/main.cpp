@@ -3,14 +3,11 @@
 
 /* Purpose: Serves as the program entry point. */
 
-#define VULKAN_HPP_NO_CONSTRUCTORS           // Allows C++20 designated initializers usage instead of positional args
-#define VULKAN_HPP_NO_SETTERS                // Don't need these because we have designated initializers
-#define VULKAN_HPP_NO_SMART_HANDLE           // Ownership is handled manually and by the VMA
-#define VULKAN_HPP_NO_EXCEPTIONS             // Exceptions can degrade runtime performance, don't need them here
-#define VULKAN_HPP_DISPATCH_LOADER_DYNAMIC 1 // Use dynamic loading of Vulkan functions and extension instead of static
-#include <vulkan/vulkan.hpp>
+#include <cstdlib>
+#include <vector>
 
-VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
+#include <volk/volk.h>
+#include <vulkan/vk_enum_string_helper.h>
 
 import cielim.utils.log;
 
@@ -28,32 +25,38 @@ auto main() -> int
     // Flush warnings and above immediately instead of buffering
     cielim::utils::log::flush_on(cielim::utils::log::level::warn);
 
-    VULKAN_HPP_DEFAULT_DISPATCHER.init(); // Initialize Vulkan Core
-
-    const auto [api_result, vulkan_api_version] = vk::enumerateInstanceVersion();
-
-    if (api_result != vk::Result::eSuccess)
+    if (volkInitialize() != VK_SUCCESS)
     {
-        cielim::utils::log::critical("Vulkan loader could not be found: {}", vk::to_string(api_result));
-        return -1;
+        cielim::utils::log::critical("Volk failed to initialize!");
+        return EXIT_FAILURE;
+    }
+
+    uint32_t vk_api_version = 0;
+    const VkResult api_result = vkEnumerateInstanceVersion(&vk_api_version);
+
+    if (api_result != VK_SUCCESS)
+    {
+        cielim::utils::log::critical("Vulkan loader could not be found: {}", string_VkResult(api_result));
+        return EXIT_FAILURE;
     }
 
     cielim::utils::log::info(
         "Detected Vulkan loader API version: {}.{}.{}",
-        VK_API_VERSION_MAJOR(vulkan_api_version),
-        VK_API_VERSION_MINOR(vulkan_api_version),
-        VK_API_VERSION_PATCH(vulkan_api_version)
+        VK_API_VERSION_MAJOR(vk_api_version),
+        VK_API_VERSION_MINOR(vk_api_version),
+        VK_API_VERSION_PATCH(vk_api_version)
     );
 
     // Require Vulkan 1.4+
-    if (VK_API_VERSION_MAJOR(vulkan_api_version) < 1 || VK_API_VERSION_MINOR(vulkan_api_version) < 4)
+    if (VK_API_VERSION_MAJOR(vk_api_version) < 1 || VK_API_VERSION_MINOR(vk_api_version) < 4)
     {
         cielim::utils::log::critical("Vulkan loader API version less than 1.4!");
-        return -1;
+        return EXIT_FAILURE;
     }
 
     // Setup application info
-    constexpr vk::ApplicationInfo APP_INFO = {
+    constexpr VkApplicationInfo APP_INFO = {
+        .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pApplicationName = "Cielim",
         .applicationVersion = VK_MAKE_VERSION(0, 1, 0),
         .pEngineName = "CielimEngine",
@@ -61,23 +64,20 @@ auto main() -> int
         .apiVersion = VK_API_VERSION_1_4,
     };
 
+    std::vector<const char*> instance_extensions;
+
     uint32_t inst_ext_count = 0;
-    auto inst_ext_result = vk::enumerateInstanceExtensionProperties(nullptr, &inst_ext_count, nullptr);
+    vkEnumerateInstanceExtensionProperties(nullptr, &inst_ext_count, nullptr);
 
-    if (inst_ext_result != vk::Result::eSuccess)
-    {
-        cielim::utils::log::critical("Vulkan instance extension count could not be fetched!");
-        return -1;
-    }
+    std::vector<VkExtensionProperties> inst_extensions(inst_ext_count);
 
-    std::vector<vk::ExtensionProperties> inst_extensions(inst_ext_count);
+    const VkResult inst_ext_result
+        = vkEnumerateInstanceExtensionProperties(nullptr, &inst_ext_count, inst_extensions.data());
 
-    inst_ext_result = vk::enumerateInstanceExtensionProperties(nullptr, &inst_ext_count, inst_extensions.data());
-
-    if (inst_ext_result != vk::Result::eSuccess)
+    if (inst_ext_result != VK_SUCCESS)
     {
         cielim::utils::log::critical("Vulkan instance extensions could not be fetched!");
-        return -1;
+        return EXIT_FAILURE;
     }
 
 #ifdef __APPLE__
@@ -94,41 +94,46 @@ auto main() -> int
     if (!found_portable)
     {
         cielim::utils::log::critical("MoltenVK portability extension is not supported!");
-        return -1;
+        return EXIT_FAILURE;
     }
 
-    std::vector<const char*> instance_extensions;
     instance_extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+#endif
 
-    vk::InstanceCreateInfo instance_create_info = {
-        .flags = vk::InstanceCreateFlagBits::eEnumeratePortabilityKHR,
+
+    const VkInstanceCreateInfo instance_create_info = {
+        .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+#ifdef __APPLE__
+        .flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR,
+#endif
         .pApplicationInfo = &APP_INFO,
         .enabledExtensionCount = static_cast<uint32_t>(instance_extensions.size()),
         .ppEnabledExtensionNames = instance_extensions.data(),
     };
-#else
-    vk::InstanceCreateInfo instance_create_info = {
-        .pApplicationInfo = &APP_INFO,
-    };
-#endif
 
-    const auto [instance_result, vk_instance] = vk::createInstance(instance_create_info);
+    VkInstance vk_instance;
+    const VkResult instance_result = vkCreateInstance(&instance_create_info, nullptr, &vk_instance);
 
-    if (instance_result != vk::Result::eSuccess)
+    if (instance_result != VK_SUCCESS)
     {
-        cielim::utils::log::critical("Instance creation failed: {}", vk::to_string(instance_result));
-        return -1;
+        cielim::utils::log::critical("Instance creation failed: {}", string_VkResult(instance_result));
+        return EXIT_FAILURE;
     }
 
-    VULKAN_HPP_DEFAULT_DISPATCHER.init(vk_instance); // Initialize Vulkan instance
+    volkLoadInstance(vk_instance); // Initialize Vulkan instance
 
-    const auto [devices_result, physical_devices] = vk_instance.enumeratePhysicalDevices();
+    uint32_t num_devices = 0;
+    vkEnumeratePhysicalDevices(vk_instance, &num_devices, nullptr);
 
-    if (devices_result != vk::Result::eSuccess || physical_devices.empty())
+    std::vector<VkPhysicalDevice> physical_devices(num_devices);
+
+    const VkResult devices_result = vkEnumeratePhysicalDevices(vk_instance, &num_devices, physical_devices.data());
+
+    if (devices_result != VK_SUCCESS || physical_devices.empty())
     {
         cielim::utils::log::critical("No physical devices found!");
-        vk_instance.destroy();
-        return -1;
+        vkDestroyInstance(vk_instance, nullptr);
+        return EXIT_FAILURE;
     }
 
     uint32_t device_index = -1;
@@ -137,7 +142,8 @@ auto main() -> int
     // Loop through all physical devices to find most suitable one
     for (uint32_t i = 0; const auto& device : physical_devices)
     {
-        const vk::PhysicalDeviceProperties device_properties = device.getProperties();
+        VkPhysicalDeviceProperties device_properties;
+        vkGetPhysicalDeviceProperties(device, &device_properties);
 
         const uint32_t major = VK_API_VERSION_MAJOR(device_properties.apiVersion);
         const uint32_t minor = VK_API_VERSION_MINOR(device_properties.apiVersion);
@@ -146,12 +152,17 @@ auto main() -> int
         if (major < 1 || minor < 4)
             continue;
 
-        const std::vector<vk::QueueFamilyProperties> queue_families = device.getQueueFamilyProperties();
+        uint32_t num_queue_families = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(device, &num_queue_families, nullptr);
+
+        std::vector<VkQueueFamilyProperties> queue_families(num_queue_families);
+
+        vkGetPhysicalDeviceQueueFamilyProperties(device, &num_queue_families, queue_families.data());
 
         for (uint32_t j = 0; const auto& queue_family : queue_families)
         {
             // Check that the GPU supports graphics computations
-            if (queue_family.queueFlags & vk::QueueFlagBits::eGraphics)
+            if ((queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
             {
                 device_index = i;
                 graphics_queue_family = j; // We're just picking out the first graphics queue for everything
@@ -164,51 +175,26 @@ auto main() -> int
     if (device_index < 0 || graphics_queue_family < 0)
     {
         cielim::utils::log::critical("No device could be found that supports Vulkan 1.4+ and/or graphics queues!");
-        vk_instance.destroy();
-        return -1;
+        vkDestroyInstance(vk_instance, nullptr);
+        return EXIT_FAILURE;
     }
 
-    const vk::PhysicalDevice physical_device = physical_devices[device_index];
-    const vk::PhysicalDeviceProperties device_properties = physical_device.getProperties();
+    VkPhysicalDevice physical_device = physical_devices[device_index];
+    VkPhysicalDeviceProperties device_properties;
+    vkGetPhysicalDeviceProperties(physical_device, &device_properties);
 
     cielim::utils::log::info(
-        "Found device {} (graphics queue family {})", device_properties.deviceName.data(), graphics_queue_family
+        "Found device {} (graphics queue family {})", device_properties.deviceName, graphics_queue_family
     );
 
-    float queue_priority = 1.0f;
-    const vk::DeviceQueueCreateInfo queue_info = {
-        .queueFamilyIndex = graphics_queue_family,
-        .queueCount = 1,
-        .pQueuePriorities = &queue_priority,
-    };
-
-    const vk::DeviceCreateInfo device_info = {
-        .queueCreateInfoCount = 1,
-        .pQueueCreateInfos = &queue_info,
-    };
-
-    auto [device_result, device] = physical_device.createDevice(device_info);
-
-    if (device_result != vk::Result::eSuccess)
-    {
-        cielim::utils::log::critical("Device creation failed: {}", vk::to_string(device_result));
-        vk_instance.destroy();
-        return -1;
-    }
-
-    VULKAN_HPP_DEFAULT_DISPATCHER.init(device); // Initialize physical device
-
-    // Check that we can acquire the queue
-    const vk::Queue graphics_queue = device.getQueue(graphics_queue_family, 0);
-    (void)graphics_queue;
-
-    const vk::PhysicalDeviceMemoryProperties memory_properties = physical_device.getMemoryProperties();
+    VkPhysicalDeviceMemoryProperties memory_properties;
+    vkGetPhysicalDeviceMemoryProperties(physical_device, &memory_properties);
 
     // Total heap size in bytes for device
-    vk::DeviceSize dev_local_bytes = 0;
+    VkDeviceSize dev_local_bytes = 0;
     for (uint32_t i = 0; i < memory_properties.memoryHeapCount; i++)
     {
-        if (memory_properties.memoryHeaps[i].flags & vk::MemoryHeapFlagBits::eDeviceLocal)
+        if ((memory_properties.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) != 0)
             dev_local_bytes += memory_properties.memoryHeaps[i].size;
     }
 
@@ -216,8 +202,73 @@ auto main() -> int
 
     cielim::utils::log::info("Device heap total: {:.2f} GB", static_cast<float>(dev_local_bytes) / BYTES_IN_GB);
 
-    device.destroy();
-    vk_instance.destroy();
+    std::vector<const char*> device_extensions;
 
-    return 0;
+    uint32_t dev_ext_count = 0;
+    vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &dev_ext_count, nullptr);
+
+    std::vector<VkExtensionProperties> dev_extensions(dev_ext_count);
+
+    const VkResult dev_ext_result
+        = vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &dev_ext_count, dev_extensions.data());
+
+    if (dev_ext_result != VK_SUCCESS)
+    {
+        cielim::utils::log::critical("Vulkan device extensions could not be fetched!");
+        vkDestroyInstance(vk_instance, nullptr);
+        return EXIT_FAILURE;
+    }
+
+#ifdef __APPLE__
+    bool found_dev_portable = false;
+    for (uint32_t i = 0; i < dev_ext_count; i++)
+    {
+        if (strcmp("VK_KHR_portability_subset", dev_extensions[i].extensionName) == 0)
+        {
+            found_dev_portable = true;
+            break;
+        }
+    }
+
+    if (found_dev_portable) // Only add extension if needed
+        device_extensions.push_back("VK_KHR_portability_subset");
+#endif
+
+    float queue_priority = 1.0f;
+    const VkDeviceQueueCreateInfo queue_info = {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+        .queueFamilyIndex = graphics_queue_family,
+        .queueCount = 1,
+        .pQueuePriorities = &queue_priority,
+    };
+
+    const VkDeviceCreateInfo device_info = {
+        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        .queueCreateInfoCount = 1,
+        .pQueueCreateInfos = &queue_info,
+        .enabledExtensionCount = static_cast<uint32_t>(device_extensions.size()),
+        .ppEnabledExtensionNames = device_extensions.data(),
+    };
+
+    VkDevice device;
+    const VkResult device_result = vkCreateDevice(physical_device, &device_info, nullptr, &device);
+
+    if (device_result != VK_SUCCESS)
+    {
+        cielim::utils::log::critical("Device creation failed: {}", string_VkResult(device_result));
+        vkDestroyInstance(vk_instance, nullptr);
+        return EXIT_FAILURE;
+    }
+
+    volkLoadDevice(device);
+
+    // Check that we can acquire the queue
+    VkQueue graphics_queue;
+    vkGetDeviceQueue(device, graphics_queue_family, 0, &graphics_queue);
+    (void)graphics_queue;
+
+    vkDestroyDevice(device, nullptr);
+    vkDestroyInstance(vk_instance, nullptr);
+
+    return EXIT_SUCCESS;
 }
