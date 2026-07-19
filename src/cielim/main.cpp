@@ -11,9 +11,62 @@
 
 import cielim.utils.log;
 
+#ifndef NDEBUG
+static VKAPI_ATTR auto VKAPI_CALL DebugCallback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
+    VkDebugUtilsMessageTypeFlagsEXT message_type,
+    const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data,
+    void* p_user_data
+) -> VkBool32
+{
+    (void)p_user_data; // We don't do anything with this for now
+
+    // Drop message if logger can't be found
+    if (const auto logger = cielim::utils::log::get("log-vulkan"))
+    {
+        std::string message_type_str;
+
+        if (message_type == VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)
+        {
+            message_type_str = "General";
+        }
+        else if (message_type == VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)
+        {
+            message_type_str = "Performance";
+        }
+        else if (message_type == VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
+        {
+            message_type_str = "Validation";
+        }
+
+        if (message_severity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
+        {
+            logger->info("Vulkan-{} -- {}", message_type_str, p_callback_data->pMessage);
+        }
+        else if (message_severity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+        {
+            logger->warn("Vulkan-{} -- {}", message_type_str, p_callback_data->pMessage);
+        }
+        else if (message_severity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+        {
+            logger->error("Vulkan-{} -- {}", message_type_str, p_callback_data->pMessage);
+        }
+        else
+        {
+            logger->trace("Vulkan-{} -- {}", message_type_str, p_callback_data->pMessage);
+        }
+    }
+
+    return VK_FALSE; // Always return VK_FALSE
+}
+#endif
+
 auto main() -> int
 {
-    // Create main log
+    // Create vulkan specific log for validation layers
+    cielim::utils::log::InitLog("log-vulkan");
+
+    // Create default main log
     cielim::utils::log::InitLog("log-cielim");
 
     // Set global log format
@@ -64,6 +117,40 @@ auto main() -> int
         .apiVersion = VK_API_VERSION_1_4,
     };
 
+    std::vector<const char*> instance_layers;
+
+    uint32_t inst_layer_count = 0;
+    vkEnumerateInstanceLayerProperties(&inst_layer_count, nullptr);
+
+    std::vector<VkLayerProperties> inst_layers(inst_layer_count);
+
+    const VkResult inst_layer_result = vkEnumerateInstanceLayerProperties(&inst_layer_count, inst_layers.data());
+
+    if (inst_layer_result != VK_SUCCESS)
+    {
+        cielim::utils::log::critical("Vulkan instance layers could not be fetched!");
+    }
+
+#ifndef NDEBUG
+    bool found_validation = false;
+    for (uint32_t i = 0; i < inst_layer_count; i++)
+    {
+        if (strcmp("VK_LAYER_KHRONOS_validation", inst_layers[i].layerName) == 0)
+        {
+            found_validation = true;
+            break;
+        }
+    }
+
+    if (!found_validation)
+    {
+        cielim::utils::log::critical("Vulkan validation layers could not be found!");
+        return EXIT_FAILURE;
+    }
+
+    instance_layers.push_back("VK_LAYER_KHRONOS_validation");
+#endif
+
     std::vector<const char*> instance_extensions;
 
     uint32_t inst_ext_count = 0;
@@ -79,6 +166,26 @@ auto main() -> int
         cielim::utils::log::critical("Vulkan instance extensions could not be fetched!");
         return EXIT_FAILURE;
     }
+
+#ifndef NDEBUG
+    bool found_validation_debug = false;
+    for (uint32_t i = 0; i < inst_ext_count; i++)
+    {
+        if (strcmp(VK_EXT_DEBUG_UTILS_EXTENSION_NAME, inst_extensions[i].extensionName) == 0)
+        {
+            found_validation_debug = true;
+            break;
+        }
+    }
+
+    if (!found_validation_debug)
+    {
+        cielim::utils::log::critical("Vulkan debug extension is not supported!");
+        return EXIT_FAILURE;
+    }
+
+    instance_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+#endif
 
 #ifdef __APPLE__
     bool found_portable = false;
@@ -100,13 +207,28 @@ auto main() -> int
     instance_extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 #endif
 
+#ifndef NDEBUG
+    VkDebugUtilsMessengerCreateInfoEXT debug_messenger_create_info = {
+        .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+        .messageSeverity
+        = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT
+        | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
+        .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT,
+        .pfnUserCallback = DebugCallback,
+    };
+#endif
 
     const VkInstanceCreateInfo instance_create_info = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+#ifndef NDEBUG
+        .pNext = &debug_messenger_create_info,
+#endif
 #ifdef __APPLE__
         .flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR,
 #endif
         .pApplicationInfo = &APP_INFO,
+        .enabledLayerCount = static_cast<uint32_t>(instance_layers.size()),
+        .ppEnabledLayerNames = instance_layers.data(),
         .enabledExtensionCount = static_cast<uint32_t>(instance_extensions.size()),
         .ppEnabledExtensionNames = instance_extensions.data(),
     };
@@ -121,6 +243,15 @@ auto main() -> int
     }
 
     volkLoadInstance(vk_instance); // Initialize Vulkan instance
+
+#ifndef NDEBUG
+    VkDebugUtilsMessengerEXT debug_messenger;
+    const VkResult messenger_result
+        = vkCreateDebugUtilsMessengerEXT(vk_instance, &debug_messenger_create_info, nullptr, &debug_messenger);
+
+    if (messenger_result != VK_SUCCESS)
+        cielim::utils::log::warn("Vulkan debug messenger couldn't be created");
+#endif
 
     uint32_t num_devices = 0;
     vkEnumeratePhysicalDevices(vk_instance, &num_devices, nullptr);
@@ -266,6 +397,11 @@ auto main() -> int
     VkQueue graphics_queue;
     vkGetDeviceQueue(device, graphics_queue_family, 0, &graphics_queue);
     (void)graphics_queue;
+
+#ifndef NDEBUG
+    if (debug_messenger != VK_NULL_HANDLE)
+        vkDestroyDebugUtilsMessengerEXT(vk_instance, debug_messenger, nullptr);
+#endif
 
     vkDestroyDevice(device, nullptr);
     vkDestroyInstance(vk_instance, nullptr);
