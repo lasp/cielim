@@ -9,6 +9,11 @@
 #include <volk/volk.h>
 #include <vulkan/vk_enum_string_helper.h>
 
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
+
+#include <SDL3/SDL_main.h> // This has to be the last SDL include
+
 import cielim.utils.log;
 
 #ifndef NDEBUG
@@ -61,7 +66,7 @@ static VKAPI_ATTR auto VKAPI_CALL DebugCallback(
 }
 #endif
 
-auto main() -> int
+auto main(int argc, char* argv[]) -> int
 {
     // Create vulkan specific log for validation layers
     cielim::utils::log::InitLog("log-vulkan");
@@ -469,6 +474,8 @@ auto main() -> int
 #endif
     vkDestroyDevice(device, nullptr);
     vkDestroyInstance(vk_instance, nullptr);
+
+    SDL_Quit();
 
     return EXIT_SUCCESS;
 }
