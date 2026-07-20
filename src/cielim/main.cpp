@@ -83,9 +83,27 @@ auto main(int argc, char* argv[]) -> int
     // Flush warnings and above immediately instead of buffering
     cielim::utils::log::flush_on(cielim::utils::log::level::warn);
 
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
+    {
+        cielim::utils::log::critical("SDL failed to initialize: {}", SDL_GetError());
+        return EXIT_FAILURE;
+    }
+
     if (volkInitialize() != VK_SUCCESS)
     {
         cielim::utils::log::critical("Volk failed to initialize!");
+        return EXIT_FAILURE;
+    }
+
+    constexpr int WINDOW_WIDTH = 1280;
+    constexpr int WINDOW_HEIGHT = 720;
+
+    SDL_Window* window = nullptr;
+    window = SDL_CreateWindow("cielim", WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
+
+    if (window == nullptr)
+    {
+        cielim::utils::log::critical("SDL failed to create window: {}", SDL_GetError());
         return EXIT_FAILURE;
     }
 
@@ -166,6 +184,17 @@ auto main(int argc, char* argv[]) -> int
     }
 
     std::vector<const char*> req_inst_extensions;
+
+    uint32_t sdl_extension_count = 0;
+    const char* const* sdl_extensions = SDL_Vulkan_GetInstanceExtensions(&sdl_extension_count);
+
+    if (sdl_extensions == nullptr)
+    {
+        cielim::utils::log::critical("SDL failed to fetch instance extensions: {}", SDL_GetError());
+        return EXIT_FAILURE;
+    }
+
+    req_inst_extensions.assign(sdl_extensions, sdl_extensions + sdl_extension_count);
 
 #ifndef NDEBUG
     req_inst_extensions.push_back("VK_EXT_debug_utils");
@@ -302,7 +331,8 @@ auto main(int argc, char* argv[]) -> int
         for (uint32_t index = 0; const auto& queue_family : queue_families)
         {
             // Check that the GPU supports graphics computations
-            if ((queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
+            if ((queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0
+                && SDL_Vulkan_GetPresentationSupport(vk_instance, device, index))
             {
                 physical_device = device;
                 graphics_queue_family = index; // We're just picking out the first graphics queue for everything
@@ -376,6 +406,8 @@ auto main(int argc, char* argv[]) -> int
     };
 
     std::vector<const char*> req_dev_extensions;
+
+    req_dev_extensions.push_back("VK_KHR_swapchain");
 
 #ifdef __APPLE__
     req_dev_extensions.push_back("VK_KHR_portability_subset");
@@ -467,6 +499,21 @@ auto main(int argc, char* argv[]) -> int
     VkQueue graphics_queue;
     vkGetDeviceQueue(device, graphics_queue_family, 0, &graphics_queue);
     (void)graphics_queue;
+
+    bool is_running = true;
+
+    while (is_running)
+    {
+        SDL_Event event;
+        while (SDL_PollEvent(&event))
+        {
+            switch (event.type)
+            {
+            case SDL_EVENT_QUIT: is_running = false; break;
+            default: break;
+            }
+        }
+    }
 
 #ifndef NDEBUG
     if (debug_messenger != VK_NULL_HANDLE)
