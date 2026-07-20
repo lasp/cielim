@@ -2,6 +2,10 @@
   "name": "cielim",
   "version-string": "0.1.0",
   "dependencies": [
+    {
+      "name": "sdl3",
+      "features": [ "vulkan" ]
+    },
     "spdlog",
     "zeromq",
     "cppzmq",

@@ -10,6 +10,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Find dependencies
 
+find_package(SDL3 CONFIG REQUIRED) # From vcpkg
 find_package(spdlog CONFIG REQUIRED) # From vcpkg
 find_package(Vulkan REQUIRED COMPONENTS volk) # From VulkanSDK
 
@@ -35,5 +36,6 @@ target_sources(cielim
 
 # Link dependencies
 
+target_link_libraries(cielim PRIVATE SDL3::SDL3)
 target_link_libraries(cielim PRIVATE spdlog::spdlog)
 target_link_libraries(cielim PRIVATE Vulkan::volk)
