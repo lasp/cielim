@@ -9,6 +9,7 @@ module;
 #include <string>
 #include <vector>
 
+#include <fmt/ranges.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
@@ -16,6 +17,11 @@ module;
 export module cielim.utils.log;
 
 constexpr int DEFAULT_FILE_SIZE = 5 * 1024 * 1024;
+
+export namespace fmt
+{
+using fmt::join;
+}
 
 export namespace cielim::utils::log
 {

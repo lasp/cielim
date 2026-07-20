@@ -117,7 +117,11 @@ auto main() -> int
         .apiVersion = VK_API_VERSION_1_4,
     };
 
-    std::vector<const char*> instance_layers;
+    std::vector<const char*> req_inst_layers;
+
+#ifndef NDEBUG
+    req_inst_layers.push_back("VK_LAYER_KHRONOS_validation");
+#endif
 
     uint32_t inst_layer_count = 0;
     vkEnumerateInstanceLayerProperties(&inst_layer_count, nullptr);
@@ -131,27 +135,40 @@ auto main() -> int
         cielim::utils::log::critical("Vulkan instance layers could not be fetched!");
     }
 
-#ifndef NDEBUG
-    bool found_validation = false;
-    for (uint32_t i = 0; i < inst_layer_count; i++)
+    std::vector<const char*> missing_inst_layers;
+
+    for (const char* req_layer : req_inst_layers)
     {
-        if (strcmp("VK_LAYER_KHRONOS_validation", inst_layers[i].layerName) == 0)
+        bool found = false;
+
+        for (const auto& layer : inst_layers)
         {
-            found_validation = true;
-            break;
+            if (std::strcmp(req_layer, layer.layerName) == 0)
+            {
+                found = true;
+                break;
+            }
         }
+
+        if (!found)
+            missing_inst_layers.push_back(req_layer);
     }
 
-    if (!found_validation)
+    if (!missing_inst_layers.empty())
     {
-        cielim::utils::log::critical("Vulkan validation layers could not be found!");
+        cielim::utils::log::critical("Missing required instance layers: {}", fmt::join(missing_inst_layers, ", "));
         return EXIT_FAILURE;
     }
 
-    instance_layers.push_back("VK_LAYER_KHRONOS_validation");
+    std::vector<const char*> req_inst_extensions;
+
+#ifndef NDEBUG
+    req_inst_extensions.push_back("VK_EXT_debug_utils");
 #endif
 
-    std::vector<const char*> instance_extensions;
+#ifdef __APPLE__
+    req_inst_extensions.push_back("VK_KHR_portability_enumeration");
+#endif
 
     uint32_t inst_ext_count = 0;
     vkEnumerateInstanceExtensionProperties(nullptr, &inst_ext_count, nullptr);
@@ -167,45 +184,32 @@ auto main() -> int
         return EXIT_FAILURE;
     }
 
-#ifndef NDEBUG
-    bool found_validation_debug = false;
-    for (uint32_t i = 0; i < inst_ext_count; i++)
+    std::vector<const char*> missing_inst_extensions;
+
+    for (const char* req_extension : req_inst_extensions)
     {
-        if (strcmp(VK_EXT_DEBUG_UTILS_EXTENSION_NAME, inst_extensions[i].extensionName) == 0)
+        bool found = false;
+
+        for (const auto& extension : inst_extensions)
         {
-            found_validation_debug = true;
-            break;
+            if (std::strcmp(req_extension, extension.extensionName) == 0)
+            {
+                found = true;
+                break;
+            }
         }
+
+        if (!found)
+            missing_inst_extensions.push_back(req_extension);
     }
 
-    if (!found_validation_debug)
+    if (!missing_inst_extensions.empty())
     {
-        cielim::utils::log::critical("Vulkan debug extension is not supported!");
+        cielim::utils::log::critical(
+            "Missing required instance extensions: {}", fmt::join(missing_inst_extensions, ", ")
+        );
         return EXIT_FAILURE;
     }
-
-    instance_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-#endif
-
-#ifdef __APPLE__
-    bool found_portable = false;
-    for (uint32_t i = 0; i < inst_ext_count; i++)
-    {
-        if (strcmp(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME, inst_extensions[i].extensionName) == 0)
-        {
-            found_portable = true;
-            break;
-        }
-    }
-
-    if (!found_portable)
-    {
-        cielim::utils::log::critical("MoltenVK portability extension is not supported!");
-        return EXIT_FAILURE;
-    }
-
-    instance_extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-#endif
 
 #ifndef NDEBUG
     VkDebugUtilsMessengerCreateInfoEXT debug_messenger_create_info = {
@@ -227,10 +231,10 @@ auto main() -> int
         .flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR,
 #endif
         .pApplicationInfo = &APP_INFO,
-        .enabledLayerCount = static_cast<uint32_t>(instance_layers.size()),
-        .ppEnabledLayerNames = instance_layers.data(),
-        .enabledExtensionCount = static_cast<uint32_t>(instance_extensions.size()),
-        .ppEnabledExtensionNames = instance_extensions.data(),
+        .enabledLayerCount = static_cast<uint32_t>(req_inst_layers.size()),
+        .ppEnabledLayerNames = req_inst_layers.data(),
+        .enabledExtensionCount = static_cast<uint32_t>(req_inst_extensions.size()),
+        .ppEnabledExtensionNames = req_inst_extensions.data(),
     };
 
     VkInstance vk_instance;
@@ -267,11 +271,11 @@ auto main() -> int
         return EXIT_FAILURE;
     }
 
-    uint32_t device_index = -1;
+    VkPhysicalDevice physical_device;
     uint32_t graphics_queue_family = -1;
 
     // Loop through all physical devices to find most suitable one
-    for (uint32_t i = 0; const auto& device : physical_devices)
+    for (const auto& device : physical_devices)
     {
         VkPhysicalDeviceProperties device_properties;
         vkGetPhysicalDeviceProperties(device, &device_properties);
@@ -290,27 +294,25 @@ auto main() -> int
 
         vkGetPhysicalDeviceQueueFamilyProperties(device, &num_queue_families, queue_families.data());
 
-        for (uint32_t j = 0; const auto& queue_family : queue_families)
+        for (uint32_t index = 0; const auto& queue_family : queue_families)
         {
             // Check that the GPU supports graphics computations
             if ((queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0)
             {
-                device_index = i;
-                graphics_queue_family = j; // We're just picking out the first graphics queue for everything
+                physical_device = device;
+                graphics_queue_family = index; // We're just picking out the first graphics queue for everything
             }
-            j++;
+            index++;
         }
-        i++;
     }
 
-    if (device_index < 0 || graphics_queue_family < 0)
+    if (physical_device == VK_NULL_HANDLE || graphics_queue_family < 0)
     {
         cielim::utils::log::critical("No device could be found that supports Vulkan 1.4+ and/or graphics queues!");
         vkDestroyInstance(vk_instance, nullptr);
         return EXIT_FAILURE;
     }
 
-    VkPhysicalDevice physical_device = physical_devices[device_index];
     VkPhysicalDeviceProperties device_properties;
     vkGetPhysicalDeviceProperties(physical_device, &device_properties);
 
@@ -333,7 +335,46 @@ auto main() -> int
 
     cielim::utils::log::info("Device heap total: {:.2f} GB", static_cast<float>(dev_local_bytes) / BYTES_IN_GB);
 
-    std::vector<const char*> device_extensions;
+    /* TODO: Add checking for support for each feature, assuming support for basic features for now. */
+
+    VkPhysicalDeviceVulkan11Features req_dev_vulkan11_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+    };
+
+    VkPhysicalDeviceVulkan12Features req_dev_vulkan12_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+        .pNext = &req_dev_vulkan11_features,
+        .scalarBlockLayout = VK_TRUE,
+        .timelineSemaphore = VK_TRUE,
+        .bufferDeviceAddress = VK_TRUE,
+    };
+
+    VkPhysicalDeviceVulkan13Features req_dev_vulkan13_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+        .pNext = &req_dev_vulkan12_features,
+        .synchronization2 = VK_TRUE,
+        .dynamicRendering = VK_TRUE,
+        .maintenance4 = VK_TRUE,
+    };
+
+    VkPhysicalDeviceVulkan14Features req_dev_vulkan14_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES,
+        .pNext = &req_dev_vulkan13_features,
+    };
+
+    VkPhysicalDeviceFeatures2 req_dev_features = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+        .pNext = &req_dev_vulkan14_features,
+        .features = {
+            .samplerAnisotropy = VK_TRUE,
+        },
+    };
+
+    std::vector<const char*> req_dev_extensions;
+
+#ifdef __APPLE__
+    req_dev_extensions.push_back("VK_KHR_portability_subset");
+#endif
 
     uint32_t dev_ext_count = 0;
     vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &dev_ext_count, nullptr);
@@ -346,24 +387,43 @@ auto main() -> int
     if (dev_ext_result != VK_SUCCESS)
     {
         cielim::utils::log::critical("Vulkan device extensions could not be fetched!");
+#ifndef NDEBUG
+        if (debug_messenger != VK_NULL_HANDLE)
+            vkDestroyDebugUtilsMessengerEXT(vk_instance, debug_messenger, nullptr);
+#endif
         vkDestroyInstance(vk_instance, nullptr);
         return EXIT_FAILURE;
     }
 
-#ifdef __APPLE__
-    bool found_dev_portable = false;
-    for (uint32_t i = 0; i < dev_ext_count; i++)
+    std::vector<const char*> missing_dev_extensions;
+
+    for (const char* req_extension : req_dev_extensions)
     {
-        if (strcmp("VK_KHR_portability_subset", dev_extensions[i].extensionName) == 0)
+        bool found = false;
+
+        for (const auto& extension : dev_extensions)
         {
-            found_dev_portable = true;
-            break;
+            if (std::strcmp(req_extension, extension.extensionName) == 0)
+            {
+                found = true;
+                break;
+            }
         }
+
+        if (!found)
+            missing_dev_extensions.push_back(req_extension);
     }
 
-    if (found_dev_portable) // Only add extension if needed
-        device_extensions.push_back("VK_KHR_portability_subset");
+    if (!missing_dev_extensions.empty())
+    {
+        cielim::utils::log::critical("Missing required device extensions: {}", fmt::join(missing_dev_extensions, ", "));
+#ifndef NDEBUG
+        if (debug_messenger != VK_NULL_HANDLE)
+            vkDestroyDebugUtilsMessengerEXT(vk_instance, debug_messenger, nullptr);
 #endif
+        vkDestroyInstance(vk_instance, nullptr);
+        return EXIT_FAILURE;
+    }
 
     float queue_priority = 1.0f;
     const VkDeviceQueueCreateInfo queue_info = {
@@ -375,10 +435,11 @@ auto main() -> int
 
     const VkDeviceCreateInfo device_info = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        .pNext = &req_dev_features,
         .queueCreateInfoCount = 1,
         .pQueueCreateInfos = &queue_info,
-        .enabledExtensionCount = static_cast<uint32_t>(device_extensions.size()),
-        .ppEnabledExtensionNames = device_extensions.data(),
+        .enabledExtensionCount = static_cast<uint32_t>(req_dev_extensions.size()),
+        .ppEnabledExtensionNames = req_dev_extensions.data(),
     };
 
     VkDevice device;
@@ -387,6 +448,10 @@ auto main() -> int
     if (device_result != VK_SUCCESS)
     {
         cielim::utils::log::critical("Device creation failed: {}", string_VkResult(device_result));
+#ifndef NDEBUG
+        if (debug_messenger != VK_NULL_HANDLE)
+            vkDestroyDebugUtilsMessengerEXT(vk_instance, debug_messenger, nullptr);
+#endif
         vkDestroyInstance(vk_instance, nullptr);
         return EXIT_FAILURE;
     }
@@ -402,7 +467,6 @@ auto main() -> int
     if (debug_messenger != VK_NULL_HANDLE)
         vkDestroyDebugUtilsMessengerEXT(vk_instance, debug_messenger, nullptr);
 #endif
-
     vkDestroyDevice(device, nullptr);
     vkDestroyInstance(vk_instance, nullptr);
 
