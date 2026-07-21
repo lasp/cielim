@@ -88,6 +88,15 @@ def _get_exposure_time():
     return exposure_time_list, time_list
 
 
+def dark_signal_rate_dn_s(temp_c: float) -> float:
+    """
+    PolyCam CCD dark signal generation rate (DN/s) as a function of CCD temperature (deg C).
+    Fit: R_dark = a*exp(b*T) + c*exp(d*T). Valid over the documented CCD range (-25 to 13 degC).
+    """
+    a, b, c, d = 2.47, 0.0148, 0.295, 0.101
+    return a * np.exp(b * temp_c) + c * np.exp(d * temp_c)
+
+
 def scene_setup() -> cielim.Scene:
     scene = cielim.Scene()
 
@@ -106,7 +115,10 @@ def scene_setup() -> cielim.Scene:
         well_capacity=int(14500 / 4.5),  # Using sensor linearity
     )
 
-    scene.set_corruption_params(read_noise=3)
+    ccd_temp_c = -10.0
+    dark_current_e_s = dark_signal_rate_dn_s(ccd_temp_c) / 4.5  # DN/s -> e-/s, same 4.5 DN/e- gain as well_capacity
+
+    scene.set_corruption_params(read_noise=3, dc_rate=dark_current_e_s)
 
     scene.set_celestial_body_params(0, position=(0, 0, -10000))  # Sets the position of the sun
 
