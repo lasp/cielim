@@ -16,12 +16,31 @@ message EpochDateTime{
     double seconds = 6;
 }
 
+message StrayLightModel{
+  bool enabled = 1; // [-] Master toggle for the stray-light / lens-flare pass
+  double coreSize = 2; // [-] Scale factor for the sun core blob size (SunFalloffK = 8/coreSize)
+  double ghostSize = 3; // [-] Global scale factor for the ghost sizes
+  double ghostTransmittance = 4; // [-] Global brightness scale for the ghosts
+  double ghost1RelativeSize = 5; // [-] Per-ghost size scale for the first (closest) ghosts
+  double ghost2RelativeSize = 6; // [-] Per-ghost size scale for the second ghosts
+  double ghost3RelativeSize = 7; // [-] Per-ghost size scale for the third ghosts
+  double ghost4RelativeSize = 8; // [-] Per-ghost size scale for the fourth (orb) ghosts
+  double ghostBrightnessSizeExponent = 9; // [-] Couples ghost brightness to inverse size (2 = area-conserving)
+  double coronaFalloffExponent = 10; // [-] Falloff exponent of the wide corona aureole (higher = tighter)
+  double coronaIntensity = 11; // [-] Brightness amplitude of the wide corona, relative to the core
+  double baffleShieldAngle = 12; // [deg] Angle beyond the FoV half-angle out to which the off-axis sun still casts stray light (cutoff = FoV/2 + this; 0 = only when the sun is in frame)
+  double intensity = 13; // [-] Overall stray-light brightness as a fraction of the direct solar radiance (throughput); scales the whole flare. 1.0 = as bright as the sun's disk (default); real optics are far smaller, ~1e-3..1e-6
+  double numRays = 14; // [-] Number of evenly-spaced symmetric rays radiating from the sun (even -> mirror-symmetric across boresight)
+  double raySharpness = 15; // [-] Angular sharpness of the rays (higher = narrower, crisper rays)
+  double rayWeight = 16; // [-] Strength of the symmetric rays relative to the random streaks
+}
+
 message RenderingModel{
   double wavelength1 = 1; // [nm] first wavelength sample point
   double wavelength2 = 2; // [nm] second wavelength sample point
   double wavelength3 = 3; // [nm] third wavelength sample point
   double cosmicRayStdDeviation = 4; // [-] Standard deviation of cosmic ray frequency (poisson distribution)
-  double strayLight = 5; // [-] Enable stray light model
+  StrayLightModel strayLightModel = 5; // [-] Stray-light / lens-flare model parameters
   bool starField = 6; // [-] Enable star field
   string rendering = 7; // [-] Type of rendering engine to be used (Lumen, Ray tracing)
   bool enableSmear = 8; // [-] Enable effects of long exposure times

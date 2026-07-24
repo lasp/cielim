@@ -39,13 +39,84 @@ class EpochDateTime(_message.Message):
         seconds: _Optional[float] = ...,
     ) -> None: ...
 
+class StrayLightModel(_message.Message):
+    __slots__ = (
+        "enabled",
+        "coreSize",
+        "ghostSize",
+        "ghostTransmittance",
+        "ghost1RelativeSize",
+        "ghost2RelativeSize",
+        "ghost3RelativeSize",
+        "ghost4RelativeSize",
+        "ghostBrightnessSizeExponent",
+        "coronaFalloffExponent",
+        "coronaIntensity",
+        "baffleShieldAngle",
+        "intensity",
+        "numRays",
+        "raySharpness",
+        "rayWeight",
+    )
+    ENABLED_FIELD_NUMBER: _ClassVar[int]
+    CORESIZE_FIELD_NUMBER: _ClassVar[int]
+    GHOSTSIZE_FIELD_NUMBER: _ClassVar[int]
+    GHOSTTRANSMITTANCE_FIELD_NUMBER: _ClassVar[int]
+    GHOST1RELATIVESIZE_FIELD_NUMBER: _ClassVar[int]
+    GHOST2RELATIVESIZE_FIELD_NUMBER: _ClassVar[int]
+    GHOST3RELATIVESIZE_FIELD_NUMBER: _ClassVar[int]
+    GHOST4RELATIVESIZE_FIELD_NUMBER: _ClassVar[int]
+    GHOSTBRIGHTNESSSIZEEXPONENT_FIELD_NUMBER: _ClassVar[int]
+    CORONAFALLOFFEXPONENT_FIELD_NUMBER: _ClassVar[int]
+    CORONAINTENSITY_FIELD_NUMBER: _ClassVar[int]
+    BAFFLESHIELDANGLE_FIELD_NUMBER: _ClassVar[int]
+    INTENSITY_FIELD_NUMBER: _ClassVar[int]
+    NUMRAYS_FIELD_NUMBER: _ClassVar[int]
+    RAYSHARPNESS_FIELD_NUMBER: _ClassVar[int]
+    RAYWEIGHT_FIELD_NUMBER: _ClassVar[int]
+    enabled: bool
+    coreSize: float
+    ghostSize: float
+    ghostTransmittance: float
+    ghost1RelativeSize: float
+    ghost2RelativeSize: float
+    ghost3RelativeSize: float
+    ghost4RelativeSize: float
+    ghostBrightnessSizeExponent: float
+    coronaFalloffExponent: float
+    coronaIntensity: float
+    baffleShieldAngle: float
+    intensity: float
+    numRays: float
+    raySharpness: float
+    rayWeight: float
+    def __init__(
+        self,
+        enabled: _Optional[bool] = ...,
+        coreSize: _Optional[float] = ...,
+        ghostSize: _Optional[float] = ...,
+        ghostTransmittance: _Optional[float] = ...,
+        ghost1RelativeSize: _Optional[float] = ...,
+        ghost2RelativeSize: _Optional[float] = ...,
+        ghost3RelativeSize: _Optional[float] = ...,
+        ghost4RelativeSize: _Optional[float] = ...,
+        ghostBrightnessSizeExponent: _Optional[float] = ...,
+        coronaFalloffExponent: _Optional[float] = ...,
+        coronaIntensity: _Optional[float] = ...,
+        baffleShieldAngle: _Optional[float] = ...,
+        intensity: _Optional[float] = ...,
+        numRays: _Optional[float] = ...,
+        raySharpness: _Optional[float] = ...,
+        rayWeight: _Optional[float] = ...,
+    ) -> None: ...
+
 class RenderingModel(_message.Message):
     __slots__ = (
         "wavelength1",
         "wavelength2",
         "wavelength3",
         "cosmicRayStdDeviation",
-        "strayLight",
+        "strayLightModel",
         "starField",
         "rendering",
         "enableSmear",
@@ -54,7 +125,7 @@ class RenderingModel(_message.Message):
     WAVELENGTH2_FIELD_NUMBER: _ClassVar[int]
     WAVELENGTH3_FIELD_NUMBER: _ClassVar[int]
     COSMICRAYSTDDEVIATION_FIELD_NUMBER: _ClassVar[int]
-    STRAYLIGHT_FIELD_NUMBER: _ClassVar[int]
+    STRAYLIGHTMODEL_FIELD_NUMBER: _ClassVar[int]
     STARFIELD_FIELD_NUMBER: _ClassVar[int]
     RENDERING_FIELD_NUMBER: _ClassVar[int]
     ENABLESMEAR_FIELD_NUMBER: _ClassVar[int]
@@ -62,7 +133,7 @@ class RenderingModel(_message.Message):
     wavelength2: float
     wavelength3: float
     cosmicRayStdDeviation: float
-    strayLight: float
+    strayLightModel: StrayLightModel
     starField: bool
     rendering: str
     enableSmear: bool
@@ -72,7 +143,7 @@ class RenderingModel(_message.Message):
         wavelength2: _Optional[float] = ...,
         wavelength3: _Optional[float] = ...,
         cosmicRayStdDeviation: _Optional[float] = ...,
-        strayLight: _Optional[float] = ...,
+        strayLightModel: _Optional[_Union[StrayLightModel, _Mapping]] = ...,
         starField: _Optional[bool] = ...,
         rendering: _Optional[str] = ...,
         enableSmear: _Optional[bool] = ...,

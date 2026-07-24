@@ -94,6 +94,43 @@ struct FImageCorruptionParams
 	float SignalGain;
 };
 
+// Tunable parameters for the lens-flare / stray-light pass (LensFlares.usf), sourced from the
+// protobuf StrayLightModel. Defaults reproduce the tuned look when a scene leaves them unset.
+struct FStrayLightParams
+{
+	bool bEnabled = false; // Master on/off for the whole pass
+
+	// Overall brightness of the flare as a fraction of the direct solar radiance (baffle/optics
+	// throughput). Scales the entire flare uniformly. 1.0 = as bright as the sun's disk; real optics
+	// are far dimmer (~1e-3..1e-6), so leave low to keep the flare from saturating the frame.
+	float Intensity = 1.0f;
+
+	// Typical tuning ranges are noted in [brackets]; they bound the useful look, not hard limits.
+	float CoreSize = 1.0f; // Sun core disc size (shader SunFalloffK = 8 / CoreSize; larger = bigger disc) [0.1, 1]
+
+	// Ghosts
+	float GhostSize = 1.0f; // Global ghost size scale [0.1, 1.25]
+	float GhostTransmittance = 3.0f; // Global ghost brightness (>1 so ghosts read above the corona) [0.5, 1.5]
+	float Ghost1RelativeSize = 1.0f; // Per-ghost size scale, first (closest to sun) ghost [0.25, 1]
+	float Ghost2RelativeSize = 1.0f; // ... second ghost [0.25, 1]
+	float Ghost3RelativeSize = 1.0f; // ... third ghost [0.25, 1]
+	float Ghost4RelativeSize = 1.0f; // ... fourth (orb) ghost [0.25, 1]
+	float GhostBrightnessSizeExponent = 2.0f; // Couples ghost brightness to inverse size (2 = area-conserving)
+
+	// Wide corona aureole (exposure-independent power-law glow around the core)
+	float CoronaFalloffExponent = 1.2f; // Falloff exponent (higher = tighter corona) [0.5, 2]
+	float CoronaIntensity = 0.02f; // Corona brightness relative to the core (low so ghosts aren't washed out) [0, 1]
+
+	// Symmetric rays radiating from the sun (on top of the random streaks)
+	float NumRays = 6.0f; // Number of evenly-spaced rays (even -> mirror-symmetric across boresight) [0, 15]
+	float RaySharpness = 24.0f; // Angular sharpness (higher = narrower, crisper rays) [0, 30]
+	float RayWeight = 0.8f; // Ray strength relative to the random streaks [0, 1]
+
+	// Baffle / stray-light angular reach: the sun still casts stray light while it is within
+	// (FoV half-angle + BaffleShieldAngle) of the boresight, even when it is outside the frame.
+	float BaffleShieldAngle = 0.0f; // [deg] Extra angle beyond the FoV half-angle (0 = only when the sun is in frame)
+};
+
 struct FDistantObject
 {
 	/* TODO: Fix that albedo doesn't take into account albedo map corrections */
@@ -155,12 +192,15 @@ public:
 	FCameraParams CameraParams{};
 	FDiagnosticParams DiagnosticParams{};
 	FImageCorruptionParams CorruptionParams{};
+	FStrayLightParams StrayLightParams{};
 
 	cielimMessage::ImageFormat::Format ImageFormat; // Defaults to PNG
 
 	// Distant object information
 
+	FVector3f SunPosition{};
 	FVector3f SolarDirection{};
+	FVector3f SolarSpectralRadiance{};
 	FVector3f SolarSpectralIrradiance{};
 	TArray<FDistantObject> DistantObjects{};
 

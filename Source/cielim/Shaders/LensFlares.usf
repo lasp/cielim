@@ -1,0 +1,264 @@
+//=================== Copyright (c) 2026 Laboratory for Atmospheric and Space Physics ===================//
+//
+// Purpose: Pixel shader for the sun's stray light / lens flare — a bright core disc, a wide corona
+//          aureole, radial streaks + symmetric rays, and a chain of ghost reflections. Runs in the
+//          radiance domain (before the QuE tonemap), so its intensity scales with exposure.
+//
+// License: MIT License. See LICENSE file.
+//
+//=======================================================================================================//
+
+#include "/Engine/Public/Platform.ush"
+#include "/CielimShaders/RandomFuncs.ush"
+
+Texture2D InputTexture;
+SamplerState InputSampler;
+
+// Scene inputs (bound each frame from the render pipeline).
+float3 SolarSpectralRadiance; // Sun blackbody radiance per wavelength (W/m^2/nm/str); the flare amplitude
+float4 SunClipPosition;       // Sun position in clip space; w<=0 means behind camera (flare culled)
+float2 SunFlareUV;            // Sun position in flare-UV space; remapped by off-boresight angle (see LensFlarePass)
+float StrayLightVisibility;   // Baffle-shield fade: 1 while the sun is in view, ramping to 0 at the shield cutoff
+float StrayLightIntensity;    // Overall flare brightness as a fraction of the solar radiance (baffle/optics throughput)
+float SunRadiusUV;            // Sun angular radius in UV units; sets the core disc size
+float AspectRatio;            // Viewport width/height, used to keep the flare circular
+
+// Stray-light parameters — bound from FStrayLightParams (see LensFlares.h). Defaults and scene/test
+// overrides live there; the comments here describe what each does in the math below.
+// Ranges in [brackets] are the typical tuning ranges (useful look), not hard limits.
+float CoreSize;                    // Core disc size scale (SunFalloffK = 8/CoreSize) [0.1, 1]
+float GhostSize;                   // Global ghost size scale [0.1, 1.25]
+float GhostTransmittance;          // Global ghost brightness scale [0.5, 1.5]
+float Ghost1RelativeSize;          // Per-ghost size scale, first (closest) ghost [0.25, 1]
+float Ghost2RelativeSize;          // ... second ghost [0.25, 1]
+float Ghost3RelativeSize;          // ... third ghost [0.25, 1]
+float Ghost4RelativeSize;          // ... fourth (orb) ghost [0.25, 1]
+float GhostBrightnessSizeExponent; // Couples ghost brightness to inverse size (2 = area-conserving)
+float CoronaFalloffExponent;       // Wide-corona falloff exponent (higher = tighter) [0.5, 2]
+float CoronaIntensity;             // Wide-corona brightness relative to the core (lower = fainter) [0, 1]
+float NumRays;                     // Number of evenly-spaced symmetric rays (even -> point-symmetric across boresight) [0, 15]
+float RaySharpness;                // Angular sharpness of the rays (higher = narrower, crisper rays) [0, 30]
+float RayWeight;                   // Symmetric-ray strength relative to the random streaks [0, 1]
+float ExposureTime;                // Sensor exposure (s); scales the streak length (see StreakLength)
+uint IsGrayscale;                  // 1 = achromatic ghosts, 0 = chromatic R/B ghost offsets (from image settings)
+
+// Core sun blob parameters
+
+static const float CoreFalloffExponent = 1.5f; // Falloff exponent for the crisp core disc
+
+static const float RingAngFreq      = 2.0f;   // Angular frequency of the streaks
+static const float RingNoiseWarp    = 4.0f;   // Scale that warps the noise input for the streak shape
+static const float RingNoiseWeight  = 0.15f;  // Streak amplitude
+
+// Streaks radiate from the sun with their own slow radial falloff. StreakLength is the radial reach in UV (bigger =
+// longer streaks); StreakFalloff shapes the taper (lower = flatter/longer). The reach grows with
+// exposure time via StreakExposureScaling, measured in decades above StreakRefLogExposure, so
+// longer exposures show longer streaks.
+static const float StreakLength          = 0.5f;   // base radial reach (UV; ~0.5 spans center->edge)
+static const float StreakFalloff         = 1.0f;   // taper exponent (lower = longer, flatter streaks)
+static const float StreakExposureScaling = 0.5f;   // extra reach per decade of exposure above the reference
+static const float StreakRefLogExposure  = -9.0f;  // log10 of the reference exposure
+
+// NumRays / RaySharpness / RayWeight (bound from FStrayLightParams above) add a few evenly-spaced
+// symmetric rays on top of the random streaks for a balanced star. cos(NumRays * Angle) has NumRays
+// maxima; an even NumRays is point-symmetric, keeping the flare mirror-symmetric across the boresight.
+
+// Per-ghost constants (four ghosts along the sun->center axis). For each ghost:
+//   Exp       = radial falloff exponent (with GhostSize/RelativeSize, sets the blob's spread)
+//   Threshold = brightness cutoff = the blob's radius before it clips to 0
+//   OffsetR/G/B = center position as a fraction of SunUV; the R/B split gives chromatic fringing
+//   Scale     = base brightness
+//   UVMix     = blend toward the radially-distorted UV (shifts the ghost along the axis)
+
+// First (closest to sun) ghost
+static const float FirstExp = 1.6f;
+static const float FirstThreshold = 0.01f;
+static const float FirstOffsetR = 0.300f;
+static const float FirstOffsetG = 0.325f;
+static const float FirstOffsetB = 0.350f;
+static const float FirstScale = 5.0f;
+
+// Second ghost
+static const float SecondUVMix = -0.5f;
+static const float SecondExp = 3.0f;
+static const float SecondThreshold = 0.01f;
+static const float SecondOffsetR = 0.0f;
+static const float SecondOffsetG = 0.2f;
+static const float SecondOffsetB = 0.4f;
+static const float SecondScale = 2.0f;
+
+// Third ghost
+static const float ThirdUVMix = -0.5f;
+static const float ThirdExp = 2.2f;
+static const float ThirdThreshold = 0.01f;
+static const float ThirdOffsetR = 0.4f;
+static const float ThirdOffsetG = 0.45f;
+static const float ThirdOffsetB = 0.5f;
+static const float ThirdScale = 5.0f;
+
+// Fourth (furthest from sun) ghost — a sharp orb (Lorentzian) rather than a threshold blob
+static const float FourthSharpness = 32.0f; // orb sharpness (larger = tighter orb)
+static const float FourthExp = 1.5f;
+static const float FourthOffsetR = 0.8f;
+static const float FourthOffsetG = 0.85f;
+static const float FourthOffsetB = 0.9f;
+static const float FourthScale = 0.25f;
+
+// Shape helper functions. Atan is expensive, so this is just circles for now.
+
+/*float PolygonLength(float2 Position, uint Sides)
+{
+	float a = atan2(Position.y, Position.x);
+	float r = length(Position);
+
+	float Sector = 6.28318530718 / Sides;
+
+	return r * cos(floor(0.5 + a / sector) * sector - a);
+}
+
+float ShapeLength(float2 Position)
+{
+	if (FLARE_SHAPE <= 2)
+	{
+		// Circle (Euclidean norm)
+		return length(Position);
+	}
+	else
+	{
+		return PolygonLength(Position, float(FLARE_SHAPE));
+	}
+}*/
+
+float ShapeLength(float2 Position)
+{
+	// Circle (Euclidean norm)
+	return length(Position);
+}
+
+// Generate random spikes radially around the sun and smooth linearly
+float RingNoise(float RingAngle, uint Seed)
+{
+	float CellTrunc = floor(RingAngle);
+	float CellFraction = RingAngle - CellTrunc;
+
+	uint CellIndex = uint(CellTrunc + 100.0f); // Add offset to keep values small and positive
+
+	// Multiply by large value to minimize correlation
+	uint SeedMixed = Seed * 74551u;
+
+	float ValueAtCell = float(PcgHash(CellIndex + SeedMixed)) * 2.3283064365387e-10; // Range in [0,1]
+	float ValueAtNextCell = float(PcgHash(CellIndex + SeedMixed + 1u)) * 2.3283064365387e-10;
+
+	return lerp(ValueAtCell, ValueAtNextCell, CellFraction);
+}
+
+float3 LensFlare(float2 PixelUV, float2 SunUV, uint RingSeed)
+{
+	float2 DistanceVector = PixelUV - SunUV;
+	float Distance = length(DistanceVector);
+
+	float2 UVDistorted  = PixelUV * length(PixelUV); // radially distorted UV (grows toward edges)
+
+	float Angle  = atan2(DistanceVector.y, DistanceVector.x);
+
+	// Core: a bright disc with an exponential falloff exp(-x^n). SunFalloffK sets the
+	// disc radius from CoreSize; ShiftedDistance measures out from the sun's rim, not its center.
+	float SunFalloffK = 8.0f / CoreSize;
+	float ShiftedDistance = max(Distance - SunRadiusUV, 0.0f);
+	float Core = exp(-pow(ShiftedDistance * SunFalloffK, CoreFalloffExponent));
+
+	// Corona: the wide glow, a fixed power-law aureole (~1/d^n in the wings) that owns the wide light
+	// now that the core has no tail. Exposure only changes how much of it clips or drops below the sensor
+	// floor. CoronaIntensity = amplitude, CoronaFalloffExponent = drop-off, CoronaK = width
+	float CoronaK = SunFalloffK * 0.4f;
+	float Corona = CoronaIntensity / (pow(ShiftedDistance * CoronaK, CoronaFalloffExponent) + 1.0f);
+
+	float Glow = Core + Corona;
+
+	// Streaks: rays with their own radial profile (independent of the corona) so they shoot far
+	// across the frame. Their reach grows with exposure time, so longer exposures give longer
+	// streaks. RingNoise gives random spikes; SymRays adds NumRays evenly-spaced symmetric rays.
+	float EffStreakLength = StreakLength
+		* (1.0f + StreakExposureScaling * max(0.0f, log10(max(ExposureTime, 1e-30f)) - StreakRefLogExposure));
+	float StreakRadial = 1.0f / (1.0f + pow(ShiftedDistance / max(EffStreakLength, 1e-4f), StreakFalloff));
+
+	float RingAngle = sin(Angle * RingAngFreq + SunUV.x) * RingNoiseWarp;
+	float SymRays = pow(max(cos(Angle * NumRays), 0.0f), RaySharpness);
+	float RingSpikes = StreakRadial * (RingNoise(RingAngle, RingSeed) + RayWeight * SymRays) * RingNoiseWeight;
+
+	float MainGlow = max(Glow + RingSpikes, 0.0f);
+
+	// First ghost flares
+
+	float2 UVx = lerp(PixelUV, UVDistorted, ThirdUVMix);
+	float FirstGhostScale = FirstScale * GhostTransmittance / pow(GhostSize * Ghost1RelativeSize, GhostBrightnessSizeExponent);
+	float FirstDistR = ShapeLength(UVx - (FirstOffsetR + float(IsGrayscale) * 0.025f) * SunUV);
+	float FirstDistG = ShapeLength(UVx - FirstOffsetG * SunUV);
+	float FirstDistB = ShapeLength(UVx - (FirstOffsetB - float(IsGrayscale) * 0.025f) * SunUV);
+	float FirstGhostR  = max(FirstThreshold - pow(FirstDistR, FirstExp * GhostSize * Ghost1RelativeSize), 0.0f) * FirstGhostScale;
+	float FirstGhostG  = max(FirstThreshold - pow(FirstDistG, FirstExp * GhostSize * Ghost1RelativeSize), 0.0f) * FirstGhostScale;
+	float FirstGhostB  = max(FirstThreshold - pow(FirstDistB, FirstExp * GhostSize * Ghost1RelativeSize), 0.0f) * FirstGhostScale;
+
+	// Second ghost flares
+
+	UVx = lerp(PixelUV, UVDistorted, SecondUVMix);
+	float SecondGhostScale = SecondScale * GhostTransmittance / pow(GhostSize * Ghost2RelativeSize, GhostBrightnessSizeExponent);
+	float SecondDistR = ShapeLength(UVx - (SecondOffsetR + float(IsGrayscale) * 0.2f) * SunUV);
+	float SecondDistG = ShapeLength(UVx - SecondOffsetG * SunUV);
+	float SecondDistB = ShapeLength(UVx - (SecondOffsetB - float(IsGrayscale) * 0.2f) * SunUV);
+	float SecondGhostR  = max(SecondThreshold - pow(SecondDistR, SecondExp * GhostSize * Ghost2RelativeSize), 0.0f) * SecondGhostScale;
+	float SecondGhostG  = max(SecondThreshold - pow(SecondDistG, SecondExp * GhostSize * Ghost2RelativeSize), 0.0f) * SecondGhostScale;
+	float SecondGhostB  = max(SecondThreshold - pow(SecondDistB, SecondExp * GhostSize * Ghost2RelativeSize), 0.0f) * SecondGhostScale;
+
+	// Third ghost flares
+
+	UVx = lerp(PixelUV, UVDistorted, ThirdUVMix);
+	float ThirdGhostScale = ThirdScale * GhostTransmittance / pow(GhostSize * Ghost3RelativeSize, GhostBrightnessSizeExponent);
+	float ThirdDistR = ShapeLength(UVx - (ThirdOffsetR + float(IsGrayscale) * 0.05f) * SunUV);
+	float ThirdDistG = ShapeLength(UVx - ThirdOffsetG * SunUV);
+	float ThirdDistB = ShapeLength(UVx - (ThirdOffsetB - float(IsGrayscale) * 0.05f) * SunUV);
+	float ThirdGhostR  = max(ThirdThreshold - pow(ThirdDistR, ThirdExp * GhostSize * Ghost3RelativeSize), 0.0f) * ThirdGhostScale;
+	float ThirdGhostG  = max(ThirdThreshold - pow(ThirdDistG, ThirdExp * GhostSize * Ghost3RelativeSize), 0.0f) * ThirdGhostScale;
+	float ThirdGhostB  = max(ThirdThreshold - pow(ThirdDistB, ThirdExp * GhostSize * Ghost3RelativeSize), 0.0f) * ThirdGhostScale;
+
+	// Fourth ghost flares
+
+	float FourthGhostScale = FourthScale * GhostTransmittance / pow(GhostSize * Ghost4RelativeSize, GhostBrightnessSizeExponent);
+	float FourthDistR = ShapeLength(UVx - (FourthOffsetR + float(IsGrayscale) * 0.05f) * SunUV);
+	float FourthDistG = ShapeLength(UVx - FourthOffsetG * SunUV);
+	float FourthDistB = ShapeLength(UVx - (FourthOffsetB - float(IsGrayscale) * 0.05f) * SunUV);
+	float FourthGhostR = max(1.0f / (1.0f + FourthSharpness * GhostSize * Ghost4RelativeSize * pow(FourthDistR, FourthExp * GhostSize * Ghost4RelativeSize)), 0.0f) * FourthGhostScale;
+	float FourthGhostG = max(1.0f / (1.0f + FourthSharpness * GhostSize * Ghost4RelativeSize * pow(FourthDistG, FourthExp * GhostSize * Ghost4RelativeSize)), 0.0f) * FourthGhostScale;
+	float FourthGhostB = max(1.0f / (1.0f + FourthSharpness * GhostSize * Ghost4RelativeSize * pow(FourthDistB, FourthExp * GhostSize * Ghost4RelativeSize)), 0.0f) * FourthGhostScale;
+
+	float3 TotalFlares = float3(MainGlow, MainGlow, MainGlow);
+
+	TotalFlares.r += FirstGhostR + SecondGhostR + ThirdGhostR + FourthGhostR;
+	TotalFlares.g += FirstGhostG + SecondGhostG + ThirdGhostG + FourthGhostG;
+	TotalFlares.b += FirstGhostB + SecondGhostB + ThirdGhostB + FourthGhostB;
+
+	// The flare is added as radiance; the QuE tonemap then scales it by ExposureTime before clipping
+	return clamp(TotalFlares, 0.0f, 1.0f) * SolarSpectralRadiance;
+}
+
+float4 MainPS(float4 UV : TEXCOORD0, float4 Position : SV_Position) : SV_Target0
+{
+	// This is in W/m^2/nm/str
+	float4 Radiance = InputTexture.Sample(InputSampler, UV.xy);
+
+	float2 CenteredUV = UV.xy - 0.5;
+	CenteredUV.x *= AspectRatio; // Flatten aspect ratio to 1:1
+
+	// Cut off flare when sun is behind the camera
+	if (SunClipPosition.w <= 0.0)
+	{
+		return Radiance;
+	}
+
+	// SunFlareUV is the (angle-remapped) sun position; StrayLightVisibility fades the flare out as the
+	// sun approaches the baffle-shield cutoff; StrayLightIntensity scales the whole flare relative to
+	// the solar radiance. All three are computed on the CPU in LensFlarePass.
+	float3 TotalFlares = LensFlare(CenteredUV, SunFlareUV, 100) * StrayLightVisibility * StrayLightIntensity;
+
+	return Radiance + float4(TotalFlares, 0.0f);
+}

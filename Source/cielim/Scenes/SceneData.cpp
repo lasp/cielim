@@ -346,6 +346,8 @@ void USceneData::UpdateSunLight() const
 {
 	const FVector3d SunLocation = this->SunLight->GetActorLocation();
 
+	this->Spacecraft->CameraModel->SunPosition = static_cast<FVector3f>(SunLocation);
+
 	const FVector SunDirection = -SunLocation.GetSafeNormal();
 	const FRotator SunRotation = FRotationMatrix::MakeFromX(SunDirection).Rotator();
 
@@ -391,6 +393,9 @@ void USceneData::UpdateSunLight() const
 
 	const float Wavelength3Radiance = 1e-9 * RadiationConstant1 /
 		(FMath::Pow(Wavelength3, 5) * (FMath::Exp(RadiationConstant2 / (Wavelength3 * SunTemperature)) - 1.0f));
+
+	this->Spacecraft->CameraModel->SolarSpectralRadiance =
+		FVector3f(Wavelength1Radiance, Wavelength2Radiance, Wavelength3Radiance);
 
 	const float Distance = SunLocation.Length(); // Meters
 	const float SunSolidAngle = 3.1415f * SunRadius * SunRadius / (Distance * Distance); // Steradians

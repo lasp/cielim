@@ -103,6 +103,61 @@ void ACameraModel::SetCameraParameters(const cielimMessage::CielimMessage &Cieli
 
 		if (RenderParams.wavelength3() > 0.0f)
 			this->CameraParams.Wavelength3 = RenderParams.wavelength3();
+
+		if (RenderParams.has_straylightmodel())
+		{
+			const auto StrayLight = RenderParams.straylightmodel();
+
+			// bEnabled is copied directly (false is a meaningful value). Every other field keeps its
+			// FStrayLightParams default unless positively set, matching the > 0.0f guard idiom used
+			// for the rest of the camera parameters (so an unset field means "use the default look").
+			this->StrayLightParams.bEnabled = StrayLight.enabled();
+
+			if (StrayLight.intensity() > 0.0f)
+				this->StrayLightParams.Intensity = StrayLight.intensity();
+
+			if (StrayLight.coresize() > 0.0f)
+				this->StrayLightParams.CoreSize = StrayLight.coresize();
+
+			if (StrayLight.ghostsize() > 0.0f)
+				this->StrayLightParams.GhostSize = StrayLight.ghostsize();
+
+			if (StrayLight.ghosttransmittance() > 0.0f)
+				this->StrayLightParams.GhostTransmittance = StrayLight.ghosttransmittance();
+
+			if (StrayLight.ghost1relativesize() > 0.0f)
+				this->StrayLightParams.Ghost1RelativeSize = StrayLight.ghost1relativesize();
+
+			if (StrayLight.ghost2relativesize() > 0.0f)
+				this->StrayLightParams.Ghost2RelativeSize = StrayLight.ghost2relativesize();
+
+			if (StrayLight.ghost3relativesize() > 0.0f)
+				this->StrayLightParams.Ghost3RelativeSize = StrayLight.ghost3relativesize();
+
+			if (StrayLight.ghost4relativesize() > 0.0f)
+				this->StrayLightParams.Ghost4RelativeSize = StrayLight.ghost4relativesize();
+
+			if (StrayLight.ghostbrightnesssizeexponent() > 0.0f)
+				this->StrayLightParams.GhostBrightnessSizeExponent = StrayLight.ghostbrightnesssizeexponent();
+
+			if (StrayLight.coronafalloffexponent() > 0.0f)
+				this->StrayLightParams.CoronaFalloffExponent = StrayLight.coronafalloffexponent();
+
+			if (StrayLight.coronaintensity() > 0.0f)
+				this->StrayLightParams.CoronaIntensity = StrayLight.coronaintensity();
+
+			if (StrayLight.numrays() > 0.0f)
+				this->StrayLightParams.NumRays = StrayLight.numrays();
+
+			if (StrayLight.raysharpness() > 0.0f)
+				this->StrayLightParams.RaySharpness = StrayLight.raysharpness();
+
+			if (StrayLight.rayweight() > 0.0f)
+				this->StrayLightParams.RayWeight = StrayLight.rayweight();
+
+			// Copied directly: 0 is meaningful (stray light only while the sun is in frame).
+			this->StrayLightParams.BaffleShieldAngle = StrayLight.baffleshieldangle();
+		}
 	}
 
 	if (bHasLensModel)
