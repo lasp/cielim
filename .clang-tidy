@@ -6,6 +6,7 @@ Checks: >
   portability-*,
   -bugprone-easily-swappable-parameters,
   -bugprone-signed-bitwise,
+  -misc-misplaced-const,
   -readability-identifier-length,
   -readability-uppercase-literal-suffix
 
