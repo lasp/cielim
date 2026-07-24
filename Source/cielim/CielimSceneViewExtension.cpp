@@ -12,6 +12,7 @@
 #include "PostProcess/PostProcessInputs.h"
 #include "ScreenPass.h"
 
+#include "Shaders/CompositeAdd.h"
 #include "Shaders/CosmicRays.h"
 #include "Shaders/DistantObjects.h"
 #include "Shaders/GaussianPSF.h"
@@ -58,15 +59,27 @@ void FCielimSceneViewExtension::PrePostProcessPass_RenderThread(FRDGBuilder &Gra
 
 	const FRDGTextureRef SceneColor = GetAsTexture(Inputs.SceneTextures->GetContents()->SceneColorTexture);
 	const FRDGTextureRef SceneDepth = GetAsTexture(Inputs.SceneTextures->GetContents()->SceneDepthTexture);
+	const ACameraModel *CameraModel = Cast<ACameraModel>(View.ViewActor.Get());
 
 	// Intermediates used for texture ping-pong
 	FRDGTextureRef TextureIn = GraphBuilder.CreateTexture(SceneColor->Desc, TEXT("Temp Input Texture"));
 	FRDGTextureRef TextureOut = GraphBuilder.CreateTexture(SceneColor->Desc, TEXT("Temp Output Texture"));
 
-	// Init input texture as current scene color
+	// Sample copy: SceneColor reads as 0 when sampled in a screen pass.
 	AddCopyTexturePass(GraphBuilder, SceneColor, TextureIn);
 
-	const ACameraModel *CameraModel = Cast<ACameraModel>(View.ViewActor.Get());
+	if (CameraModel && CameraModel->DistantObjects.Num() > 0)
+	{
+		// Distant objects render to their own cleared target; ELoad a populated one black-frames.
+		FRDGTextureRef DistantTexture = GraphBuilder.CreateTexture(SceneColor->Desc, TEXT("Distant Objects Texture"));
+
+		DistantObjectsPass(GraphBuilder, View, CameraModel->SolarDirection, CameraModel->SolarSpectralIrradiance,
+						   CameraModel->DistantObjects, SceneDepth, DistantTexture);
+
+		// Add distant objects onto the scene copy.
+		CompositeAddPass(GraphBuilder, TextureIn, DistantTexture, TextureOut);
+		Swap(TextureIn, TextureOut);
+	}
 
 	FCameraParams CameraParams{};
 	FImageCorruptionParams CorruptionParams{};
@@ -102,10 +115,6 @@ void FCielimSceneViewExtension::PrePostProcessPass_RenderThread(FRDGBuilder &Gra
 		CorruptionParams.KernelWidth = 7;
 		CorruptionParams.Sigma = 0.25f;
 	}
-
-	if (CameraModel && CameraModel->DistantObjects.Num() > 0)
-		DistantObjectsPass(GraphBuilder, View, CameraModel->SolarDirection, CameraModel->SolarSpectralIrradiance,
-						   CameraModel->DistantObjects, SceneDepth, TextureIn);
 
 	// These passes operate on light entering camera
 
@@ -158,7 +167,7 @@ void FCielimSceneViewExtension::PrePostProcessPass_RenderThread(FRDGBuilder &Gra
 void FCielimSceneViewExtension::DistantObjectsPass(FRDGBuilder &GraphBuilder, const FSceneView &View,
 												   const FVector3f &SolarDirection, const FVector3f &SolarIrradiance,
 												   const TArray<FDistantObject> &DistantObjects,
-												   const FRDGTextureRef &SceneDepth, const FRDGTextureRef &SceneColor)
+												   const FRDGTextureRef &SceneDepth, const FRDGTextureRef &RenderTarget)
 {
 	RDG_GPU_STAT_SCOPE(GraphBuilder, DistantObjects);
 	RDG_EVENT_SCOPE(GraphBuilder, "DistantObjects");
@@ -183,7 +192,8 @@ void FCielimSceneViewExtension::DistantObjectsPass(FRDGBuilder &GraphBuilder, co
 	DistantVSParams->SolarSpectralIrradiance = SolarIrradiance;
 	DistantVSParams->DistantObjects = GraphBuilder.CreateSRV(DistantObjectsBuffer);
 
-	DistantPSParams->RenderTargets[0] = FRenderTargetBinding(SceneColor, ERenderTargetLoadAction::ELoad);
+	// Distant objects accumulate on their own cleared texture (added onto the scene by CompositeAddPass).
+	DistantPSParams->RenderTargets[0] = FRenderTargetBinding(RenderTarget, ERenderTargetLoadAction::EClear);
 	DistantPSParams->RenderTargets.DepthStencil =
 		FDepthStencilBinding(SceneDepth, ERenderTargetLoadAction::ELoad, FExclusiveDepthStencil::DepthRead);
 
@@ -227,6 +237,26 @@ void FCielimSceneViewExtension::DistantObjectsPass(FRDGBuilder &GraphBuilder, co
 
 			RHICmdList.DrawPrimitive(0, 2, NumInstances);
 		});
+}
+
+void FCielimSceneViewExtension::CompositeAddPass(FRDGBuilder &GraphBuilder, const FRDGTextureRef &SceneTexture,
+												 const FRDGTextureRef &DistantTexture, const FRDGTextureRef &Output)
+{
+	// Add the distant-objects texture on top of the scene: Output = SceneTexture + DistantTexture.
+	RDG_EVENT_SCOPE(GraphBuilder, "CompositeDistantObjects");
+
+	const FScreenPassTextureViewport Viewport(Output);
+
+	FCompositeAdd::FParameters *Params = GraphBuilder.AllocParameters<FCompositeAdd::FParameters>();
+	Params->SceneTexture = SceneTexture;
+	Params->DistantTexture = DistantTexture;
+	Params->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
+	Params->RenderTargets[0] = FRenderTargetBinding(Output, ERenderTargetLoadAction::EClear);
+
+	const TShaderMapRef<FCompositeAdd> CompositeAddShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+
+	AddDrawScreenPass(GraphBuilder, RDG_EVENT_NAME("Composite Distant Objects"), GMaxRHIFeatureLevel, Viewport,
+					  Viewport, CompositeAddShader, Params);
 }
 
 void FCielimSceneViewExtension::QuETonemapPass(FRDGBuilder &GraphBuilder, const FCameraParams &CameraParams,

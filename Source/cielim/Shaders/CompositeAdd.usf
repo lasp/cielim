@@ -1,0 +1,23 @@
+//=================== Copyright (c) 2025 Laboratory for Atmospheric and Space Physics ===================//
+//
+// Purpose: Full-screen pixel shader that adds the distant-objects buffer onto the scene color. Used so
+//          distant objects can be rendered into their own cleared target and composited via sampling,
+//          instead of additively blending into the (loaded) scene color render target directly.
+//
+// License: MIT License. See LICENSE file.
+//
+//=======================================================================================================//
+
+#include "/Engine/Public/Platform.ush"
+
+Texture2D SceneTexture;
+Texture2D DistantTexture;
+SamplerState InputSampler;
+
+float4 MainPS(float4 UV : TEXCOORD0) : SV_Target0
+{
+	float4 Scene = SceneTexture.Sample(InputSampler, UV.xy);
+	float3 Distant = DistantTexture.Sample(InputSampler, UV.xy).rgb;
+
+	return float4(Scene.rgb + Distant, Scene.a);
+}
