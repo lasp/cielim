@@ -219,7 +219,7 @@ def qe_curve_fit(
 
     # Run basinhopping with SLSQP as the local optimizer
     minimizer_kwargs = {"method": "SLSQP", "bounds": bounds, "constraints": constrs}
-    result = basinhopping(fit_three_wavelengths, initial_guess, minimizer_kwargs=minimizer_kwargs, niter=100, rng=123)
+    result = basinhopping(fit_three_wavelengths, initial_guess, minimizer_kwargs=minimizer_kwargs, niter=100)
 
     if show_plots:
         print(f"Optimal variables: {result.x}")
