@@ -1,5 +1,6 @@
 import contextlib
 import os
+import re
 from pathlib import Path
 
 import cv2
@@ -9,6 +10,7 @@ from astropy.io import fits
 from matplotlib import pyplot as plt
 
 import cielim
+from cielim.utils import image_comparison_toolkit as image_comparison
 from cielim.utils import qe_curve_fit as qefit
 from cielim.utils import rigid_body_kinematics as rbk
 
@@ -19,6 +21,55 @@ ROOT = HERE.parents[1]  # <repo root>
 MK = ROOT / "support-data" / "vesta-spice" / "vesta-spice.txt"
 FITS_DIR = ROOT / "support-data" / "vesta-spice" / "images"
 OUT_DIR = HERE.parent / "images-vesta"
+
+# Output dir for the real-vs-generated batch comparison (raw/ and aligned/ subsets).
+SHOWCASE_DIR = HERE.parent / "showcase_images" / "vesta"
+
+# Frames come in near-simultaneous pairs: a 1500 ms long exposure and a short (8-31 ms) exposure.
+# The long exposures saturate (the disk clips to full well), so both the real and cielim sides render
+# as a flat overexposed blob — not an informative comparison. Skip anything above this threshold and
+# keep only the well-exposed short twins. Set EXPOSURE_MAX_MS = None to add the long exposures back.
+EXPOSURE_MAX_MS = 100
+
+
+def _sorted_fits():
+    return [p for p in sorted(FITS_DIR.iterdir()) if p.is_file() and p.suffix.lower() == ".fit"]
+
+
+def _real_entries():
+    """List of (ephemeris_time, fit_path) for the real frames, keyed by each frame's START_TIME
+    header. Matching on time (rather than list position) keeps the real/generated pairing correct
+    even if the file ordering changes. Requires SPICE kernels loaded (for str2et)."""
+    entries = []
+    for p in _sorted_fits():
+        try:
+            exp, time, *_ = get_header(str(p))
+            if EXPOSURE_MAX_MS is not None and exp > EXPOSURE_MAX_MS:
+                continue  # overexposed long exposure — re-added when EXPOSURE_MAX_MS is None
+            entries.append((spice.str2et(time), p))
+        except Exception:
+            continue
+    return entries
+
+
+def _real_gray_of(path):
+    """Grayscale uint8 of a real Vesta FITS frame (data in HDU[0])."""
+    data = np.nan_to_num(fits.open(str(path))[0].data)
+    return image_comparison.to_uint8_gray(data)
+
+
+def _stamp(et):
+    """Filesystem-safe compact UTC stamp for a render time, e.g. 20110503T133516."""
+    return spice.et2utc(et, "ISOC", 0).replace("-", "").replace(":", "")
+
+
+def _gen_time(path):
+    """Ephemeris time parsed from a saved generated filename's compact stamp (..._YYYYMMDDThhmmss)."""
+    m = re.search(r"(\d{8})T(\d{6})", path.name)
+    if not m:
+        return None
+    d, t = m.groups()
+    return spice.str2et(f"{d[:4]}-{d[4:6]}-{d[6:8]}T{t[:2]}:{t[2:4]}:{t[4:6]}")
 
 
 @contextlib.contextmanager
@@ -80,8 +131,10 @@ def get_header_data():
     sun_list = []
     for p in sorted(FITS_DIR.iterdir()):
         if p.is_file() and p.suffix.lower() in {".fit"}:
-            _fits_to_png(str(p))
             exp, time, pos, sun_pos, mrp = get_header(str(p))
+            if EXPOSURE_MAX_MS is not None and exp > EXPOSURE_MAX_MS:
+                continue  # overexposed long exposure — re-added when EXPOSURE_MAX_MS is None
+            _fits_to_png(str(p))
             exposure_time_list.append(exp * 1e-3)
             time_list.append(time)
             position_list.append(-pos)
@@ -245,10 +298,21 @@ def vesta_scenario(number_of_images: int | None = None):
 
         image, _, _ = connector.request_image_for_camera_id(1, True, False)
         image = np.flip(image, 0)
-        cv2.imwrite(os.path.join(current_file_path, f"images-vesta/vesta_image_{idx}.png"), image)
+        # Save the generated frame named with its observation time so the comparison can read it
+        # back and pair it with the real image of the same time (using the exact saved orientation).
+        cv2.imwrite(os.path.join(current_file_path, f"images-vesta/vesta_{_stamp(time)}.png"), image)
 
     connector.disconnect()
     launcher.terminate()
+
+    # Read the saved generated frames back and compare each to the real image at the same time.
+    # raw/ and aligned/ subsets, each with individual histograms + heatmaps and an average histogram.
+    n = image_comparison.compare_saved(
+        OUT_DIR, _gen_time, _real_entries(), _real_gray_of, str(SHOWCASE_DIR),
+        title_real="real", title_generated="cielim",
+    )
+    print(f"Saved real-vs-generated batch comparison ({n} pairs) -> {SHOWCASE_DIR}")
+
     spice.kclear()
 
 

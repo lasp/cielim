@@ -1,5 +1,6 @@
 import contextlib
 import os
+import re
 from pathlib import Path
 
 import cv2
@@ -9,6 +10,7 @@ from astropy.io import fits
 from matplotlib import pyplot as plt
 
 import cielim
+from cielim.utils import image_comparison_toolkit as image_comparison
 from cielim.utils import qe_curve_fit as qefit
 from cielim.utils import rigid_body_kinematics as rbk
 
@@ -19,6 +21,56 @@ ROOT = HERE.parents[1]  # <repo root>
 MK = ROOT / "support-data" / "bennu-spice" / "bennu-spice.txt"
 FITS_DIR = ROOT / "support-data" / "bennu-spice" / "images"
 OUT_DIR = HERE.parent / "images-bennu"
+
+# Output dir for the real-vs-generated batch comparison (raw/ and aligned/ subsets).
+SHOWCASE_DIR = HERE.parent / "showcase_images" / "bennu"
+
+# The observation time is encoded in each FITS filename, e.g. 20181013T092310S088 -> 09:23:10.088.
+_FNAME_TIME = re.compile(r"(\d{8})T(\d{6})S(\d{3})")
+
+
+def _sorted_fits():
+    return [p for p in sorted(FITS_DIR.iterdir()) if p.is_file() and p.suffix.lower() == ".fits"]
+
+
+def _filename_et(path):
+    """SPICE ephemeris time parsed from the FITS filename timestamp (requires kernels loaded)."""
+    m = _FNAME_TIME.search(path.name)
+    if not m:
+        return None
+    d, t, ms = m.groups()
+    iso = f"{d[:4]}-{d[4:6]}-{d[6:8]}T{t[:2]}:{t[2:4]}:{t[4:6]}.{ms}"
+    return spice.str2et(iso)
+
+
+def _real_entries():
+    """List of (ephemeris_time, fits_path) for the real frames, keyed by their filename timestamp."""
+    entries = []
+    for p in _sorted_fits():
+        et = _filename_et(p)
+        if et is not None:
+            entries.append((et, p))
+    return entries
+
+
+def _real_gray_of(path):
+    """Grayscale uint8 of a real Bennu FITS frame (data in HDU[0])."""
+    data = np.nan_to_num(fits.open(str(path))[0].data)
+    return image_comparison.to_uint8_gray(data)
+
+
+def _stamp(et):
+    """Filesystem-safe compact UTC stamp for a render time, e.g. 20181013T092310."""
+    return spice.et2utc(et, "ISOC", 0).replace("-", "").replace(":", "")
+
+
+def _gen_time(path):
+    """Ephemeris time parsed from a saved generated filename's compact stamp (..._YYYYMMDDThhmmss)."""
+    m = re.search(r"(\d{8})T(\d{6})", path.name)
+    if not m:
+        return None
+    d, t = m.groups()
+    return spice.str2et(f"{d[:4]}-{d[4:6]}-{d[6:8]}T{t[:2]}:{t[2:4]}:{t[4:6]}")
 
 
 @contextlib.contextmanager
@@ -242,7 +294,9 @@ def bennu_scenario(number_of_images: int | None = None):
 
         image, _, _ = connector.request_image_for_camera_id(1, True, False)
         image = np.flip(image, 1)
-        cv2.imwrite(os.path.join(current_file_path, f"images-bennu/bennu_image_{idx}.png"), image)
+        # Save the generated frame named with its observation time so the comparison can read it
+        # back and pair it with the real image of the same time (using the exact saved orientation).
+        cv2.imwrite(os.path.join(current_file_path, f"images-bennu/bennu_{_stamp(time)}.png"), image)
 
         captured_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         moments = cv2.moments(captured_image)
@@ -255,6 +309,15 @@ def bennu_scenario(number_of_images: int | None = None):
 
     connector.disconnect()
     launcher.terminate()
+
+    # Read the saved generated frames back and compare each to the real image at the same time.
+    # raw/ and aligned/ subsets, each with individual histograms + heatmaps and an average histogram.
+    n = image_comparison.compare_saved(
+        OUT_DIR, _gen_time, _real_entries(), _real_gray_of, str(SHOWCASE_DIR),
+        title_real="real", title_generated="cielim",
+    )
+    print(f"Saved real-vs-generated batch comparison ({n} pairs) -> {SHOWCASE_DIR}")
+
     spice.kclear()
 
 
