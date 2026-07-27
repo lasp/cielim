@@ -56,6 +56,29 @@ def _get_exposure_time():
     return exposure_time_list, time_list
 
 
+navcam_gain_e_per_dn = 1.76
+navcam_a_d = 226648
+navcam_delta_t_k = -0.04422
+navcam_ccd_temp_k = 263.15  # representative operating temperature (documented range: -30 to 10 degC)
+
+
+def silicon_bandgap_ev(temp_k: float) -> float:
+    """Varshni bandgap equation for silicon, E_g(T) in eV (T in Kelvin)."""
+    return 1.1557 - (7.021e-4 * temp_k**2) / (1108 + temp_k)
+
+
+def dark_current_rate_e_s(temp_k: float) -> float:
+    """
+    NavCam2 dark current rate (e-/s) as a function of CCD temperature (Kelvin).
+    Fit: rate = g*A_D*(T-dT)^1.5*exp(-Eg(T) / (2k(T-dT))), converted from DN/s to e-/s via gain.
+    """
+    k_ev_per_k = 8.617333262e-5  # Boltzmann constant, eV/K
+    eg = silicon_bandgap_ev(temp_k)
+    shifted_temp = temp_k - navcam_delta_t_k
+    dn_rate = navcam_gain_e_per_dn * navcam_a_d * shifted_temp**1.5 * np.exp(-eg / (2 * k_ev_per_k * shifted_temp))
+    return dn_rate * navcam_gain_e_per_dn
+
+
 def scene_setup() -> cielim.Scene:
     scene = cielim.Scene()
 
@@ -76,7 +99,7 @@ def scene_setup() -> cielim.Scene:
         well_capacity=7000,
     )
 
-    scene.set_corruption_params(psf_sigma=1, read_noise=6.7)
+    scene.set_corruption_params(psf_sigma=1, read_noise=6.7, dc_rate=dark_current_rate_e_s(navcam_ccd_temp_k))
 
     scene.set_celestial_body_params(0, position=(0, 0, -10000))
 

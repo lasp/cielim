@@ -90,6 +90,33 @@ def get_header_data():
     return exposure_time_list, time_list, position_list, attitude_list, sun_list
 
 
+vesta_gain_e_per_dn = 17.7
+vesta_b_j = 1.018e-19  # activation-energy-like constant, J
+vesta_t_ref_k = 219.0
+vesta_ccd_temp_k = 220.0
+boltzmann_j_per_k = 1.38065e-23
+vesta_a_dn_s = 2.46e13
+
+# PLACEHOLDER M(T_ref): the mission paper builds this from the median of real 300s dark
+# exposures at T_ref, corrected to temperature -- that measured value isn't available here.
+# Approximated via B(T_ref) itself; replace with the real measured value once available.
+vesta_m_tref_dn_s = vesta_a_dn_s * np.exp(-vesta_b_j / (boltzmann_j_per_k * vesta_t_ref_k))
+
+
+def dark_current_ratio(temp_k: float, t_ref_k: float) -> float:
+    """B(T)/B(T_ref) from B(T) = a*exp(-b/(k_B*T)); the pre-exponential constant a cancels out."""
+    return np.exp(-vesta_b_j / boltzmann_j_per_k * (1 / temp_k - 1 / t_ref_k))
+
+
+def dark_current_rate_e_s(temp_k: float) -> float:
+    """
+    Vesta CCD dark current rate (e-/s): D(T_CCD) = [B(T_CCD)/B(T_ref)] * M(T_ref), converted
+    from DN/s to e-/s via gain.
+    """
+    dn_rate = vesta_m_tref_dn_s * dark_current_ratio(temp_k, vesta_t_ref_k)
+    return dn_rate * vesta_gain_e_per_dn
+
+
 def scene_setup() -> cielim.Scene:
     scene = cielim.Scene()
 
@@ -113,7 +140,7 @@ def scene_setup() -> cielim.Scene:
         well_capacity=120_000,
     )
 
-    scene.set_corruption_params(psf_sigma=1, read_noise=18)
+    scene.set_corruption_params(psf_sigma=1, read_noise=18, dc_rate=dark_current_rate_e_s(vesta_ccd_temp_k))
 
     scene.set_celestial_body_params(0, position=(0, 0, -10000))
 
