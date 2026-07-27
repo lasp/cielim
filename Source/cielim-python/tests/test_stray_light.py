@@ -39,6 +39,7 @@ import pytest
 from matplotlib import pyplot as plt
 
 import cielim
+from cielim.utils import plot_style as ps
 
 # Read at import time so it survives pytest.main() re-importing this file as a module.
 show_plots = os.environ.get("show_plots", "False") == "True"
@@ -1066,6 +1067,49 @@ def test_ghost_parameters_respond_off_axis(cielim_connection):
         assert core is not None, "No flare core found in off-axis scene"
         signals.append(ghost_band_signal(gray, core))
     assert signals[-1] > signals[0], f"Larger ghostSize should raise the off-axis ghost band: {signals}"
+
+
+# ===========================================================================
+# Showcase: page-ready stray-light demo images (opt-in via the showcase_dir env var)
+# ===========================================================================
+
+
+@requires_params
+@pytest.mark.showcase
+def test_showcase_stray_light(cielim_connection):
+    """Save page-ready stray-light demo images: one well-composed flare + the off-boresight sweep.
+
+    Scene images are shown in grayscale (a render displayed for viewing, not a numeric comparison).
+    """
+    ps.apply_showcase_style()
+
+    # (1) One off-center flare showing the core, ghost chain, corona, and rays/streaks together.
+    exp = calibrate_exposure(
+        cielim_connection, lambda e: _ghost_scene(e), target=GHOST_TARGET, measure=ghost_window_peak
+    )
+    gray = render_gray(cielim_connection, _ghost_scene(exp))
+    fig, ax = plt.subplots(figsize=ps.figsize_single(aspect=1.0))
+    ax.imshow(gray, cmap=ps.SCENE_CMAP, vmin=0, vmax=255)
+    ax.set_title("Stray light — sun core, ghost chain, corona, rays")
+    ax.axis("off")
+    plt.tight_layout()
+    ps.save_showcase(fig, "stray_light_flare")
+    plt.close(fig)
+
+    # (2) Off-boresight sweep filmstrip through the baffle-shield regimes.
+    exp_sweep = cached_exposure(
+        cielim_connection, "sweep", lambda e: _sweep_scene(SWEEP_CAL_ANGLE, e), target=GHOST_TARGET, measure=ghost_window_peak
+    )
+    grays = [render_gray(cielim_connection, _sweep_scene(a, exp_sweep)) for a in SWEEP_ANGLES]
+    fig2, axes = plt.subplots(1, len(SWEEP_ANGLES), figsize=ps.figsize_strip(len(SWEEP_ANGLES)))
+    for ax, g, a in zip(axes, grays, SWEEP_ANGLES):
+        ax.imshow(g, cmap=ps.SCENE_CMAP, vmin=0, vmax=255)
+        ax.set_title(f"{a:+d}°")
+        ax.axis("off")
+    fig2.suptitle("Off-boresight sun sweep (stray light vs angle)")
+    plt.tight_layout()
+    ps.save_showcase(fig2, "stray_light_sweep")
+    plt.close(fig2)
 
 
 if __name__ == "__main__":

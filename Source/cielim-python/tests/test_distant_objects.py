@@ -6,6 +6,7 @@ import pytest
 from matplotlib import pyplot as plt
 
 import cielim
+from cielim.utils import plot_style as ps
 
 # Read at import time so it survives pytest.main() re-importing this file as a module.
 show_plots = os.environ.get("show_plots", "False") == "True"
@@ -1011,6 +1012,53 @@ def test_distant_object_occluded_by_mesh(cielim_connection):
         atol=0.02,
         err_msg=f"Occluded center should match mesh-only: both={b_both:.4f}, mesh={b_mesh:.4f}",
     )
+
+
+# ---------------------------------------------------------------------------
+# Showcase: page-ready distant-object demo image (opt-in via the showcase_dir env var)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.showcase
+def test_showcase_distant_objects(cielim_connection):
+    """Page pair: a distant-planets scene (sub-pixel bodies + a rasterized mesh) beside a resolved
+    target. Scene images are shown in native color (renders displayed for viewing)."""
+    ps.apply_showcase_style()
+    connector = cielim_connection
+
+    # (a) Distant planets in/out of frame + a nearer rasterized mesh (same layout as the multibody test).
+    multi = scene_with_bodies(
+        0,
+        [
+            {"name": "rasterized", "position": [0, 0, 2e6]},
+            {"name": "distant_right", "position": [1.41e6, 0, 20e6]},
+            {"name": "distant_left", "position": [-1.41e6, 0, 20e6]},
+            {"name": "distant_offscreen", "position": [5.29e6, 0, 20e6]},
+        ],
+    )
+    connector.send_init_request()
+    render_frame(connector, multi)  # warm-up
+    multi_img, _, _ = render_frame(connector, multi)
+
+    # (b) A resolved target: camera well inside the mesh transition so the sphere is rasterized.
+    resolved = default_scene(2e5)
+    connector.send_init_request()
+    render_frame(connector, resolved)  # warm-up
+    resolved_img, _, _ = render_frame(connector, resolved)
+
+    fig, axes = plt.subplots(1, 2, figsize=ps.figsize_pair(aspect=0.42))
+    for ax, img, title in [
+        (axes[0], multi_img, "Distant bodies + rasterized mesh"),
+        (axes[1], resolved_img, "Resolved target"),
+    ]:
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if img.ndim == 3 else img
+        ax.imshow(gray, cmap=ps.SCENE_CMAP, vmin=0, vmax=255, interpolation="nearest")
+        ax.set_title(title)
+        ax.axis("off")
+    fig.suptitle("Distant objects")
+    plt.tight_layout()
+    ps.save_showcase(fig, "distant_objects")
+    plt.close(fig)
 
 
 if __name__ == "__main__":

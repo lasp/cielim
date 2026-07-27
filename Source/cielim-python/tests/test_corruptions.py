@@ -1,8 +1,10 @@
 import cv2
 import numpy as np
 import pytest
+from matplotlib import pyplot as plt
 
 import cielim
+from cielim.utils import plot_style as ps
 
 
 @pytest.fixture
@@ -323,3 +325,77 @@ def test_SignalGain(cielim_connection: cielim.Connector, default_scene: cielim.S
     np.testing.assert_allclose(
         gain_image, comparison_image, rtol=0.1, err_msg="Received image does not match comparison with specified gain"
     )
+
+
+# ===========================================================================
+# Showcase: page-ready sensor- and lens-model demo images (opt-in via showcase_dir)
+# ===========================================================================
+
+
+def _render(connector, scene):
+    """Send a scene and return the rendered image (BGR)."""
+    connector.send_init_request()
+    connector.send_frame(scene.get_scene())
+    image, _, _ = connector.request_image_for_camera_id(1, True, False)
+    return image
+
+
+def _show_scene(ax, image_bgr, title):
+    """Display a rendered scene image (native color, not inferno) on ``ax``."""
+    ax.imshow(cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB), interpolation="nearest")
+    ax.set_title(title)
+    ax.axis("off")
+
+
+@pytest.mark.showcase
+def test_showcase_sensor_effects(cielim_connection, default_scene):
+    """One frame combining the sensor-model corruptions: read noise, dark current, stuck/dead
+    pixels, and cosmic rays over a simple lit target."""
+    ps.apply_showcase_style()
+    connector = cielim_connection
+    scene = default_scene
+
+    scene.set_spacecraft_params(position=(0, 0, 100))  # fill the frame with the lit plane
+    scene.set_sensor_params(exposure=2e-5)  # low exposure -> mid-gray field so the effects read
+    scene.set_corruption_params(
+        read_noise=3000,
+        dc_rate=50,
+        dc_sigma=800,
+        stuck_px_rate=0.0005,
+        dead_px_rate=0.0005,
+        cosmic_rays=100,
+    )
+
+    image = _render(connector, scene)
+
+    fig, ax = plt.subplots(figsize=ps.figsize_single(aspect=1.0))
+    _show_scene(ax, image, "Sensor model — read noise, dark current, dead/stuck pixels, cosmic rays")
+    plt.tight_layout()
+    ps.save_showcase(fig, "sensor_effects")
+    plt.close(fig)
+
+
+@pytest.mark.showcase
+def test_showcase_lens_effects(cielim_connection, default_scene):
+    """Lens models side-by-side: a clean render, radial distortion, and a PSF-blurred render."""
+    ps.apply_showcase_style()
+    connector = cielim_connection
+    scene = default_scene
+    scene.set_spacecraft_params(position=(0, 0, 1000))  # closer -> distortion/blur are pronounced
+
+    clean = _render(connector, scene)
+
+    scene.set_corruption_params(dist_radial=(0.5, 0.0, 0.0), dist_tangent=(0.0, 0.0))
+    distorted = _render(connector, scene)
+
+    scene.set_corruption_params(dist_radial=(0.0, 0.0, 0.0), dist_tangent=(0.0, 0.0), psf_sigma=50)
+    blurred = _render(connector, scene)
+
+    fig, axes = plt.subplots(1, 3, figsize=ps.figsize_strip(3))
+    _show_scene(axes[0], clean, "Clean")
+    _show_scene(axes[1], distorted, "Radial distortion (k1=0.5)")
+    _show_scene(axes[2], blurred, "Gaussian PSF (σ=50)")
+    fig.suptitle("Lens models")
+    plt.tight_layout()
+    ps.save_showcase(fig, "lens_effects")
+    plt.close(fig)
