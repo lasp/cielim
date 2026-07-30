@@ -87,7 +87,9 @@ def scene_setup() -> cielim.Scene:
         well_capacity=13500,  # dynamic range = 13500 electrons full well,
     )
 
-    scene.set_corruption_params(psf_sigma=1)
+    gain_e_per_dn = 12.333  # e-/DN
+    dark_current_e_s = 1.0 * gain_e_per_dn  # e-/s
+    scene.set_corruption_params(psf_sigma=1, dc_rate=dark_current_e_s)
 
     scene.set_celestial_body_params(0, position=(0, 0, -10000))
 
