@@ -186,7 +186,8 @@ def test_DarkCurrent(cielim_connection: cielim.Connector, default_scene: cielim.
     connector.send_init_request()
     connector.send_frame(scene.get_scene())
     image, _, _ = connector.request_image_for_camera_id(1, True, False)
-
+    cv2.imshow("image", image)
+    cv2.waitKey(0)
     np.testing.assert_(image[..., :3].any(), "No noise was applied")
 
 

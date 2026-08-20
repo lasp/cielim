@@ -53,9 +53,32 @@ def _real_entries():
 
 
 def _real_gray_of(path):
-    """Grayscale uint8 of a real Vesta FITS frame (data in HDU[0])."""
+    """Grayscale uint8 of a real Vesta FITS frame (HDU[0]).
+
+    Min/max stretch computed in-memory (to_uint8_gray with 0/100 percentiles) — the same look the
+    saved PNG previews had, without saving/reading a PNG. Preserves the resolved disk's gradient; a
+    1-99 percentile stretch would clip the disk (it's <1% of the frame) to a flat white blob.
+    """
     data = np.nan_to_num(fits.open(str(path))[0].data)
-    return image_comparison.to_uint8_gray(data)
+    return image_comparison.to_uint8_gray(data, lo_pct=0, hi_pct=100)
+
+
+def _predicted_pixel(path):
+    """SPICE-projected Vesta pixel for a real frame — where cielim places Vesta given the ephemeris.
+
+    Validated against cielim's rendered COB to sub-pixel. Vesta is at the scene origin, so this
+    projects the origin from the Dawn position through the same pose cielim is pointed with (DAWN_FC2
+    via DAWN_SPACECRAFT), plus the render's vertical flip (np.flip(image, 0)). Kernels must be loaded;
+    the render time is the frame's START_TIME (as in the render loop). Keep FOV/resolution in sync
+    with scene_setup.
+    """
+    _, tstr, *_ = get_header(str(path))
+    time = spice.str2et(tstr)
+    position, _ = spice.spkpos("DAWN", time, "J2000", "NONE", "2000004")
+    BN = spice.pxform("DAWN_SPACECRAFT", "DAWN_FC2", time) @ spice.pxform("J2000", "DAWN_SPACECRAFT", time)
+    return image_comparison.project_to_pixel(
+        position, BN, (5.5 * np.pi / 180, 5.5 * np.pi / 180), (1024, 1024), flip_y=True
+    )
 
 
 def _stamp(et):
@@ -112,17 +135,6 @@ def get_header(filename: str) -> tuple:
     return exp, time, pos, sun_pos, mrp
 
 
-def _fits_to_png(filename: str) -> None:
-    image_data = fits.open(filename)[0]
-    image_data = np.nan_to_num(image_data)
-    plt.figure()
-    plt.xticks([])
-    plt.yticks([])
-    plt.tight_layout(pad=0)  # Remove padding around the image
-    plt.imshow(image_data.data, cmap="gray")
-    plt.imsave(str(filename).split(".")[0] + ".png", image_data.data, cmap="gray")
-
-
 def get_header_data():
     exposure_time_list = []
     time_list = []
@@ -134,7 +146,6 @@ def get_header_data():
             exp, time, pos, sun_pos, mrp = get_header(str(p))
             if EXPOSURE_MAX_MS is not None and exp > EXPOSURE_MAX_MS:
                 continue  # overexposed long exposure — re-added when EXPOSURE_MAX_MS is None
-            _fits_to_png(str(p))
             exposure_time_list.append(exp * 1e-3)
             time_list.append(time)
             position_list.append(-pos)
@@ -175,7 +186,7 @@ def scene_setup() -> cielim.Scene:
 
     scene.set_spacecraft_params(name="dawn", position=(0, 0, -1000000), velocity=(0, 1000, 0))
 
-    scene.set_camera_params(name="dawn")
+    scene.set_camera_params(name="dawn", grayscale=True)
 
     # (https://link.springer.com/article/10.1007/s11214-011-9745-4)
     # (https://www.teledynespaceimaging.com/en-us/Products_/Documents/ccd-datasheets/CCD47-20%20FSI%20NIMO%20Datasheet%20(v9).pdf)
@@ -193,7 +204,7 @@ def scene_setup() -> cielim.Scene:
         well_capacity=120_000,
     )
 
-    scene.set_corruption_params(psf_sigma=1, read_noise=18, dc_rate=dark_current_rate_e_s(vesta_ccd_temp_k))
+    scene.set_corruption_params(psf_sigma=0.6 , read_noise=18, dc_rate=dark_current_rate_e_s(vesta_ccd_temp_k), dc_sigma=10, shot_noise=True)
 
     scene.set_celestial_body_params(0, position=(0, 0, -10000))
 
@@ -310,6 +321,9 @@ def vesta_scenario(number_of_images: int | None = None):
     n = image_comparison.compare_saved(
         OUT_DIR, _gen_time, _real_entries(), _real_gray_of, str(SHOWCASE_DIR),
         title_real="real", title_generated="cielim",
+        predicted_of=_predicted_pixel,  # cyan ○ = SPICE-projected Vesta (should match cielim's +)
+        # Overall average plus three sub-batch averages by frame index (16-19 read from "15-19").
+        average_batches=[("00-11", range(0, 12)), ("12-15", range(12, 16)), ("16-19", range(16, 20))],
     )
     print(f"Saved real-vs-generated batch comparison ({n} pairs) -> {SHOWCASE_DIR}")
 

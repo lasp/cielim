@@ -25,6 +25,13 @@ OUT_DIR = HERE.parent / "images-bennu"
 # Output dir for the real-vs-generated batch comparison (raw/ and aligned/ subsets).
 SHOWCASE_DIR = HERE.parent / "showcase_images" / "bennu"
 
+# Early approach frames where Bennu is only a few px across (a distant object). These get a dedicated
+# zoomed point-source comparison (image_comparison.plot_point_source_pair) instead of the disk
+# comparison, which can't locate a point target — its brightness crop grabs a field star or render
+# noise. Keyed by the UTC date (YYYYMMDD) at the start of the FITS filename.
+DISTANT_DATES = ("20181013", "20181014", "20181015")
+DISTANT_DIR = HERE.parent / "showcase_images" / "bennu_distant"
+
 # The observation time is encoded in each FITS filename, e.g. 20181013T092310S088 -> 09:23:10.088.
 _FNAME_TIME = re.compile(r"(\d{8})T(\d{6})S(\d{3})")
 
@@ -54,9 +61,27 @@ def _real_entries():
 
 
 def _real_gray_of(path):
-    """Grayscale uint8 of a real Bennu FITS frame (data in HDU[0])."""
+    """Grayscale uint8 of a real Bennu FITS frame (HDU[0]) for the MAIN (raw/aligned) comparison.
+
+    1-99 percentile stretch, in-memory, no PNG save/read — fills all 256 levels for a smooth
+    histogram across the batch. The dedicated distant-object comparison instead uses a min/max stretch
+    (:func:`_real_gray_minmax`): for a few-pixel point source the percentile stretch buries it in
+    background speckle, whereas min/max anchors the white point to the object's peak so it reads as a
+    clean point on black.
+    """
     data = np.nan_to_num(fits.open(str(path))[0].data)
     return image_comparison.to_uint8_gray(data)
+
+
+def _real_gray_minmax(path):
+    """Grayscale uint8 of a real Bennu FITS frame (HDU[0]) via a min/max (0/100 percentile) stretch.
+
+    Used only by the distant-object comparison (:func:`compare_distant_objects`) so the few-pixel
+    target shows cleanly on black; the main comparison uses :func:`_real_gray_of` (percentile). See
+    _real_gray_of for why the two paths differ.
+    """
+    data = np.nan_to_num(fits.open(str(path))[0].data)
+    return image_comparison.to_uint8_gray(data, lo_pct=0, hi_pct=100)
 
 
 def _stamp(et):
@@ -83,13 +108,12 @@ def cd(path: Path):
         os.chdir(str(prev))
 
 
-def _fits_to_png(filename: str) -> None:
-    image_data = fits.open(filename)[0]
-    image_data = np.nan_to_num(image_data)
-    plt.figure()
-    plt.imshow(image_data.data, cmap="gray")
-    plt.savefig(str(filename).split(".")[0] + ".png")  # save as png
+def _fits_exposure(filename: str) -> float:
+    """Exposure time (s) from the frame's EXPOSEC header card."""
     return fits.open(filename)[0].header.cards["EXPOSEC"][1]
+
+def _poly_ccd_temp(filename: str) -> float:
+    return fits.open(filename)[0].header.cards["PCCCDTMP"][1]
 
 
 def _fits_time(filename: str):
@@ -130,14 +154,49 @@ def _get_bennu_centers():
     return bennu_xy_list
 
 
-def _get_exposure_time():
+# OSIRIS-REx PolyCam pose used to point cielim: instrument-in-body (CB) and the body→image-plane
+# permutation. Shared by the render loop and the SPICE projection (_predicted_pixel) so both use the
+# exact same pointing. FOV/resolution mirror scene_setup; the render saves horizontally flipped
+# (np.flip(image, 1)). Keep all of these in sync with scene_setup and the render loop.
+_ORX_CB = np.array(
+    [
+        [0.999992877299969, 0.00376869788833074, 0.000205585885614917],
+        [-0.003768435874442, 0.999992105221604, -0.00126031167762166],
+        [-0.000210333996518, 0.001259527963573, 0.999999184674127],
+    ]
+)
+_C_IMG_CAM = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]], dtype=float)
+_CAM_FOV = (0.0138, 0.0138)
+_CAM_RES = (1024, 1024)
+
+
+def _cam_rotation(time):
+    """World (J2000) → camera-frame rotation cielim is pointed with at ``time`` (kernels loaded)."""
+    return _C_IMG_CAM @ (_ORX_CB @ spice.pxform("J2000", "ORX_SPACECRAFT", time))
+
+
+def _predicted_pixel(path):
+    """SPICE-projected Bennu pixel for a real frame — where cielim places Bennu given the ephemeris.
+
+    Bennu is at the scene origin, so this projects the origin from the spacecraft position through the
+    same pose cielim uses, including the saved image's horizontal flip. It should land on cielim's
+    rendered peak; its gap to the real object is the ephemeris/pointing error. Kernels must be loaded.
+    """
+    time = spice.str2et(_fits_time(str(path)))
+    position, _ = spice.spkpos("ORX_SPACECRAFT", time, "J2000", "NONE", "2101955")
+    return image_comparison.project_to_pixel(position, _cam_rotation(time), _CAM_FOV, _CAM_RES, flip_x=True)
+
+
+def _get_fits_data():
     exposure_time_list = []
     time_list = []
+    ccd_temps_list = []
     for p in sorted(FITS_DIR.iterdir()):
         if p.is_file() and p.suffix.lower() in {".fits"}:
-            exposure_time_list.append(_fits_to_png(str(p)))
+            ccd_temps_list.append(_poly_ccd_temp(str(p)))
+            exposure_time_list.append(_fits_exposure(str(p)))
             time_list.append(_fits_time(str(p)))
-    return exposure_time_list, time_list
+    return ccd_temps_list, exposure_time_list, time_list
 
 
 def dark_signal_rate_dn_s(temp_c: float) -> float:
@@ -154,7 +213,7 @@ def scene_setup() -> cielim.Scene:
 
     scene.set_spacecraft_params(name="osiris_rex", position=(0, 0, -1000000), velocity=(0, 1000, 0))
 
-    scene.set_camera_params(name="PolyCam")
+    scene.set_camera_params(name="PolyCam", grayscale=True)
 
     # Camera params from here: (https://link.springer.com/article/10.1007/s11214-011-9745-4)
 
@@ -168,18 +227,56 @@ def scene_setup() -> cielim.Scene:
     )
 
     ccd_temp_c = -10.0
-    dark_current_e_s = dark_signal_rate_dn_s(ccd_temp_c) / 4.5  # DN/s -> e-/s, same 4.5 DN/e- gain as well_capacity
+    dark_current_e_s = dark_signal_rate_dn_s(ccd_temp_c) / 4.5 # DN/s -> e-/s, same 4.5 DN/e- gain as well_capacity
 
-    scene.set_corruption_params(read_noise=3, dc_rate=dark_current_e_s)
+    scene.set_corruption_params(read_noise=1 , dc_rate=dark_current_e_s , dc_sigma=0.1  , psf_sigma=0.9, shot_noise=True )
 
     scene.set_celestial_body_params(0, position=(0, 0, -10000))  # Sets the position of the sun
 
     index = scene.add_celestial_body("bennu")
     scene.set_celestial_body_params(
-        index, albedo=0.044, mesh_shape="bennu_normalized", mesh_brdf="Regolith", mesh_radius=246
+        index, albedo=(2/3)*0.044, mesh_shape="bennu_normalized", mesh_brdf="Regolith", mesh_radius=246
     )
 
     return scene
+
+
+def compare_distant_objects(tol_s: float = 60.0):
+    """Dedicated zoomed point-source comparison for the DISTANT_DATES approach frames.
+
+    For each such real frame, locate Bennu at its FITS header center (CRPIX + BENNUNX) and pair it
+    with the cielim render nearest in time, writing an image_comparison.plot_point_source_pair figure
+    (untitled zoom) to DISTANT_DIR. Uses the known header position as the search anchor because the
+    ordinary brightness crop can't find a few-pixel target. The figures carry no titles; the measured
+    real→cielim offset is folded into the filename instead (e.g. ..._dx-17_dy+15.png). Returns the
+    number of frames written.
+    """
+    DISTANT_DIR.mkdir(parents=True, exist_ok=True)
+    renders = [g for g in sorted(OUT_DIR.glob("*.png")) if _gen_time(g) is not None]
+    n = 0
+    for p in _sorted_fits():
+        if p.name[:8] not in DISTANT_DATES:
+            continue
+        et = _filename_et(p)
+        if et is None or not renders:
+            continue
+        dt, gp = min((abs(_gen_time(g) - et), g) for g in renders)
+        if dt > tol_s:
+            continue
+        hdr = fits.open(str(p))[0].header
+        truth = (hdr.cards["CRPIX1"][1] + hdr.cards["BENNUNX1"][1],   # measured/nav centroid (real)
+                 hdr.cards["CRPIX2"][1] + hdr.cards["BENNUNX2"][1])
+        predicted = _predicted_pixel(p)                               # SPICE projection (where cielim places it)
+        fig, info = image_comparison.plot_point_source_pair(
+            _real_gray_minmax(p), image_comparison.load_grayscale(gp),
+            real_anchor=truth, gen_anchor=predicted, predicted_xy=predicted, search=25,
+            title_real="real", title_generated="cielim",
+        )
+        dx, dy = info["offset"]
+        fig.savefig(DISTANT_DIR / f"distant_{_stamp(et)}_dx{dx:+d}_dy{dy:+d}.png", dpi=200, bbox_inches="tight")
+        plt.close(fig)
+        n += 1
+    return n
 
 
 def bennu_scenario(number_of_images: int | None = None):
@@ -203,7 +300,7 @@ def bennu_scenario(number_of_images: int | None = None):
         spice.furnsh(str(MK))
 
     if os.path.exists(FITS_DIR):
-        exposure_time_list, time_list = _get_exposure_time()
+        ccd_temps, exposure_time_list, time_list = _get_fits_data()
         bennu_pixel_center = _get_bennu_centers()
     else:
         time_list = [
@@ -256,26 +353,13 @@ def bennu_scenario(number_of_images: int | None = None):
     connector.connect(launcher.launch())
     connector.send_init_request()
 
-    # camera frame to image plane transformation
-    C_img_cam = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]], dtype=float)
-
     for idx, time in enumerate(et_range):
         position, _ = spice.spkpos("ORX_SPACECRAFT", time, "J2000", "NONE", "2101955")
         sun_pos, _ = spice.spkpos("SUN", time, "J2000", "NONE", "2101955")
         phase_angle = (
             np.arccos(np.dot(position / np.linalg.norm(position), sun_pos / np.linalg.norm(sun_pos))) * 180 / np.pi
         )
-        BN = spice.pxform("J2000", "ORX_SPACECRAFT", time)
-        CB = np.array(
-            [
-                [0.999992877299969, 0.00376869788833074, 0.000205585885614917],
-                [-0.003768435874442, 0.999992105221604, -0.00126031167762166],
-                [-0.000210333996518, 0.001259527963573, 0.999999184674127],
-            ]
-        )  # instrument in body frame
-
-        # sun_pos = np.dot(np.dot(CB, BN).T, sun_vec_list[idx])
-        BN = C_img_cam @ np.dot(CB, BN)
+        BN = _cam_rotation(time)  # world→camera (instrument CB + image-plane permutation)
         BN_object = spice.pxform("J2000", "IAU_BENNU", time)
 
         scene.set_celestial_body_params(0, position=tuple(sun_pos * 1e3))  # Move sun
@@ -286,6 +370,9 @@ def bennu_scenario(number_of_images: int | None = None):
         # update exposure time per image
         scene.set_sensor_params(exposure=exposure_time_list[idx])
         print(f"exposure time: {scene.get_scene().camera.sensorModel.exposureTime:.4f} sec")
+
+        # update temperature per image
+        scene.set_corruption_params(dc_rate=dark_signal_rate_dn_s(ccd_temps[idx])/4.5)
 
         connector.send_frame(scene.get_scene())
 
@@ -315,8 +402,13 @@ def bennu_scenario(number_of_images: int | None = None):
     n = image_comparison.compare_saved(
         OUT_DIR, _gen_time, _real_entries(), _real_gray_of, str(SHOWCASE_DIR),
         title_real="real", title_generated="cielim",
+        average_exclude={0},  # drop image 0 from the average (its individual plots are kept)
+        predicted_of=_predicted_pixel,  # cyan ○ = SPICE-projected Bennu (should match cielim's +)
     )
     print(f"Saved real-vs-generated batch comparison ({n} pairs) -> {SHOWCASE_DIR}")
+
+    m = compare_distant_objects()
+    print(f"Saved distant-object point-source comparison ({m} frames) -> {DISTANT_DIR}")
 
     spice.kclear()
 

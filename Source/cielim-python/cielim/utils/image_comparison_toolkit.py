@@ -7,9 +7,9 @@ figures: a batch is rendered in three variants so they can be compared side by s
 
   * ``raw/``     — frames as-is (any real→generated offset preserved),
   * ``aligned/`` — the generated frame cross-correlated onto the real one,
-  * ``masked/``  — aligned, then background zeroed so only the target (union of both frames'
-                   foreground, with a small dilation halo) is compared. Particularly useful for
-                   small/faint disks, where background pixels would otherwise swamp the statistics.
+  * ``masked/``  — (opt-in, off by default) aligned, then background zeroed so only the target (union
+                   of both frames' foreground, with a small dilation halo) is compared. Useful for
+                   small/faint disks; enable by passing ``modes=(..., "masked")`` to generate_batch.
 
 For a batch of pairs each variant contains the individual side-by-side views, histograms and
 heatmaps plus one **average histogram** aggregated across all pairs.
@@ -18,8 +18,9 @@ The side-by-side view is framed tightly on the target (so a few-pixel disk isn't
 space) and labels each panel with that frame's center-of-brightness pixel, so the target's location
 can be compared directly between real and cielim.
 
-Colormap convention (see plot_style): numerical figures (heatmaps, histograms) use inferno; scene
-images shown for viewing use grayscale.
+Colormap convention (see plot_style): histograms use inferno-sampled series colors; the signed
+difference heatmap uses a zero-centered diverging ramp (black = match, see DIFF_CMAP); scene images
+shown for viewing use grayscale.
 """
 
 from pathlib import Path
@@ -27,11 +28,25 @@ from pathlib import Path
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
 from PIL import Image
 
 from cielim.utils import plot_style as ps
 
 THRESHOLD = 10
+
+# Diverging colormap for the signed difference heatmap, centered on BLACK at zero so a perfect match
+# is unmistakable. Both directions use the inferno ramp emanating from black — inferno for positive
+# error, the mirror (reversed inferno) for negative — so the hue stays in the inferno family and
+# brightness grows with the mismatch. Because the two halves share the ramp, color encodes the
+# *magnitude* of the difference, not its sign (a large +err and a large -err are both bright yellow).
+# The near-zero background falls at the black center on its own (the heatmap compares every pixel, no
+# masking); set_bad black is just a safety for any NaN so it too blends with the zero-error center.
+_INFERNO = plt.get_cmap("inferno")
+DIFF_CMAP = ListedColormap(
+    np.vstack([_INFERNO(np.linspace(1, 0, 128)), _INFERNO(np.linspace(0, 1, 128))]), name="diff_inferno"
+)
+DIFF_CMAP.set_bad("black")
 
 # Region-of-interest cropping (shared by the scenario comparisons). Small, faint disks get a large
 # relative pad so they aren't a speck in the frame; large disks get a tight pad. Sub-DISPLAY_SIZE
@@ -66,14 +81,17 @@ def load_grayscale(path):
     return np.array(Image.open(path).convert("L"))
 
 
-def to_uint8_gray(arr):
+def to_uint8_gray(arr, lo_pct=1, hi_pct=99):
     """Normalize an arbitrary 2-D array (e.g. float FITS data) to a 0–255 uint8 grayscale image.
 
-    NaN-safe, contrast-stretched on the 1st–99th percentile so a few hot/dead pixels don't crush the
-    dynamic range. Matches how the scenarios' _fits_to_png previews the real frames.
+    NaN-safe, contrast-stretched between the ``lo_pct`` and ``hi_pct`` percentiles. The default
+    1st–99th percentile keeps a few hot/dead pixels from crushing the dynamic range. Pass
+    ``lo_pct=0, hi_pct=100`` for a plain min/max stretch — the look the saved imsave PNG previews had
+    (which preserves a resolved disk's gradient instead of clipping it to a white blob), but computed
+    in-memory, so there's no colormap round-trip punching holes in the 8-bit histogram.
     """
     a = np.nan_to_num(np.asarray(arr, dtype=float))
-    lo, hi = np.percentile(a, 1), np.percentile(a, 99)
+    lo, hi = np.percentile(a, lo_pct), np.percentile(a, hi_pct)
     if hi <= lo:
         lo, hi = float(a.min()), float(a.max())
     if hi <= lo:
@@ -224,6 +242,9 @@ def compare_saved(
     title_generated="cielim",
     tol_s=2.0,
     pattern="*.png",
+    average_exclude=None,
+    average_batches=None,
+    predicted_of=None,
 ):
     """Read the saved generated images, pair each with the real frame taken at the same time, and
     run :func:`generate_batch` on the result.
@@ -239,11 +260,17 @@ def compare_saved(
         real_entries: list of ``(time, real_path)``.
         real_reader(path) -> uint8 grayscale array: load a real frame from its path.
         tol_s: max |time difference| for a match.
+        average_exclude, average_batches: forwarded to :func:`generate_batch` (drop indices from the
+            overall average / write extra labelled sub-batch averages). Indices are pair positions in
+            the sorted-by-time order, i.e. the same NN as ``histogram_NN`` / ``images_NN``.
+        predicted_of(real_path) -> (x, y) | None: optional predicted pixel (e.g. the SPICE-projected
+            target position) drawn on each side-by-side view. Evaluated for the matched real frame.
 
     Returns the number of matched pairs.
     """
     real_times = [e[0] for e in real_entries]
     pairs = []
+    predicted = []
     for gp in sorted(Path(generated_dir).glob(pattern)):
         t = gen_time(gp)
         if t is None:
@@ -251,8 +278,18 @@ def compare_saved(
         j = nearest_time_index(t, real_times, tol_s)
         if j is None:
             continue
-        pairs.append((real_reader(real_entries[j][1]), load_grayscale(gp)))
-    generate_batch(pairs, output_dir, title_real=title_real, title_generated=title_generated)
+        real_path = real_entries[j][1]
+        pairs.append((real_reader(real_path), load_grayscale(gp)))
+        predicted.append(predicted_of(real_path) if predicted_of else None)
+    generate_batch(
+        pairs,
+        output_dir,
+        title_real=title_real,
+        title_generated=title_generated,
+        average_exclude=average_exclude,
+        average_batches=average_batches,
+        predicted=predicted if predicted_of else None,
+    )
     return len(pairs)
 
 
@@ -282,14 +319,18 @@ def _frame_box(img, cx, cy, obj_size):
     return max(cx - half, 0), min(cx + half, w), max(cy - half, 0), min(cy + half, h)
 
 
-def plot_side_by_side(real, generated, title1="real", title2="cielim", mask=False):
+def plot_side_by_side(real, generated, title1="real", title2="cielim", mask=False, predicted=None):
     """Grayscale side-by-side of the two compared frames, tightly framed on the target.
 
     Both panels share one tight window (centered between the two targets and sized to enclose both),
     so any real→generated location offset stays visible instead of each frame being re-centered on
-    its own disk. Each panel is labeled with, and marked at, that frame's center-of-brightness pixel
-    ``(cx, cy)`` in the common frame — so the target's position can be read off and compared even
-    when the disk is only a few pixels across. With ``mask`` the background is zeroed first.
+    its own disk. Each panel is marked (+) at that frame's center-of-brightness pixel, with the pixel
+    grid on the axes so the position can be read off and compared even when the disk is only a few
+    pixels across. If ``predicted`` (a pixel, e.g. the SPICE-projected target position from
+    :func:`project_to_pixel`) is given, it is drawn on both panels (cyan ○): the generated + should
+    sit on it (cielim placing the object where SPICE asked), while its gap to the real + is the
+    ephemeris/pointing discrepancy. No titles (left = real, right = generated by convention); with
+    ``mask`` the background is zeroed first.
     """
     ps.apply_showcase_style()
     real, generated = match_shapes(real, generated)
@@ -299,24 +340,125 @@ def plot_side_by_side(real, generated, title1="real", title2="cielim", mask=Fals
         fg = foreground_mask(real, generated)
         real, generated = apply_mask(real, fg), apply_mask(generated, fg)
 
-    # One window enclosing both targets and their separation, so the offset is in-frame for both.
-    obj = max(rbw, rbh, gbw, gbh, abs(gcx - rcx) * 2, abs(gcy - rcy) * 2)
-    x1, x2, y1, y2 = _frame_box(real, (rcx + gcx) // 2, (rcy + gcy) // 2, obj)
+    pred = None if predicted is None else (int(round(predicted[0])), int(round(predicted[1])))
+    # One window enclosing both targets (and the predicted marker) so everything stays in-frame.
+    cx0, cy0 = (rcx + gcx) // 2, (rcy + gcy) // 2
+    marks = [(rcx, rcy), (gcx, gcy)] + ([pred] if pred else [])
+    reach = max([max(rbw, rbh, gbw, gbh)] + [2 * abs(mx - cx0) for mx, my in marks] + [2 * abs(my - cy0) for mx, my in marks])
+    x1, x2, y1, y2 = _frame_box(real, cx0, cy0, reach)
     extent = [x1 - 0.5, x2 - 0.5, y2 - 0.5, y1 - 0.5]  # bottom=y2, top=y1 keeps image orientation
 
     fig, axes = plt.subplots(1, 2, figsize=ps.figsize_pair(aspect=0.6))
-    fig.suptitle("Compared frames", fontweight="bold")
-    for ax, img, (cx, cy), title in (
-        (axes[0], real, (rcx, rcy), title1),
-        (axes[1], generated, (gcx, gcy), title2),
-    ):
+    for ax, img, (cx, cy) in ((axes[0], real, (rcx, rcy)), (axes[1], generated, (gcx, gcy))):
         ax.imshow(img[y1:y2, x1:x2], cmap=ps.SCENE_CMAP, extent=extent, interpolation="nearest", vmin=0, vmax=255)
-        ax.plot(cx, cy, "+", color=ps.SERIES_COLORS[1], markersize=10, markeredgewidth=1.5)
-        ax.set_title(f"{title}\ncenter (px): ({cx}, {cy})")
+        if pred is not None:
+            ax.plot(*pred, "o", mfc="none", mec="#00d0ff", markersize=11, markeredgewidth=1.5)  # SPICE-predicted
+        ax.plot(cx, cy, "+", color=ps.SERIES_COLORS[1], markersize=10, markeredgewidth=1.5)  # center-of-brightness
         ax.set_xlabel("x (px)")
         ax.set_ylabel("y (px)")
     plt.tight_layout()
     return fig
+
+
+def locate_peak(img, center, search=15, blur=1.0):
+    """Pixel ``(x, y)`` of the brightest spot within ±``search`` px of ``center``.
+
+    A light Gaussian blur is applied first so a single noisy/hot pixel doesn't win — for locating a
+    compact source near a known/expected position (e.g. a distant object at its SPICE-predicted pixel)
+    without being fooled by field stars or render speckle elsewhere in the frame.
+    """
+    cx, cy = int(round(center[0])), int(round(center[1]))
+    h, w = img.shape
+    x0, x1 = max(cx - search, 0), min(cx + search + 1, w)
+    y0, y1 = max(cy - search, 0), min(cy + search + 1, h)
+    win = img[y0:y1, x0:x1].astype(float)
+    if blur:
+        win = cv2.GaussianBlur(win, (0, 0), blur)
+    py, px = np.unravel_index(int(np.argmax(win)), win.shape)
+    return x0 + int(px), y0 + int(py)
+
+
+def _aperture_sum(img, cx, cy, r):
+    """(summed, peak) intensity in a ±r px box around (cx, cy)."""
+    sub = img[max(cy - r, 0):cy + r + 1, max(cx - r, 0):cx + r + 1].astype(float)
+    return float(sub.sum()), float(sub.max())
+
+
+def project_to_pixel(position, world_to_cam, fov, resolution, flip_x=False, flip_y=False):
+    """Pixel where a target at the WORLD ORIGIN projects for a pinhole camera at ``position``.
+
+    ``world_to_cam`` is the 3x3 world→camera-frame rotation (camera +z = boresight). Reproduces
+    cielim's reversed-Z projection — NDC = (cot(fovx/2)·x/z, cot(fovy/2)·y/z), pixel =
+    ((1+NDCx)/2·W, (1+NDCy)/2·H) — and mirrors the result when the scenario saved a flipped image
+    (``flip_x`` for np.flip(image, 1), ``flip_y`` for axis 0). Validated against cielim's rendered
+    Bennu peak to sub-pixel. ``fov`` is (fovx, fovy) in radians, ``resolution`` is (W, H). Returns
+    (px, py) floats; the object's own extent/attitude is not modeled (center only).
+    """
+    d = np.asarray(world_to_cam, float) @ (-np.asarray(position, float))
+    d = d / np.linalg.norm(d)
+    w, h = resolution
+    px = (1 + (d[0] / d[2]) / np.tan(fov[0] / 2)) / 2 * w
+    py = (1 + (d[1] / d[2]) / np.tan(fov[1] / 2)) / 2 * h
+    if flip_x:
+        px = w - 1 - px
+    if flip_y:
+        py = h - 1 - py
+    return px, py
+
+
+def plot_point_source_pair(
+    real, generated, real_anchor, gen_anchor=None, predicted_xy=None,
+    search=15, zoom=25, aperture=6, title_real="real", title_generated="cielim",
+):
+    """Zoomed real-vs-generated comparison of a compact bright object near a known position.
+
+    For distant-object frames where the target is only a few pixels and ordinary brightest-blob
+    detection would grab a field star or render noise. The object is located in each image as the
+    brightest lightly-blurred pixel within ±``search`` px of an anchor (see :func:`locate_peak`):
+    ``real_anchor`` for the real frame and ``gen_anchor`` for the generated one (defaults to
+    ``real_anchor``). Give them separately when the two are expected to sit apart — e.g. the real
+    object at its measured/header centroid and cielim's at the SPICE-projected pixel.
+
+    Both panels share one ±``zoom`` px window centered on the real object's peak. Each panel is marked
+    with its located peak (orange +); if ``predicted_xy`` is given (the SPICE/ephemeris-projected
+    pixel, e.g. from :func:`project_to_pixel`) it is drawn on both panels (cyan ○). The generated
+    panel's + should sit on the ○ — cielim placing the object where SPICE asked — while any gap
+    between the ○ and the real + is the ephemeris/pointing discrepancy, which is expected and does not
+    indict cielim's placement.
+
+    No titles (left = real, right = generated by convention). Returns ``(fig, info)`` where ``info``
+    has the located peaks (``real_xy``, ``gen_xy``), ``offset`` (cielim − real, px), the ``predicted``
+    pixel (or None), and the ±``aperture`` box sums (``real_flux``, ``gen_flux``). Intensities are in
+    display (stretch) units, not calibrated radiometry — an apparent size/brightness cue only.
+    """
+    ps.apply_showcase_style()
+    real, generated = match_shapes(real, generated)
+    if gen_anchor is None:
+        gen_anchor = real_anchor
+    rx, ry = locate_peak(real, real_anchor, search)
+    gx, gy = locate_peak(generated, gen_anchor, search)
+    pred = None if predicted_xy is None else (int(round(predicted_xy[0])), int(round(predicted_xy[1])))
+
+    h, w = real.shape
+    x1, x2 = max(rx - zoom, 0), min(rx + zoom, w)
+    y1, y2 = max(ry - zoom, 0), min(ry + zoom, h)
+    extent = [x1 - 0.5, x2 - 0.5, y2 - 0.5, y1 - 0.5]  # bottom=y2, top=y1 keeps image orientation
+
+    fig, axes = plt.subplots(1, 2, figsize=ps.figsize_pair(aspect=0.6))
+    fluxes = []
+    for ax, img, (px, py) in ((axes[0], real, (rx, ry)), (axes[1], generated, (gx, gy))):
+        flux, _ = _aperture_sum(img, px, py, aperture)
+        fluxes.append(flux)
+        ax.imshow(img[y1:y2, x1:x2], cmap=ps.SCENE_CMAP, extent=extent, interpolation="nearest", vmin=0, vmax=255)
+        if pred is not None:
+            ax.plot(*pred, "o", mfc="none", mec="#00d0ff", markersize=13, markeredgewidth=1.5)  # SPICE-predicted
+        ax.plot(px, py, "+", color=ps.SERIES_COLORS[1], markersize=12, markeredgewidth=1.5)  # located peak
+        ax.set_xlabel("x (px)")
+        ax.set_ylabel("y (px)")
+    plt.tight_layout()
+    info = {"real_xy": (rx, ry), "gen_xy": (gx, gy), "offset": (gx - rx, gy - ry),
+            "predicted": pred, "real_flux": fluxes[0], "gen_flux": fluxes[1]}
+    return fig, info
 
 
 def plot_histogram(img1, img2, title1="real", title2="cielim", bins=256, mask=None):
@@ -337,7 +479,6 @@ def plot_histogram(img1, img2, title1="real", title2="cielim", bins=256, mask=No
     m2 = compute_disk_stats(img2)["mean"]
 
     fig, ax = plt.subplots(figsize=ps.figsize_single(aspect=0.55))
-    fig.suptitle("Pixel intensity histogram", fontweight="bold")
     ax.fill_between(centers, counts1, step="mid", alpha=0.45, color=c1, label=title1)
     ax.fill_between(centers, counts2, step="mid", alpha=0.45, color=c2, label=title2)
     ax.axvline(m1, color=c1, linestyle="--", linewidth=1.5, label=f"{title1} mean {m1:.0f}")
@@ -353,19 +494,22 @@ def plot_histogram(img1, img2, title1="real", title2="cielim", bins=256, mask=No
 
 
 def plot_diff_heatmap(img1, img2, title1="real", title2="cielim"):
-    """Signed pixel-difference heatmap (img1 − img2) on the inferno ramp."""
+    """Signed pixel-difference heatmap (img1 − img2) on a zero-centered inferno diverging ramp.
+
+    Uses :data:`DIFF_CMAP`: zero error is black, so matching regions (including the near-zero
+    background) are obvious; brightness along the inferno ramp grows with the magnitude of the
+    mismatch in both directions (a large +err and a large -err look the same — color encodes
+    |difference|, not its sign; read the colorbar for sign). The difference is computed over *every*
+    pixel (no THRESHOLD masking) so the background shows its true, near-zero difference.
+    """
     ps.apply_showcase_style()
     img1, img2 = match_shapes(img1, img2)
-    mask = (img1 > THRESHOLD) | (img2 > THRESHOLD)
-    diff = np.zeros_like(img1, dtype=float)
-    diff[mask] = img1[mask].astype(float) - img2[mask].astype(float)
+    diff = img1.astype(float) - img2.astype(float)
 
     fig, ax = plt.subplots(figsize=ps.figsize_single(aspect=0.85))
-    fig.suptitle(f"Difference heatmap — {title1} minus {title2}", fontweight="bold")
-    im = ax.imshow(diff, cmap="inferno", vmin=-128, vmax=128)
+    im = ax.imshow(diff, cmap=DIFF_CMAP, vmin=-128, vmax=128)
     cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
     cbar.set_label(f"Intensity difference ({title1} − {title2})")
-    ax.set_title(f"bright = {title1} brighter  |  dark = {title2} brighter")
     ax.axis("off")
     plt.tight_layout()
     return fig
@@ -378,7 +522,8 @@ def plot_average_histogram(cropped_pairs, title1="real", title2="cielim", bins=2
     normalized to a per-bin pixel *fraction* (so different crop sizes are comparable), then averaged
     across the batch; the shaded band is ±1σ across the batch. With ``drop_zero_bin`` the intensity-0
     bin is discarded before normalizing — for the masked variant, whose background is zeroed, this
-    keeps the average from collapsing onto that one dominant bin.
+    keeps the average from collapsing onto that one dominant bin. Which sub-batch this is (an index
+    range) is documented by the caller's filename, not a title.
     """
     ps.apply_showcase_style()
     c1, c2 = ps.SERIES_COLORS
@@ -400,7 +545,6 @@ def plot_average_histogram(cropped_pairs, title1="real", title2="cielim", bins=2
     gm, gs = gen_frac.mean(0), gen_frac.std(0)
 
     fig, ax = plt.subplots(figsize=ps.figsize_single(aspect=0.55))
-    fig.suptitle(f"Average intensity histogram — batch of {len(cropped_pairs)}", fontweight="bold")
     ax.plot(centers, rm, color=c1, label=title1)
     ax.fill_between(centers, np.clip(rm - rs, 0, None), rm + rs, color=c1, alpha=0.2)
     ax.plot(centers, gm, color=c2, label=title2)
@@ -418,14 +562,31 @@ def plot_average_histogram(cropped_pairs, title1="real", title2="cielim", bins=2
 # --- batch driver ------------------------------------------------------------------------------
 
 
-def generate_batch(pairs, output_dir, title_real="real", title_generated="cielim", modes=("raw", "aligned", "masked")):
+def generate_batch(
+    pairs,
+    output_dir,
+    title_real="real",
+    title_generated="cielim",
+    modes=("raw", "aligned"),
+    average_exclude=None,
+    average_batches=None,
+    predicted=None,
+):
     """Emit the comparison set for a batch of (real, generated) image pairs.
 
     ``pairs`` is a list of (real, generated); each item may be a path, a BGR array, or a grayscale
     array. Both sides are coerced to grayscale and the generated frame resized onto the real one. For
-    every mode in ``modes`` (default: ``"raw"``, ``"aligned"``, ``"masked"`` — see the module
-    docstring) a subdirectory is written containing per-pair ``images_NN.png`` (side-by-side view),
-    ``histogram_NN.png`` and ``heatmap_NN.png`` plus one ``histogram_average.png``.
+    every mode in ``modes`` (default: ``"raw"``, ``"aligned"``; pass ``"masked"`` too to also emit the
+    background-zeroed variant — see the module docstring) a subdirectory is written containing per-pair
+    ``images_NN.png`` (side-by-side view),
+    ``histogram_NN.png`` and ``heatmap_NN.png`` plus one overall ``histogram_average.png``.
+
+    ``average_exclude`` is an iterable of pair indices to drop from the overall average (their
+    individual per-pair figures are still written). ``average_batches`` is an optional list of
+    ``(label, indices)`` sub-batches; each writes an extra ``histogram_average_<label>.png`` averaged
+    over just those indices (also respecting ``average_exclude``). The overall average is always
+    written, so sub-batches are additive. ``predicted`` is an optional list aligned with ``pairs`` of
+    predicted pixels (or None per item) drawn on each side-by-side view (see :func:`plot_side_by_side`).
     """
     ps.apply_showcase_style()
     output_dir = Path(output_dir)
@@ -446,7 +607,8 @@ def generate_batch(pairs, output_dir, title_real="real", title_generated="cielim
             gg = align_pair(real, gen) if cfg["align"] else gen
 
             # The two compared frames, saved together as one tightly-framed side-by-side view.
-            fig = plot_side_by_side(real, gg, title_real, title_generated, mask=cfg["mask"])
+            pred_i = predicted[i] if predicted is not None and i < len(predicted) else None
+            fig = plot_side_by_side(real, gg, title_real, title_generated, mask=cfg["mask"], predicted=pred_i)
             fig.savefig(mode_dir / f"images_{i:02d}.png", dpi=ps.SAVE_DPI, bbox_inches="tight")
             plt.close(fig)
 
@@ -464,6 +626,16 @@ def generate_batch(pairs, output_dir, title_real="real", title_generated="cielim
             fig.savefig(mode_dir / f"heatmap_{i:02d}.png", dpi=ps.SAVE_DPI, bbox_inches="tight")
             plt.close(fig)
 
-        fig = plot_average_histogram(cropped, title_real, title_generated, drop_zero_bin=cfg["mask"])
-        fig.savefig(mode_dir / "histogram_average.png", dpi=ps.SAVE_DPI, bbox_inches="tight")
-        plt.close(fig)
+        exclude = set(average_exclude or ())
+
+        def _avg(indices, suffix):
+            sel = [cropped[i] for i in indices if 0 <= i < len(cropped) and i not in exclude]
+            if not sel:
+                return
+            fig = plot_average_histogram(sel, title_real, title_generated, drop_zero_bin=cfg["mask"])
+            fig.savefig(mode_dir / f"histogram_average{suffix}.png", dpi=ps.SAVE_DPI, bbox_inches="tight")
+            plt.close(fig)
+
+        _avg(range(len(cropped)), "")  # overall average (respecting average_exclude)
+        for label, indices in average_batches or []:
+            _avg(indices, f"_{label}")  # the label documents the sub-batch in the filename

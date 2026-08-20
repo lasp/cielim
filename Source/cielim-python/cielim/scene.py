@@ -263,7 +263,7 @@ class Scene(object):
         if qe_weight is not None and qe_weight > 0:
             self.cielim_message.camera.sensorModel.qeCurve.integrationWeightFactor = qe_weight
 
-    def set_corruption_params(
+    def  set_corruption_params(
         self,
         dist_radial: tuple[float, float, float] | None = None,
         dist_tangent: tuple[float, float] | None = None,
@@ -295,12 +295,15 @@ class Scene(object):
             stuck_px_rate (float, optional): Stuck pixel rate (probability).
             dead_px_rate (float, optional): Dead pixel rate (probability).
         """
-        if dist_radial is not None and all(f >= 0 for f in dist_radial):
+        # Distortion coefficients are signed (negative k1 = barrel, positive = pincushion), so do NOT
+        # reject negatives here — a `>= 0` guard silently drops a valid barrel-distortion setup. Apply
+        # only when at least one coefficient is non-zero (an all-zero tuple is a no-op).
+        if dist_radial is not None and any(f != 0 for f in dist_radial):
             self.cielim_message.camera.lensModel.distortionK1 = dist_radial[0]
             self.cielim_message.camera.lensModel.distortionK2 = dist_radial[1]
             self.cielim_message.camera.lensModel.distortionK3 = dist_radial[2]
 
-        if dist_tangent is not None and all(f >= 0 for f in dist_tangent):
+        if dist_tangent is not None and any(f != 0 for f in dist_tangent):
             self.cielim_message.camera.lensModel.distortionP1 = dist_tangent[0]
             self.cielim_message.camera.lensModel.distortionP2 = dist_tangent[1]
 
