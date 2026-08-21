@@ -13,7 +13,8 @@ Texture2D InputTexture;
 SamplerState InputSampler;
 
 uint CurrentTime;
-float ReadNoiseSigma;
+float ReadNoiseSigma; // This is in electrons
+float InvFullWellCapacity; // This is in # of electrons (inverse)
 uint GrayscaleToggle;
 uint PixelDefectPattern;
 float StuckPixelRate;
@@ -30,7 +31,7 @@ float4 MainPS(float4 UV : TEXCOORD0, float4 Position : SV_Position) : SV_Target0
 	float4 ReadNoiseColor = float4(RandGaussians.x, RandGaussians.y, RandGaussians.z, 0.0f) * ReadNoiseSigma;
 	float4 ReadNoiseGrayscale = float4(RandGaussians.x, RandGaussians.x, RandGaussians.x, 0.0f) * ReadNoiseSigma;
 
-	float4 ReadNoise = lerp(ReadNoiseColor, ReadNoiseGrayscale, GrayscaleToggle);
+	float4 ReadNoise = saturate(lerp(ReadNoiseColor, ReadNoiseGrayscale, GrayscaleToggle) * InvFullWellCapacity);
 
 	// Determine if the pixel should be stuck or dead
 
