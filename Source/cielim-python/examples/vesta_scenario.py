@@ -25,6 +25,35 @@ OUT_DIR = HERE.parent / "images-vesta"
 # Output dir for the real-vs-generated batch comparison (raw/ and aligned/ subsets).
 SHOWCASE_DIR = HERE.parent / "showcase_images" / "vesta"
 
+# The comparison is split into two groups plus a dropped pair. Keys are the observation-time stamp of
+# each frame (as in the saved render filename); the indices quoted below are the positions the frames
+# had in the earlier single 00-19 comparison.
+#
+# 00-11: the distant approach frames (2011-05-03 .. 2011-07-04, ~8-9 ms). Vesta covers only a small
+# part of the frame here, so their statistics don't belong in the same batch as the close-in frames —
+# they get their own comparison group in DISTANT_DIR.
+DISTANT_DIR = HERE.parent / "showcase_images" / "vesta_distant"
+DISTANT_STAMPS = frozenset(
+    {
+        "20110503T133601",
+        "20110510T070317",
+        "20110517T125701",
+        "20110524T085201",
+        "20110601T063701",
+        "20110608T152416",
+        "20110614T133816",
+        "20110617T123816",
+        "20110620T133816",
+        "20110624T040816",
+        "20110704T004002",
+        "20110704T023402",
+    }
+)
+
+# 14-15: the 2011-07-18 pair, the only 31 ms exposures kept by EXPOSURE_MAX_MS. Excluded from the
+# comparison altogether (they are still rendered and saved to OUT_DIR).
+EXCLUDED_STAMPS = frozenset({"20110718T204002", "20110718T223402"})
+
 # Frames come in near-simultaneous pairs: a 1500 ms long exposure and a short (8-31 ms) exposure.
 # The long exposures saturate (the disk clips to full well), so both the real and cielim sides render
 # as a flat overexposed blob — not an informative comparison. Skip anything above this threshold and
@@ -93,6 +122,26 @@ def _gen_time(path):
         return None
     d, t = m.groups()
     return spice.str2et(f"{d[:4]}-{d[4:6]}-{d[6:8]}T{t[:2]}:{t[2:4]}:{t[4:6]}")
+
+
+def _stamp_of(path):
+    """Compact observation stamp of a saved generated frame (..._YYYYMMDDThhmmss), or None."""
+    m = re.search(r"(\d{8})T(\d{6})", path.name)
+    return f"{m.group(1)}T{m.group(2)}" if m else None
+
+
+def _gen_time_if(keep):
+    """``gen_time`` for compare_saved restricted to the frames whose stamp satisfies ``keep``.
+
+    Returning None for every other frame leaves it unpaired, which is how compare_saved drops it: the
+    group's figures are numbered over the kept frames only.
+    """
+
+    def _timer(path):
+        stamp = _stamp_of(path)
+        return _gen_time(path) if stamp is not None and keep(stamp) else None
+
+    return _timer
 
 
 @contextlib.contextmanager
@@ -204,14 +253,14 @@ def scene_setup() -> cielim.Scene:
         well_capacity=120_000,
     )
 
-    scene.set_corruption_params(psf_sigma=0.6 , read_noise=18, dc_rate=dark_current_rate_e_s(vesta_ccd_temp_k), dc_sigma=10, shot_noise=True)
+    scene.set_corruption_params(psf_sigma=0.7 , read_noise=18, dc_rate=dark_current_rate_e_s(vesta_ccd_temp_k), dc_sigma=10, shot_noise=True)
 
     scene.set_celestial_body_params(0, position=(0, 0, -10000))
 
     index = scene.add_celestial_body("vesta")
 
     scene.set_celestial_body_params(
-        index, albedo=0.423, mesh_shape="vesta_normalized", mesh_brdf="Regolith", mesh_radius=262.7 * 1e3
+        index, albedo=0.423 * 10, mesh_shape="vesta_normalized", mesh_brdf="Regolith", mesh_radius=262.7 * 1e3
     )
 
     return scene
@@ -318,14 +367,29 @@ def vesta_scenario(number_of_images: int | None = None):
 
     # Read the saved generated frames back and compare each to the real image at the same time.
     # raw/ and aligned/ subsets, each with individual histograms + heatmaps and an average histogram.
+    real_entries = _real_entries()
+
+    # Main group: the close-in frames only (old indices 12-13 and 16-19, renumbered 00-05 here). The
+    # distant approach frames go to their own group below and the 31 ms pair is dropped outright.
     n = image_comparison.compare_saved(
-        OUT_DIR, _gen_time, _real_entries(), _real_gray_of, str(SHOWCASE_DIR),
+        OUT_DIR, _gen_time_if(lambda s: s not in DISTANT_STAMPS and s not in EXCLUDED_STAMPS),
+        real_entries, _real_gray_of, str(SHOWCASE_DIR),
         title_real="real", title_generated="cielim",
         predicted_of=_predicted_pixel,  # cyan ○ = SPICE-projected Vesta (should match cielim's +)
-        # Overall average plus three sub-batch averages by frame index (16-19 read from "15-19").
-        average_batches=[("00-11", range(0, 12)), ("12-15", range(12, 16)), ("16-19", range(16, 20))],
+        # Overall average plus one sub-batch average per observation date (15 ms vs 14 ms exposures).
+        average_batches=[("20110717", range(0, 2)), ("20110723", range(2, 6))],
     )
     print(f"Saved real-vs-generated batch comparison ({n} pairs) -> {SHOWCASE_DIR}")
+
+    # Distant-approach group: the same comparison over DISTANT_STAMPS only (old indices 00-11), so its
+    # average histogram isn't mixed with the close-in frames.
+    m = image_comparison.compare_saved(
+        OUT_DIR, _gen_time_if(lambda s: s in DISTANT_STAMPS),
+        real_entries, _real_gray_of, str(DISTANT_DIR),
+        title_real="real", title_generated="cielim",
+        predicted_of=_predicted_pixel,
+    )
+    print(f"Saved distant-approach batch comparison ({m} pairs) -> {DISTANT_DIR}")
 
     spice.kclear()
 

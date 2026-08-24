@@ -229,13 +229,13 @@ def scene_setup() -> cielim.Scene:
     ccd_temp_c = -10.0
     dark_current_e_s = dark_signal_rate_dn_s(ccd_temp_c) / 4.5 # DN/s -> e-/s, same 4.5 DN/e- gain as well_capacity
 
-    scene.set_corruption_params(read_noise=1 , dc_rate=dark_current_e_s , dc_sigma=0.1  , psf_sigma=0.9, shot_noise=True )
+    scene.set_corruption_params(read_noise=1 , dc_rate=dark_current_e_s , dc_sigma=0.1  , psf_sigma=0.9, shot_noise=False )
 
     scene.set_celestial_body_params(0, position=(0, 0, -10000))  # Sets the position of the sun
 
     index = scene.add_celestial_body("bennu")
     scene.set_celestial_body_params(
-        index, albedo=(2/3)*0.044, mesh_shape="bennu_normalized", mesh_brdf="Regolith", mesh_radius=246
+        index, albedo=0.044 * 2.5, mesh_shape="bennu_normalized", mesh_brdf="Regolith", mesh_radius=246
     )
 
     return scene

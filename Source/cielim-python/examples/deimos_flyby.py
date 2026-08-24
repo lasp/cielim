@@ -47,6 +47,17 @@ SHOWCASE_DIR = HERE.parent / "showcase_images" / "deimos"
 _FNAME_TIME = re.compile(r"(\d{8})T(\d{6})")
 _RENDER_FILTER = "f635"
 
+# Real frames whose raw noise is too strong to compare against an unmodelled render. They are still
+# rendered (and saved), just left out of the comparison: these were images 00, 01, 08, 12 and 13 of
+# the full-set comparison.
+_NOISY_STAMPS = {
+    "20231101T034225",
+    "20231101T034357",
+    "20231101T035640",
+    "20231101T040154",
+    "20231101T040654",
+}
+
 
 def _sorted_fits():
     return [
@@ -64,6 +75,15 @@ def _filename_et(path):
     d, t = m.groups()
     iso = f"{d[:4]}-{d[4:6]}-{d[6:8]}T{t[:2]}:{t[2:4]}:{t[4:6]}"
     return spice.str2et(iso)
+
+
+def _comparison_et(path):
+    """``gen_time`` for the comparison: as _filename_et, but None for the noisy frames so they are
+    never paired and hence dropped from the comparison entirely."""
+    m = _FNAME_TIME.search(path.name)
+    if m and f"{m.group(1)}T{m.group(2)}" in _NOISY_STAMPS:
+        return None
+    return _filename_et(path)
 
 
 def _real_entries():
@@ -145,7 +165,7 @@ def scene_setup() -> cielim.Scene:
     # This is done so that average color of the shape model matches the real world average albedo.
 
     scene.set_celestial_body_params(
-        index, albedo=0.12, mesh_shape="deimos_normalized", mesh_brdf="Regolith", mesh_radius=6.2 * 1e3
+        index, albedo=0.12*10, mesh_shape="deimos_normalized", mesh_brdf="Regolith", mesh_radius=6.2 * 1e3
     )
 
     return scene
@@ -250,10 +270,11 @@ def spice_scenario():
     connector.disconnect()
     launcher.terminate()
 
-    # Read the saved generated frames back and compare each to the real f635 image at the same time.
-    # raw/ and aligned/ subsets, each with individual histograms + heatmaps and an average histogram.
+    # Read the saved generated frames back and compare each to the real f635 image at the same time,
+    # skipping the noisy real frames (_NOISY_STAMPS). raw/ and aligned/ subsets, each with individual
+    # histograms + heatmaps and an average histogram.
     n = image_comparison.compare_saved(
-        OUT_DIR, _filename_et, real_entries, _real_gray_of, str(SHOWCASE_DIR),
+        OUT_DIR, _comparison_et, real_entries, _real_gray_of, str(SHOWCASE_DIR),
         title_real="real", title_generated="cielim",
     )
     print(f"Saved real-vs-generated batch comparison ({n} pairs) -> {SHOWCASE_DIR}")
