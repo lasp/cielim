@@ -165,7 +165,7 @@ def scene_setup() -> cielim.Scene:
     # This is done so that average color of the shape model matches the real world average albedo.
 
     scene.set_celestial_body_params(
-        index, albedo=0.12*10, mesh_shape="deimos_normalized", mesh_brdf="Regolith", mesh_radius=6.2 * 1e3
+        index, albedo=0.07 , mesh_shape="deimos_normalized", mesh_brdf="Lambertian", mesh_radius=6.2 * 1e3
     )
 
     return scene

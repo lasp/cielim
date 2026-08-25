@@ -235,7 +235,7 @@ def scene_setup() -> cielim.Scene:
 
     index = scene.add_celestial_body("bennu")
     scene.set_celestial_body_params(
-        index, albedo=0.044 * 2.5, mesh_shape="bennu_normalized", mesh_brdf="Regolith", mesh_radius=246
+        index, albedo=0.044, mesh_shape="bennu_normalized", mesh_brdf="Regolith", mesh_radius=246
     )
 
     return scene

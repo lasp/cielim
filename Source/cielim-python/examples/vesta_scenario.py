@@ -260,7 +260,7 @@ def scene_setup() -> cielim.Scene:
     index = scene.add_celestial_body("vesta")
 
     scene.set_celestial_body_params(
-        index, albedo=0.423 * 10, mesh_shape="vesta_normalized", mesh_brdf="Regolith", mesh_radius=262.7 * 1e3
+        index, albedo=0.423, mesh_shape="vesta_normalized", mesh_brdf="Lambertian", mesh_radius=262.7 * 1e3
     )
 
     return scene
