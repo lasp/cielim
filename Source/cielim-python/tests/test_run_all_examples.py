@@ -361,3 +361,45 @@ def test_send_protobuffer_file():
 
     # Cleanup
     out_file.unlink()
+
+
+def test_speed_test_scenario():
+    # headless plotting
+    os.environ.setdefault("MPLBACKEND", "Agg")
+
+    # Load modules directly from files (no need for examples/__init__.py)
+    st = _load_module_from(EXAMPLES_DIR / "speed_test_scenario.py", "speed_test_scenario")
+
+    # where this example writes outputs (falls back to examples/ if attribute missing)
+    base_dir = Path(getattr(st, "current_file_path", EXAMPLES_DIR))
+
+    out_dir = base_dir / "images-speed-test"
+
+    # clean slate
+    if out_dir.exists():
+        shutil.rmtree(out_dir)
+
+    # Build and edit the scene exactly as the example's __main__ does
+    scene = st.scene_setup()
+    scene.set_celestial_body_params(
+        st.CENTRAL_BODY_INDEX,
+        name="bennu",
+        mesh_shape="bennu_normalized",
+        mesh_brdf="Regolith",
+        mesh_radius=246.0,
+        albedo=0.044,
+    )
+    scene.gravitational_parameter = 5.2
+    scene.set_lens_params(fov=(20 * np.pi / 180, 15 * np.pi / 180))
+    scene.set_sensor_params(resolution=(2000, 1500), exposure=5e-4)
+
+    summary = st.speed_test_scenario(scene, number_of_images=3)
+
+    # assertions (numpy.testing)
+    np.testing.assert_(out_dir.exists(), msg="images-speed-test directory was not created")
+    np.testing.assert_equal(len(list(out_dir.glob("*.png"))), 3, err_msg="Expected 3 PNGs in images-speed-test")
+    np.testing.assert_equal(summary["number_of_images"], 3)
+    np.testing.assert_(summary["images_per_second"] > 0, msg="No render throughput reported")
+
+    # cleanup
+    shutil.rmtree(out_dir)
