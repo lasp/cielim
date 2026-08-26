@@ -9,6 +9,7 @@
 #include "CameraModel.h"
 
 #include <random>
+#include <chrono>
 
 #include "ImageUtils.h"
 #include "Kismet/KismetRenderingLibrary.h"
@@ -19,6 +20,8 @@
 #include "cielim/Shaders/CoverageReduce.h"
 #include "cielim/Shaders/GammaCorrect.h"
 #include "cielim/Utilities/Logging/CielimLoggingMacros.h"
+
+extern ENGINE_API float GAverageFPS;
 
 DECLARE_GPU_STAT_NAMED(CobReductionCalculations, TEXT("CoBReductionCalculations"));
 DECLARE_GPU_STAT_NAMED(CoverageReductionCalculations, TEXT("CoverageReductionCalculations"));
@@ -332,12 +335,16 @@ void ACameraModel::GetImageData(TArray64<uint8> &ImageData)
 	FImage Image;
 
 	this->CameraParams.bIsDiagnosticRun = false;
+	
+	const auto start = std::chrono::high_resolution_clock::now();
 
 	this->SceneCaptureComponent2D->CaptureScene();
 	this->ApplyGammaCorrection();
 
 	// Copy the final render from the render target to Image
 	verify(FImageUtils::GetRenderTargetImage(this->SceneCaptureComponent2D->TextureTarget, Image));
+	
+	const auto end1 = std::chrono::high_resolution_clock::now();
 
 	// Take modified image data from Image and convert/pack and copy to ImageData
 	switch (this->ImageFormat)
@@ -381,6 +388,16 @@ void ACameraModel::GetImageData(TArray64<uint8> &ImageData)
 	default:
 		break;
 	}
+	
+	const auto end2 = std::chrono::high_resolution_clock::now();
+	
+	const auto diff1 = static_cast<float>(std::chrono::duration_cast<std::chrono::milliseconds>(end1 - start).count());
+	const auto diff2 = static_cast<float>(std::chrono::duration_cast<std::chrono::milliseconds>(end2 - start).count());
+	
+	float CurrentFPS = GAverageFPS;
+	
+	UE_LOG(LogCielim, Warning, TEXT("Frame time (before png conversion): %f"), diff1);
+	UE_LOG(LogCielim, Warning, TEXT("Frame time (with png conversion): %f"), diff2);
 }
 
 void ACameraModel::ExtractImage(const FImage &Image, const bool bIsGrayscale, TArray64<uint8> &OutData)
