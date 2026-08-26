@@ -34,9 +34,12 @@ HALF_W = PAGE_W / 2
 SAVE_DPI = 200
 
 # Every piece of figure text -- titles, axis and tick labels, legends, panel labels -- is BODY_PT.
+# It matches the paper's body size so a figure included at scale 1.0 needs no rescaling: scaling
+# a figure in LaTeX scales its text too, and 10 pt text in a figure shrunk to fit is no longer
+# 10 pt on the page.
 # CAPTION_PT is only for the gray provenance footers (see add_footer), which are a record of how the
 # figure was rendered rather than figure content.
-BODY_PT = 10
+BODY_PT = 12
 CAPTION_PT = 8
 
 # Colormap for scene-image displays (a render/real frame shown for viewing, not a numeric compare).
@@ -65,6 +68,10 @@ def apply_showcase_style():
             # NOT "tight": the saved canvas must stay the size the figure was built at, or every
             # figure lands on the page at a slightly different width (and a different text scale).
             "savefig.bbox": "standard",
+            # Embed TrueType rather than matplotlib's default Type 3 fonts: Type 3 is rejected
+            # by many publishers' PDF checks, and vector output is the point of saving a PDF.
+            "pdf.fonttype": 42,
+            "ps.fonttype": 42,
         }
     )
 

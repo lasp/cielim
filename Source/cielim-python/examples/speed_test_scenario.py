@@ -8,8 +8,9 @@ Goal:
     periapse to the radius of apoapse then sets how far into "the body overflows the frame"
     territory the orbit dives.
 
-    Images are captured evenly spaced in time along one full orbit, starting at apoapse, and the
-    per-frame render time is reported so cost can be plotted against apparent size.
+    Images are captured evenly spaced in time along one full orbit, starting at apoapse. The
+    per-frame round-trip time is written to a CSV for examples/speed_test_analysis.py, which
+    plots it against the engine-side timings; this module only generates data.
 
     Pointing is nadir (boresight on the body center), automatically switching to horizon pointing
     (boresight offset onto the lit limb) once the body grows larger than the field of view.
@@ -23,14 +24,10 @@ import os
 import time
 
 import cv2
-import imageio
 import numpy as np
-from matplotlib import pyplot as plt
-from matplotlib.ticker import MaxNLocator
 
 import cielim
 from cielim.utils import orbital_motion
-from cielim.utils import plot_style
 from cielim.utils import rigid_body_kinematics as rbk
 from cielim.utils import scene_dynamics
 from cielim.utils.qe_curve_fit import CONST_AU
@@ -39,6 +36,10 @@ current_file_path = os.path.dirname(__file__)
 
 # Index of the central body in the scene. Index 0 is the sun, auto-created by Scene.__init__.
 CENTRAL_BODY_INDEX = 1
+
+# Per-frame round-trip timings are written here for examples/speed_test_analysis.py. Milliseconds,
+# to match the engine-side instrumentation CSVs exactly, so all three inputs share one format.
+TIMING_CSV_NAME = "cielim_roundtrip.csv"
 
 
 def _true_anomaly_from_mean(mean_anomaly: float, eccentricity: float) -> float:
@@ -122,241 +123,6 @@ def _point_at_body(scene: cielim.Scene, offset_angle: float) -> None:
     scene.set_spacecraft_params(attitude=tuple(rbk.dcm_to_mrp(BN)))
 
 
-def _read_timing_csv(path: str) -> tuple[np.ndarray, dict]:
-    """
-    Read a per-image timing column, and any context columns, out of a CSV.
-
-    Deliberately liberal about the layout, so a timing log from another renderer can be dropped in
-    without reshaping it. Accepts a file with or without a header row. With a header, the column
-    whose name mentions time / duration / render / elapsed / second is the timing; without one, a
-    single column is the timings and a wider file is assumed to be (index, timing).
-
-    Timing values are seconds per image, unless the column name mentions hz / fps / rate, in which
-    case they are read as a rate and inverted.
-
-    A headed file may also carry a phase angle column, picked up by name so that a CSV can be plotted
-    on its own with the same overlay the scenario produces: a column mentioning "phase" is read as
-    the phase angle in degrees.
-
-    Args:
-        path (str): Path to the CSV file.
-
-    Returns:
-        tuple[ndarray, dict]: Per-image render times in seconds, and a context dict that may hold a
-        "phase_angle" array in degrees.
-    """
-    with open(path, newline="") as handle:
-        rows = [row for row in csv.reader(handle) if row and any(field.strip() for field in row)]
-
-    if not rows:
-        raise ValueError(f"No data found in timing CSV {path}.")
-
-    def is_numeric(row):
-        try:
-            [float(field) for field in row]
-            return True
-        except ValueError:
-            return False
-
-    header = None if is_numeric(rows[0]) else [field.strip().lower() for field in rows[0]]
-    data_rows = rows if header is None else rows[1:]
-
-    def column_values(index):
-        return np.array([float(row[index]) for row in data_rows])
-
-    if header is None:
-        timing_column = 0 if len(rows[0]) == 1 else len(rows[0]) - 1
-        name = ""
-    else:
-        keywords = ("time", "duration", "render", "elapsed", "second", "hz", "fps", "rate")
-        matches = [i for i, field in enumerate(header) if any(key in field for key in keywords)]
-        timing_column = matches[0] if matches else (0 if len(header) == 1 else len(header) - 1)
-        name = header[timing_column]
-
-    values = column_values(timing_column)
-    if any(key in name for key in ("hz", "fps", "rate")):
-        values = 1.0 / values
-
-    context = {}
-    if header is not None:
-        found = [i for i, field in enumerate(header) if i != timing_column and "phase" in field]
-        if found:
-            context["phase_angle"] = column_values(found[0])
-
-    return values, context
-
-
-# The phase angle overlay is deliberately recessive: a thin muted line drawn behind the rate curves
-# at low alpha, so it gives the timing something to be read against without competing with it. Its
-# axis and label carry the same color, so the pairing needs no legend entry.
-PHASE_ALPHA = 0.55
-PHASE_COLOR = "#5b7f95"
-
-
-def _overlay_phase_angle(axes, phase_angle=None) -> None:
-    """
-    Overlay the phase angle on a render timing plot, as faint background context.
-
-    It takes the right-hand axis, tinted to match its curve, and sits behind the rate data.
-
-    Args:
-        axes (Axes): The rate axes to overlay onto.
-        phase_angle (ndarray, optional): Phase angle per image, in degrees.
-    """
-    if phase_angle is None or not len(phase_angle):
-        return
-
-    values = np.asarray(phase_angle, dtype=float)
-
-    # The rate axes must be transparent and on top for the overlay to sit behind it.
-    axes.set_zorder(3)
-    axes.patch.set_visible(False)
-
-    phase_axes = axes.twinx()
-    phase_axes.set_zorder(1)
-    phase_axes.patch.set_visible(False)
-
-    phase_axes.plot(
-        np.arange(len(values)),
-        values,
-        color=PHASE_COLOR,
-        alpha=PHASE_ALPHA,
-        linewidth=1.2,
-        zorder=1,
-    )
-
-    phase_axes.set_ylabel("Phase angle [deg]", color=PHASE_COLOR, alpha=0.85)
-    phase_axes.tick_params(axis="y", colors=PHASE_COLOR)
-    for tick_label in phase_axes.get_yticklabels():
-        tick_label.set_alpha(0.85)
-    phase_axes.set_ylim(bottom=0)
-    phase_axes.spines["top"].set_visible(False)
-    phase_axes.spines["right"].set_linewidth(0.6)
-    phase_axes.spines["right"].set_color(PHASE_COLOR)
-    phase_axes.spines["right"].set_alpha(PHASE_ALPHA)
-
-
-def plot_render_timing(
-    render_times: np.ndarray | None = None,
-    csv_path: str | None = None,
-    csv_label: str | None = None,
-    label: str = "cielim",
-    phase_angle: np.ndarray | None = None,
-    output_path: str | None = None,
-    show: bool = False,
-) -> str:
-    """
-    Plot the render rate for each image in Hertz, with the phase angle overlaid on the right axis.
-
-    The phase angle is context, not a second measurement to compare against: it is drawn faint and
-    behind the rate curves so it gives the timing something to be read against without competing
-    with it.
-
-    At least one of render_times and csv_path must be given; passing only csv_path plots the CSV on
-    its own, without running or referring to a scenario.
-
-    Args:
-        render_times (ndarray, optional): Per-image render times in seconds, as returned in the
-            scenario summary under "render_times". Omit to plot a CSV on its own.
-        csv_path (str, optional): CSV holding a per-image timing, plotted alongside render_times or
-            on its own. See _read_timing_csv for the accepted layouts.
-        csv_label (str, optional): Legend label for the CSV series. Defaults to the file stem.
-        label (str): Legend label for the rendered timings.
-        phase_angle (ndarray, optional): Per-image phase angle in degrees, from the scenario summary
-            under "phase_angles". Falls back to a matching CSV column.
-        output_path (str, optional): Where to write the PNG. Defaults to
-            examples/images-speed-test/render_timing.png.
-        show (bool): Whether to show the figure interactively.
-
-    Returns:
-        str: The path the figure was written to.
-    """
-    if render_times is None and csv_path is None:
-        raise ValueError("Nothing to plot: pass render_times, csv_path, or both.")
-
-    plot_style.apply_showcase_style()
-
-    series = []
-    if render_times is not None:
-        series.append((label, np.asarray(render_times, dtype=float)))
-
-    if csv_path is not None:
-        csv_times, csv_context = _read_timing_csv(csv_path)
-        series.append((csv_label or os.path.splitext(os.path.basename(csv_path))[0], csv_times))
-        # An explicit argument wins; the CSV only fills in context that was not supplied.
-        if phase_angle is None:
-            phase_angle = csv_context.get("phase_angle")
-
-    figure, axes = plt.subplots(figsize=plot_style.figsize_single())
-    means = []
-
-    for (series_label, times), color in zip(series, plot_style.SERIES_COLORS):
-        rate = 1.0 / times
-        indices = np.arange(len(rate))
-        mean_rate = rate.mean()
-
-        legend_label = f"{series_label} (mean {mean_rate:.2f} Hz)" if len(series) > 1 else series_label
-        # Per-point markers turn into a solid blob on a long run, so drop them past a readable count.
-        marker = "o" if len(rate) <= 60 else None
-        axes.plot(
-            indices,
-            rate,
-            color=color,
-            linewidth=1.8,
-            marker=marker,
-            markersize=4,
-            label=legend_label,
-            zorder=3,
-        )
-
-        # A reference level, not a gridline, so it is drawn dashed on purpose. It carries no inline
-        # label: the mean rides in the legend for two series and in the title for one, which keeps
-        # it off a curve that hugs its own mean on a long run.
-        axes.axhline(mean_rate, color=color, linewidth=1.0, linestyle="--", alpha=0.7, zorder=2)
-        means.append(mean_rate)
-
-    axes.set_xlabel("Image index")
-    axes.set_ylabel("Render rate [Hz]")
-    axes.set_xlim(-0.5, max(len(times) for _, times in series) - 0.5)
-    axes.margins(x=0.02)
-
-    # Padded around the data rather than resting on a zero baseline: the rates sit in a narrow band
-    # and a zero baseline would flatten the run-to-run structure this plot exists to show.
-    all_rates = np.concatenate([1.0 / np.asarray(times, dtype=float) for _, times in series])
-    axes.set_ylim(0.92 * all_rates.min(), 1.06 * all_rates.max())
-
-    _overlay_phase_angle(axes, phase_angle)
-
-    axes.xaxis.set_major_locator(MaxNLocator(integer=True))
-    axes.grid(True, linewidth=0.5, color="0.85", alpha=0.8)
-    axes.set_axisbelow(True)
-    axes.spines["top"].set_visible(False)
-    for side in ("left", "bottom", "right"):
-        axes.spines[side].set_linewidth(0.6)
-        axes.spines[side].set_color("0.6")
-
-    if len(series) > 1:
-        # The phase overlay lives on a twin axes, which matplotlib's "best" placement cannot see, so
-        # the legend is backed with the surface color instead of relying on landing somewhere clear.
-        axes.legend(loc="best", frameon=True, facecolor="white", edgecolor="none", framealpha=0.85)
-    else:
-        axes.set_title(f"{series[0][0]} render rate per image (mean {means[0]:.2f} Hz)")
-
-    if output_path is None:
-        output_path = os.path.join(current_file_path, "images-speed-test", "render_timing.png")
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    figure.savefig(output_path, dpi=plot_style.SAVE_DPI, bbox_inches="tight")
-
-    if show:
-        plt.show()
-    else:
-        plt.close(figure)
-
-    print(f"Saved render timing plot -> {output_path}")
-
-    return output_path
-
-
 def scene_setup() -> cielim.Scene:
     """
     Build the scene skeleton: a grayscale camera and one central body slot at the inertial origin.
@@ -376,13 +142,14 @@ def scene_setup() -> cielim.Scene:
 
 def speed_test_scenario(
     scene: cielim.Scene,
-    number_of_images: int = 20,
+    number_of_images: int = 100,
     radius_ratio: float = 0.5,
     apoapse_angular_radius: float = 5.0,
     phase_angle: float = 30.0,
     pointing_mode: str = "auto",
     horizon_trigger_fov_fraction: float = 1.0,
     save_images: bool = True,
+    output_directory: str | None = None,
 ) -> dict:
     """
     Render one full orbit of the scene's central body, evenly spaced in time, starting at apoapse.
@@ -410,6 +177,8 @@ def speed_test_scenario(
             angular diameter must exceed before horizon pointing engages. 1.0 means "once the body
             is larger than the field of view".
         save_images (bool): Whether to write the rendered frames to disk.
+        output_directory (str, optional): Where the frames and the timing CSV go. Defaults to
+            examples/images-speed-test/. Point it elsewhere to keep a run out of the repo tree.
 
     Returns:
         dict: Orbit geometry and render timing summary.
@@ -481,9 +250,8 @@ def speed_test_scenario(
     sun_heading = np.cos(phase_angle_rad) * radial + np.sin(phase_angle_rad) * in_plane
     scene.set_celestial_body_params(0, position=tuple(CONST_AU * sun_heading))
 
-    directory_path = os.path.join(current_file_path, "images-speed-test")
-    if save_images:
-        os.makedirs(directory_path, exist_ok=True)
+    directory_path = output_directory or os.path.join(current_file_path, "images-speed-test")
+    os.makedirs(directory_path, exist_ok=True)
 
     min_fov = min(fov)
     horizon_threshold = horizon_trigger_fov_fraction * min_fov
@@ -502,8 +270,6 @@ def speed_test_scenario(
     angular_radii = []
     phase_angles = []
     horizon_frames = 0
-
-    frames = []
 
     for idx in range(number_of_images):
         sample_time = idx * period / number_of_images
@@ -541,7 +307,6 @@ def speed_test_scenario(
         # Written outside the timed block so disk IO does not contaminate the render measurement.
         if save_images and image is not None:
             cv2.imwrite(os.path.join(directory_path, f"speed_test_{idx:03d}.png"), image)
-            frames.append(image)
 
         print(
             f"[{idx:03d}] t {sample_time:9.1f} s  range {orbit_radius * 1e-3:8.3f} km  "
@@ -553,10 +318,19 @@ def speed_test_scenario(
     connector.disconnect()
     #launcher.terminate()
 
-    imageio.mimsave(os.path.join(directory_path, "output.gif"), frames, fps=60, loop=0)
-
     render_times = np.array(render_times)
+
+    # Written unconditionally, not gated on save_images: the point of save_images=False is to time
+    # the path without PNG encoding, and those numbers are exactly what this file is for.
+    timing_csv = os.path.join(directory_path, TIMING_CSV_NAME)
+    with open(timing_csv, "w", newline="") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(["frame_time_ms"])
+        writer.writerows([[f"{value * 1e3:.3f}"] for value in render_times])
+    print(f"Wrote per-frame round-trip timings -> {timing_csv}")
+
     summary = {
+        "timing_csv": timing_csv,
         "number_of_images": number_of_images,
         "render_times": render_times.tolist(),
         "angular_radii": angular_radii,
@@ -607,14 +381,13 @@ if __name__ == "__main__":
     scene.set_lens_params(fov=(5 * np.pi / 180, 5 * np.pi / 180))
     scene.set_sensor_params(resolution=(1024, 1024), exposure=5e-4)
 
-    summary = speed_test_scenario(
+    speed_test_scenario(
         scene,
-        number_of_images=400,
+        number_of_images=201,
         radius_ratio=0.05,
         apoapse_angular_radius=0.57,
         phase_angle=130.0,
     )
 
-    # Pass csv_path=... to overlay a per-image timing log from another renderer or an earlier run,
-    # or call plot_render_timing(csv_path=...) on its own to plot a saved log without a scenario.
-    plot_render_timing(summary["render_times"], phase_angle=summary["phase_angles"])
+    # Plotting lives in examples/speed_test_analysis.py, which reads this run's timing CSV together
+    # with the engine-side ones. Run it after this to get the frame-time breakdown.
