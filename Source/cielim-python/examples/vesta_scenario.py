@@ -260,7 +260,7 @@ def scene_setup() -> cielim.Scene:
     index = scene.add_celestial_body("vesta")
 
     scene.set_celestial_body_params(
-        index, albedo=0.423, mesh_shape="vesta_normalized", mesh_brdf="Lambertian", mesh_radius=262.7 * 1e3
+        index, albedo=0.423, mesh_shape="vesta_normalized", mesh_brdf="Regolith", mesh_radius=262.7 * 1e3
     )
 
     return scene
@@ -375,7 +375,6 @@ def vesta_scenario(number_of_images: int | None = None):
         OUT_DIR, _gen_time_if(lambda s: s not in DISTANT_STAMPS and s not in EXCLUDED_STAMPS),
         real_entries, _real_gray_of, str(SHOWCASE_DIR),
         title_real="real", title_generated="cielim",
-        predicted_of=_predicted_pixel,  # cyan ○ = SPICE-projected Vesta (should match cielim's +)
         # Overall average plus one sub-batch average per observation date (15 ms vs 14 ms exposures).
         average_batches=[("20110717", range(0, 2)), ("20110723", range(2, 6))],
     )
@@ -387,7 +386,6 @@ def vesta_scenario(number_of_images: int | None = None):
         OUT_DIR, _gen_time_if(lambda s: s in DISTANT_STAMPS),
         real_entries, _real_gray_of, str(DISTANT_DIR),
         title_real="real", title_generated="cielim",
-        predicted_of=_predicted_pixel,
     )
     print(f"Saved distant-approach batch comparison ({m} pairs) -> {DISTANT_DIR}")
 

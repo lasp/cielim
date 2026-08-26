@@ -11,6 +11,7 @@ from matplotlib import pyplot as plt
 
 import cielim
 from cielim.utils import image_comparison_toolkit as image_comparison
+from cielim.utils import plot_style as ps
 from cielim.utils import qe_curve_fit as qefit
 from cielim.utils import rigid_body_kinematics as rbk
 
@@ -273,7 +274,7 @@ def compare_distant_objects(tol_s: float = 60.0):
             title_real="real", title_generated="cielim",
         )
         dx, dy = info["offset"]
-        fig.savefig(DISTANT_DIR / f"distant_{_stamp(et)}_dx{dx:+d}_dy{dy:+d}.png", dpi=200, bbox_inches="tight")
+        ps.save_figure(fig, DISTANT_DIR / f"distant_{_stamp(et)}_dx{dx:+d}_dy{dy:+d}.png")
         plt.close(fig)
         n += 1
     return n
@@ -403,7 +404,6 @@ def bennu_scenario(number_of_images: int | None = None):
         OUT_DIR, _gen_time, _real_entries(), _real_gray_of, str(SHOWCASE_DIR),
         title_real="real", title_generated="cielim",
         average_exclude={0},  # drop image 0 from the average (its individual plots are kept)
-        predicted_of=_predicted_pixel,  # cyan ○ = SPICE-projected Bennu (should match cielim's +)
     )
     print(f"Saved real-vs-generated batch comparison ({n} pairs) -> {SHOWCASE_DIR}")
 

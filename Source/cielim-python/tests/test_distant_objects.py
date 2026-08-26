@@ -4,8 +4,10 @@ import cv2
 import numpy as np
 import pytest
 from matplotlib import pyplot as plt
+from matplotlib.lines import Line2D
 
 import cielim
+from cielim.utils import image_comparison_toolkit as image_comparison
 from cielim.utils import plot_style as ps
 
 # Read at import time so it survives pytest.main() re-importing this file as a module.
@@ -1014,6 +1016,18 @@ def test_distant_object_occluded_by_mesh(cielim_connection):
     )
 
 
+def _report_params(name, **facts):
+    """Echo the scene/camera settings showcase figure ``name`` was rendered with to stdout.
+
+    NOT drawn on the figure — the settings live in the ``Reference image`` section of
+    ``docs/distant_objects.tex``, so the paper carries them in text rather than as small print baked
+    into the image. Printing them keeps that sheet checkable: run the showcase with ``pytest -s`` and
+    diff what it reports against what the sheet claims. Several of these are derived (the transition
+    distances, the thresholds), so they move whenever the model does.
+    """
+    print(f"[showcase] {name}: " + "  ".join(f"{k}={v}" for k, v in facts.items()))
+
+
 # ---------------------------------------------------------------------------
 # Showcase: page-ready distant-object demo image (opt-in via the showcase_dir env var)
 # ---------------------------------------------------------------------------
@@ -1021,42 +1035,108 @@ def test_distant_object_occluded_by_mesh(cielim_connection):
 
 @pytest.mark.showcase
 def test_showcase_distant_objects(cielim_connection):
-    """Page pair: a distant-planets scene (sub-pixel bodies + a rasterized mesh) beside a resolved
-    target. Scene images are shown in native color (renders displayed for viewing)."""
+    """The mesh -> distant handover, at low and high phase angle.
+
+    Each row walks the camera out through that phase angle's own transition distance, showing the
+    same fixed-size crop at every range so the size change is directly comparable. The point of the
+    pair is why the threshold has to grow with phase angle: at high alpha only a thin crescent is
+    lit, so the body's *bounding box* is still several pixels across when its visible signal has
+    already gone sub-pixel.
+    """
     ps.apply_showcase_style()
     connector = cielim_connection
 
-    # (a) Distant planets in/out of frame + a nearer rasterized mesh (same layout as the multibody test).
-    multi = scene_with_bodies(
-        0,
-        [
-            {"name": "rasterized", "position": [0, 0, 2e6]},
-            {"name": "distant_right", "position": [1.41e6, 0, 20e6]},
-            {"name": "distant_left", "position": [-1.41e6, 0, 20e6]},
-            {"name": "distant_offscreen", "position": [5.29e6, 0, 20e6]},
-        ],
+    # Multiples of the transition distance. The far column sits well past d_t on purpose: coverage
+    # saturates at 1 just after the transition (which is what makes the handover photometrically
+    # continuous), so the point source does not begin to dim until some way beyond it.
+    factors = [0.2, 0.45, 0.9, 1.05, 3.0]
+    rows = [(0, "low phase\n" + r"$\alpha=0\degree$"), (135, "high phase\n" + r"$\alpha=135\degree$")]
+    exposure, half = 1e-4, 26
+
+    # Full text width exactly, so the grid drops onto the page at scale 1.0 and its 10 pt labels
+    # print at 10 pt. Height = the two rows of square panels plus room for their two-line titles
+    # (without it the titles land on the row above) and one line for the rule label underneath.
+    # No figure title: what the grid shows is described in docs/distant_objects.tex.
+    panel_w = ps.PAGE_W / len(factors)
+    title_h = 2 * 1.35 * ps.BODY_PT / 72
+    fig, axes = plt.subplots(
+        len(rows), len(factors), figsize=(ps.PAGE_W, len(rows) * (panel_w + title_h) + 0.45)
     )
-    connector.send_init_request()
-    render_frame(connector, multi)  # warm-up
-    multi_img, _, _ = render_frame(connector, multi)
 
-    # (b) A resolved target: camera well inside the mesh transition so the sphere is rasterized.
-    resolved = default_scene(2e5)
-    connector.send_init_request()
-    render_frame(connector, resolved)  # warm-up
-    resolved_img, _, _ = render_frame(connector, resolved)
+    for row, (phase_angle_deg, row_label) in enumerate(rows):
+        transition = compute_transition_distance(phase_angle_deg=phase_angle_deg)
+        threshold = _pixel_size_threshold(phase_angle_deg)
 
-    fig, axes = plt.subplots(1, 2, figsize=ps.figsize_pair(aspect=0.42))
-    for ax, img, title in [
-        (axes[0], multi_img, "Distant bodies + rasterized mesh"),
-        (axes[1], resolved_img, "Resolved target"),
-    ]:
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if img.ndim == 3 else img
-        ax.imshow(gray, cmap=ps.SCENE_CMAP, vmin=0, vmax=255, interpolation="nearest")
-        ax.set_title(title)
-        ax.axis("off")
-    fig.suptitle("Distant objects")
-    plt.tight_layout()
+        crops = []
+        for factor in factors:
+            scene = scene_with_phase_angle(
+                transition * factor, phase_angle_deg, "Lambertian", exposure_time=exposure
+            )
+            connector.send_init_request()
+            render_frame(connector, scene)  # warm-up; the first frame after an init can be blank
+            image, _, _ = render_frame(connector, scene)
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if image.ndim == 3 else image
+            peak_y, peak_x = np.unravel_index(np.argmax(gray), gray.shape)
+            y = int(np.clip(peak_y, half, gray.shape[0] - half))
+            x = int(np.clip(peak_x, half, gray.shape[1] - half))
+            lit_y, lit_x = np.nonzero(gray)
+            footprint = (
+                f"{lit_x.max() - lit_x.min() + 1}x{lit_y.max() - lit_y.min() + 1}" if len(lit_x) else "-"
+            )
+            crops.append((gray[y - half : y + half, x - half : x + half], footprint))
+
+        # One display range per row, set by that row's brightest panel. Within a row the relative
+        # brightnesses are untouched, so the photometric continuity across the handover still reads;
+        # normalising per row is only what keeps the dim high-phase crescent visible at all.
+        row_max = max(int(crop.max()) for crop, _ in crops) or 255
+
+        for col, (factor, (crop, footprint)) in enumerate(zip(factors, crops)):
+            ax = axes[row][col]
+            ax.imshow(crop, cmap=ps.SCENE_CMAP, vmin=0, vmax=row_max, interpolation="nearest")
+            # The label is the *measured* lit footprint. Past d_t the shader draws a pixel-snapped
+            # quad, so that footprint stops shrinking with range and only the brightness falls —
+            # labelling those panels with the projected size (threshold * d_t / d, the quantity the
+            # transition test measures) would describe something that is not on screen.
+            is_distant = factor >= 1.0
+            kind = "distant" if is_distant else "mesh"
+            ax.set_title(f"{factor:g}" + r"$\times d_t$" + f"\n{kind}  {footprint}")
+            ax.axis("off")
+
+        axes[row][0].text(
+            -0.10, 0.5, row_label, transform=axes[row][0].transAxes,
+            rotation=90, va="center", ha="center",
+        )
+
+    # h_pad keeps the two-line panel titles off the row above. Lay out before reading get_position()
+    # for the rule below, so the rule is placed against the final axes geometry.
+    fig.tight_layout(h_pad=2.2)
+
+    # Rule marking where the path flips, drawn between the last mesh column and the first distant one.
+    x_rule = 0.5 * (
+        axes[0][factors.index(0.9)].get_position().x1 + axes[0][factors.index(1.05)].get_position().x0
+    )
+    y_bottom_row = axes[1][0].get_position().y0
+    fig.add_artist(Line2D([x_rule, x_rule], [y_bottom_row, axes[0][0].get_position().y1],
+                          color="0.55", linewidth=0.8))
+    fig.text(x_rule, y_bottom_row - 0.03, r"$d_t$: mesh $\rightarrow$ distant",
+             ha="center", va="top", color="0.4")
+
+    _report_params(
+        "distant_objects",
+        fov_deg=f"{np.degrees(fov_x):g}x{np.degrees(fov_y):g}",
+        resolution=f"{width}x{height}",
+        mean_radius_m=f"{mean_radius:g}",
+        geometric_albedo=f"{albedo:g}",
+        brdf="Lambertian",
+        exposure_s=f"{exposure:g}",
+        crop_px=f"{2 * half}x{2 * half}",
+        factors_of_d_t=",".join(f"{f:g}" for f in factors),
+        d_t_alpha0_m=f"{compute_transition_distance(phase_angle_deg=0):.3g}",
+        d_t_alpha135_m=f"{compute_transition_distance(phase_angle_deg=135):.3g}",
+        threshold_px=f"{_pixel_size_threshold(0):g}/{_pixel_size_threshold(135):.1f}",
+        display="per-row normalised",
+        panel_label="lit footprint in px (distant = snapped quad, constant with range)",
+    )
     ps.save_showcase(fig, "distant_objects")
     plt.close(fig)
 
@@ -1064,5 +1144,5 @@ def test_showcase_distant_objects(cielim_connection):
 if __name__ == "__main__":
     # Set the env var BEFORE pytest re-imports this file so the module-level
     # `show_plots` reads it as True in the freshly-imported test module.
-    os.environ["show_plots"] = "True"
+    os.environ["show_plots"] = "False"
     pytest.main([__file__, "-v"])

@@ -20,12 +20,14 @@ Goal:
 
 import csv
 import os
+import re
 import time
 
 import cv2
 import numpy as np
+import matplotlib as mpl
 from matplotlib import pyplot as plt
-from matplotlib.ticker import MaxNLocator
+from matplotlib.ticker import FuncFormatter, LogLocator, MaxNLocator, NullFormatter
 
 import cielim
 from cielim.utils import orbital_motion
@@ -130,8 +132,10 @@ def _read_timing_csv(path: str) -> tuple[np.ndarray, dict]:
     whose name mentions time / duration / render / elapsed / second is the timing; without one, a
     single column is the timings and a wider file is assumed to be (index, timing).
 
-    Timing values are seconds per image, unless the column name mentions hz / fps / rate, in which
-    case they are read as a rate and inverted.
+    Timing values are seconds per image unless the column name says otherwise: a name mentioning
+    hz / fps / rate is read as a rate and inverted, and one ending in a millisecond or microsecond
+    unit (``frame_time_ms``, ``..._us``) is scaled accordingly. Without this a log in milliseconds
+    would be read as seconds and plot a thousand times too slow.
 
     A headed file may also carry a phase angle column, picked up by name so that a CSV can be plotted
     on its own with the same overlay the scenario produces: a column mentioning "phase" is read as
@@ -175,6 +179,14 @@ def _read_timing_csv(path: str) -> tuple[np.ndarray, dict]:
     values = column_values(timing_column)
     if any(key in name for key in ("hz", "fps", "rate")):
         values = 1.0 / values
+    else:
+        # Match a unit as a trailing token ("frame_time_ms"), not a bare substring, so a column
+        # called "frames" or "samples" is not mistaken for milliseconds.
+        unit = re.split(r"[^a-z]+", name)[-1] if name else ""
+        if unit in ("ms", "msec", "millisecond", "milliseconds"):
+            values = values / 1e3
+        elif unit in ("us", "usec", "microsecond", "microseconds"):
+            values = values / 1e6
 
     context = {}
     if header is not None:
@@ -183,6 +195,25 @@ def _read_timing_csv(path: str) -> tuple[np.ndarray, dict]:
             context["phase_angle"] = column_values(found[0])
 
     return values, context
+
+
+# Categorical series colors, sampled from the repo's inferno convention. The three-series set was
+# checked with the dataviz palette validator against a light surface: lightness band, chroma floor,
+# CVD separation (worst adjacent dE 16.3 deutan / 14.0 tritan) and normal-vision floor all pass. It
+# warns only on contrast for the warm end (2.24:1), for which the legend's direct labels are the
+# required relief. Two series keep plot_style.SERIES_COLORS so existing figures do not change.
+SERIES_PALETTE_3 = tuple(mpl.cm.inferno(v) for v in (0.38, 0.58, 0.76))
+
+
+def _series_colors(count):
+    """Distinct colors for ``count`` series, in a fixed order (never cycled)."""
+    if count <= 2:
+        return plot_style.SERIES_COLORS
+    if count == 3:
+        return SERIES_PALETTE_3
+    # Beyond three, spread across the same validated span. Not run through the validator, so keep
+    # the series count low; past a handful, facet instead of adding hues.
+    return tuple(mpl.cm.inferno(v) for v in np.linspace(0.38, 0.76, count))
 
 
 # The phase angle overlay is deliberately recessive: a thin muted line drawn behind the rate curves
@@ -237,8 +268,8 @@ def _overlay_phase_angle(axes, phase_angle=None) -> None:
 
 def plot_render_timing(
     render_times: np.ndarray | None = None,
-    csv_path: str | None = None,
-    csv_label: str | None = None,
+    csv_path: str | list[str] | None = None,
+    csv_label: str | list[str] | None = None,
     label: str = "cielim",
     phase_angle: np.ndarray | None = None,
     output_path: str | None = None,
@@ -257,9 +288,10 @@ def plot_render_timing(
     Args:
         render_times (ndarray, optional): Per-image render times in seconds, as returned in the
             scenario summary under "render_times". Omit to plot a CSV on its own.
-        csv_path (str, optional): CSV holding a per-image timing, plotted alongside render_times or
-            on its own. See _read_timing_csv for the accepted layouts.
-        csv_label (str, optional): Legend label for the CSV series. Defaults to the file stem.
+        csv_path (str | list[str], optional): One CSV, or several, holding a per-image timing;
+            plotted alongside render_times or on their own. See _read_timing_csv for the layouts.
+        csv_label (str | list[str], optional): Legend label(s) for the CSV series, in the same order.
+            Each defaults to its file stem.
         label (str): Legend label for the rendered timings.
         phase_angle (ndarray, optional): Per-image phase angle in degrees, from the scenario summary
             under "phase_angles". Falls back to a matching CSV column.
@@ -279,17 +311,24 @@ def plot_render_timing(
     if render_times is not None:
         series.append((label, np.asarray(render_times, dtype=float)))
 
-    if csv_path is not None:
-        csv_times, csv_context = _read_timing_csv(csv_path)
-        series.append((csv_label or os.path.splitext(os.path.basename(csv_path))[0], csv_times))
-        # An explicit argument wins; the CSV only fills in context that was not supplied.
+    csv_paths = [csv_path] if isinstance(csv_path, str) else list(csv_path or [])
+    csv_labels = [csv_label] if isinstance(csv_label, str) else list(csv_label or [])
+    for index, path in enumerate(csv_paths):
+        csv_times, csv_context = _read_timing_csv(path)
+        label_for_csv = (
+            csv_labels[index]
+            if index < len(csv_labels) and csv_labels[index]
+            else os.path.splitext(os.path.basename(path))[0]
+        )
+        series.append((label_for_csv, csv_times))
+        # An explicit argument wins; the CSVs only fill in context that was not supplied.
         if phase_angle is None:
             phase_angle = csv_context.get("phase_angle")
 
     figure, axes = plt.subplots(figsize=plot_style.figsize_single())
     means = []
 
-    for (series_label, times), color in zip(series, plot_style.SERIES_COLORS):
+    for (series_label, times), color in zip(series, _series_colors(len(series))):
         rate = 1.0 / times
         indices = np.arange(len(rate))
         mean_rate = rate.mean()
@@ -319,10 +358,46 @@ def plot_render_timing(
     axes.set_xlim(-0.5, max(len(times) for _, times in series) - 0.5)
     axes.margins(x=0.02)
 
-    # Padded around the data rather than resting on a zero baseline: the rates sit in a narrow band
-    # and a zero baseline would flatten the run-to-run structure this plot exists to show.
+    # Log base 10 on the rate axis: render rates span a wide dynamic range across scenes, and a ratio
+    # (twice as fast) should read as the same distance anywhere on the axis. Only this axis is log —
+    # the phase-angle overlay stays linear, since it is an angle on a bounded 0-180 range.
+    #
+    # Padded around the data rather than resting on a zero baseline (which log cannot represent
+    # anyway): the rates sit in a narrow band and a zero baseline would flatten the run-to-run
+    # structure this plot exists to show.
     all_rates = np.concatenate([1.0 / np.asarray(times, dtype=float) for _, times in series])
+    axes.set_yscale("log", base=10)
     axes.set_ylim(0.92 * all_rates.min(), 1.06 * all_rates.max())
+
+    # Plain numbers rather than powers of ten, so the axis reads as Hz.
+    plain = FuncFormatter(lambda value, _pos: f"{value:g}")
+    axes.yaxis.set_major_locator(LogLocator(base=10.0))
+    axes.yaxis.set_major_formatter(plain)
+
+    # Decade-only ticks leave a sub-decade run nearly bare, but labelling all nine subdivisions
+    # collides into an unreadable band once the span grows. Thin the labelled subdivisions as the
+    # span widens: everything under a decade, then 2/3/5, then the decades alone.
+    low, high = axes.get_ylim()
+    decades = np.log10(high / low)
+    if decades < 1.0:
+        minor_subs = tuple(np.arange(2, 10) * 0.1)
+    elif decades < 2.5:
+        minor_subs = (0.2, 0.3, 0.5)
+    else:
+        minor_subs = ()
+    axes.yaxis.set_minor_locator(LogLocator(base=10.0, subs=tuple(np.arange(2, 10) * 0.1)))
+    if minor_subs:
+        axes.yaxis.set_minor_formatter(
+            FuncFormatter(
+                lambda value, _pos: (
+                    f"{value:g}"
+                    if any(np.isclose(value / 10 ** np.floor(np.log10(value)) / 10, sub) for sub in minor_subs)
+                    else ""
+                )
+            )
+        )
+    else:
+        axes.yaxis.set_minor_formatter(NullFormatter())
 
     _overlay_phase_angle(axes, phase_angle)
 
@@ -335,16 +410,28 @@ def plot_render_timing(
         axes.spines[side].set_color("0.6")
 
     if len(series) > 1:
-        # The phase overlay lives on a twin axes, which matplotlib's "best" placement cannot see, so
-        # the legend is backed with the surface color instead of relying on landing somewhere clear.
-        axes.legend(loc="best", frameon=True, facecolor="white", edgecolor="none", framealpha=0.85)
+        # Above the axes rather than inside: with several dense series there is no clear interior
+        # spot, and matplotlib's "best" cannot even see the phase overlay (it lives on a twin axes).
+        # Multi-series figures carry no title, so this band is free.
+        axes.legend(
+            loc="lower center",
+            bbox_to_anchor=(0.5, 1.01),
+            # Two per row: three "label (mean N Hz)" entries do not fit the text width in one
+            # row, and the canvas is saved at its built size so anything wider is simply cut.
+            ncol=min(len(series), 2),
+            frameon=False,
+            borderaxespad=0.0,
+        )
     else:
         axes.set_title(f"{series[0][0]} render rate per image (mean {means[0]:.2f} Hz)")
 
     if output_path is None:
         output_path = os.path.join(current_file_path, "images-speed-test", "render_timing.png")
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    figure.savefig(output_path, dpi=plot_style.SAVE_DPI, bbox_inches="tight")
+    # save_figure writes the canvas at its built size with no tight crop, so anything outside the
+    # axes (here the x label and the two y labels) has to be laid out before saving or it is cut off.
+    figure.tight_layout()
+    plot_style.save_figure(figure, output_path)
 
     if show:
         plt.show()
@@ -598,16 +685,26 @@ if __name__ == "__main__":
 
     # Camera: field of view (x, y) in radians, sensor resolution in pixels, exposure in seconds.
     scene.set_lens_params(fov=(20 * np.pi / 180, 15 * np.pi / 180))
-    scene.set_sensor_params(resolution=(2000, 1500), exposure=5e-4)
+    scene.set_sensor_params(resolution=(1024, 1024), exposure=5e-4)
 
     summary = speed_test_scenario(
         scene,
-        number_of_images=450,
+        number_of_images=400,
         radius_ratio=0.05,
         apoapse_angular_radius=0.57,
         phase_angle=130.0,
     )
 
-    # Pass csv_path=... to overlay a per-image timing log from another renderer or an earlier run,
-    # or call plot_render_timing(csv_path=...) on its own to plot a saved log without a scenario.
-    plot_render_timing(summary["render_times"], phase_angle=summary["phase_angles"])
+    # Saved runs to compare this one against. csv_path takes one path or several; each series is
+    # labelled from its file stem unless csv_label overrides it. Call plot_render_timing(csv_path=...)
+    # on its own to plot saved logs without running a scenario at all.
+    saved_runs = [
+        os.path.join(current_file_path, "images-speed-test", name)
+        for name in ("cielim_mac_nopng.csv", "cielim_mac_withpng.csv")
+    ]
+    plot_render_timing(
+        summary["render_times"],
+        csv_path=[path for path in saved_runs if os.path.exists(path)],
+        csv_label=["mac, no PNG", "mac, with PNG"],
+        phase_angle=summary["phase_angles"],
+    )

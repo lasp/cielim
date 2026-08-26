@@ -479,9 +479,10 @@ def ghost_window_peak(gray, ghost_idx=3, half=GHOST_HALF):
     return region_peak(gray, g, half)
 
 
-def _ghost_scene(exposure, stray_light=None):
+def _ghost_scene(exposure, stray_light=None, sun_offset_x=None):
     """Off-center base scene with the GHOST_VISIBLE preset (faint corona, brighter ghosts)."""
-    return stray_light_scene(sun_offset=(SUN_OFFSET_X, 0.0), exposure=exposure, stray_light=_ghost_params(stray_light))
+    offset = SUN_OFFSET_X if sun_offset_x is None else sun_offset_x
+    return stray_light_scene(sun_offset=(offset, 0.0), exposure=exposure, stray_light=_ghost_params(stray_light))
 
 
 def _core_and_ghosts(connector, exposure, stray_light=None):
@@ -870,6 +871,47 @@ SWEEP_BAFFLE = 35.0  # baffle shield (deg); stray-light cutoff = FoV/2 + this = 
 SWEEP_CAL_ANGLE = 8  # exposure-calibration angle (in frame, near the edge, ghosts clear of the core)
 SWEEP_ANGLES = [-55, -30, -16, -8, 0, 8, 16, 30, 55]
 
+# The showcase filmstrip shows one side only, walking out from boresight: 0 and 8 deg with the sun
+# in frame, 16 and 32 deg with it outside the frame but still inside the 45 deg shield cutoff.
+# Kept separate from SWEEP_ANGLES, which test_ghost_sweep_across_boresight needs for its negative
+# and beyond-cutoff regime assertions.
+SHOWCASE_SWEEP_ANGLES = [0, 8, 16, 32]
+
+# The showcase flare is tuned to *illustrate* the model rather than to reproduce the test baseline:
+# more symmetric rays, a fainter and tighter corona so it does not wash out the ghosts, graded ghost
+# sizes so the four ghosts separate into a legible chain, and the sun pushed further off-axis (0.88
+# of the frame half-width, so the core still sits fully inside the frame) to give that chain room to
+# spread. The ghost COUNT is fixed at four in the shader and cannot be raised from here.
+SHOWCASE_FLARE_OFFSET_X = 0.88 * np.tan(FOV / 2) * AU
+
+# Fixed rather than exposure-calibrated: calibrate_exposure targets a ghost window, and with ghosts
+# 1 and 3 deliberately collapsed below a pixel it chases their near-zero signal and floods the frame.
+SHOWCASE_FLARE_EXPOSURE = 4.0e-10
+
+# The showcase flare is tuned to *illustrate* the model rather than to reproduce the test baseline:
+# a large diffuse core, a dilute glow, soft rays, and a couple of big ghosts instead of a tight chain.
+#
+# Ghost sizing is counter-intuitive: the blob's support radius is 0.01^(1/(e_k*sigma_k)), so a LARGER
+# sigma gives a LARGER, softer blob, while brightness falls as sigma^-n. Ghosts 1 and 3 are given a
+# tiny sigma, which shrinks their support below a pixel and effectively removes them; ghosts 2 and 4
+# are grown. The ghost COUNT is fixed at four in the shader, so "fewer" can only be done this way.
+# ghost_brightness_size_exponent is dropped to 0.3 so the grown ghosts do not dim into the corona.
+#
+# The sun sits at 0.88 of the frame half-width: with the baseline baffle_shield_angle of 0 the cutoff
+# is a hard cut at the FoV half-angle, so anything past 1.0 culls the flare entirely (black frame).
+SHOWCASE_FLARE_TUNING = {
+    "core_size": 0.9,  # large, soft core (1/e radius = core_size/8 in UV; the frame spans 0.5)
+    "corona_intensity": 0.004,  # faint, so the corona does not flood the frame into a grey wash
+    "corona_falloff_exponent": 1.4,
+    "num_rays": 6.0,  # even keeps the star mirror-symmetric
+    "ray_sharpness": 4.0,  # broad, soft lobes (24 baseline is crisp)
+    "ray_weight": 0.5,
+    "ghost_size": 1.0,
+    "ghost_relative_sizes": (0.25, 1.0, 0.25, 0.9),  # 1 and 3 collapsed away; 2 and 4 grown large
+    "ghost_brightness_size_exponent": 0.3,
+    "ghost_transmittance": 5.0,
+}
+
 
 def _sweep_scene(angle_deg, exposure, extra=None):
     """A sweep/off-axis scene: sun at ``angle_deg`` off boresight, narrow FoV, baffle shield set."""
@@ -1069,6 +1111,52 @@ def test_ghost_parameters_respond_off_axis(cielim_connection):
     assert signals[-1] > signals[0], f"Larger ghostSize should raise the off-axis ghost band: {signals}"
 
 
+def _param_caption(params, **extra):
+    """Compact record of the stray-light parameters a showcase figure was rendered with.
+
+    NOT drawn on the figure — the settings live in the ``Reference images`` section of
+    ``docs/stray_light.tex``, so the paper carries them in text rather than as small print baked into
+    the image. This record is echoed to stdout by :func:`_report_params` when the showcase runs, so
+    retuning surfaces the new values to copy into that sheet instead of letting it drift.
+
+    Args:
+        params (dict): Effective stray-light tuning (the merged STRAY_LIGHT_TUNING + overrides).
+        **extra: Additional scene facts to append (exposure, FoV, sun placement, ...).
+    """
+    order = (
+        "core_size",
+        "corona_intensity",
+        "corona_falloff_exponent",
+        "num_rays",
+        "ray_sharpness",
+        "ray_weight",
+        "ghost_size",
+        "ghost_relative_sizes",
+        "ghost_transmittance",
+        "ghost_brightness_size_exponent",
+        "baffle_shield_angle",
+    )
+
+    def fmt(value):
+        if isinstance(value, (tuple, list)):
+            return "(" + ",".join(f"{v:g}" for v in value) + ")"
+        return f"{value:g}" if isinstance(value, float) else str(value)
+
+    items = [f"{key}={fmt(params[key])}" for key in order if key in params]
+    items += [f"{key}={value}" for key, value in extra.items()]
+    return "  ".join(items)
+
+
+def _report_params(name, params, **extra):
+    """Echo the parameter record for showcase figure ``name`` to stdout.
+
+    The figures themselves are unannotated: these settings belong in
+    ``docs/stray_light.tex``. Printing them keeps that sheet checkable — run the showcase with
+    ``pytest -s`` and diff what it reports against what the sheet claims.
+    """
+    print(f"[showcase] {name}: {_param_caption(params, **extra)}")
+
+
 # ===========================================================================
 # Showcase: page-ready stray-light demo images (opt-in via the showcase_dir env var)
 # ===========================================================================
@@ -1084,15 +1172,26 @@ def test_showcase_stray_light(cielim_connection):
     ps.apply_showcase_style()
 
     # (1) One off-center flare showing the core, ghost chain, corona, and rays/streaks together.
-    exp = calibrate_exposure(
-        cielim_connection, lambda e: _ghost_scene(e), target=GHOST_TARGET, measure=ghost_window_peak
-    )
-    gray = render_gray(cielim_connection, _ghost_scene(exp))
-    fig, ax = plt.subplots(figsize=ps.figsize_single(aspect=1.0))
+    def _flare_scene(exposure):
+        return _ghost_scene(exposure, SHOWCASE_FLARE_TUNING, sun_offset_x=SHOWCASE_FLARE_OFFSET_X)
+
+    exp = SHOWCASE_FLARE_EXPOSURE
+    gray = render_gray(cielim_connection, _flare_scene(exp))
+    # Half text width: one square render printed at the size of a single side-by-side panel. At full
+    # width it ran the height of a page, which is what made it dominate everything it sat next to.
+    # Bare — no title, no annotation: what the figure shows and what it was rendered with are both
+    # described in docs/stray_light.tex, so nothing in the image can go stale against the settings.
+    fig, ax = plt.subplots(figsize=ps.figsize_half())
     ax.imshow(gray, cmap=ps.SCENE_CMAP, vmin=0, vmax=255)
-    ax.set_title("Stray light — sun core, ghost chain, corona, rays")
     ax.axis("off")
-    plt.tight_layout()
+    fig.tight_layout()
+    _report_params(
+        "stray_light_flare",
+        _ghost_params(SHOWCASE_FLARE_TUNING),
+        exposure_s=f"{exp:.3g}",
+        fov_deg=f"{np.degrees(FOV):g}",
+        sun_off_axis=f"{SHOWCASE_FLARE_OFFSET_X / (np.tan(FOV / 2) * AU):.2f}x_half_frame",
+    )
     ps.save_showcase(fig, "stray_light_flare")
     plt.close(fig)
 
@@ -1100,14 +1199,25 @@ def test_showcase_stray_light(cielim_connection):
     exp_sweep = cached_exposure(
         cielim_connection, "sweep", lambda e: _sweep_scene(SWEEP_CAL_ANGLE, e), target=GHOST_TARGET, measure=ghost_window_peak
     )
-    grays = [render_gray(cielim_connection, _sweep_scene(a, exp_sweep)) for a in SWEEP_ANGLES]
-    fig2, axes = plt.subplots(1, len(SWEEP_ANGLES), figsize=ps.figsize_strip(len(SWEEP_ANGLES)))
-    for ax, g, a in zip(axes, grays, SWEEP_ANGLES):
+    angles = SHOWCASE_SWEEP_ANGLES
+    grays = [render_gray(cielim_connection, _sweep_scene(a, exp_sweep)) for a in angles]
+    # Full text width exactly: the strip spans the text block at scale 1.0, so its 10 pt labels
+    # print at 10 pt and the panels never have to be shrunk to fit. Untitled — what the strip shows,
+    # and the FoV / baffle / cutoff it shows it at, are in docs/stray_light.tex.
+    fig2, axes = plt.subplots(1, len(angles), figsize=ps.figsize_strip(len(angles), suptitle=False))
+    for ax, g, a in zip(axes, grays, angles):
+        ax.set_title(f"{a}°")  # kept: says which panel is which — the swept variable, not a setting
         ax.imshow(g, cmap=ps.SCENE_CMAP, vmin=0, vmax=255)
-        ax.set_title(f"{a:+d}°")
         ax.axis("off")
-    fig2.suptitle("Off-boresight sun sweep (stray light vs angle)")
-    plt.tight_layout()
+    fig2.tight_layout()
+    _report_params(
+        "stray_light_sweep",
+        _ghost_params({"baffle_shield_angle": SWEEP_BAFFLE}),
+        exposure_s=f"{exp_sweep:.3g}",
+        fov_deg=f"{np.degrees(SWEEP_FOV):g}",
+        cutoff_deg=f"{np.degrees(SWEEP_FOV) / 2 + SWEEP_BAFFLE:g}",
+        angles_deg=",".join(str(a) for a in angles),
+    )
     ps.save_showcase(fig2, "stray_light_sweep")
     plt.close(fig2)
 

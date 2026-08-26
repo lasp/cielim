@@ -334,17 +334,27 @@ def test_SignalGain(cielim_connection: cielim.Connector, default_scene: cielim.S
 
 
 def _render(connector, scene):
-    """Send a scene and return the rendered image (BGR)."""
+    """Send a scene and return the rendered image (BGR).
+
+    The first image requested after an init can come back blank (the same reason Connector.connect
+    renders and discards a dummy scene), which silently turns a showcase panel black. Request twice
+    and keep the second.
+    """
     connector.send_init_request()
     connector.send_frame(scene.get_scene())
+    connector.request_image_for_camera_id(1, True, False)
     image, _, _ = connector.request_image_for_camera_id(1, True, False)
     return image
 
 
-def _show_scene(ax, image_bgr, title):
-    """Display a rendered scene image (native color, not inferno) on ``ax``."""
+def _show_scene(ax, image_bgr, title, title_width_in=ps.PAGE_W):
+    """Display a rendered scene image (native color, not inferno) on ``ax``.
+
+    The title is wrapped to ``title_width_in`` so it stays 10 pt instead of setting the figure's
+    width (figures are built at the page's text width and saved at that size).
+    """
     ax.imshow(cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB), interpolation="nearest")
-    ax.set_title(title)
+    ax.set_title(ps.wrap_to_width(title, title_width_in, ps.BODY_PT, family="sans"))
     ax.axis("off")
 
 
@@ -369,9 +379,14 @@ def test_showcase_sensor_effects(cielim_connection, default_scene):
 
     image = _render(connector, scene)
 
-    fig, ax = plt.subplots(figsize=ps.figsize_single(aspect=1.0))
-    _show_scene(ax, image, "Sensor model — read noise, dark current, dead/stuck pixels, cosmic rays")
-    plt.tight_layout()
+    # Half text width — one square render, printed at the size of a single side-by-side panel rather
+    # than blown up to a full page (see plot_style: figures are placed at scale 1.0). The title stays
+    # 10 pt and wraps, so the figure carries the height for its extra lines.
+    title = "Sensor model — read noise, dark current, dead/stuck pixels, cosmic rays"
+    lines = ps.wrap_to_width(title, ps.HALF_W, ps.BODY_PT, family="sans").count("\n") + 1
+    fig, ax = plt.subplots(figsize=ps.figsize_half(title_lines=lines))
+    _show_scene(ax, image, title, title_width_in=ps.HALF_W)
+    fig.tight_layout()
     ps.save_showcase(fig, "sensor_effects")
     plt.close(fig)
 
@@ -392,11 +407,13 @@ def test_showcase_lens_effects(cielim_connection, default_scene):
     scene.set_corruption_params(dist_radial=(0.0, 0.0, 0.0), dist_tangent=(0.0, 0.0), psf_sigma=50)
     blurred = _render(connector, scene)
 
+    # Full text width exactly; each panel title wraps within its own third of the strip.
+    panel_w = ps.PAGE_W / 3
     fig, axes = plt.subplots(1, 3, figsize=ps.figsize_strip(3))
-    _show_scene(axes[0], clean, "Clean")
-    _show_scene(axes[1], distorted, "Radial distortion (k1=0.5)")
-    _show_scene(axes[2], blurred, "Gaussian PSF (σ=50)")
+    _show_scene(axes[0], clean, "Clean", title_width_in=panel_w)
+    _show_scene(axes[1], distorted, "Radial distortion (k1=0.5)", title_width_in=panel_w)
+    _show_scene(axes[2], blurred, "Gaussian PSF (σ=50)", title_width_in=panel_w)
     fig.suptitle("Lens models")
-    plt.tight_layout()
+    fig.tight_layout()
     ps.save_showcase(fig, "lens_effects")
     plt.close(fig)
