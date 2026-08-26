@@ -47,6 +47,13 @@ BAND_COLORS = (mpl.cm.inferno(0.38), mpl.cm.inferno(0.58), mpl.cm.inferno(0.76))
 # zoom and its 12 pt text is real text rather than pixels.
 OUTPUT_NAME = "speed_test_breakdown.pdf"
 
+# Square figure, this many pixels on a side at plot_style.SAVE_DPI.
+FIGURE_PX = 1024
+
+# Fixed y range in ms, so figures from different runs can be compared against each other by
+# eye. Pass ylim=None to plot_speed_breakdown to size the axis to the data instead.
+Y_LIMIT_MS = (0.0, 110.0)
+
 
 def read_frame_times(path: str) -> np.ndarray:
     """
@@ -116,6 +123,8 @@ def plot_speed_breakdown(
     skip_initial: int = 1,
     show_legend: bool = True,
     show_xlabel: bool = True,
+    show_ylabel: bool = True,
+    ylim: tuple[float, float] | None = Y_LIMIT_MS,
 ) -> str:
     """
     Plot the stacked frame-time breakdown from the three cumulative timing CSVs.
@@ -133,6 +142,11 @@ def plot_speed_breakdown(
         show_xlabel (bool): Whether to label the x axis. Turn it off for the upper figures of a
             vertical stack, where only the bottom one needs to carry the shared axis name. The tick
             numbers stay either way.
+        show_ylabel (bool): Whether to label the y axis. Turn it off for the right-hand figure of a
+            side-by-side pair, where the left one already names the shared scale.
+        ylim (tuple, optional): Fixed (low, high) y range in ms, so separate runs share one scale
+            and can be compared by eye. None sizes the axis to the data and leaves room for the
+            legend. Values above the top are clipped, and the clipping is reported.
 
     Returns:
         str: The path the figure was written to.
@@ -191,10 +205,9 @@ def plot_speed_breakdown(
     bands = [cumulative[0]] + [cumulative[i] - cumulative[i - 1] for i in range(1, len(cumulative))]
 
     plot_style.apply_showcase_style()
-    # Full text width, but short enough to stack three on one page: a US-letter text block is
-    # 9 in tall, and three figures plus their captions and spacing (~0.5 in each) leaves ~2.5 in
-    # per figure. The default 0.5 aspect would need 9.75 in for the figures alone.
-    figure, axes = plt.subplots(figsize=plot_style.figsize_full(aspect=0.38))
+    # Square, 1024 px on a side at the repo's save dpi.
+    side_in = FIGURE_PX / plot_style.SAVE_DPI
+    figure, axes = plt.subplots(figsize=(side_in, side_in))
 
     # Image number on the common grid, keeping the skipped frames' numbers so the axis still says
     # which image each sample is. When the files differ in length the grid is the coarsest of them,
@@ -220,13 +233,19 @@ def plot_speed_breakdown(
     # the fill it bounds, so it takes an ink tone instead of a fourth hue.
     axes.plot(x, total_ms, color="0.25", linewidth=0.7)
 
-    if show_xlabel:
-        axes.set_xlabel("Image number")
-    axes.set_ylabel("Frame time [ms]")
+    # A blank label instead of no label: a rotated y label reserves horizontal space equal to its
+    # line height whatever the text says, so " " holds exactly the margin the real label would (859
+    # px plot area either way, against 899 px with the label omitted). That keeps every cut of this
+    # figure on an identical plot area, so they can sit side by side without one looking zoomed.
+    axes.set_xlabel("Image number" if show_xlabel else " ")
+    axes.set_ylabel("Frame time [ms]" if show_ylabel else " ")
     axes.set_xlim(float(x[0]), float(x[-1]))
-    axes.xaxis.set_major_locator(MaxNLocator(integer=True))
+    # Tick count scales with the actual width: 3-digit labels at BODY_PT need roughly a third of an
+    # inch each, and crowding them is what turns the axis into an unreadable band.
+    width_in = figure.get_size_inches()[0]
+    axes.xaxis.set_major_locator(MaxNLocator(integer=True, nbins=max(4, int(width_in * 1.6))))
     # A stacked area has to rest on zero, or the bands misrepresent their own proportions.
-    axes.set_ylim(0.0, (1.28 if show_legend else 1.06) * float(total_ms.max()))
+    axes.set_ylim(*ylim) if ylim else axes.set_ylim(0.0, 1.06 * float(total_ms.max()))
 
     axes.grid(True, linewidth=0.5, color="0.85", alpha=0.8)
     axes.set_axisbelow(True)
@@ -239,11 +258,8 @@ def plot_speed_breakdown(
     # relative to the visual stack. Reverse it, and keep it inside the axes to stay compact.
     handles, handle_labels = axes.get_legend_handles_labels()
     if show_legend:
-        axes.legend(
-            handles[::-1],
-            handle_labels[::-1],
+        legend_style = dict(
             loc="upper left",
-            ncol=len(bands),
             frameon=True,
             facecolor="white",
             framealpha=0.85,
@@ -253,6 +269,37 @@ def plot_speed_breakdown(
             handletextpad=0.4,
             columnspacing=1.2,
         )
+        # Prefer one row, but measure it rather than guessing from the figure width: whether three
+        # names fit depends on the font size and the label text as much as the size of the canvas.
+        # Draw it, measure, and stack it vertically only if it actually overflows the axes.
+        legend = axes.legend(handles[::-1], handle_labels[::-1], ncol=len(bands), **legend_style)
+        figure.canvas.draw()
+        to_inches = figure.dpi_scale_trans.inverted()
+        legend_w = legend.get_window_extent().transformed(to_inches).width
+        axes_w = axes.get_window_extent().transformed(to_inches).width
+        if legend_w > axes_w:
+            legend.remove()
+            legend = axes.legend(handles[::-1], handle_labels[::-1], ncol=1, **legend_style)
+        # How much of the panel the legend actually occupies, for the headroom below.
+        legend_height_frac = (
+            legend.get_window_extent().transformed(to_inches).height
+            / axes.get_window_extent().transformed(to_inches).height
+        )
+
+    # Headroom from the legend's measured height, so the data fills whatever the legend leaves. A
+    # per-row guess overshot badly: three stacked rows are ~13% of a square panel, not 60%. Skipped
+    # when the range is pinned, where a shared scale matters more than keeping the legend clear.
+    if show_legend and ylim is None:
+        clear_fraction = max(0.2, 1.0 - legend_height_frac - 0.04)
+        axes.set_ylim(0.0, float(total_ms.max()) / clear_fraction)
+
+    if ylim is not None:
+        clipped = int((total_ms > ylim[1]).sum())
+        if clipped:
+            print(
+                f"y axis pinned to {ylim[0]:g}-{ylim[1]:g} ms: {clipped} frame(s) exceed it "
+                f"(max {total_ms.max():.1f} ms) and are drawn cut off at the top."
+            )
 
     # save_figure writes the canvas at its built size with no tight crop, so the labels must be laid
     # out first or they fall outside and are cut.
@@ -275,6 +322,7 @@ def plot_speed_breakdown(
 
 
 if __name__ == "__main__":
-    # Legend on; x axis unlabelled because this figure sits above others in a stack that share the
-    # same x axis, so only the bottom one needs to name it. Tick numbers are kept.
-    plot_speed_breakdown(show_legend=True, show_xlabel=False)
+    # Pass show_legend / show_xlabel / show_ylabel as False, with an output_path of their own, for a
+    # stripped cut to sit beside this one; the blank-label placeholders keep the plot area identical
+    # between cuts so they can be placed together without one looking zoomed.
+    plot_speed_breakdown(show_legend=True, show_xlabel=True, show_ylabel=True)

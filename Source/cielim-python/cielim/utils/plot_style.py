@@ -39,7 +39,7 @@ SAVE_DPI = 200
 # 10 pt on the page.
 # CAPTION_PT is only for the gray provenance footers (see add_footer), which are a record of how the
 # figure was rendered rather than figure content.
-BODY_PT = 12
+BODY_PT = 10
 CAPTION_PT = 8
 
 # Colormap for scene-image displays (a render/real frame shown for viewing, not a numeric compare).
