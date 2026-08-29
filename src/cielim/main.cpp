@@ -74,14 +74,18 @@ static VKAPI_ATTR auto VKAPI_CALL DebugCallback(
 static VkDebugUtilsMessengerEXT debug_messenger;
 #endif
 
-static SDL_Window* window;
-static VkInstance vk_instance;
-static VkSurfaceKHR surface;
-static VkDevice device;
-static VkSwapchainKHR swapchain;
+static SDL_Window* window = nullptr;
+static VkInstance vk_instance = VK_NULL_HANDLE;
+static VkSurfaceKHR surface = VK_NULL_HANDLE;
+static VkDevice device = VK_NULL_HANDLE;
+static VkSwapchainKHR swapchain = VK_NULL_HANDLE;
 static std::vector<VkImage> swapchain_images;
 static std::vector<VkImageView> swapchain_views;
-static VkShaderModule shader_module; // Single shader for now
+static VkShaderModule shader_module = VK_NULL_HANDLE; // Single shader for now
+static VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
+static VkPipeline graphics_pipeline = VK_NULL_HANDLE;
+static VkCommandPool command_pool = VK_NULL_HANDLE;
+static VkCommandBuffer command_buffer = VK_NULL_HANDLE;
 
 // Clean up Vulkan resources
 static auto Clean() -> void
@@ -90,6 +94,15 @@ static auto Clean() -> void
     if (debug_messenger != VK_NULL_HANDLE)
         vkDestroyDebugUtilsMessengerEXT(vk_instance, debug_messenger, nullptr);
 #endif
+
+    if (command_pool != VK_NULL_HANDLE)
+        vkDestroyCommandPool(device, command_pool, nullptr);
+
+    if (graphics_pipeline != VK_NULL_HANDLE)
+        vkDestroyPipeline(device, graphics_pipeline, nullptr);
+
+    if (pipeline_layout != VK_NULL_HANDLE)
+        vkDestroyPipelineLayout(device, pipeline_layout, nullptr);
 
     if (shader_module != VK_NULL_HANDLE)
         vkDestroyShaderModule(device, shader_module, nullptr);
@@ -721,6 +734,145 @@ auto main(int argc, char* argv[]) -> int
     };
 
     VkPipelineShaderStageCreateInfo shader_stages[] = {vertex_stage_info, frag_stage_info};
+
+    // Empty for now because of shader hard-coding vertex buffer
+    VkPipelineVertexInputStateCreateInfo vertex_input_state = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+    };
+
+    VkPipelineInputAssemblyStateCreateInfo input_assembly_state = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+        .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
+    };
+
+    VkPipelineViewportStateCreateInfo viewport_state = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+        .viewportCount = 1,
+        .scissorCount = 1,
+    };
+
+    VkPipelineRasterizationStateCreateInfo rasterization_state = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+        .depthClampEnable = VK_FALSE,
+        .rasterizerDiscardEnable = VK_FALSE,
+        .polygonMode = VK_POLYGON_MODE_FILL,
+        .cullMode = VK_CULL_MODE_BACK_BIT,
+        .frontFace = VK_FRONT_FACE_CLOCKWISE,
+        .depthBiasEnable = VK_FALSE,
+        .lineWidth = 1.0f,
+    };
+
+    VkPipelineMultisampleStateCreateInfo multisample_state = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+        .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+        .sampleShadingEnable = VK_FALSE,
+    };
+
+    VkPipelineColorBlendAttachmentState color_blend_attachment_state = {
+        .blendEnable = VK_TRUE,
+        .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+        .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+        .colorBlendOp = VK_BLEND_OP_ADD,
+        .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+        .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+        .alphaBlendOp = VK_BLEND_OP_ADD,
+        .colorWriteMask
+        = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+    };
+
+    VkPipelineColorBlendStateCreateInfo color_blend_state = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+        .logicOpEnable = VK_FALSE,
+        .logicOp = VK_LOGIC_OP_COPY,
+        .attachmentCount = 1,
+        .pAttachments = &color_blend_attachment_state,
+    };
+
+    // This is empty because no uniforms are used yet
+    VkPipelineLayoutCreateInfo layout_create_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .setLayoutCount = 0,
+        .pushConstantRangeCount = 0,
+    };
+
+    vk_result = vkCreatePipelineLayout(device, &layout_create_info, nullptr, &pipeline_layout);
+
+    if (vk_result != VK_SUCCESS)
+    {
+        cielim::utils::log::critical("Pipeline layout could not be created: {}", string_VkResult(vk_result));
+        Clean();
+        return EXIT_FAILURE;
+    }
+
+    std::vector<VkDynamicState> dynamic_states = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
+
+    VkPipelineDynamicStateCreateInfo dynamic_state = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+        .dynamicStateCount = static_cast<uint32_t>(dynamic_states.size()),
+        .pDynamicStates = dynamic_states.data(),
+    };
+
+    VkPipelineRenderingCreateInfo pipeline_rendering_state = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
+        .colorAttachmentCount = 1,
+        .pColorAttachmentFormats = &req_format,
+    };
+
+    VkGraphicsPipelineCreateInfo pipeline_info = {
+        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .pNext = &pipeline_rendering_state,
+        .stageCount = 2,
+        .pStages = shader_stages,
+        .pVertexInputState = &vertex_input_state,
+        .pInputAssemblyState = &input_assembly_state,
+        .pViewportState = &viewport_state,
+        .pRasterizationState = &rasterization_state,
+        .pMultisampleState = &multisample_state,
+        .pColorBlendState = &color_blend_state,
+        .pDynamicState = &dynamic_state,
+        .layout = pipeline_layout,
+        .renderPass = nullptr,
+    };
+
+    vk_result = vkCreateGraphicsPipelines(device, nullptr, 1, &pipeline_info, nullptr, &graphics_pipeline);
+
+    if (vk_result != VK_SUCCESS)
+    {
+        cielim::utils::log::critical("Graphics pipeline could not be created: {}", string_VkResult(vk_result));
+        Clean();
+        return EXIT_FAILURE;
+    }
+
+    VkCommandPoolCreateInfo command_pool_create_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+        .queueFamilyIndex = graphics_queue_family,
+    };
+
+    vk_result = vkCreateCommandPool(device, &command_pool_create_info, nullptr, &command_pool);
+
+    if (vk_result != VK_SUCCESS)
+    {
+        cielim::utils::log::critical("Command pool could not be created: {}", string_VkResult(vk_result));
+        Clean();
+        return EXIT_FAILURE;
+    }
+
+    VkCommandBufferAllocateInfo command_buffer_allocate_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool = command_pool,
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = 1,
+    };
+
+    vk_result = vkAllocateCommandBuffers(device, &command_buffer_allocate_info, &command_buffer);
+
+    if (vk_result != VK_SUCCESS)
+    {
+        cielim::utils::log::critical("Command buffer could not be allocated: {}", string_VkResult(vk_result));
+        Clean();
+        return EXIT_FAILURE;
+    }
 
     // Check that we can acquire the queue
     VkQueue graphics_queue;
