@@ -84,8 +84,11 @@ static std::vector<VkImageView> swapchain_views;
 static VkShaderModule shader_module = VK_NULL_HANDLE; // Single shader for now
 static VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
 static VkPipeline graphics_pipeline = VK_NULL_HANDLE;
-static VkCommandPool command_pool = VK_NULL_HANDLE;
-static VkCommandBuffer command_buffer = VK_NULL_HANDLE;
+static std::vector<VkCommandPool> command_pools;
+static std::vector<VkCommandBuffer> command_buffers;
+static VkSemaphore timeline_semaphore = VK_NULL_HANDLE;
+static std::vector<VkSemaphore> acquire_semaphores;
+static std::vector<VkSemaphore> render_finished_semaphores;
 
 // Clean up Vulkan resources
 static auto Clean() -> void
@@ -95,8 +98,26 @@ static auto Clean() -> void
         vkDestroyDebugUtilsMessengerEXT(vk_instance, debug_messenger, nullptr);
 #endif
 
-    if (command_pool != VK_NULL_HANDLE)
-        vkDestroyCommandPool(device, command_pool, nullptr);
+    for (const auto& semaphore : render_finished_semaphores)
+    {
+        if (semaphore != VK_NULL_HANDLE)
+            vkDestroySemaphore(device, semaphore, nullptr);
+    }
+
+    for (const auto& semaphore : acquire_semaphores)
+    {
+        if (semaphore != VK_NULL_HANDLE)
+            vkDestroySemaphore(device, semaphore, nullptr);
+    }
+
+    if (timeline_semaphore != VK_NULL_HANDLE)
+        vkDestroySemaphore(device, timeline_semaphore, nullptr);
+
+    for (const auto& pool : command_pools)
+    {
+        if (pool != VK_NULL_HANDLE)
+            vkDestroyCommandPool(device, pool, nullptr);
+    }
 
     if (graphics_pipeline != VK_NULL_HANDLE)
         vkDestroyPipeline(device, graphics_pipeline, nullptr);
@@ -843,41 +864,94 @@ auto main(int argc, char* argv[]) -> int
         return EXIT_FAILURE;
     }
 
-    VkCommandPoolCreateInfo command_pool_create_info = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-        .queueFamilyIndex = graphics_queue_family,
-    };
+    constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
 
-    vk_result = vkCreateCommandPool(device, &command_pool_create_info, nullptr, &command_pool);
+    command_pools.resize(MAX_FRAMES_IN_FLIGHT);
+    command_buffers.resize(MAX_FRAMES_IN_FLIGHT);
 
-    if (vk_result != VK_SUCCESS)
+    for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
     {
-        cielim::utils::log::critical("Command pool could not be created: {}", string_VkResult(vk_result));
-        Clean();
-        return EXIT_FAILURE;
+        VkCommandPoolCreateInfo command_pool_create_info = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+            .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+            .queueFamilyIndex = graphics_queue_family,
+        };
+
+        vk_result = vkCreateCommandPool(device, &command_pool_create_info, nullptr, &command_pools[i]);
+
+        if (vk_result != VK_SUCCESS)
+        {
+            cielim::utils::log::critical("Command pool could not be created: {}", string_VkResult(vk_result));
+            Clean();
+            return EXIT_FAILURE;
+        }
+
+        VkCommandBufferAllocateInfo command_buffer_allocate_info = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            .commandPool = command_pools[i],
+            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+            .commandBufferCount = 1,
+        };
+
+        vk_result = vkAllocateCommandBuffers(device, &command_buffer_allocate_info, &command_buffers[i]);
+
+        if (vk_result != VK_SUCCESS)
+        {
+            cielim::utils::log::critical("Command buffer could not be allocated: {}", string_VkResult(vk_result));
+            Clean();
+            return EXIT_FAILURE;
+        }
     }
 
-    VkCommandBufferAllocateInfo command_buffer_allocate_info = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .commandPool = command_pool,
-        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandBufferCount = 1,
+    VkSemaphoreTypeCreateInfo timeline_semaphore_type_info = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
+        .semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE,
+        .initialValue = 0,
     };
 
-    vk_result = vkAllocateCommandBuffers(device, &command_buffer_allocate_info, &command_buffer);
+    VkSemaphoreCreateInfo timeline_semaphore_info = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        .pNext = &timeline_semaphore_type_info,
+    };
 
-    if (vk_result != VK_SUCCESS)
+    vkCreateSemaphore(device, &timeline_semaphore_info, nullptr, &timeline_semaphore);
+
+    VkSemaphoreCreateInfo binary_semaphore_info = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+    };
+
+    acquire_semaphores.resize(MAX_FRAMES_IN_FLIGHT);
+
+    for (auto& semaphore : acquire_semaphores)
     {
-        cielim::utils::log::critical("Command buffer could not be allocated: {}", string_VkResult(vk_result));
-        Clean();
-        return EXIT_FAILURE;
+        vk_result = vkCreateSemaphore(device, &binary_semaphore_info, nullptr, &semaphore); // One per frame-in-flight
+
+        if (vk_result != VK_SUCCESS)
+        {
+            cielim::utils::log::critical("Binary semaphore failed to be created: {}", string_VkResult(vk_result));
+            Clean();
+            return EXIT_FAILURE;
+        }
     }
 
-    // Check that we can acquire the queue
+    render_finished_semaphores.resize(image_count);
+
+    for (auto& semaphore : render_finished_semaphores)
+    {
+        vk_result = vkCreateSemaphore(device, &binary_semaphore_info, nullptr, &semaphore); // One per swapchain image
+
+        if (vk_result != VK_SUCCESS)
+        {
+            cielim::utils::log::critical("Binary semaphore failed to be created: {}", string_VkResult(vk_result));
+            Clean();
+            return EXIT_FAILURE;
+        }
+    }
+
     VkQueue graphics_queue;
     vkGetDeviceQueue(device, graphics_queue_family, 0, &graphics_queue);
-    (void)graphics_queue;
+
+    uint64_t frame_counter = 0;
 
     bool is_running = true;
 
@@ -892,7 +966,257 @@ auto main(int argc, char* argv[]) -> int
             default: break;
             }
         }
+
+        frame_counter++;
+
+        const uint32_t frame_index = (frame_counter - 1) % MAX_FRAMES_IN_FLIGHT;
+
+        if (frame_counter > MAX_FRAMES_IN_FLIGHT)
+        {
+            uint64_t wait_value = frame_counter - MAX_FRAMES_IN_FLIGHT;
+
+            VkSemaphoreWaitInfo wait_info = {
+                .sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
+                .semaphoreCount = 1,
+                .pSemaphores = &timeline_semaphore,
+                .pValues = &wait_value,
+            };
+
+            vk_result = vkWaitSemaphores(device, &wait_info, UINT64_MAX);
+
+            if (vk_result != VK_SUCCESS)
+            {
+                cielim::utils::log::critical("Failed waiting on timeline semaphore: {}", string_VkResult(vk_result));
+                Clean();
+                return EXIT_FAILURE;
+            }
+        }
+
+        uint32_t image_index;
+
+        vk_result = vkAcquireNextImageKHR(
+            device, swapchain, UINT64_MAX, acquire_semaphores[frame_index], nullptr, &image_index
+        );
+
+        if (vk_result == VK_ERROR_OUT_OF_DATE_KHR)
+        {
+            cielim::utils::log::warn("Swapchain out of date on acquire, skipping frame");
+            frame_counter--;
+            continue;
+        }
+
+        if (vk_result != VK_SUCCESS && vk_result != VK_SUBOPTIMAL_KHR)
+        {
+            cielim::utils::log::critical("Failed to acquire swapchain image: {}", string_VkResult(vk_result));
+            Clean();
+            return EXIT_FAILURE;
+        }
+
+        vk_result = vkResetCommandPool(device, command_pools[frame_index], 0);
+
+        if (vk_result != VK_SUCCESS)
+        {
+            cielim::utils::log::critical("Failed to reset command pool: {}", string_VkResult(vk_result));
+            Clean();
+            return EXIT_FAILURE;
+        }
+
+        VkCommandBufferBeginInfo begin_info = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        };
+
+        vk_result = vkBeginCommandBuffer(command_buffers[frame_index], &begin_info);
+
+        if (vk_result != VK_SUCCESS)
+        {
+            cielim::utils::log::critical("Failed to begin command buffer: {}", string_VkResult(vk_result));
+            Clean();
+            return EXIT_FAILURE;
+        }
+
+        // This can be reused after each command recording
+        VkImageMemoryBarrier2 barrier = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+            .srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .srcAccessMask = {},
+            .dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+            .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image = swapchain_images[image_index],
+            .subresourceRange = {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+        };
+
+        // Same for this
+        VkDependencyInfo dependency_info = {
+            .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+            .dependencyFlags = {},
+            .imageMemoryBarrierCount = 1,
+            .pImageMemoryBarriers = &barrier,
+        };
+
+        vkCmdPipelineBarrier2(command_buffers[frame_index], &dependency_info);
+
+        VkClearValue clear_color = {{0.12f, 0.12f, 0.12f, 1.0f}};
+
+        VkRenderingAttachmentInfo rendering_attachment_info = {
+            .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+            .imageView = swapchain_views[image_index],
+            .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+            .clearValue = clear_color,
+        };
+
+        VkRenderingInfo rendering_info = {
+            .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+            .renderArea = {.offset = {.x = 0, .y = 0}, .extent = req_extent},
+            .layerCount = 1,
+            .colorAttachmentCount = 1,
+            .pColorAttachments = &rendering_attachment_info,
+        };
+
+        vkCmdBeginRendering(command_buffers[frame_index], &rendering_info);
+
+        vkCmdBindPipeline(command_buffers[frame_index], VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
+
+        VkViewport viewport = {
+            .x = 0.0f,
+            .y = 0.0f,
+            .width = static_cast<float>(req_extent.width),
+            .height = static_cast<float>(req_extent.height),
+            .minDepth = 0.0f,
+            .maxDepth = 0.0f,
+        };
+
+        VkRect2D scissor = {
+            .offset = {.x = 0, .y = 0},
+            .extent = req_extent,
+        };
+
+        vkCmdSetViewport(command_buffers[frame_index], 0, 1, &viewport);
+        vkCmdSetScissor(command_buffers[frame_index], 0, 1, &scissor);
+
+        vkCmdDraw(command_buffers[frame_index], 3, 1, 0, 0);
+
+        vkCmdEndRendering(command_buffers[frame_index]);
+
+        barrier = {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+            .srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT,
+            .dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT,
+            .dstAccessMask = {},
+            .oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .image = swapchain_images[image_index],
+            .subresourceRange = {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+        };
+
+        dependency_info = {
+            .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+            .dependencyFlags = {},
+            .imageMemoryBarrierCount = 1,
+            .pImageMemoryBarriers = &barrier,
+        };
+
+        vkCmdPipelineBarrier2(command_buffers[frame_index], &dependency_info);
+
+        vk_result = vkEndCommandBuffer(command_buffers[frame_index]);
+
+        if (vk_result != VK_SUCCESS)
+        {
+            cielim::utils::log::critical("Failed to end command buffer: {}", string_VkResult(vk_result));
+            Clean();
+            return EXIT_FAILURE;
+        }
+
+        VkCommandBufferSubmitInfo buffer_submit_info = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+            .commandBuffer = command_buffers[frame_index],
+        };
+
+        VkSemaphoreSubmitInfo wait_binary_info = {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+            .semaphore = acquire_semaphores[frame_index],
+            .stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        };
+
+        VkSemaphoreSubmitInfo signal_binary_info = {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+            .semaphore = render_finished_semaphores[image_index],
+            .stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
+        };
+
+        VkSemaphoreSubmitInfo signal_timeline_info = {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+            .semaphore = timeline_semaphore,
+            .value = frame_counter,
+            .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
+        };
+
+        VkSemaphoreSubmitInfo wait_semaphores[] = {wait_binary_info};
+        VkSemaphoreSubmitInfo signal_semaphores[] = {signal_binary_info, signal_timeline_info};
+
+        VkSubmitInfo2 submit_info = {
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+            .waitSemaphoreInfoCount = 1,
+            .pWaitSemaphoreInfos = wait_semaphores,
+            .commandBufferInfoCount = 1,
+            .pCommandBufferInfos = &buffer_submit_info,
+            .signalSemaphoreInfoCount = 2,
+            .pSignalSemaphoreInfos = signal_semaphores,
+        };
+
+        vk_result = vkQueueSubmit2(graphics_queue, 1, &submit_info, nullptr);
+
+        if (vk_result != VK_SUCCESS)
+        {
+            cielim::utils::log::critical("Failed to submit command buffer: {}", string_VkResult(vk_result));
+            Clean();
+            return EXIT_FAILURE;
+        }
+
+        VkPresentInfoKHR present_info = {
+            .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+            .waitSemaphoreCount = 1,
+            .pWaitSemaphores = &render_finished_semaphores[image_index],
+            .swapchainCount = 1,
+            .pSwapchains = &swapchain,
+            .pImageIndices = &image_index,
+        };
+
+        vk_result = vkQueuePresentKHR(graphics_queue, &present_info);
+
+        if (vk_result == VK_ERROR_OUT_OF_DATE_KHR || vk_result == VK_SUBOPTIMAL_KHR)
+        {
+            cielim::utils::log::warn("Swapchain out of date or suboptimal for presentation");
+        }
+        else if (vk_result != VK_SUCCESS)
+        {
+            cielim::utils::log::critical("Failed to present swapchain image: {}", string_VkResult(vk_result));
+            Clean();
+            return EXIT_FAILURE;
+        }
     }
+
+    vkDeviceWaitIdle(device);
 
     Clean();
 
