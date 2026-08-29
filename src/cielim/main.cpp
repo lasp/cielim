@@ -5,6 +5,10 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <expected>
+#include <filesystem>
+#include <string>
+#include <system_error>
 #include <vector>
 
 #include <volk/volk.h>
@@ -15,6 +19,7 @@
 
 #include <SDL3/SDL_main.h> // This has to be the last SDL include
 
+import cielim.utils.file;
 import cielim.utils.log;
 
 #ifndef NDEBUG
@@ -76,6 +81,7 @@ static VkDevice device;
 static VkSwapchainKHR swapchain;
 static std::vector<VkImage> swapchain_images;
 static std::vector<VkImageView> swapchain_views;
+static VkShaderModule shader_module; // Single shader for now
 
 // Clean up Vulkan resources
 static auto Clean() -> void
@@ -84,6 +90,9 @@ static auto Clean() -> void
     if (debug_messenger != VK_NULL_HANDLE)
         vkDestroyDebugUtilsMessengerEXT(vk_instance, debug_messenger, nullptr);
 #endif
+
+    if (shader_module != VK_NULL_HANDLE)
+        vkDestroyShaderModule(device, shader_module, nullptr);
 
     for (const auto& view : swapchain_views)
     {
@@ -123,6 +132,16 @@ auto main(int argc, char* argv[]) -> int
 
     // Flush warnings and above immediately instead of buffering
     cielim::utils::log::flush_on(cielim::utils::log::level::warn);
+
+    const char* base_path_raw = SDL_GetBasePath();
+
+    if (base_path_raw == nullptr)
+    {
+        cielim::utils::log::critical("Executable location could not be found: {}", SDL_GetError());
+        return EXIT_FAILURE;
+    }
+
+    std::filesystem::path base_path(base_path_raw);
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
     {
@@ -423,6 +442,7 @@ auto main(int argc, char* argv[]) -> int
 
     VkPhysicalDeviceVulkan11Features req_dev_vulkan11_features = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+        .shaderDrawParameters = VK_TRUE,
     };
 
     VkPhysicalDeviceVulkan12Features req_dev_vulkan12_features = {
@@ -657,6 +677,50 @@ auto main(int argc, char* argv[]) -> int
         }
         i++;
     }
+
+    std::filesystem::path triangle_shader_path = base_path / "content" / "shaders" / "triangle.spv";
+
+    auto triangle_shader = cielim::utils::file::ReadFile32(triangle_shader_path);
+
+    if (!triangle_shader.has_value())
+    {
+        cielim::utils::log::error(
+            "Shader {} could not be opened: {}", triangle_shader_path.string(), triangle_shader.error().message()
+        );
+        Clean();
+        return EXIT_FAILURE;
+    }
+
+    VkShaderModuleCreateInfo shader_module_create_info = {
+        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        .codeSize = triangle_shader->size() * sizeof(uint32_t),
+        .pCode = triangle_shader->data(),
+    };
+
+    vk_result = vkCreateShaderModule(device, &shader_module_create_info, nullptr, &shader_module);
+
+    if (vk_result != VK_SUCCESS)
+    {
+        cielim::utils::log::error("Shader module could not be created: {}", string_VkResult(vk_result));
+        Clean();
+        return EXIT_FAILURE;
+    }
+
+    VkPipelineShaderStageCreateInfo vertex_stage_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .stage = VK_SHADER_STAGE_VERTEX_BIT,
+        .module = shader_module,
+        .pName = "VertMain",
+    };
+
+    VkPipelineShaderStageCreateInfo frag_stage_info = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+        .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+        .module = shader_module,
+        .pName = "FragMain",
+    };
+
+    VkPipelineShaderStageCreateInfo shader_stages[] = {vertex_stage_info, frag_stage_info};
 
     // Check that we can acquire the queue
     VkQueue graphics_queue;

@@ -5,6 +5,7 @@ import platform
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 base_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -12,7 +13,7 @@ base_path = os.path.dirname(os.path.abspath(__file__))
 def clean():
     print("Cleaning build files...")
 
-    folders_to_clean = ["build"]
+    folders_to_clean = ["build", "content"]
 
     for folder in folders_to_clean:
         dir = os.path.join(base_path, folder)
@@ -22,6 +23,44 @@ def clean():
             print(f"Removed {folder}/")
         else:
             print(f"{folder}/ already cleaned")
+
+
+def compile_shaders():
+    print("Compiling shaders...")
+
+    if shutil.which("slangc") is None:
+        raise FileNotFoundError("Slang compiler (slangc) not detected")
+
+    source_dir = Path(os.path.join(base_path, "assets", "shaders"))
+    output_dir = Path(os.path.join(base_path, "content", "shaders"))
+
+    for shader in source_dir.rglob("*.slang"):
+        relative_path = shader.relative_to(source_dir).with_suffix(".spv")
+        out_path = output_dir / relative_path
+
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+
+        process = subprocess.Popen(
+            [
+                "slangc",
+                str(shader),
+                "-target",
+                "spirv",
+                "-fvk-use-entrypoint-name",
+                "-entry",
+                "VertMain",
+                "-entry",
+                "FragMain",
+                "-o",
+                str(out_path),
+            ],
+            stdout=sys.stdout,
+            stderr=sys.stderr,
+        )
+
+        process.wait()
+
+        print(f"Finished compiling {shader.name}")
 
 
 def configure(platform_name: str, preset: str):
@@ -98,6 +137,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Add options for building Cielim")
     parser.add_argument("-x", "--clean", action="store_true", help="Clean Cielim build files")
+    parser.add_argument("-s", "--shaders", action="store_true", help="Compile shaders into SPIR-V")
     parser.add_argument("-c", "--config", action="store_true", help="Configure Cielim build files")
     parser.add_argument("-b", "--build", action="store_true", help="Build Cielim")
     parser.add_argument("-p", "--preset", type=str, default="", help="CMake preset to use for building")
@@ -108,7 +148,8 @@ if __name__ == "__main__":
 
     # Create build config if it doesn't exist
     if os.path.exists("build_config.json"):
-        config = json.load(open("build_config.json", "r"))
+        with open("build_config.json", "r") as config_file:
+            config = json.load(config_file)
     else:
         config = {}
 
@@ -125,12 +166,16 @@ if __name__ == "__main__":
     if "preset" not in config or config["preset"] is not preset:
         print(f"Saving preset {preset} to build_config.json...")
         config["preset"] = preset
-        json.dump(config, open("build_config.json", "w"))
+        with open("build_config.json", "w") as config_file:
+            json.dump(config, config_file)
 
     ranAtLeastOnce = False
 
     if args.clean:
         clean()
+        ranAtLeastOnce = True
+    if args.shaders:
+        compile_shaders()
         ranAtLeastOnce = True
     if args.config:
         configure(platform_name, preset)
@@ -142,5 +187,6 @@ if __name__ == "__main__":
     # If no command has been run, default to full clean run
     if not ranAtLeastOnce:
         clean()
+        compile_shaders()
         configure(platform_name, preset)
         build(platform_name, preset)
