@@ -32,6 +32,7 @@ target_sources(cielim
         BASE_DIRS "${CIELIM_CPP_SOURCE}"
         FILES
             ${CIELIM_CPP_SOURCE}/utils/log.cppm
+            ${CIELIM_CPP_SOURCE}/utils/file.cppm
 )
 
 # Link dependencies
