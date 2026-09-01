@@ -4,10 +4,8 @@ import cv2
 import numpy as np
 import pytest
 from matplotlib import pyplot as plt
-from matplotlib.lines import Line2D
 
 import cielim
-from cielim.utils import image_comparison_toolkit as image_comparison
 from cielim.utils import plot_style as ps
 
 # Read at import time so it survives pytest.main() re-importing this file as a module.
@@ -1029,43 +1027,66 @@ def _report_params(name, **facts):
 
 
 # ---------------------------------------------------------------------------
-# Showcase: page-ready distant-object demo image (opt-in via the showcase_dir env var)
+# Showcase: page-ready distant-object demo images (opt-in via the showcase_dir env var)
 # ---------------------------------------------------------------------------
+
+# Each panel is its own file, sized so the five of a phase-angle row placed in one row of a LaTeX
+# figure span the text width at scale 1.0, with a small gutter between them.
+SHOWCASE_GUTTER_IN = 0.06
+
+# Half-width of the crop window, in frame pixels: every panel shows the SAME 2*half square, at every
+# range and both phase angles, because the whole point is that the target shrinks inside a fixed
+# window. 13 is tight on purpose (the old 26 left >85% of each panel black); the widest target is
+# the alpha=135 crescent at 0.2*d_t, 8x22 px, which fits with ~2 px to spare ONLY because the crop
+# is centered on the lit bounding box rather than the brightest pixel — see _lit_bbox.
+SHOWCASE_CROP_HALF = 13
+
+
+def _lit_bbox(gray, near, reach):
+    """``(x0, x1, y0, y1)`` of the lit pixels within ±``reach`` of ``near``, or None if none are.
+
+    Windowed on purpose. Measuring the lit box over the whole frame is what the reported
+    ``footprint`` does, and that is right for a number that describes the render — but for choosing
+    a crop center it is a trap: one stray nonzero pixel anywhere in the frame stretches the box
+    across the image and drags the center to the middle of nowhere, silently. Restricting to a
+    generous window around the peak keeps a hot pixel from moving the target off-panel.
+    """
+    cx, cy = int(near[0]), int(near[1])
+    h, w = gray.shape
+    x0, x1 = max(cx - reach, 0), min(cx + reach + 1, w)
+    y0, y1 = max(cy - reach, 0), min(cy + reach + 1, h)
+    ys, xs = np.nonzero(gray[y0:y1, x0:x1])
+    if not len(xs):
+        return None
+    return x0 + int(xs.min()), x0 + int(xs.max()), y0 + int(ys.min()), y0 + int(ys.max())
 
 
 @pytest.mark.showcase
 def test_showcase_distant_objects(cielim_connection):
     """The mesh -> distant handover, at low and high phase angle.
 
-    Each row walks the camera out through that phase angle's own transition distance, showing the
-    same fixed-size crop at every range so the size change is directly comparable. The point of the
-    pair is why the threshold has to grow with phase angle: at high alpha only a thin crescent is
-    lit, so the body's *bounding box* is still several pixels across when its visible signal has
-    already gone sub-pixel.
+    One file per panel, named for the phase angle and the range it was rendered at, e.g.
+    ``distant_a135_0pnt45dt.png``. Every panel shows the same fixed-size crop, so the target visibly
+    shrinks with range; the point of the pair is why the threshold has to grow with phase angle: at
+    high alpha only a thin crescent is lit, so the body's *bounding box* is still several pixels
+    across when its visible signal has already gone sub-pixel.
+
+    Brightness is normalised per phase-angle row, so panels from the two rows are NOT photometrically
+    comparable with each other — within a row they are.
     """
-    ps.apply_showcase_style()
     connector = cielim_connection
 
     # Multiples of the transition distance. The far column sits well past d_t on purpose: coverage
     # saturates at 1 just after the transition (which is what makes the handover photometrically
     # continuous), so the point source does not begin to dim until some way beyond it.
     factors = [0.2, 0.45, 0.9, 1.05, 3.0]
-    rows = [(0, "low phase\n" + r"$\alpha=0\degree$"), (135, "high phase\n" + r"$\alpha=135\degree$")]
-    exposure, half = 1e-4, 26
+    phase_angles = [0, 135]
+    exposure, half = 1e-4, SHOWCASE_CROP_HALF
+    panel_h = (ps.PAGE_W - (len(factors) - 1) * SHOWCASE_GUTTER_IN) / len(factors)
+    footprints, row_maxes = {}, {}
 
-    # Full text width exactly, so the grid drops onto the page at scale 1.0 and its 10 pt labels
-    # print at 10 pt. Height = the two rows of square panels plus room for their two-line titles
-    # (without it the titles land on the row above) and one line for the rule label underneath.
-    # No figure title: what the grid shows is described in docs/distant_objects.tex.
-    panel_w = ps.PAGE_W / len(factors)
-    title_h = 2 * 1.35 * ps.BODY_PT / 72
-    fig, axes = plt.subplots(
-        len(rows), len(factors), figsize=(ps.PAGE_W, len(rows) * (panel_w + title_h) + 0.45)
-    )
-
-    for row, (phase_angle_deg, row_label) in enumerate(rows):
+    for phase_angle_deg in phase_angles:
         transition = compute_transition_distance(phase_angle_deg=phase_angle_deg)
-        threshold = _pixel_size_threshold(phase_angle_deg)
 
         crops = []
         for factor in factors:
@@ -1077,8 +1098,25 @@ def test_showcase_distant_objects(cielim_connection):
             image, _, _ = render_frame(connector, scene)
             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if image.ndim == 3 else image
             peak_y, peak_x = np.unravel_index(np.argmax(gray), gray.shape)
-            y = int(np.clip(peak_y, half, gray.shape[0] - half))
-            x = int(np.clip(peak_x, half, gray.shape[1] - half))
+
+            # Center the crop on the lit bounding box, NOT on the brightest pixel. At high phase the
+            # peak sits on the bright limb of the crescent while the crescent tails ~17 px away from
+            # it, so a window this tight centered on the peak would cut the far horn off.
+            box = _lit_bbox(gray, near=(peak_x, peak_y), reach=4 * half)
+            if box is None:
+                box = (int(peak_x), int(peak_x), int(peak_y), int(peak_y))
+            bx0, bx1, by0, by1 = box
+            assert bx1 - bx0 < 2 * half and by1 - by0 < 2 * half, (
+                f"alpha={phase_angle_deg}, {factor:g}*d_t: lit target is "
+                f"{bx1 - bx0 + 1}x{by1 - by0 + 1} px and does not fit the {2 * half}x{2 * half} "
+                f"crop — it would be clipped. Raise SHOWCASE_CROP_HALF."
+            )
+            x = int(np.clip((bx0 + bx1 + 1) // 2, half, gray.shape[1] - half))
+            y = int(np.clip((by0 + by1 + 1) // 2, half, gray.shape[0] - half))
+
+            # The footprint is measured over the WHOLE frame, unchanged: it describes the render, and
+            # the doc sheets quote it. If it disagrees with the windowed box there is signal outside
+            # the crop, which the crop would silently hide.
             lit_y, lit_x = np.nonzero(gray)
             footprint = (
                 f"{lit_x.max() - lit_x.min() + 1}x{lit_y.max() - lit_y.min() + 1}" if len(lit_x) else "-"
@@ -1089,37 +1127,16 @@ def test_showcase_distant_objects(cielim_connection):
         # brightnesses are untouched, so the photometric continuity across the handover still reads;
         # normalising per row is only what keeps the dim high-phase crescent visible at all.
         row_max = max(int(crop.max()) for crop, _ in crops) or 255
+        row_maxes[phase_angle_deg] = row_max
+        footprints[phase_angle_deg] = ",".join(fp for _, fp in crops)
 
-        for col, (factor, (crop, footprint)) in enumerate(zip(factors, crops)):
-            ax = axes[row][col]
-            ax.imshow(crop, cmap=ps.SCENE_CMAP, vmin=0, vmax=row_max, interpolation="nearest")
-            # The label is the *measured* lit footprint. Past d_t the shader draws a pixel-snapped
-            # quad, so that footprint stops shrinking with range and only the brightness falls —
-            # labelling those panels with the projected size (threshold * d_t / d, the quantity the
-            # transition test measures) would describe something that is not on screen.
-            is_distant = factor >= 1.0
-            kind = "distant" if is_distant else "mesh"
-            ax.set_title(f"{factor:g}" + r"$\times d_t$" + f"\n{kind}  {footprint}")
-            ax.axis("off")
-
-        axes[row][0].text(
-            -0.10, 0.5, row_label, transform=axes[row][0].transAxes,
-            rotation=90, va="center", ha="center",
-        )
-
-    # h_pad keeps the two-line panel titles off the row above. Lay out before reading get_position()
-    # for the rule below, so the rule is placed against the final axes geometry.
-    fig.tight_layout(h_pad=2.2)
-
-    # Rule marking where the path flips, drawn between the last mesh column and the first distant one.
-    x_rule = 0.5 * (
-        axes[0][factors.index(0.9)].get_position().x1 + axes[0][factors.index(1.05)].get_position().x0
-    )
-    y_bottom_row = axes[1][0].get_position().y0
-    fig.add_artist(Line2D([x_rule, x_rule], [y_bottom_row, axes[0][0].get_position().y1],
-                          color="0.55", linewidth=0.8))
-    fig.text(x_rule, y_bottom_row - 0.03, r"$d_t$: mesh $\rightarrow$ distant",
-             ha="center", va="top", color="0.4")
+        # Bake the row's display range into the pixels: these are bare rasters now, so there is no
+        # imshow(vmin=0, vmax=row_max) to do it at draw time. Rounded rather than truncated so
+        # row_max maps to exactly 255 and mid-range levels don't come out a step dark.
+        for factor, (crop, _) in zip(factors, crops):
+            panel = np.clip(np.rint(crop.astype(np.float64) * (255.0 / row_max)), 0, 255).astype(np.uint8)
+            tag = f"{factor:.2f}".replace(".", "pnt")
+            ps.save_showcase_raster(panel, f"distant_a{phase_angle_deg:03d}_{tag}dt", panel_h)
 
     _report_params(
         "distant_objects",
@@ -1130,15 +1147,21 @@ def test_showcase_distant_objects(cielim_connection):
         brdf="Lambertian",
         exposure_s=f"{exposure:g}",
         crop_px=f"{2 * half}x{2 * half}",
+        crop_center="lit bounding box",
         factors_of_d_t=",".join(f"{f:g}" for f in factors),
         d_t_alpha0_m=f"{compute_transition_distance(phase_angle_deg=0):.3g}",
         d_t_alpha135_m=f"{compute_transition_distance(phase_angle_deg=135):.3g}",
         threshold_px=f"{_pixel_size_threshold(0):g}/{_pixel_size_threshold(135):.1f}",
+        # The measured lit footprint per column, in factor order. It used to label each panel; the
+        # panels carry no text now, so this record is the only place it survives — and the doc
+        # sheets quote these numbers as fact.
+        footprints_a000=footprints.get(0, "-"),
+        footprints_a135=footprints.get(135, "-"),
         display="per-row normalised",
-        panel_label="lit footprint in px (distant = snapped quad, constant with range)",
+        row_max_a000=row_maxes.get(0, "-"),
+        row_max_a135=row_maxes.get(135, "-"),
+        files="distant_a{000,135}_{0pnt20,0pnt45,0pnt90,1pnt05,3pnt00}dt.png",
     )
-    ps.save_showcase(fig, "distant_objects")
-    plt.close(fig)
 
 
 if __name__ == "__main__":

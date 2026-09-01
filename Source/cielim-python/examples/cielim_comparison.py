@@ -29,5 +29,6 @@ if __name__ == "__main__":
         pairs.append((load_grayscale(giant_img), load_grayscale(cielim_img)))
 
     out_dir = BASE_DIR / "comparison_plots"
-    image_comparison.generate_batch(pairs, out_dir, title_real="giant", title_generated="cielim")
+    stats = image_comparison.generate_batch(pairs, out_dir, title_real="giant", title_generated="cielim")
     print(f"Done → {out_dir}/raw and {out_dir}/aligned")
+    print(image_comparison.format_error_stats(stats, title_real="giant"))

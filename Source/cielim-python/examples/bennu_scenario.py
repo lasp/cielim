@@ -290,7 +290,9 @@ def bennu_scenario(number_of_images: int | None = None):
     solid_angle = np.pi
     pixel_area = 2.2 * 2.2 * 10 ** (-12)  # m^2
 
-    qefit.set_qe_curve_fit(scene.get_scene(), str(qe_file_path), solid_angle, pixel_area)
+    qefit.set_qe_curve_fit(
+        scene.get_scene(), str(qe_file_path), solid_angle, pixel_area, figure_name="qe_fit_bennu_ocam"
+    )
 
     instrument_id = "-64360"
 
@@ -400,12 +402,13 @@ def bennu_scenario(number_of_images: int | None = None):
 
     # Read the saved generated frames back and compare each to the real image at the same time.
     # raw/ and aligned/ subsets, each with individual histograms + heatmaps and an average histogram.
-    n = image_comparison.compare_saved(
+    n, stats = image_comparison.compare_saved(
         OUT_DIR, _gen_time, _real_entries(), _real_gray_of, str(SHOWCASE_DIR),
         title_real="real", title_generated="cielim",
         average_exclude={0},  # drop image 0 from the average (its individual plots are kept)
     )
     print(f"Saved real-vs-generated batch comparison ({n} pairs) -> {SHOWCASE_DIR}")
+    print(image_comparison.format_error_stats(stats))
 
     m = compare_distant_objects()
     print(f"Saved distant-object point-source comparison ({m} frames) -> {DISTANT_DIR}")

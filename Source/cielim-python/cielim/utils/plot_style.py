@@ -24,6 +24,7 @@ import textwrap
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from PIL import Image
 
 # Page geometry, in inches. PAGE_W is the paper's text width (\textwidth on US letter with 1 in
 # margins) -- a full-width figure is built at exactly this and needs no \includegraphics scaling.
@@ -183,3 +184,48 @@ def save_showcase(fig, name):
         return None
     os.makedirs(out, exist_ok=True)
     return save_figure(fig, os.path.join(out, f"{name}.png"))
+
+
+def save_raster_panel(img, path, height_in, px=1024, exact_height=False):
+    """Write a uint8 array as a bare image panel: just the pixels, no axes, margins or interpolation.
+
+    For a figure that IS an image — a render, a crop — where matplotlib would only add margins and
+    resampling blur. Tagged with the dpi that makes it ``height_in`` inches tall on the page, so the
+    panel prints at its intended size with no ``\\includegraphics`` scaling.
+
+    ``px`` is the target pixel height, and how strictly it is met is the caller's choice:
+
+    * default — scale up by a WHOLE number of pixels, or not at all. A fractional scale lands one
+      source pixel on 39 output pixels and its neighbour on 40, which is plainly visible on a panel
+      whose subject IS individual pixels. Use this for a panel that stands on its own.
+    * ``exact_height=True`` — land on exactly ``px`` tall, accepting uneven pixel blocks. Use this
+      when the file has to match the height of something it cannot control, such as a matplotlib
+      figure in the same row that can only be sized through its dpi.
+
+    Either way the dpi is derived from the size actually written, so the print size is exact.
+    """
+    h, w = img.shape[:2]
+    im = Image.fromarray(img)
+    if exact_height and h != px:
+        im = im.resize((max(int(round(w * px / h)), 1), px), Image.NEAREST if px >= h else Image.LANCZOS)
+    elif not exact_height and h < px:
+        factor = max(int(round(px / h)), 1)
+        if factor > 1:
+            im = im.resize((w * factor, h * factor), Image.NEAREST)
+    dpi = im.size[1] / height_in
+    os.makedirs(os.path.dirname(str(path)) or ".", exist_ok=True)
+    im.save(str(path), dpi=(dpi, dpi))
+    return str(path)
+
+
+def save_showcase_raster(img, name, height_in, px=1024, exact_height=False):
+    """Raster counterpart of :func:`save_showcase`: write ``img`` to ``<showcase_dir>/<name>.png``.
+
+    No-op returning None when the showcase_dir env var is unset. ``name`` goes straight into the
+    filename, so it must already be filesystem-safe.
+    """
+    out = showcase_dir()
+    if not out:
+        return None
+    os.makedirs(out, exist_ok=True)
+    return save_raster_panel(img, os.path.join(out, f"{name}.png"), height_in, px, exact_height)

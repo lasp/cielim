@@ -877,6 +877,12 @@ SWEEP_ANGLES = [-55, -30, -16, -8, 0, 8, 16, 30, 55]
 # and beyond-cutoff regime assertions.
 SHOWCASE_SWEEP_ANGLES = [0, 8, 16, 32]
 
+# Each sweep panel is saved as its own file, sized so the four of them placed in one row span the
+# paper's text width at scale 1.0 (a small gutter so the row has something to distribute between
+# them and the panels don't abut into one continuous strip).
+SWEEP_GUTTER_IN = 0.06
+SWEEP_PANEL_H = (ps.PAGE_W - (len(SHOWCASE_SWEEP_ANGLES) - 1) * SWEEP_GUTTER_IN) / len(SHOWCASE_SWEEP_ANGLES)
+
 # The showcase flare is tuned to *illustrate* the model rather than to reproduce the test baseline:
 # more symmetric rays, a fainter and tighter corona so it does not wash out the ghosts, graded ghost
 # sizes so the four ghosts separate into a legible chain, and the sun pushed further off-axis (0.88
@@ -1201,15 +1207,14 @@ def test_showcase_stray_light(cielim_connection):
     )
     angles = SHOWCASE_SWEEP_ANGLES
     grays = [render_gray(cielim_connection, _sweep_scene(a, exp_sweep)) for a in angles]
-    # Full text width exactly: the strip spans the text block at scale 1.0, so its 10 pt labels
-    # print at 10 pt and the panels never have to be shrunk to fit. Untitled — what the strip shows,
-    # and the FoV / baffle / cutoff it shows it at, are in docs/stray_light.tex.
-    fig2, axes = plt.subplots(1, len(angles), figsize=ps.figsize_strip(len(angles), suptitle=False))
-    for ax, g, a in zip(axes, grays, angles):
-        ax.set_title(f"{a}°")  # kept: says which panel is which — the swept variable, not a setting
-        ax.imshow(g, cmap=ps.SCENE_CMAP, vmin=0, vmax=255)
-        ax.axis("off")
-    fig2.tight_layout()
+    # One file per angle, the angle in the filename: the panels go into the document as a row the
+    # document lays out, so the strip is not baked in. Each is sized to a quarter of the text width
+    # (see SWEEP_PANEL_H) so that row spans the text block at scale 1.0.
+    #
+    # Written as bare rasters straight from the render — the old panels were imshow(vmin=0, vmax=255)
+    # of a uint8 frame, i.e. the identity, so this is the same pixels with no margins or resampling.
+    for angle, gray_sweep in zip(angles, grays):
+        ps.save_showcase_raster(gray_sweep, f"sweep_{angle:02d}deg", SWEEP_PANEL_H)
     _report_params(
         "stray_light_sweep",
         _ghost_params({"baffle_shield_angle": SWEEP_BAFFLE}),
@@ -1217,9 +1222,8 @@ def test_showcase_stray_light(cielim_connection):
         fov_deg=f"{np.degrees(SWEEP_FOV):g}",
         cutoff_deg=f"{np.degrees(SWEEP_FOV) / 2 + SWEEP_BAFFLE:g}",
         angles_deg=",".join(str(a) for a in angles),
+        files=",".join(f"sweep_{a:02d}deg.png" for a in angles),
     )
-    ps.save_showcase(fig2, "stray_light_sweep")
-    plt.close(fig2)
 
 
 if __name__ == "__main__":

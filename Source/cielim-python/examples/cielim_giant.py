@@ -277,7 +277,9 @@ def cielim_giant(number_of_images: int = None):
     if QE_FILE.exists():
         solid_angle = np.pi
         pixel_area = 14e-6 * 14e-6
-        qefit.set_qe_curve_fit(scene.get_scene(), str(QE_FILE), solid_angle, pixel_area)
+        qefit.set_qe_curve_fit(
+            scene.get_scene(), str(QE_FILE), solid_angle, pixel_area, figure_name="qe_fit_giant_fc2"
+        )
         print(f"QE curve loaded: {QE_FILE.name}")
     else:
         print(f"WARNING: QE file not found at {QE_FILE}")

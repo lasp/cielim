@@ -128,7 +128,9 @@ def tag_scenario(number_of_images: int | None = None):
     solid_angle = np.pi
     pixel_area = 2.2 * 2.2 * 10 ** (-12)  # m^2
 
-    qefit.set_qe_curve_fit(scene.get_scene(), str(qe_file_path), solid_angle, pixel_area)
+    qefit.set_qe_curve_fit(
+        scene.get_scene(), str(qe_file_path), solid_angle, pixel_area, figure_name="qe_fit_bennu_navcam"
+    )
 
     instrument_id = "ORX_NAVCAM2"
 

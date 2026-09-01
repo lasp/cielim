@@ -260,7 +260,7 @@ def scene_setup() -> cielim.Scene:
     index = scene.add_celestial_body("vesta")
 
     scene.set_celestial_body_params(
-        index, albedo=0.423, mesh_shape="vesta_normalized", mesh_brdf="Regolith", mesh_radius=262.7 * 1e3
+        index, albedo=0.423, mesh_shape="vesta_normalized", mesh_brdf="Lambertian", mesh_radius=262.7 * 1e3
     )
 
     return scene
@@ -276,7 +276,9 @@ def vesta_scenario(number_of_images: int | None = None):
     solid_angle = np.pi
     pixel_area = 2.2 * 2.2 * 10 ** (-12)  # m^2
 
-    qefit.set_qe_curve_fit(scene.get_scene(), str(qe_file_path), solid_angle, pixel_area)
+    qefit.set_qe_curve_fit(
+        scene.get_scene(), str(qe_file_path), solid_angle, pixel_area, figure_name="qe_fit_vesta_fc2"
+    )
 
     # Load SPICE kernels using a meta-kernel with RELATIVE paths.
     # We temporarily chdir to the repo root so 'support-data/…' resolves correctly.
@@ -371,7 +373,7 @@ def vesta_scenario(number_of_images: int | None = None):
 
     # Main group: the close-in frames only (old indices 12-13 and 16-19, renumbered 00-05 here). The
     # distant approach frames go to their own group below and the 31 ms pair is dropped outright.
-    n = image_comparison.compare_saved(
+    n, stats = image_comparison.compare_saved(
         OUT_DIR, _gen_time_if(lambda s: s not in DISTANT_STAMPS and s not in EXCLUDED_STAMPS),
         real_entries, _real_gray_of, str(SHOWCASE_DIR),
         title_real="real", title_generated="cielim",
@@ -379,15 +381,17 @@ def vesta_scenario(number_of_images: int | None = None):
         average_batches=[("20110717", range(0, 2)), ("20110723", range(2, 6))],
     )
     print(f"Saved real-vs-generated batch comparison ({n} pairs) -> {SHOWCASE_DIR}")
+    print(image_comparison.format_error_stats(stats))
 
     # Distant-approach group: the same comparison over DISTANT_STAMPS only (old indices 00-11), so its
     # average histogram isn't mixed with the close-in frames.
-    m = image_comparison.compare_saved(
+    m, distant_stats = image_comparison.compare_saved(
         OUT_DIR, _gen_time_if(lambda s: s in DISTANT_STAMPS),
         real_entries, _real_gray_of, str(DISTANT_DIR),
         title_real="real", title_generated="cielim",
     )
     print(f"Saved distant-approach batch comparison ({m} pairs) -> {DISTANT_DIR}")
+    print(image_comparison.format_error_stats(distant_stats))
 
     spice.kclear()
 

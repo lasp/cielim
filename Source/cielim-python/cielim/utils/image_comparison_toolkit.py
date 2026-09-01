@@ -1,8 +1,21 @@
 """Real-vs-generated image comparison plots.
 
-Per image pair we emit three things: a **side-by-side view** of the two compared frames (so the
-actual images can be eyeballed, not just their statistics), an intensity **histogram**, and a
-difference **heatmap**. Cross-correlation and background masking are preprocessing toggles, not
+Per image pair we emit one **comparison row** — the real frame, the cielim frame and their
+difference **heatmap** as three separate files, so a document can lay them out as a single row of
+panels — plus an intensity **histogram**. Every file in the row is written :data:`PANEL_PX` pixels
+tall and tagged with a print size that makes the three of them span the text width together, so the
+row lines up and needs no scaling:
+
+.. code-block:: latex
+
+    \\begin{figure}
+      \\includegraphics{raw/real_00}\\hfill
+      \\includegraphics{raw/cielim_00}\\hfill
+      \\includegraphics{raw/heatmap_00}
+      \\caption{Real, cielim, and their signed difference (real - cielim).}
+    \\end{figure}
+
+Cross-correlation and background masking are preprocessing toggles, not
 figures: a batch is rendered in three variants so they can be compared side by side —
 
   * ``raw/``     — frames as-is (any real→generated offset preserved),
@@ -11,19 +24,26 @@ figures: a batch is rendered in three variants so they can be compared side by s
                    of both frames' foreground, with a small dilation halo) is compared. Useful for
                    small/faint disks; enable by passing ``modes=(..., "masked")`` to generate_batch.
 
-For a batch of pairs each variant contains the individual side-by-side views, histograms and
-heatmaps plus one **average histogram** aggregated across all pairs.
+For a batch of pairs each variant contains the individual rows and histograms plus one **average
+histogram** aggregated across all pairs. Every heatmap is captioned with the mean and standard
+deviation of the pixel error it shows (real - generated, so positive = the render is too dark), and
+the same numbers are tabulated per frame and per average batch in ``pixel_error_frames.csv`` /
+``pixel_error_average.csv`` (see :func:`pixel_error_stats`), so the agreement can be quoted as a
+number and not only read off a picture.
 
-The side-by-side view is framed tightly on the target (so a few-pixel disk isn't lost in dark space)
-and shows both panels bare — no axes, no markers — so only the imagery is compared. The annotated
-view, with located peaks and the SPICE-predicted pixel, is plot_point_source_pair, for targets too
-small to judge by eye.
+The two image panels share ONE window, framed tightly on the target (so a few-pixel disk isn't lost
+in dark space) and identical between them, so a real→generated offset stays visible instead of each
+frame being re-centered on its own disk. They are written bare — just the pixels, no axes, no
+markers, no resampling blur — so only the imagery is compared. The annotated view, with located
+peaks and the SPICE-predicted pixel, is plot_point_source_pair, for targets too small to judge by
+eye.
 
 Colormap convention (see plot_style): histograms use inferno-sampled series colors; the signed
 difference heatmap uses a zero-centered diverging ramp (black = match, see DIFF_CMAP); scene images
 shown for viewing use grayscale.
 """
 
+import re
 from pathlib import Path
 
 import cv2
@@ -66,6 +86,18 @@ MIN_FRAME_HALF = 6
 # MASK_DILATE px so the target's faint edge isn't clipped; everything else is zeroed out.
 MASK_DILATE = 2
 
+# --- comparison row geometry -------------------------------------------------------------------
+# Each pair is emitted as three files meant to sit in ONE row of a LaTeX figure:
+# real_NN | cielim_NN | heatmap_NN. Every one is written PANEL_PX pixels tall, so the row lines up
+# whichever way it is placed, and each is tagged with the print size that makes the three of them
+# span the text width at scale 1.0 (no \includegraphics scaling, so 12 pt stays 12 pt).
+#
+#   PAGE_W = 2 * ROW_PANEL_H  +  HEATMAP_ASPECT * ROW_PANEL_H
+#            \_ the two square image panels _/    \_ heatmap: square + its colorbar _/
+PANEL_PX = 1024
+HEATMAP_ASPECT = 1.4  # heatmap width / height: 1 for the square image + 0.4 for the colorbar strip
+ROW_PANEL_H = ps.PAGE_W / (2 + HEATMAP_ASPECT)
+
 # The three comparison variants and their preprocessing. ``masked`` builds on ``aligned`` because you
 # want the target registered before isolating it from the background.
 MODES = {
@@ -98,6 +130,11 @@ def to_uint8_gray(arr, lo_pct=1, hi_pct=99):
     if hi <= lo:
         return np.zeros(a.shape, np.uint8)
     return np.clip((a - lo) / (hi - lo) * 255.0, 0, 255).astype(np.uint8)
+
+
+def _slug(text):
+    """Filename-safe lowercase token from a panel title (``"cielim"`` -> ``cielim``)."""
+    return re.sub(r"[^a-z0-9]+", "-", str(text).lower()).strip("-") or "panel"
 
 
 def _as_gray(img):
@@ -262,9 +299,10 @@ def compare_saved(
         tol_s: max |time difference| for a match.
         average_exclude, average_batches: forwarded to :func:`generate_batch` (drop indices from the
             overall average / write extra labelled sub-batch averages). Indices are pair positions in
-            the sorted-by-time order, i.e. the same NN as ``histogram_NN`` / ``images_NN``.
+            the sorted-by-time order, i.e. the same NN as ``histogram_NN`` / ``heatmap_NN``.
 
-    Returns the number of matched pairs.
+    Returns ``(number of matched pairs, error stats)``, the stats being what :func:`generate_batch`
+    returns — pass them to :func:`format_error_stats` to report the mean error and its std.
     """
     real_times = [e[0] for e in real_entries]
     pairs = []
@@ -277,7 +315,7 @@ def compare_saved(
             continue
         real_path = real_entries[j][1]
         pairs.append((real_reader(real_path), load_grayscale(gp)))
-    generate_batch(
+    stats = generate_batch(
         pairs,
         output_dir,
         title_real=title_real,
@@ -285,7 +323,7 @@ def compare_saved(
         average_exclude=average_exclude,
         average_batches=average_batches,
     )
-    return len(pairs)
+    return len(pairs), stats
 
 
 def nearest_time_index(target_et, ets, tol_s=None):
@@ -314,17 +352,14 @@ def _frame_box(img, cx, cy, obj_size):
     return max(cx - half, 0), min(cx + half, w), max(cy - half, 0), min(cy + half, h)
 
 
-def plot_side_by_side(real, generated, title1="real", title2="cielim", mask=False):
-    """Grayscale side-by-side of the two compared frames, tightly framed on the target.
+def frame_pair(real, generated, mask=False):
+    """Crop ``real`` and ``generated`` to ONE tight window around the target, ready to save.
 
-    Both panels share one tight window (centered between the two targets and sized to enclose both),
-    so any real→generated location offset stays visible instead of each frame being re-centered on
-    its own disk. The frames are shown bare: no markers and no axes, so nothing overlays the imagery
-    being compared (:func:`plot_point_source_pair` is the annotated view, for targets too small to
-    judge by eye). No titles (left = real, right = generated by convention); with ``mask`` the
-    background is zeroed first.
+    The window is centered between the two targets and sized to enclose both, so any real→generated
+    location offset stays visible instead of each frame being re-centered on its own disk. Returns
+    ``(real_crop, generated_crop)``, identical in shape — the two panels of a comparison row. With
+    ``mask`` the background is zeroed first.
     """
-    ps.apply_showcase_style()
     real, generated = match_shapes(real, generated)
     rcx, rcy, rbw, rbh = get_cob_and_bbox(real)
     gcx, gcy, gbw, gbh = get_cob_and_bbox(generated)
@@ -337,14 +372,19 @@ def plot_side_by_side(real, generated, title1="real", title2="cielim", mask=Fals
     marks = [(rcx, rcy), (gcx, gcy)]
     reach = max([max(rbw, rbh, gbw, gbh)] + [2 * abs(mx - cx0) for mx, my in marks] + [2 * abs(my - cy0) for mx, my in marks])
     x1, x2, y1, y2 = _frame_box(real, cx0, cy0, reach)
-    extent = [x1 - 0.5, x2 - 0.5, y2 - 0.5, y1 - 0.5]  # bottom=y2, top=y1 keeps image orientation
+    return real[y1:y2, x1:x2], generated[y1:y2, x1:x2]
 
-    fig, axes = plt.subplots(1, 2, figsize=ps.figsize_pair())  # full text width, two HALF_W panels
-    for ax, img in ((axes[0], real), (axes[1], generated)):
-        ax.imshow(img[y1:y2, x1:x2], cmap=ps.SCENE_CMAP, extent=extent, interpolation="nearest", vmin=0, vmax=255)
-        ax.set_axis_off()  # no ticks/labels — the panels are the imagery only
-    fig.tight_layout()
-    return fig
+
+def save_image_panel(img, path, height_in=None):
+    """Write one image panel of a comparison row — see :func:`plot_style.save_raster_panel`.
+
+    Same bare-pixels writer, with this module's row geometry as the defaults: :data:`PANEL_PX` tall
+    and :data:`ROW_PANEL_H` inches on the page. ``exact_height`` because the row's third file is a
+    matplotlib heatmap that can only be sized through its dpi — these two have to match it exactly,
+    not land on a convenient whole-pixel multiple.
+    """
+    height_in = ROW_PANEL_H if height_in is None else height_in
+    return ps.save_raster_panel(img, path, height_in, px=PANEL_PX, exact_height=True)
 
 
 def locate_peak(img, center, search=15, blur=1.0):
@@ -480,7 +520,7 @@ def plot_histogram(img1, img2, title1="real", title2="cielim", bins=256, mask=No
     return fig
 
 
-def plot_diff_heatmap(img1, img2, title1="real", title2="cielim"):
+def plot_diff_heatmap(img1, img2, title1="real", title2="cielim", mask=None):
     """Signed pixel-difference heatmap (img1 − img2) on a zero-centered inferno diverging ramp.
 
     Uses :data:`DIFF_CMAP`: zero error is black, so matching regions (including the near-zero
@@ -488,23 +528,167 @@ def plot_diff_heatmap(img1, img2, title1="real", title2="cielim"):
     mismatch in both directions (a large +err and a large -err look the same — color encodes
     |difference|, not its sign; read the colorbar for sign). The difference is computed over *every*
     pixel (no THRESHOLD masking) so the background shows its true, near-zero difference.
+
+    The panel is captioned with the mean and standard deviation of the very pixels it shows
+    (:func:`pixel_error_stats`), so the map can be read quantitatively: mean ± σ separates a uniform
+    brightness offset from a structural mismatch that averages away. ``mask`` restricts those two
+    numbers (not the displayed map) to the target's pixels.
     """
     ps.apply_showcase_style()
     img1, img2 = match_shapes(img1, img2)
     diff = img1.astype(float) - img2.astype(float)
+    st = pixel_error_stats(img1, img2, mask)
 
-    # Half text width: one image, printed at the size of a single side-by-side panel (and so two
-    # heatmaps, or a heatmap and its pair's view, can sit next to each other on the page).
-    fig, ax = plt.subplots(figsize=ps.figsize_half())
-    im = ax.imshow(diff, cmap=DIFF_CMAP, vmin=-128, vmax=128)
-    cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
-    cbar.set_label(f"Difference ({title1} − {title2})")  # short: the label is 10 pt in HALF_W
+    # Third panel of a real | cielim | heatmap row: exactly as tall as the two image panels beside
+    # it, and wider only by its colorbar strip. The axes are placed explicitly rather than by
+    # tight_layout so the diff image spans the FULL figure height — with a margin above and below it
+    # the target would render smaller here than in the panels next to it and the row would not read
+    # across. The colorbar carries numeric ticks but no label: a rotated label needs more height
+    # than the row has, and what the numbers mean (the sign convention, title1 − title2) belongs in
+    # the figure's LaTeX caption.
+    fig = plt.figure(figsize=(HEATMAP_ASPECT * ROW_PANEL_H, ROW_PANEL_H))
+    img_frac = 1.0 / HEATMAP_ASPECT  # square image axes, full height
+    ax = fig.add_axes((0.0, 0.0, img_frac, 1.0))
+    im = ax.imshow(diff, cmap=DIFF_CMAP, vmin=-128, vmax=128)  # aspect stays equal: never distorted
     ax.axis("off")
-    fig.tight_layout()
+    # The mean/σ ride INSIDE the image: the axes fill the canvas, so there is no margin to caption,
+    # and the top-left corner of a target-centered crop is background. White on a translucent black
+    # box stays legible over both ends of the ramp.
+    ax.text(0.02, 0.98, f"μ = {st['mean_error']:+.1f} DN\nσ = {st['std_error']:.1f} DN",
+            transform=ax.transAxes, ha="left", va="top", color="white", fontsize=ps.BODY_PT,
+            linespacing=1.3, bbox=dict(facecolor="black", edgecolor="none", alpha=0.55, pad=2.5))
+    cax = fig.add_axes((img_frac + 0.03, 0.04, 0.035, 0.92))
+    fig.colorbar(im, cax=cax)
     return fig
 
 
-def plot_average_histogram(cropped_pairs, title1="real", title2="cielim", bins=256, drop_zero_bin=False):
+def _bin_centers(bins=256):
+    edges = np.linspace(0, 255, bins + 1)
+    return (edges[:-1] + edges[1:]) / 2
+
+
+def _intensity_fractions(img, bins=256, drop_zero_bin=False):
+    """One frame's intensity histogram as per-bin pixel *fractions*, so crops of different sizes (and
+    the masked variant, whose foreground area varies frame to frame) are directly comparable.
+
+    ``drop_zero_bin`` discards intensity 0 before normalizing — for the masked variant, whose
+    background is zeroed, that one bin would otherwise hold nearly every pixel.
+    """
+    counts, _ = np.histogram(img.flatten(), bins=bins, range=(0, 255))
+    if drop_zero_bin:
+        counts[0] = 0
+    return counts / max(counts.sum(), 1)
+
+
+def _error_moments(real, gen, mask=None):
+    """Raw sums of one pair's per-pixel error ``real - generated``.
+
+    Sums rather than the arrays themselves: a batch is pooled by adding these up, so the batch
+    statistics are over every pixel of every frame exactly, with no per-frame arrays kept around and
+    no averaging of averages (frames whose crops differ in size would otherwise be weighted wrong).
+    ``mask`` (a boolean foreground array) restricts the count to those pixels — for the masked
+    variant, where the zeroed background would otherwise pull the mean error toward zero.
+    """
+    real, gen = match_shapes(real, gen)
+    r = real.astype(float)
+    g = gen.astype(float)
+    r, g = (r[mask], g[mask]) if mask is not None else (r.ravel(), g.ravel())
+    err = r - g
+    return {"n": int(err.size), "sum_r": float(r.sum()), "sum_g": float(g.sum()),
+            "sum_e": float(err.sum()), "sum_e2": float(np.square(err).sum()),
+            "sum_abs_e": float(np.abs(err).sum())}
+
+
+def _stats_from_moments(moments):
+    """Turn a list of per-frame :func:`_error_moments` into the reported statistics."""
+    n = sum(m["n"] for m in moments)
+    if n == 0:
+        return {k: 0.0 for k in ("real_mean", "gen_mean", "mean_error", "std_error", "mae", "rmse",
+                                 "frame_mean_std")} | {"frames": len(moments), "pixels": 0}
+    mean_e = sum(m["sum_e"] for m in moments) / n
+    mean_e2 = sum(m["sum_e2"] for m in moments) / n
+    frame_means = [m["sum_e"] / m["n"] for m in moments if m["n"]]
+    return {
+        "frames": len(moments),
+        "pixels": n,
+        "real_mean": sum(m["sum_r"] for m in moments) / n,
+        "gen_mean": sum(m["sum_g"] for m in moments) / n,
+        "mean_error": mean_e,
+        # Population std over the pixels themselves — the spread of the error map, which is what the
+        # heatmap shows. max(., 0) guards the rounding of a variance that is numerically zero.
+        "std_error": float(np.sqrt(max(mean_e2 - mean_e**2, 0.0))),
+        "mae": sum(m["sum_abs_e"] for m in moments) / n,
+        "rmse": float(np.sqrt(mean_e2)),
+        # Frame-to-frame scatter of the per-frame mean error: whether the offset is a repeatable bias
+        # or varies frame by frame. Zero for a single frame, which has no scatter to report.
+        "frame_mean_std": float(np.std(frame_means, ddof=1)) if len(frame_means) > 1 else 0.0,
+    }
+
+
+def pixel_error_stats(real, gen, mask=None):
+    """Per-pixel error statistics of ONE (real, generated) pair — the numbers on its heatmap.
+
+    The error is ``real - generated`` at every pixel, the sign convention of the difference heatmap:
+    a POSITIVE ``mean_error`` means the render is too dark. ``std_error`` is the spread of that error
+    map over its pixels, so mean ± std describes the heatmap directly: a large mean with a small std
+    is a uniform brightness offset, a near-zero mean with a large std is a structural mismatch that
+    cancels in the average. ``mae``/``rmse`` do not let positive and negative error cancel, so they
+    are the ones to quote as accuracy.
+
+    Both frames must be the same window (they are resized onto each other if not). Pass ``mask`` to
+    count only the target's pixels.
+    """
+    return _stats_from_moments([_error_moments(real, gen, mask)])
+
+
+def batch_pixel_error(pairs, masks=None):
+    """Pixel error statistics pooled over a batch of (real, generated) pairs.
+
+    Every pixel of every frame counts once, so the batch mean is the true mean pixel error and not an
+    average of per-frame averages. ``masks``, when given, is one foreground array per pair (or None
+    for an unmasked pair). ``pairs`` must be non-empty; see :func:`pixel_error_stats` for the meaning
+    of each statistic and :func:`format_error_stats` for a printable summary.
+    """
+    masks = masks if masks is not None else [None] * len(pairs)
+    return _stats_from_moments([_error_moments(r, g, m) for (r, g), m in zip(pairs, masks)])
+
+
+# Columns of the per-mode error CSVs, in order. Kept as constants so the header and the rows cannot
+# drift apart, and so a table in the paper can be built straight off them. Every column after the
+# first is a key of the stats dict, so the header names the statistic it holds.
+FRAME_ERROR_CSV_COLUMNS = ("frame", "pixels", "real_mean", "gen_mean", "mean_error",
+                           "std_error", "mae", "rmse")
+BATCH_ERROR_CSV_COLUMNS = ("batch", "frames", "pixels", "real_mean", "gen_mean", "mean_error",
+                           "std_error", "mae", "rmse", "frame_mean_std")
+
+
+def _error_csv(columns, rows):
+    """CSV text for ``rows`` of ``(label, stats)``, one column per name in ``columns``."""
+    out = [",".join(columns)]
+    for label, st in rows:
+        values = [label] + [f"{st[c]:.4f}" if isinstance(st[c], float) else str(st[c])
+                            for c in columns[1:]]
+        out.append(",".join(values))
+    return "\n".join(out) + "\n"
+
+
+def format_error_stats(stats, title_real="real", title_generated="cielim"):
+    """One printable line per batch of the nested ``{mode: {label: stats}}`` :func:`generate_batch`
+    returns, for a scenario to echo after it writes its comparison set."""
+    lines = []
+    for mode, batches in stats.items():
+        for label, st in batches.items():
+            lines.append(
+                f"  {mode}/{label}: mean pixel error ({title_real} − {title_generated}) = "
+                f"{st['mean_error']:+.2f} ± {st['std_error']:.2f} DN over {st['frames']} frames "
+                f"({st['pixels']} px), MAE {st['mae']:.2f}, RMSE {st['rmse']:.2f} DN, "
+                f"frame-to-frame scatter {st['frame_mean_std']:.2f} DN"
+            )
+    return "\n".join(lines)
+
+
+def plot_average_histogram(cropped_pairs, title1="real", title2="cielim", bins=256, drop_zero_bin=False,
+                           error_stats=None):
     """Average intensity histogram across a batch of (real, generated) grayscale pairs.
 
     Pairs are expected already aligned/masked (see :func:`generate_batch`). Each frame's histogram is
@@ -513,23 +697,19 @@ def plot_average_histogram(cropped_pairs, title1="real", title2="cielim", bins=2
     bin is discarded before normalizing — for the masked variant, whose background is zeroed, this
     keeps the average from collapsing onto that one dominant bin. Which sub-batch this is (an index
     range) is documented by the caller's filename, not a title.
+
+    Pass ``error_stats`` — what :func:`batch_pixel_error` returns for the same batch — to put the
+    batch's mean pixel error ± σ in the legend, so the figure is quotable without its CSV beside it.
+    :func:`generate_batch` measures that error on the comparison row's window rather than on this
+    plot's tighter ROI crop, so one error figure describes the whole row: the heatmaps, the CSVs and
+    this legend are all the same number.
     """
     ps.apply_showcase_style()
     c1, c2 = ps.SERIES_COLORS
-    centers = (np.linspace(0, 255, bins + 1)[:-1] + np.linspace(0, 255, bins + 1)[1:]) / 2
+    centers = _bin_centers(bins)
 
-    def fractions(img):
-        counts, _ = np.histogram(img.flatten(), bins=bins, range=(0, 255))
-        if drop_zero_bin:
-            counts[0] = 0
-        return counts / max(counts.sum(), 1)
-
-    real_frac, gen_frac = [], []
-    for real, gen in cropped_pairs:
-        real_frac.append(fractions(real))
-        gen_frac.append(fractions(gen))
-    real_frac = np.array(real_frac)
-    gen_frac = np.array(gen_frac)
+    real_frac = np.array([_intensity_fractions(r, bins, drop_zero_bin) for r, _ in cropped_pairs])
+    gen_frac = np.array([_intensity_fractions(g, bins, drop_zero_bin) for _, g in cropped_pairs])
     rm, rs = real_frac.mean(0), real_frac.std(0)
     gm, gs = gen_frac.mean(0), gen_frac.std(0)
 
@@ -538,6 +718,11 @@ def plot_average_histogram(cropped_pairs, title1="real", title2="cielim", bins=2
     ax.fill_between(centers, np.clip(rm - rs, 0, None), rm + rs, color=c1, alpha=0.2)
     ax.plot(centers, gm, color=c2, label=title2)
     ax.fill_between(centers, np.clip(gm - gs, 0, None), gm + gs, color=c2, alpha=0.2)
+    if error_stats is not None:
+        # The error goes in the legend rather than a floating text box: it is a third entry in the
+        # same frame, so it can never land on top of a curve whatever the batch looks like.
+        ax.plot([], [], " ", label=(f"error ({title1} − {title2}) {error_stats['mean_error']:+.1f} ± "
+                                   f"{error_stats['std_error']:.1f} DN, {error_stats['frames']} frames"))
 
     ax.set_yscale("log")
     ax.set_xlim(0, 255)
@@ -565,24 +750,40 @@ def generate_batch(
     ``pairs`` is a list of (real, generated); each item may be a path, a BGR array, or a grayscale
     array. Both sides are coerced to grayscale and the generated frame resized onto the real one. For
     every mode in ``modes`` (default: ``"raw"``, ``"aligned"``; pass ``"masked"`` too to also emit the
-    background-zeroed variant — see the module docstring) a subdirectory is written containing per-pair
-    ``images_NN.png`` (side-by-side view),
-    ``histogram_NN.png`` and ``heatmap_NN.png`` plus one overall ``histogram_average.png``.
+    background-zeroed variant — see the module docstring) a subdirectory is written containing, per
+    pair, the three files of one comparison row — ``real_NN.png``, ``cielim_NN.png`` and
+    ``heatmap_NN.png``, all :data:`PANEL_PX` tall — plus ``histogram_NN.png`` and one overall
+    ``histogram_average.png``.
 
     ``average_exclude`` is an iterable of pair indices to drop from the overall average (their
     individual per-pair figures are still written). ``average_batches`` is an optional list of
     ``(label, indices)`` sub-batches; each writes an extra ``histogram_average_<label>.png`` averaged
     over just those indices (also respecting ``average_exclude``). The overall average is always
     written, so sub-batches are additive.
+
+    Each mode also gets the numbers behind its figures, measured on the pixels of the comparison
+    row's window (see :func:`pixel_error_stats`):
+
+      * ``pixel_error_frames.csv``  — one row per pair, columns :data:`FRAME_ERROR_CSV_COLUMNS`; the
+        mean/σ of row ``NN`` are the pair captioned on ``heatmap_NN.png``,
+      * ``pixel_error_average.csv`` — one row per average batch, columns
+        :data:`BATCH_ERROR_CSV_COLUMNS`, pooled over every pixel of every frame in the batch.
+
+    The batch rows are also returned, as a nested ``{mode: {batch label: stats}}`` dict with the
+    overall average keyed ``"all"``; :func:`format_error_stats` turns it into printable lines.
     """
     ps.apply_showcase_style()
     output_dir = Path(output_dir)
+    stats = {}
 
-    # Full-resolution matched grayscale pairs, kept for the side-by-side view so its pixel-coordinate
-    # annotations are in the true image frame; the numeric figures use a padded ROI crop of the pair.
+    # Full-resolution matched grayscale pairs; the numeric figures use a padded ROI crop of the pair.
     full = [match_shapes(_as_gray(r), _as_gray(g)) for r, g in pairs]
     if not full:
-        return
+        return stats
+
+    # The panels are named for what they hold, so a LaTeX row reads real | cielim | heatmap.
+    real_name = _slug(title_real)
+    gen_name = _slug(title_generated)
 
     for mode in modes:
         cfg = MODES[mode]
@@ -590,15 +791,31 @@ def generate_batch(
         mode_dir.mkdir(parents=True, exist_ok=True)
 
         cropped = []  # collected for the batch-average histogram
+        moments = []  # per-pair error sums, in the same order, pooled into the batch averages
         for i, (real, gen) in enumerate(full):
             gg = align_pair(real, gen) if cfg["align"] else gen
 
-            # The two compared frames, saved together as one tightly-framed side-by-side view.
-            fig = plot_side_by_side(real, gg, title_real, title_generated, mask=cfg["mask"])
-            ps.save_figure(fig, mode_dir / f"images_{i:02d}.png")
+            # The two compared frames, one tight window shared between them, as separate files so
+            # they can be placed individually alongside the heatmap.
+            rp, gp = frame_pair(real, gg, mask=cfg["mask"])
+            save_image_panel(rp, mode_dir / f"{real_name}_{i:02d}.png")
+            save_image_panel(gp, mode_dir / f"{gen_name}_{i:02d}.png")
+
+            # The pixel error is measured on this window — the pixels the row actually shows — so the
+            # heatmap's caption, the CSVs and the average all describe one and the same field of
+            # view. In the masked variant only the target counts: its zeroed background matches
+            # perfectly by construction and would drag the mean error toward zero.
+            frame_fg = ((rp > 0) | (gp > 0)) if cfg["mask"] else None
+            moments.append(_error_moments(rp, gp, frame_fg))
+
+            # The heatmap is the third panel of the row, so it takes the SAME window as the two
+            # image panels — the row has to show one field of view across all three.
+            fig = plot_diff_heatmap(rp, gp, title_real, title_generated, mask=frame_fg)
+            fig.savefig(mode_dir / f"heatmap_{i:02d}.png", dpi=PANEL_PX / ROW_PANEL_H)
             plt.close(fig)
 
-            # ROI crop (common window preserves any offset); zero the background for the masked mode.
+            # The histograms keep their own, tighter ROI crop (see crop_pair): they are disk
+            # statistics, and the row's window deliberately carries more background for context.
             rc, gc = crop_pair(real, gg)
             fg = foreground_mask(rc, gc) if cfg["mask"] else None
             if fg is not None:
@@ -608,20 +825,36 @@ def generate_batch(
             fig = plot_histogram(rc, gc, title_real, title_generated, mask=fg)
             ps.save_figure(fig, mode_dir / f"histogram_{i:02d}.png")
             plt.close(fig)
-            fig = plot_diff_heatmap(rc, gc, title_real, title_generated)
-            ps.save_figure(fig, mode_dir / f"heatmap_{i:02d}.png")
-            plt.close(fig)
+
+        (mode_dir / "pixel_error_frames.csv").write_text(
+            _error_csv(FRAME_ERROR_CSV_COLUMNS,
+                       [(f"{i:02d}", _stats_from_moments([m])) for i, m in enumerate(moments)])
+        )
 
         exclude = set(average_exclude or ())
+        mode_stats = {}
 
-        def _avg(indices, suffix):
-            sel = [cropped[i] for i in indices if 0 <= i < len(cropped) and i not in exclude]
-            if not sel:
+        def _avg(indices, suffix, label):
+            keep = [i for i in indices if 0 <= i < len(cropped) and i not in exclude]
+            if not keep:
                 return
-            fig = plot_average_histogram(sel, title_real, title_generated, drop_zero_bin=cfg["mask"])
+            # The batch's error pools the same frames the average histogram is drawn from, so the
+            # figure, the CSV row and the printed line are one number.
+            batch = _stats_from_moments([moments[i] for i in keep])
+            fig = plot_average_histogram([cropped[i] for i in keep], title_real, title_generated,
+                                         drop_zero_bin=cfg["mask"], error_stats=batch)
             ps.save_figure(fig, mode_dir / f"histogram_average{suffix}.png")
             plt.close(fig)
+            mode_stats[label] = batch
 
-        _avg(range(len(cropped)), "")  # overall average (respecting average_exclude)
+        _avg(range(len(cropped)), "", "all")  # overall average (respecting average_exclude)
         for label, indices in average_batches or []:
-            _avg(indices, f"_{label}")  # the label documents the sub-batch in the filename
+            _avg(indices, f"_{label}", label)  # the label documents the sub-batch in the filename
+
+        if mode_stats:
+            (mode_dir / "pixel_error_average.csv").write_text(
+                _error_csv(BATCH_ERROR_CSV_COLUMNS, list(mode_stats.items()))
+            )
+            stats[mode] = mode_stats
+
+    return stats

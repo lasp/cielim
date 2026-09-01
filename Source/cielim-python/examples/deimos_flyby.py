@@ -182,7 +182,14 @@ def spice_scenario():
     pixel_area = (0.022528 * 0.016896) / (4096 * 3072)  # m^2
     f635_window = [625, 645]
 
-    qefit.set_qe_curve_fit(scene.get_scene(), str(qe_file_path), solid_angle, pixel_area, f635_window)
+    qefit.set_qe_curve_fit(
+        scene.get_scene(),
+        str(qe_file_path),
+        solid_angle,
+        pixel_area,
+        f635_window,
+        figure_name="qe_fit_deimos_f635",
+    )
 
     # Load SPICE kernels using a meta-kernel with RELATIVE paths.
     # We temporarily chdir to the repo root so 'support-data/…' resolves correctly.
@@ -273,11 +280,12 @@ def spice_scenario():
     # Read the saved generated frames back and compare each to the real f635 image at the same time,
     # skipping the noisy real frames (_NOISY_STAMPS). raw/ and aligned/ subsets, each with individual
     # histograms + heatmaps and an average histogram.
-    n = image_comparison.compare_saved(
+    n, stats = image_comparison.compare_saved(
         OUT_DIR, _comparison_et, real_entries, _real_gray_of, str(SHOWCASE_DIR),
         title_real="real", title_generated="cielim",
     )
     print(f"Saved real-vs-generated batch comparison ({n} pairs) -> {SHOWCASE_DIR}")
+    print(image_comparison.format_error_stats(stats))
 
     spice.kclear()
 
