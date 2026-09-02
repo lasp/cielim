@@ -39,7 +39,7 @@ The build script ``build.py`` requires Python 3. No additional packages beyond t
 
 ## Building
 
-The project can be built from an IDE, from the build script ``build.py``, or by manually running CMake commands from the command line. Build artifacts and executables are built to ``<project_dir>/build/<preset>/``. When running the build script, options can be added to limit to just configuring, building, etc. These are elaborated in the Wiki pages for this repository.
+The project can be built from an IDE, from the build script ``build.py``, or by manually running CMake commands from the command line. Build artifacts and executables are built to ``cielim/build/<preset>/``. When running the build script, options can be added to limit to just configuring, building, etc. These are elaborated in the Wiki pages for this repository.
 
    ```bash
    python3 build.py           # Full clean build
@@ -48,7 +48,7 @@ The project can be built from an IDE, from the build script ``build.py``, or by 
 
 Build presets are defined in ``CMakePresets.json`` and user-specific presets can be defined in ``CMakeUserPresets.json``. A preset can be chosen by using the ``--preset`` flag with the build script. This will set the preset and save it in ``build_config.json``. If no preset is given, the script will use whatever preset is set in that file. If it doesn't have a preset saved or doesn't exist, the build script will use a default preset and save that in the build config file.
 
-Vcpkg runs in **manifest mode**: dependencies and version overrides are declared in ``vcpkg.json``. These will be built and installed to ``<project_dir>/build/<preset>/vcpkg_installed/<triplet>/`` automatically before CMake generates build files during configuration.
+Vcpkg runs in **manifest mode**: dependencies and version overrides are declared in ``vcpkg.json``. These will be built and installed to ``cielim/build/<preset>/vcpkg_installed/<triplet>/`` automatically before CMake generates build files during configuration.
 
 It is important that the toolchain version that vcpkg uses to build the dependencies **is the exact same** as the toolchain version used when building the project source files, otherwise you may experience linking errors.
 
@@ -69,9 +69,9 @@ Generated ``.pb.{h,cc}`` files must be regenerated whenever the corresponding ``
 After a successful vcpkg install, the matching protoc binary is available in the vcpkg install directory. The generated files can then be rebuilt using the python script ``build_protobuf.py`` or manually.
 
    ```bash
-   PROTOC="build/<preset>/vcpkg_installed/<triplet>/tools/protobuf/protoc"
-   PROTO_DIR="src/cielim/Protobuf"
-   PROTO_DIR_PY="src/cielim-python/cielim"
+   PROTOC="cielim/build/<preset>/vcpkg_installed/<triplet>/tools/protobuf/protoc"
+   PROTO_DIR="cielim/src/protobuf"
+   PROTO_DIR_PY="cielim-python/cielim"
 
    $PROTOC --proto_path=$PROTO_DIR --cpp_out=$PROTO_DIR --python_out=$PROTO_DIR_PY cielimMessage.proto imageDiagnostics.proto
    ```

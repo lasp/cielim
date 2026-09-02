@@ -8,12 +8,17 @@ import sys
 from pathlib import Path
 
 base_path = os.path.dirname(os.path.abspath(__file__))
+cielim_path = os.path.join(base_path, "cielim")
 
 
 def clean():
     print("Cleaning build files...")
 
-    folders_to_clean = ["build", "content"]
+    folders_to_clean = [
+        os.path.join(base_path, "bin"),
+        os.path.join(cielim_path, "build"),
+        os.path.join(cielim_path, "content"),
+    ]
 
     for folder in folders_to_clean:
         dir = os.path.join(base_path, folder)
@@ -31,8 +36,8 @@ def compile_shaders():
     if shutil.which("slangc") is None:
         raise FileNotFoundError("Slang compiler (slangc) not detected")
 
-    source_dir = Path(os.path.join(base_path, "assets", "shaders"))
-    output_dir = Path(os.path.join(base_path, "content", "shaders"))
+    source_dir = Path(os.path.join(cielim_path, "assets", "shaders"))
+    output_dir = Path(os.path.join(cielim_path, "content", "shaders"))
 
     for shader in source_dir.rglob("*.slang"):
         relative_path = shader.relative_to(source_dir).with_suffix(".spv")
@@ -73,6 +78,7 @@ def configure(platform_name: str, preset: str):
             "--preset",
             f"{preset}",
         ],
+        cwd=cielim_path,
         stdout=sys.stdout,
         stderr=sys.stderr,
     )
@@ -81,8 +87,8 @@ def configure(platform_name: str, preset: str):
 
     # Copy compile_commands.json to base build directory for Clangd
 
-    target_path = os.path.join(base_path, "build", preset, "compile_commands.json")
-    link_path = os.path.join(base_path, "build", "compile_commands.json")
+    target_path = os.path.join(cielim_path, "build", preset, "compile_commands.json")
+    link_path = os.path.join(cielim_path, "build", "compile_commands.json")
 
     if os.path.isfile(target_path):
         if os.path.exists(link_path):
@@ -90,7 +96,7 @@ def configure(platform_name: str, preset: str):
         try:
             os.symlink(target_path, link_path)
         except PermissionError as e:
-            print(f"Skipped compile_commands.json symlink, permission denined: {e}")
+            print(f"Skipped compile_commands.json symlink, permission denied: {e}")
 
 
 def build(platform_name: str, preset: str):
@@ -101,13 +107,42 @@ def build(platform_name: str, preset: str):
         [
             "cmake",
             "--build",
-            f"{os.path.join(base_path, "build", preset)}",
+            f"{os.path.join(cielim_path, "build", preset)}",
         ],
         stdout=sys.stdout,
         stderr=sys.stderr,
     )
 
     process.wait()
+
+
+def package(system: str, architecture: str, preset: str):
+    print("Packaging build...")
+
+    build_dir = Path(os.path.join(cielim_path, "build", preset))
+    out_dir = Path(os.path.join(base_path, "bin", f"{architecture}_{system}"))
+
+    exe_name = "cielim.exe" if system == "windows" else "cielim"
+    candidates = [
+        executable
+        for executable in build_dir.rglob(exe_name)
+        if "vcpkg_installed" not in executable.parts and "CMakeFiles" not in executable.parts
+    ]
+
+    if len(candidates) != 1:
+        raise FileNotFoundError(
+            f"Could not find unique executable '{exe_name}', found {len(candidates)} in {build_dir}"
+        )
+
+    if out_dir.exists():
+        shutil.rmtree(out_dir)
+
+    out_dir.mkdir(parents=True)
+
+    shutil.copy2(candidates[0], out_dir / exe_name)
+    shutil.copytree(Path(cielim_path) / "content", out_dir / "content")
+
+    print(f"Packaged build to {os.path.join(base_path, out_dir)}/")
 
 
 if __name__ == "__main__":
@@ -140,6 +175,7 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--shaders", action="store_true", help="Compile shaders into SPIR-V")
     parser.add_argument("-c", "--config", action="store_true", help="Configure Cielim build files")
     parser.add_argument("-b", "--build", action="store_true", help="Build Cielim")
+    parser.add_argument("-k", "--package", action="store_true", help="Package Cielim application")
     parser.add_argument("-p", "--preset", type=str, default="", help="CMake preset to use for building")
 
     args, remaining_args = parser.parse_known_args()
@@ -183,6 +219,9 @@ if __name__ == "__main__":
     if args.build:
         build(platform_name, preset)
         ranAtLeastOnce = True
+    if args.package:
+        package(system, architecture, preset)
+        ranAtLeastOnce = True
 
     # If no command has been run, default to full clean run
     if not ranAtLeastOnce:
@@ -190,3 +229,4 @@ if __name__ == "__main__":
         compile_shaders()
         configure(platform_name, preset)
         build(platform_name, preset)
+        package(system, architecture, preset)

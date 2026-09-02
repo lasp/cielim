@@ -5,7 +5,7 @@ CompileFlags:
     -Wall,
     -Wextra,
     -pedantic]
-  CompilationDatabase: build # Search cielim/build for compile_commands.json
+  CompilationDatabase: cielim/build # Search cielim/build for compile_commands.json
 
 InlayHints:
   DeducedTypes: Yes
