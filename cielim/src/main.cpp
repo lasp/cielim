@@ -23,7 +23,7 @@ import cielim.utils.file;
 import cielim.utils.log;
 
 #ifndef NDEBUG
-static VKAPI_ATTR auto VKAPI_CALL DebugCallback(
+static VKAPI_ATTR auto VKAPI_CALL debug_callback(
     VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
     VkDebugUtilsMessageTypeFlagsEXT message_type,
     const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data,
@@ -91,7 +91,7 @@ static std::vector<VkSemaphore> acquire_semaphores;
 static std::vector<VkSemaphore> render_finished_semaphores;
 
 // Clean up Vulkan resources
-static auto Clean() -> void
+static auto clean() -> void
 {
 #ifndef NDEBUG
     if (debug_messenger != VK_NULL_HANDLE)
@@ -153,10 +153,10 @@ static auto Clean() -> void
 auto main(int argc, char* argv[]) -> int
 {
     // Create vulkan specific log for validation layers
-    cielim::utils::log::InitLog("log-vulkan");
+    cielim::utils::log::init_log("log-vulkan");
 
     // Create default main log
-    cielim::utils::log::InitLog("log-cielim");
+    cielim::utils::log::init_log("log-cielim");
 
     // Set global log format
     cielim::utils::log::set_pattern("[%Y-%m-%d %H:%M:%S.%e] %n - %^%l%$: %v");
@@ -347,7 +347,7 @@ auto main(int argc, char* argv[]) -> int
         = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT
         | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
         .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT,
-        .pfnUserCallback = DebugCallback,
+        .pfnUserCallback = debug_callback,
     };
 #endif
 
@@ -371,7 +371,7 @@ auto main(int argc, char* argv[]) -> int
     if (vk_result != VK_SUCCESS)
     {
         cielim::utils::log::critical("Instance creation failed: {}", string_VkResult(vk_result));
-        Clean();
+        clean();
         return EXIT_FAILURE;
     }
 
@@ -389,7 +389,7 @@ auto main(int argc, char* argv[]) -> int
     if (surface == VK_NULL_HANDLE)
     {
         cielim::utils::log::critical("Vulkan surface could not be created!");
-        Clean();
+        clean();
         return EXIT_FAILURE;
     }
 
@@ -403,7 +403,7 @@ auto main(int argc, char* argv[]) -> int
     if (vk_result != VK_SUCCESS || physical_devices.empty())
     {
         cielim::utils::log::critical("No physical devices found!");
-        Clean();
+        clean();
         return EXIT_FAILURE;
     }
 
@@ -446,7 +446,7 @@ auto main(int argc, char* argv[]) -> int
     if (physical_device == VK_NULL_HANDLE || graphics_queue_family < 0)
     {
         cielim::utils::log::critical("No device could be found that supports Vulkan 1.4+ and/or graphics queues!");
-        Clean();
+        clean();
         return EXIT_FAILURE;
     }
 
@@ -526,7 +526,7 @@ auto main(int argc, char* argv[]) -> int
     if (vk_result != VK_SUCCESS)
     {
         cielim::utils::log::critical("Vulkan device extensions could not be fetched!");
-        Clean();
+        clean();
         return EXIT_FAILURE;
     }
 
@@ -552,7 +552,7 @@ auto main(int argc, char* argv[]) -> int
     if (!missing_dev_extensions.empty())
     {
         cielim::utils::log::critical("Missing required device extensions: {}", fmt::join(missing_dev_extensions, ", "));
-        Clean();
+        clean();
         return EXIT_FAILURE;
     }
 
@@ -578,7 +578,7 @@ auto main(int argc, char* argv[]) -> int
     if (vk_result != VK_SUCCESS)
     {
         cielim::utils::log::critical("Device creation failed: {}", string_VkResult(vk_result));
-        Clean();
+        clean();
         return EXIT_FAILURE;
     }
 
@@ -590,7 +590,7 @@ auto main(int argc, char* argv[]) -> int
     if (vk_result != VK_SUCCESS)
     {
         cielim::utils::log::critical("Surface capabilities could not be fetched!");
-        Clean();
+        clean();
         return EXIT_FAILURE;
     }
 
@@ -605,14 +605,14 @@ auto main(int argc, char* argv[]) -> int
     if (vk_result != VK_SUCCESS)
     {
         cielim::utils::log::critical("Surface formats could not be fetched!");
-        Clean();
+        clean();
         return EXIT_FAILURE;
     }
 
     if (surface_formats.empty())
     {
         cielim::utils::log::critical("No available surface formats!");
-        Clean();
+        clean();
         return EXIT_FAILURE;
     }
 
@@ -629,7 +629,7 @@ auto main(int argc, char* argv[]) -> int
     if (!found_format)
     {
         cielim::utils::log::critical("Required surface format is not supported!");
-        Clean();
+        clean();
         return EXIT_FAILURE;
     }
 
@@ -679,7 +679,7 @@ auto main(int argc, char* argv[]) -> int
     if (swapchain == VK_NULL_HANDLE)
     {
         cielim::utils::log::critical("Swap-chain creation failed: {}", string_VkResult(vk_result));
-        Clean();
+        clean();
         return EXIT_FAILURE;
     }
 
@@ -706,7 +706,7 @@ auto main(int argc, char* argv[]) -> int
         if (vk_result != VK_SUCCESS)
         {
             cielim::utils::log::critical("Image view creation failed: {}", string_VkResult(vk_result));
-            Clean();
+            clean();
             return EXIT_FAILURE;
         }
         i++;
@@ -714,14 +714,14 @@ auto main(int argc, char* argv[]) -> int
 
     std::filesystem::path triangle_shader_path = base_path / "content" / "shaders" / "triangle.spv";
 
-    auto triangle_shader = cielim::utils::file::ReadFile32(triangle_shader_path);
+    auto triangle_shader = cielim::utils::file::read_file32(triangle_shader_path);
 
     if (!triangle_shader.has_value())
     {
         cielim::utils::log::error(
             "Shader {} could not be opened: {}", triangle_shader_path.string(), triangle_shader.error().message()
         );
-        Clean();
+        clean();
         return EXIT_FAILURE;
     }
 
@@ -736,7 +736,7 @@ auto main(int argc, char* argv[]) -> int
     if (vk_result != VK_SUCCESS)
     {
         cielim::utils::log::error("Shader module could not be created: {}", string_VkResult(vk_result));
-        Clean();
+        clean();
         return EXIT_FAILURE;
     }
 
@@ -821,7 +821,7 @@ auto main(int argc, char* argv[]) -> int
     if (vk_result != VK_SUCCESS)
     {
         cielim::utils::log::critical("Pipeline layout could not be created: {}", string_VkResult(vk_result));
-        Clean();
+        clean();
         return EXIT_FAILURE;
     }
 
@@ -860,7 +860,7 @@ auto main(int argc, char* argv[]) -> int
     if (vk_result != VK_SUCCESS)
     {
         cielim::utils::log::critical("Graphics pipeline could not be created: {}", string_VkResult(vk_result));
-        Clean();
+        clean();
         return EXIT_FAILURE;
     }
 
@@ -882,7 +882,7 @@ auto main(int argc, char* argv[]) -> int
         if (vk_result != VK_SUCCESS)
         {
             cielim::utils::log::critical("Command pool could not be created: {}", string_VkResult(vk_result));
-            Clean();
+            clean();
             return EXIT_FAILURE;
         }
 
@@ -898,7 +898,7 @@ auto main(int argc, char* argv[]) -> int
         if (vk_result != VK_SUCCESS)
         {
             cielim::utils::log::critical("Command buffer could not be allocated: {}", string_VkResult(vk_result));
-            Clean();
+            clean();
             return EXIT_FAILURE;
         }
     }
@@ -929,7 +929,7 @@ auto main(int argc, char* argv[]) -> int
         if (vk_result != VK_SUCCESS)
         {
             cielim::utils::log::critical("Binary semaphore failed to be created: {}", string_VkResult(vk_result));
-            Clean();
+            clean();
             return EXIT_FAILURE;
         }
     }
@@ -943,7 +943,7 @@ auto main(int argc, char* argv[]) -> int
         if (vk_result != VK_SUCCESS)
         {
             cielim::utils::log::critical("Binary semaphore failed to be created: {}", string_VkResult(vk_result));
-            Clean();
+            clean();
             return EXIT_FAILURE;
         }
     }
@@ -987,7 +987,7 @@ auto main(int argc, char* argv[]) -> int
             if (vk_result != VK_SUCCESS)
             {
                 cielim::utils::log::critical("Failed waiting on timeline semaphore: {}", string_VkResult(vk_result));
-                Clean();
+                clean();
                 return EXIT_FAILURE;
             }
         }
@@ -1008,7 +1008,7 @@ auto main(int argc, char* argv[]) -> int
         if (vk_result != VK_SUCCESS && vk_result != VK_SUBOPTIMAL_KHR)
         {
             cielim::utils::log::critical("Failed to acquire swapchain image: {}", string_VkResult(vk_result));
-            Clean();
+            clean();
             return EXIT_FAILURE;
         }
 
@@ -1017,7 +1017,7 @@ auto main(int argc, char* argv[]) -> int
         if (vk_result != VK_SUCCESS)
         {
             cielim::utils::log::critical("Failed to reset command pool: {}", string_VkResult(vk_result));
-            Clean();
+            clean();
             return EXIT_FAILURE;
         }
 
@@ -1030,7 +1030,7 @@ auto main(int argc, char* argv[]) -> int
         if (vk_result != VK_SUCCESS)
         {
             cielim::utils::log::critical("Failed to begin command buffer: {}", string_VkResult(vk_result));
-            Clean();
+            clean();
             return EXIT_FAILURE;
         }
 
@@ -1143,7 +1143,7 @@ auto main(int argc, char* argv[]) -> int
         if (vk_result != VK_SUCCESS)
         {
             cielim::utils::log::critical("Failed to end command buffer: {}", string_VkResult(vk_result));
-            Clean();
+            clean();
             return EXIT_FAILURE;
         }
 
@@ -1189,7 +1189,7 @@ auto main(int argc, char* argv[]) -> int
         if (vk_result != VK_SUCCESS)
         {
             cielim::utils::log::critical("Failed to submit command buffer: {}", string_VkResult(vk_result));
-            Clean();
+            clean();
             return EXIT_FAILURE;
         }
 
@@ -1211,14 +1211,14 @@ auto main(int argc, char* argv[]) -> int
         else if (vk_result != VK_SUCCESS)
         {
             cielim::utils::log::critical("Failed to present swapchain image: {}", string_VkResult(vk_result));
-            Clean();
+            clean();
             return EXIT_FAILURE;
         }
     }
 
     vkDeviceWaitIdle(device);
 
-    Clean();
+    clean();
 
     SDL_Quit();
 
