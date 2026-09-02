@@ -5,6 +5,7 @@
 
 module;
 
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <vector>
@@ -21,7 +22,7 @@ constexpr int DEFAULT_FILE_SIZE = 5 * 1024 * 1024;
 export namespace fmt
 {
 using fmt::join;
-}
+} // namespace fmt
 
 export namespace cielim::utils::log
 {
@@ -44,16 +45,16 @@ using level = spdlog::level::level_enum;
 
 /**
  * @brief Initializes and registers a log with color console sink and optional file sink, and sets as default.
- *        This function should not be used outside program start.
+ * This function should not be used outside program start.
  * @param name Name of the logger.
  * @param file_path (Optional) Path to log file including name, e.g., logs/myapp.log.
- *                  No log file will be used if empty.
+ * No log file will be used if empty.
  * @param max_file_size (Optional) Number of characters after which new log file is created.
  * @param max_files (Optional) Max number of log files to write.
  */
-auto InitLog(
+auto init_log(
     const std::string& name,
-    const std::string& file_path = "",
+    const std::filesystem::path& file_path = "",
     std::size_t max_file_size = DEFAULT_FILE_SIZE,
     std::size_t max_files = 2
 ) -> void
@@ -65,7 +66,9 @@ auto InitLog(
 
     if (!file_path.empty())
     {
-        sinks.push_back(std::make_shared<spdlog::sinks::rotating_file_sink_mt>(file_path, max_file_size, max_files));
+        sinks.push_back(
+            std::make_shared<spdlog::sinks::rotating_file_sink_mt>(file_path.string(), max_file_size, max_files)
+        );
     }
 
     const auto logger = std::make_shared<spdlog::logger>(name, sinks.begin(), sinks.end());

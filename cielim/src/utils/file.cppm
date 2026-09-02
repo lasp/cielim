@@ -21,7 +21,7 @@ export namespace cielim::utils::file
  * @param file_path Path to the file to be read.
  * @return Vector containing the byte contents of the file.
  */
-[[nodiscard]] auto ReadFile(const std::filesystem::path& file_path)
+[[nodiscard]] auto read_file(const std::filesystem::path& file_path)
     -> std::expected<std::vector<uint8_t>, std::error_code>
 {
     std::error_code file_error;
@@ -73,10 +73,10 @@ export namespace cielim::utils::file
  * @param file_path Path to the file to be read.
  * @return Vector containing the 4-byte aligned contents of the file.
  */
-[[nodiscard]] auto ReadFile32(const std::filesystem::path& file_path)
+[[nodiscard]] auto read_file32(const std::filesystem::path& file_path)
     -> std::expected<std::vector<uint32_t>, std::error_code>
 {
-    const auto byte_buffer = ReadFile(file_path);
+    const auto byte_buffer = read_file(file_path);
 
     if (!byte_buffer.has_value())
         return std::unexpected(byte_buffer.error());
