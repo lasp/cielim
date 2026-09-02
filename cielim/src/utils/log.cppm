@@ -15,7 +15,7 @@ module;
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
-export module cielim.utils.log;
+export module cielim.utils:log;
 
 constexpr int DEFAULT_FILE_SIZE = 5 * 1024 * 1024;
 

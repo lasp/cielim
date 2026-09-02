@@ -11,7 +11,7 @@ module;
 #include <system_error>
 #include <vector>
 
-export module cielim.utils.file;
+export module cielim.utils:file;
 
 export namespace cielim::utils::file
 {

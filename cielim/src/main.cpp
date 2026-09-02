@@ -19,8 +19,7 @@
 
 #include <SDL3/SDL_main.h> // This has to be the last SDL include
 
-import cielim.utils.file;
-import cielim.utils.log;
+import cielim.utils;
 
 #ifndef NDEBUG
 static VKAPI_ATTR auto VKAPI_CALL debug_callback(
