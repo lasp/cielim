@@ -17,7 +17,7 @@ find_package(Vulkan REQUIRED COMPONENTS volk) # From VulkanSDK
 add_executable(cielim)
 
 # Cielim c++ source code path
-set(CIELIM_CPP_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src/cielim")
+set(CIELIM_CPP_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 # Add C++ source files
 target_sources(cielim

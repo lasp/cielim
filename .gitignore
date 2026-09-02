@@ -29,10 +29,13 @@ build_config.json
 content
 
 # Cielim-python data and folders
-Source/cielim-python/examples/images*
-Source/cielim-python/support-data/*-spice
-Source/cielim-python/support-data/giant-vesta
-Source/cielim-python/support-data/monte-carlo-sample
+cielim-python/examples/images*
+cielim-python/support-data/*-spice
+cielim-python/support-data/giant-vesta
+cielim-python/support-data/monte-carlo-sample
+
+# Packaged build output
+bin/
 
 ##### C++ Ignores #####
 
