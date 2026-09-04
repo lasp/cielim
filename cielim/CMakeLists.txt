@@ -31,6 +31,7 @@ target_sources(cielim
         FILE_SET CXX_MODULES
         BASE_DIRS "${CIELIM_CPP_SOURCE}"
         FILES
+            ${CIELIM_CPP_SOURCE}/error.cppm
             ${CIELIM_CPP_SOURCE}/utils.cppm
             ${CIELIM_CPP_SOURCE}/utils/file.cppm
             ${CIELIM_CPP_SOURCE}/utils/log.cppm
