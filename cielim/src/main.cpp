@@ -19,7 +19,9 @@
 
 #include <SDL3/SDL_main.h> // This has to be the last SDL include
 
+import cielim.error;
 import cielim.utils;
+import cielim.window;
 
 #ifndef NDEBUG
 static VKAPI_ATTR auto VKAPI_CALL debug_callback(
@@ -73,7 +75,6 @@ static VKAPI_ATTR auto VKAPI_CALL debug_callback(
 static VkDebugUtilsMessengerEXT debug_messenger;
 #endif
 
-static SDL_Window* window = nullptr;
 static VkInstance vk_instance = VK_NULL_HANDLE;
 static VkSurfaceKHR surface = VK_NULL_HANDLE;
 static VkDevice device = VK_NULL_HANDLE;
@@ -144,9 +145,6 @@ static auto clean() -> void
 
     if (vk_instance != VK_NULL_HANDLE)
         vkDestroyInstance(vk_instance, nullptr);
-
-    if (window != nullptr)
-        SDL_DestroyWindow(window);
 }
 
 auto main(int argc, char* argv[]) -> int
@@ -191,11 +189,14 @@ auto main(int argc, char* argv[]) -> int
     constexpr int WINDOW_WIDTH = 1280;
     constexpr int WINDOW_HEIGHT = 720;
 
-    window = SDL_CreateWindow("cielim", WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
+    auto window = cielim::window::Window();
 
-    if (window == nullptr)
+    auto win_result
+        = window.create_window("cielim", WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
+
+    if (!win_result)
     {
-        cielim::utils::log::critical("SDL failed to create window: {}", SDL_GetError());
+        cielim::utils::log::critical(win_result.error().message());
         return EXIT_FAILURE;
     }
 
@@ -278,18 +279,15 @@ auto main(int argc, char* argv[]) -> int
         return EXIT_FAILURE;
     }
 
-    std::vector<const char*> req_inst_extensions;
+    auto ext_result = cielim::window::Window::vk_get_extensions();
 
-    uint32_t sdl_extension_count = 0;
-    const char* const* sdl_extensions = SDL_Vulkan_GetInstanceExtensions(&sdl_extension_count);
-
-    if (sdl_extensions == nullptr)
+    if (!ext_result)
     {
-        cielim::utils::log::critical("SDL failed to fetch instance extensions: {}", SDL_GetError());
+        cielim::utils::log::critical(ext_result.error().message());
         return EXIT_FAILURE;
     }
 
-    req_inst_extensions.assign(sdl_extensions, sdl_extensions + sdl_extension_count);
+    std::vector<const char*> req_inst_extensions = ext_result.value();
 
 #ifndef NDEBUG
     req_inst_extensions.push_back("VK_EXT_debug_utils");
@@ -383,11 +381,11 @@ auto main(int argc, char* argv[]) -> int
         cielim::utils::log::warn("Vulkan debug messenger couldn't be created");
 #endif
 
-    SDL_Vulkan_CreateSurface(window, vk_instance, nullptr, &surface);
+    auto surface_result = window.vk_create_surface(vk_instance, &surface);
 
-    if (surface == VK_NULL_HANDLE)
+    if (!surface_result)
     {
-        cielim::utils::log::critical("Vulkan surface could not be created!");
+        cielim::utils::log::critical(surface_result.error().message());
         clean();
         return EXIT_FAILURE;
     }
@@ -433,7 +431,7 @@ auto main(int argc, char* argv[]) -> int
         {
             // Check that the GPU supports graphics computations
             if ((queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0
-                && SDL_Vulkan_GetPresentationSupport(vk_instance, device, index))
+                && cielim::window::Window::vk_get_presentation_support(vk_instance, device, index))
             {
                 physical_device = device;
                 graphics_queue_family = index; // We're just picking out the first graphics queue for everything
