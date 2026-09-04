@@ -21,6 +21,7 @@ constexpr int DEFAULT_FILE_SIZE = 5 * 1024 * 1024;
 
 export namespace fmt
 {
+using fmt::format;
 using fmt::join;
 } // namespace fmt
 

@@ -33,9 +33,11 @@ target_sources(cielim
         FILES
             ${CIELIM_CPP_SOURCE}/error.cppm
             ${CIELIM_CPP_SOURCE}/utils.cppm
+            ${CIELIM_CPP_SOURCE}/vk.cppm
             ${CIELIM_CPP_SOURCE}/window.cppm
             ${CIELIM_CPP_SOURCE}/utils/file.cppm
             ${CIELIM_CPP_SOURCE}/utils/log.cppm
+            ${CIELIM_CPP_SOURCE}/vk/context.cppm
 )
 
 # Link dependencies

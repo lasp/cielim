@@ -21,63 +21,10 @@
 
 import cielim.error;
 import cielim.utils;
+import cielim.vk;
 import cielim.window;
 
-#ifndef NDEBUG
-static VKAPI_ATTR auto VKAPI_CALL debug_callback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
-    VkDebugUtilsMessageTypeFlagsEXT message_type,
-    const VkDebugUtilsMessengerCallbackDataEXT* p_callback_data,
-    void* p_user_data
-) -> VkBool32
-{
-    (void)p_user_data; // We don't do anything with this for now
-
-    // Drop message if logger can't be found
-    if (const auto logger = cielim::utils::log::get("log-vulkan"))
-    {
-        std::string message_type_str;
-
-        if (message_type == VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT)
-        {
-            message_type_str = "General";
-        }
-        else if (message_type == VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT)
-        {
-            message_type_str = "Performance";
-        }
-        else if (message_type == VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT)
-        {
-            message_type_str = "Validation";
-        }
-
-        if (message_severity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)
-        {
-            logger->info("Vulkan-{} -- {}", message_type_str, p_callback_data->pMessage);
-        }
-        else if (message_severity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
-        {
-            logger->warn("Vulkan-{} -- {}", message_type_str, p_callback_data->pMessage);
-        }
-        else if (message_severity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
-        {
-            logger->error("Vulkan-{} -- {}", message_type_str, p_callback_data->pMessage);
-        }
-        else
-        {
-            logger->trace("Vulkan-{} -- {}", message_type_str, p_callback_data->pMessage);
-        }
-    }
-
-    return VK_FALSE; // Always return VK_FALSE
-}
-
-static VkDebugUtilsMessengerEXT debug_messenger;
-#endif
-
-static VkInstance vk_instance = VK_NULL_HANDLE;
-static VkSurfaceKHR surface = VK_NULL_HANDLE;
-static VkDevice device = VK_NULL_HANDLE;
+static cielim::vk::Context& vk_context = cielim::vk::Context::get_context();
 static VkSwapchainKHR swapchain = VK_NULL_HANDLE;
 static std::vector<VkImage> swapchain_images;
 static std::vector<VkImageView> swapchain_views;
@@ -93,58 +40,44 @@ static std::vector<VkSemaphore> render_finished_semaphores;
 // Clean up Vulkan resources
 static auto clean() -> void
 {
-#ifndef NDEBUG
-    if (debug_messenger != VK_NULL_HANDLE)
-        vkDestroyDebugUtilsMessengerEXT(vk_instance, debug_messenger, nullptr);
-#endif
-
     for (const auto& semaphore : render_finished_semaphores)
     {
         if (semaphore != VK_NULL_HANDLE)
-            vkDestroySemaphore(device, semaphore, nullptr);
+            vkDestroySemaphore(vk_context.get_device(), semaphore, nullptr);
     }
 
     for (const auto& semaphore : acquire_semaphores)
     {
         if (semaphore != VK_NULL_HANDLE)
-            vkDestroySemaphore(device, semaphore, nullptr);
+            vkDestroySemaphore(vk_context.get_device(), semaphore, nullptr);
     }
 
     if (timeline_semaphore != VK_NULL_HANDLE)
-        vkDestroySemaphore(device, timeline_semaphore, nullptr);
+        vkDestroySemaphore(vk_context.get_device(), timeline_semaphore, nullptr);
 
     for (const auto& pool : command_pools)
     {
         if (pool != VK_NULL_HANDLE)
-            vkDestroyCommandPool(device, pool, nullptr);
+            vkDestroyCommandPool(vk_context.get_device(), pool, nullptr);
     }
 
     if (graphics_pipeline != VK_NULL_HANDLE)
-        vkDestroyPipeline(device, graphics_pipeline, nullptr);
+        vkDestroyPipeline(vk_context.get_device(), graphics_pipeline, nullptr);
 
     if (pipeline_layout != VK_NULL_HANDLE)
-        vkDestroyPipelineLayout(device, pipeline_layout, nullptr);
+        vkDestroyPipelineLayout(vk_context.get_device(), pipeline_layout, nullptr);
 
     if (shader_module != VK_NULL_HANDLE)
-        vkDestroyShaderModule(device, shader_module, nullptr);
+        vkDestroyShaderModule(vk_context.get_device(), shader_module, nullptr);
 
     for (const auto& view : swapchain_views)
     {
         if (view != VK_NULL_HANDLE)
-            vkDestroyImageView(device, view, nullptr);
+            vkDestroyImageView(vk_context.get_device(), view, nullptr);
     }
 
     if (swapchain != VK_NULL_HANDLE)
-        vkDestroySwapchainKHR(device, swapchain, nullptr);
-
-    if (device != VK_NULL_HANDLE)
-        vkDestroyDevice(device, nullptr);
-
-    if (surface != VK_NULL_HANDLE)
-        vkDestroySurfaceKHR(vk_instance, surface, nullptr);
-
-    if (vk_instance != VK_NULL_HANDLE)
-        vkDestroyInstance(vk_instance, nullptr);
+        vkDestroySwapchainKHR(vk_context.get_device(), swapchain, nullptr);
 }
 
 auto main(int argc, char* argv[]) -> int
@@ -200,389 +133,19 @@ auto main(int argc, char* argv[]) -> int
         return EXIT_FAILURE;
     }
 
+    if (auto const result = vk_context.init(window); !result.has_value())
+    {
+        cielim::utils::log::critical(result.error().message());
+        clean();
+        return EXIT_FAILURE;
+    }
+
     VkResult vk_result;
 
-    uint32_t vk_api_version = 0;
-    vk_result = vkEnumerateInstanceVersion(&vk_api_version);
-
-    if (vk_result != VK_SUCCESS)
-    {
-        cielim::utils::log::critical("Vulkan loader could not be found: {}", string_VkResult(vk_result));
-        return EXIT_FAILURE;
-    }
-
-    cielim::utils::log::info(
-        "Detected Vulkan loader API version: {}.{}.{}",
-        VK_API_VERSION_MAJOR(vk_api_version),
-        VK_API_VERSION_MINOR(vk_api_version),
-        VK_API_VERSION_PATCH(vk_api_version)
-    );
-
-    // Require Vulkan 1.4+
-    if (VK_API_VERSION_MAJOR(vk_api_version) < 1 || VK_API_VERSION_MINOR(vk_api_version) < 4)
-    {
-        cielim::utils::log::critical("Vulkan loader API version less than 1.4!");
-        return EXIT_FAILURE;
-    }
-
-    // Setup application info
-    constexpr VkApplicationInfo APP_INFO = {
-        .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-        .pApplicationName = "Cielim",
-        .applicationVersion = VK_MAKE_VERSION(0, 1, 0),
-        .pEngineName = "CielimEngine",
-        .engineVersion = VK_MAKE_VERSION(0, 1, 0),
-        .apiVersion = VK_API_VERSION_1_4,
-    };
-
-    std::vector<const char*> req_inst_layers;
-
-#ifndef NDEBUG
-    req_inst_layers.push_back("VK_LAYER_KHRONOS_validation");
-#endif
-
-    uint32_t inst_layer_count = 0;
-    vkEnumerateInstanceLayerProperties(&inst_layer_count, nullptr);
-
-    std::vector<VkLayerProperties> inst_layers(inst_layer_count);
-
-    vk_result = vkEnumerateInstanceLayerProperties(&inst_layer_count, inst_layers.data());
-
-    if (vk_result != VK_SUCCESS)
-    {
-        cielim::utils::log::critical("Vulkan instance layers could not be fetched!");
-        return EXIT_FAILURE;
-    }
-
-    std::vector<const char*> missing_inst_layers;
-
-    for (const char* req_layer : req_inst_layers)
-    {
-        bool found = false;
-
-        for (const auto& layer : inst_layers)
-        {
-            if (std::strcmp(req_layer, layer.layerName) == 0)
-            {
-                found = true;
-                break;
-            }
-        }
-
-        if (!found)
-            missing_inst_layers.push_back(req_layer);
-    }
-
-    if (!missing_inst_layers.empty())
-    {
-        cielim::utils::log::critical("Missing required instance layers: {}", fmt::join(missing_inst_layers, ", "));
-        return EXIT_FAILURE;
-    }
-
-    auto ext_result = cielim::window::Window::vk_get_extensions();
-
-    if (!ext_result)
-    {
-        cielim::utils::log::critical(ext_result.error().message());
-        return EXIT_FAILURE;
-    }
-
-    std::vector<const char*> req_inst_extensions = ext_result.value();
-
-#ifndef NDEBUG
-    req_inst_extensions.push_back("VK_EXT_debug_utils");
-#endif
-
-#ifdef __APPLE__
-    req_inst_extensions.push_back("VK_KHR_portability_enumeration");
-#endif
-
-    uint32_t inst_ext_count = 0;
-    vkEnumerateInstanceExtensionProperties(nullptr, &inst_ext_count, nullptr);
-
-    std::vector<VkExtensionProperties> inst_extensions(inst_ext_count);
-
-    vk_result = vkEnumerateInstanceExtensionProperties(nullptr, &inst_ext_count, inst_extensions.data());
-
-    if (vk_result != VK_SUCCESS)
-    {
-        cielim::utils::log::critical("Vulkan instance extensions could not be fetched!");
-        return EXIT_FAILURE;
-    }
-
-    std::vector<const char*> missing_inst_extensions;
-
-    for (const char* req_extension : req_inst_extensions)
-    {
-        bool found = false;
-
-        for (const auto& [extension_name, spec_version] : inst_extensions)
-        {
-            if (std::strcmp(req_extension, extension_name) == 0)
-            {
-                found = true;
-                break;
-            }
-        }
-
-        if (!found)
-            missing_inst_extensions.push_back(req_extension);
-    }
-
-    if (!missing_inst_extensions.empty())
-    {
-        cielim::utils::log::critical(
-            "Missing required instance extensions: {}", fmt::join(missing_inst_extensions, ", ")
-        );
-        return EXIT_FAILURE;
-    }
-
-#ifndef NDEBUG
-    VkDebugUtilsMessengerCreateInfoEXT debug_messenger_create_info = {
-        .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
-        .messageSeverity
-        = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT
-        | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
-        .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT,
-        .pfnUserCallback = debug_callback,
-    };
-#endif
-
-    const VkInstanceCreateInfo instance_create_info = {
-        .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-#ifndef NDEBUG
-        .pNext = &debug_messenger_create_info,
-#endif
-#ifdef __APPLE__
-        .flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR,
-#endif
-        .pApplicationInfo = &APP_INFO,
-        .enabledLayerCount = static_cast<uint32_t>(req_inst_layers.size()),
-        .ppEnabledLayerNames = req_inst_layers.data(),
-        .enabledExtensionCount = static_cast<uint32_t>(req_inst_extensions.size()),
-        .ppEnabledExtensionNames = req_inst_extensions.data(),
-    };
-
-    vk_result = vkCreateInstance(&instance_create_info, nullptr, &vk_instance);
-
-    if (vk_result != VK_SUCCESS)
-    {
-        cielim::utils::log::critical("Instance creation failed: {}", string_VkResult(vk_result));
-        clean();
-        return EXIT_FAILURE;
-    }
-
-    volkLoadInstance(vk_instance); // Initialize Vulkan instance
-
-#ifndef NDEBUG
-    vk_result = vkCreateDebugUtilsMessengerEXT(vk_instance, &debug_messenger_create_info, nullptr, &debug_messenger);
-
-    if (vk_result != VK_SUCCESS)
-        cielim::utils::log::warn("Vulkan debug messenger couldn't be created");
-#endif
-
-    auto surface_result = window.vk_create_surface(vk_instance, &surface);
-
-    if (!surface_result)
-    {
-        cielim::utils::log::critical(surface_result.error().message());
-        clean();
-        return EXIT_FAILURE;
-    }
-
-    uint32_t num_devices = 0;
-    vkEnumeratePhysicalDevices(vk_instance, &num_devices, nullptr);
-
-    std::vector<VkPhysicalDevice> physical_devices(num_devices);
-
-    vk_result = vkEnumeratePhysicalDevices(vk_instance, &num_devices, physical_devices.data());
-
-    if (vk_result != VK_SUCCESS || physical_devices.empty())
-    {
-        cielim::utils::log::critical("No physical devices found!");
-        clean();
-        return EXIT_FAILURE;
-    }
-
-    VkPhysicalDevice physical_device;
-    uint32_t graphics_queue_family = -1;
-
-    // Loop through all physical devices to find most suitable one
-    for (const auto& device : physical_devices)
-    {
-        VkPhysicalDeviceProperties device_properties;
-        vkGetPhysicalDeviceProperties(device, &device_properties);
-
-        const uint32_t major = VK_API_VERSION_MAJOR(device_properties.apiVersion);
-        const uint32_t minor = VK_API_VERSION_MINOR(device_properties.apiVersion);
-
-        // Don't allow device that can't support Vulkan 1.4+
-        if (major < 1 || minor < 4)
-            continue;
-
-        uint32_t num_queue_families = 0;
-        vkGetPhysicalDeviceQueueFamilyProperties(device, &num_queue_families, nullptr);
-
-        std::vector<VkQueueFamilyProperties> queue_families(num_queue_families);
-
-        vkGetPhysicalDeviceQueueFamilyProperties(device, &num_queue_families, queue_families.data());
-
-        for (uint32_t index = 0; const auto& queue_family : queue_families)
-        {
-            // Check that the GPU supports graphics computations
-            if ((queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0
-                && cielim::window::Window::vk_get_presentation_support(vk_instance, device, index))
-            {
-                physical_device = device;
-                graphics_queue_family = index; // We're just picking out the first graphics queue for everything
-            }
-            index++;
-        }
-    }
-
-    if (physical_device == VK_NULL_HANDLE || graphics_queue_family < 0)
-    {
-        cielim::utils::log::critical("No device could be found that supports Vulkan 1.4+ and/or graphics queues!");
-        clean();
-        return EXIT_FAILURE;
-    }
-
-    VkPhysicalDeviceProperties device_properties;
-    vkGetPhysicalDeviceProperties(physical_device, &device_properties);
-
-    cielim::utils::log::info(
-        "Found device {} (graphics queue family {})", device_properties.deviceName, graphics_queue_family
-    );
-
-    VkPhysicalDeviceMemoryProperties memory_properties;
-    vkGetPhysicalDeviceMemoryProperties(physical_device, &memory_properties);
-
-    // Total heap size in bytes for device
-    VkDeviceSize dev_local_bytes = 0;
-    for (uint32_t i = 0; i < memory_properties.memoryHeapCount; i++)
-    {
-        if ((memory_properties.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) != 0)
-            dev_local_bytes += memory_properties.memoryHeaps[i].size;
-    }
-
-    constexpr float BYTES_IN_GB = 1073741824.0f;
-
-    cielim::utils::log::info("Device heap total: {:.2f} GB", static_cast<float>(dev_local_bytes) / BYTES_IN_GB);
-
-    /* TODO: Add checking for support for each feature, assuming support for basic features for now. */
-
-    VkPhysicalDeviceVulkan11Features req_dev_vulkan11_features = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
-        .shaderDrawParameters = VK_TRUE,
-    };
-
-    VkPhysicalDeviceVulkan12Features req_dev_vulkan12_features = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
-        .pNext = &req_dev_vulkan11_features,
-        .scalarBlockLayout = VK_TRUE,
-        .timelineSemaphore = VK_TRUE,
-        .bufferDeviceAddress = VK_TRUE,
-    };
-
-    VkPhysicalDeviceVulkan13Features req_dev_vulkan13_features = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-        .pNext = &req_dev_vulkan12_features,
-        .synchronization2 = VK_TRUE,
-        .dynamicRendering = VK_TRUE,
-        .maintenance4 = VK_TRUE,
-    };
-
-    VkPhysicalDeviceVulkan14Features req_dev_vulkan14_features = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES,
-        .pNext = &req_dev_vulkan13_features,
-    };
-
-    VkPhysicalDeviceFeatures2 req_dev_features = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-        .pNext = &req_dev_vulkan14_features,
-        .features = {
-            .samplerAnisotropy = VK_TRUE,
-        },
-    };
-
-    std::vector<const char*> req_dev_extensions;
-
-    req_dev_extensions.push_back("VK_KHR_swapchain");
-
-#ifdef __APPLE__
-    req_dev_extensions.push_back("VK_KHR_portability_subset");
-#endif
-
-    uint32_t dev_ext_count = 0;
-    vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &dev_ext_count, nullptr);
-
-    std::vector<VkExtensionProperties> dev_extensions(dev_ext_count);
-
-    vk_result = vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &dev_ext_count, dev_extensions.data());
-
-    if (vk_result != VK_SUCCESS)
-    {
-        cielim::utils::log::critical("Vulkan device extensions could not be fetched!");
-        clean();
-        return EXIT_FAILURE;
-    }
-
-    std::vector<const char*> missing_dev_extensions;
-
-    for (const char* req_extension : req_dev_extensions)
-    {
-        bool found = false;
-
-        for (const auto& [extension_name, spec_version] : dev_extensions)
-        {
-            if (std::strcmp(req_extension, extension_name) == 0)
-            {
-                found = true;
-                break;
-            }
-        }
-
-        if (!found)
-            missing_dev_extensions.push_back(req_extension);
-    }
-
-    if (!missing_dev_extensions.empty())
-    {
-        cielim::utils::log::critical("Missing required device extensions: {}", fmt::join(missing_dev_extensions, ", "));
-        clean();
-        return EXIT_FAILURE;
-    }
-
-    float queue_priority = 1.0f;
-    const VkDeviceQueueCreateInfo queue_info = {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-        .queueFamilyIndex = graphics_queue_family,
-        .queueCount = 1,
-        .pQueuePriorities = &queue_priority,
-    };
-
-    const VkDeviceCreateInfo device_info = {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .pNext = &req_dev_features,
-        .queueCreateInfoCount = 1,
-        .pQueueCreateInfos = &queue_info,
-        .enabledExtensionCount = static_cast<uint32_t>(req_dev_extensions.size()),
-        .ppEnabledExtensionNames = req_dev_extensions.data(),
-    };
-
-    vk_result = vkCreateDevice(physical_device, &device_info, nullptr, &device);
-
-    if (vk_result != VK_SUCCESS)
-    {
-        cielim::utils::log::critical("Device creation failed: {}", string_VkResult(vk_result));
-        clean();
-        return EXIT_FAILURE;
-    }
-
-    volkLoadDevice(device);
-
     VkSurfaceCapabilitiesKHR surface_capabilities;
-    vk_result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, surface, &surface_capabilities);
+    vk_result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+        vk_context.get_physical_device(), vk_context.get_surface(), &surface_capabilities
+    );
 
     if (vk_result != VK_SUCCESS)
     {
@@ -592,12 +155,15 @@ auto main(int argc, char* argv[]) -> int
     }
 
     uint32_t surface_format_count = 0;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &surface_format_count, nullptr);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(
+        vk_context.get_physical_device(), vk_context.get_surface(), &surface_format_count, nullptr
+    );
 
     std::vector<VkSurfaceFormatKHR> surface_formats(surface_format_count);
 
-    vk_result
-        = vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &surface_format_count, surface_formats.data());
+    vk_result = vkGetPhysicalDeviceSurfaceFormatsKHR(
+        vk_context.get_physical_device(), vk_context.get_surface(), &surface_format_count, surface_formats.data()
+    );
 
     if (vk_result != VK_SUCCESS)
     {
@@ -659,7 +225,7 @@ auto main(int argc, char* argv[]) -> int
 
     VkSwapchainCreateInfoKHR swap_chain_create_info = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-        .surface = surface,
+        .surface = vk_context.get_surface(),
         .minImageCount = min_image_count,
         .imageFormat = req_format,
         .imageColorSpace = req_color_space,
@@ -671,7 +237,7 @@ auto main(int argc, char* argv[]) -> int
         .presentMode = req_present_mode,
     };
 
-    vk_result = vkCreateSwapchainKHR(device, &swap_chain_create_info, nullptr, &swapchain);
+    vk_result = vkCreateSwapchainKHR(vk_context.get_device(), &swap_chain_create_info, nullptr, &swapchain);
 
     if (swapchain == VK_NULL_HANDLE)
     {
@@ -681,12 +247,12 @@ auto main(int argc, char* argv[]) -> int
     }
 
     uint32_t image_count = 0;
-    vkGetSwapchainImagesKHR(device, swapchain, &image_count, nullptr);
+    vkGetSwapchainImagesKHR(vk_context.get_device(), swapchain, &image_count, nullptr);
 
     swapchain_images.resize(image_count);
     swapchain_views.resize(image_count);
 
-    vkGetSwapchainImagesKHR(device, swapchain, &image_count, swapchain_images.data());
+    vkGetSwapchainImagesKHR(vk_context.get_device(), swapchain, &image_count, swapchain_images.data());
 
     VkImageViewCreateInfo image_view_create_info = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -698,7 +264,7 @@ auto main(int argc, char* argv[]) -> int
     for (int i = 0; auto& image : swapchain_images)
     {
         image_view_create_info.image = image;
-        vk_result = vkCreateImageView(device, &image_view_create_info, nullptr, &swapchain_views[i]);
+        vk_result = vkCreateImageView(vk_context.get_device(), &image_view_create_info, nullptr, &swapchain_views[i]);
 
         if (vk_result != VK_SUCCESS)
         {
@@ -728,7 +294,7 @@ auto main(int argc, char* argv[]) -> int
         .pCode = triangle_shader->data(),
     };
 
-    vk_result = vkCreateShaderModule(device, &shader_module_create_info, nullptr, &shader_module);
+    vk_result = vkCreateShaderModule(vk_context.get_device(), &shader_module_create_info, nullptr, &shader_module);
 
     if (vk_result != VK_SUCCESS)
     {
@@ -813,7 +379,7 @@ auto main(int argc, char* argv[]) -> int
         .pushConstantRangeCount = 0,
     };
 
-    vk_result = vkCreatePipelineLayout(device, &layout_create_info, nullptr, &pipeline_layout);
+    vk_result = vkCreatePipelineLayout(vk_context.get_device(), &layout_create_info, nullptr, &pipeline_layout);
 
     if (vk_result != VK_SUCCESS)
     {
@@ -852,7 +418,8 @@ auto main(int argc, char* argv[]) -> int
         .renderPass = nullptr,
     };
 
-    vk_result = vkCreateGraphicsPipelines(device, nullptr, 1, &pipeline_info, nullptr, &graphics_pipeline);
+    vk_result
+        = vkCreateGraphicsPipelines(vk_context.get_device(), nullptr, 1, &pipeline_info, nullptr, &graphics_pipeline);
 
     if (vk_result != VK_SUCCESS)
     {
@@ -871,10 +438,10 @@ auto main(int argc, char* argv[]) -> int
         VkCommandPoolCreateInfo command_pool_create_info = {
             .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
             .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-            .queueFamilyIndex = graphics_queue_family,
+            .queueFamilyIndex = vk_context.get_queue(),
         };
 
-        vk_result = vkCreateCommandPool(device, &command_pool_create_info, nullptr, &command_pools[i]);
+        vk_result = vkCreateCommandPool(vk_context.get_device(), &command_pool_create_info, nullptr, &command_pools[i]);
 
         if (vk_result != VK_SUCCESS)
         {
@@ -890,7 +457,8 @@ auto main(int argc, char* argv[]) -> int
             .commandBufferCount = 1,
         };
 
-        vk_result = vkAllocateCommandBuffers(device, &command_buffer_allocate_info, &command_buffers[i]);
+        vk_result
+            = vkAllocateCommandBuffers(vk_context.get_device(), &command_buffer_allocate_info, &command_buffers[i]);
 
         if (vk_result != VK_SUCCESS)
         {
@@ -911,7 +479,7 @@ auto main(int argc, char* argv[]) -> int
         .pNext = &timeline_semaphore_type_info,
     };
 
-    vkCreateSemaphore(device, &timeline_semaphore_info, nullptr, &timeline_semaphore);
+    vkCreateSemaphore(vk_context.get_device(), &timeline_semaphore_info, nullptr, &timeline_semaphore);
 
     VkSemaphoreCreateInfo binary_semaphore_info = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
@@ -921,7 +489,9 @@ auto main(int argc, char* argv[]) -> int
 
     for (auto& semaphore : acquire_semaphores)
     {
-        vk_result = vkCreateSemaphore(device, &binary_semaphore_info, nullptr, &semaphore); // One per frame-in-flight
+        vk_result = vkCreateSemaphore(
+            vk_context.get_device(), &binary_semaphore_info, nullptr, &semaphore
+        ); // One per frame-in-flight
 
         if (vk_result != VK_SUCCESS)
         {
@@ -935,7 +505,9 @@ auto main(int argc, char* argv[]) -> int
 
     for (auto& semaphore : render_finished_semaphores)
     {
-        vk_result = vkCreateSemaphore(device, &binary_semaphore_info, nullptr, &semaphore); // One per swapchain image
+        vk_result = vkCreateSemaphore(
+            vk_context.get_device(), &binary_semaphore_info, nullptr, &semaphore
+        ); // One per swapchain image
 
         if (vk_result != VK_SUCCESS)
         {
@@ -946,7 +518,7 @@ auto main(int argc, char* argv[]) -> int
     }
 
     VkQueue graphics_queue;
-    vkGetDeviceQueue(device, graphics_queue_family, 0, &graphics_queue);
+    vkGetDeviceQueue(vk_context.get_device(), vk_context.get_queue(), 0, &graphics_queue);
 
     uint64_t frame_counter = 0;
 
@@ -979,7 +551,7 @@ auto main(int argc, char* argv[]) -> int
                 .pValues = &wait_value,
             };
 
-            vk_result = vkWaitSemaphores(device, &wait_info, UINT64_MAX);
+            vk_result = vkWaitSemaphores(vk_context.get_device(), &wait_info, UINT64_MAX);
 
             if (vk_result != VK_SUCCESS)
             {
@@ -992,7 +564,7 @@ auto main(int argc, char* argv[]) -> int
         uint32_t image_index;
 
         vk_result = vkAcquireNextImageKHR(
-            device, swapchain, UINT64_MAX, acquire_semaphores[frame_index], nullptr, &image_index
+            vk_context.get_device(), swapchain, UINT64_MAX, acquire_semaphores[frame_index], nullptr, &image_index
         );
 
         if (vk_result == VK_ERROR_OUT_OF_DATE_KHR)
@@ -1009,7 +581,7 @@ auto main(int argc, char* argv[]) -> int
             return EXIT_FAILURE;
         }
 
-        vk_result = vkResetCommandPool(device, command_pools[frame_index], 0);
+        vk_result = vkResetCommandPool(vk_context.get_device(), command_pools[frame_index], 0);
 
         if (vk_result != VK_SUCCESS)
         {
@@ -1213,7 +785,7 @@ auto main(int argc, char* argv[]) -> int
         }
     }
 
-    vkDeviceWaitIdle(device);
+    vkDeviceWaitIdle(vk_context.get_device());
 
     clean();
 
