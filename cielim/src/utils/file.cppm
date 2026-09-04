@@ -8,6 +8,7 @@ module;
 #include <expected>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <system_error>
 #include <vector>
 

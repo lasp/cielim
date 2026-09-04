@@ -97,11 +97,63 @@ struct ErrorType<WindowError>
     }
 };
 
+enum class VkContextError : std::uint8_t
+{
+    EnumerateVersionError,
+    VersionUnsupported,
+    EnumerateInstanceLayersError,
+    MissingInstanceLayer,
+    EnumerateInstanceExtsError,
+    MissingInstanceExt,
+    InstanceCreateError,
+    DebugMessengerCreateError,
+    EnumeratePhysicalDevicesError,
+    NoSupportedDevice,
+    EnumerateDeviceExtsError,
+    MissingDeviceExt,
+    DeviceCreateError,
+};
+
+template <>
+struct ErrorType<VkContextError>
+{
+    static constexpr bool IS_ERROR = true;
+    static constexpr std::string_view CATEGORY_NAME = "VkContextError";
+
+    static auto message(const VkContextError error) -> std::string_view
+    {
+        using enum VkContextError;
+
+        switch (error)
+        {
+        case EnumerateVersionError: return "Failed to enumerate Vulkan instance version";
+        case VersionUnsupported: return "Vulkan instance does not support version 1.4";
+        case EnumerateInstanceLayersError: return "Failed to enumerate supported Vulkan instance layers";
+        case MissingInstanceLayer: return "Missing required Vulkan instance layer";
+        case EnumerateInstanceExtsError: return "Failed to enumerated supported Vulkan instance extensions";
+        case MissingInstanceExt: return "Missing required Vulkan instance extension";
+        case InstanceCreateError: return "Failed to create Vulkan instance";
+        case DebugMessengerCreateError: return "Failed to create Vulkan debug messenger";
+        case EnumeratePhysicalDevicesError: return "Failed to enumerate Vulkan physical devices";
+        case NoSupportedDevice: return "Failed to find supported Vulkan physical device";
+        case EnumerateDeviceExtsError: return "Failed to enumerate Vulkan device extensions";
+        case MissingDeviceExt: return "Missing required Vulkan device extensions";
+        case DeviceCreateError: return "Failed to create Vulkan device";
+        }
+
+        return "Unknown Vulkan instance error";
+    }
+};
+
 } // namespace cielim::error
 
 // Register custom error types with standard library
 
 template <>
 struct std::is_error_code_enum<cielim::error::WindowError> : std::true_type
+{
+};
+template <>
+struct std::is_error_code_enum<cielim::error::VkContextError> : std::true_type
 {
 };
