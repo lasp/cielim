@@ -30,17 +30,7 @@ class Swapchain
 public:
     Swapchain() = default;
 
-    ~Swapchain()
-    {
-        for (const auto& view : this->swapchain_views_)
-        {
-            if (view != nullptr)
-                vkDestroyImageView(vk_device_handle_, view, nullptr);
-        }
-
-        if (this->vk_swapchain_ != nullptr)
-            vkDestroySwapchainKHR(vk_device_handle_, this->vk_swapchain_, nullptr);
-    }
+    ~Swapchain() { this->cleanup(); }
 
     /**
      * @brief Initializes the swapchain for the Vulkan context and window.
@@ -248,6 +238,29 @@ public:
         return {};
     }
 
+    /**
+     * @brief Destroys the swapchain and recreates it.
+     * @details This should not be called before init.
+     * @param context The Vulkan context.
+     * @param window The window to which the swapchain is connected.
+     * @return Void on success, error code on failure.
+     */
+    [[nodiscard]] auto recreate(const context::Context& context, window::Window& window)
+        -> std::expected<void, error::DetailedError>
+    {
+        // Check in case this is being called before first init
+        if (this->vk_device_handle_ == nullptr)
+            this->vk_device_handle_ = context.get_device();
+
+        // Wait for device to finish whatever it's doing
+        vkDeviceWaitIdle(this->vk_device_handle_);
+
+        // Destroy everything
+        this->cleanup();
+
+        return this->init(context, window);
+    }
+
     [[nodiscard]] auto get_handle() const -> VkSwapchainKHR { return this->vk_swapchain_; }
     [[nodiscard]] auto get_extent() const -> VkExtent2D { return this->extent_; }
     [[nodiscard]] auto get_num_images() const -> uint32_t { return this->swapchain_images_.size(); }
@@ -257,6 +270,24 @@ public:
     [[nodiscard]] auto get_color_space() const -> VkColorSpaceKHR { return this->color_space_; }
 
 private:
+    auto cleanup() -> void
+    {
+        for (const auto& view : this->swapchain_views_)
+        {
+            if (view != nullptr)
+                vkDestroyImageView(vk_device_handle_, view, nullptr);
+        }
+
+        this->swapchain_views_.clear();
+        this->swapchain_images_.clear();
+
+        if (this->vk_swapchain_ != nullptr)
+        {
+            vkDestroySwapchainKHR(vk_device_handle_, this->vk_swapchain_, nullptr);
+            this->vk_swapchain_ = nullptr;
+        }
+    }
+
     // Non-owning handle for the Vulkan logical device
     VkDevice vk_device_handle_ = nullptr;
 

@@ -132,7 +132,8 @@ auto main(int argc, char* argv[]) -> int
 
     cielim::vk::Swapchain swapchain;
 
-    if (const auto result = swapchain.init(vk_context, window); !result.has_value())
+    if (const auto result = swapchain.init(vk_context, window);
+        !result.has_value() && result.error().errc != cielim::error::VkSwapchainError::NullExtent)
     {
         cielim::utils::log::critical(result.error().message());
         clean();
@@ -398,8 +399,51 @@ auto main(int argc, char* argv[]) -> int
             switch (event.type)
             {
             case SDL_EVENT_QUIT: is_running = false; break;
+
+            case SDL_EVENT_WINDOW_RESIZED:
+                if (const auto result = swapchain.recreate(vk_context, window);
+                    !result.has_value() && result.error().errc != cielim::error::VkSwapchainError::NullExtent)
+                {
+                    cielim::utils::log::critical(result.error().message());
+                    clean();
+                    return EXIT_FAILURE;
+                }
+
+                // Per-image semaphores need to be recreated as the number of swapchain images may have changed
+
+                for (const auto& semaphore : render_finished_semaphores)
+                {
+                    if (semaphore != nullptr)
+                        vkDestroySemaphore(vk_context.get_device(), semaphore, nullptr);
+                }
+
+                render_finished_semaphores.assign(swapchain.get_num_images(), nullptr);
+
+                for (auto& semaphore : render_finished_semaphores)
+                {
+                    vk_result = vkCreateSemaphore(vk_context.get_device(), &binary_semaphore_info, nullptr, &semaphore);
+
+                    if (vk_result != VK_SUCCESS)
+                    {
+                        cielim::utils::log::critical(
+                            "Failed to create binary semaphore: {}", string_VkResult(vk_result)
+                        );
+                        clean();
+                        return EXIT_FAILURE;
+                    }
+                }
+                break;
+
             default: break;
             }
+        }
+
+        SDL_WindowFlags window_flags = SDL_GetWindowFlags(window.get_handle());
+
+        if ((window_flags & SDL_WINDOW_MINIMIZED) != 0 || swapchain.get_handle() == nullptr)
+        {
+            SDL_Delay(8); // Wait a bit to reduce CPU usage when not rendering
+            continue;
         }
 
         frame_counter++;
