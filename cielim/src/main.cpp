@@ -25,9 +25,6 @@ import cielim.vk;
 import cielim.window;
 
 static cielim::vk::Context& vk_context = cielim::vk::Context::get_context();
-static VkSwapchainKHR swapchain = VK_NULL_HANDLE;
-static std::vector<VkImage> swapchain_images;
-static std::vector<VkImageView> swapchain_views;
 static VkShaderModule shader_module = VK_NULL_HANDLE; // Single shader for now
 static VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
 static VkPipeline graphics_pipeline = VK_NULL_HANDLE;
@@ -69,15 +66,6 @@ static auto clean() -> void
 
     if (shader_module != VK_NULL_HANDLE)
         vkDestroyShaderModule(vk_context.get_device(), shader_module, nullptr);
-
-    for (const auto& view : swapchain_views)
-    {
-        if (view != VK_NULL_HANDLE)
-            vkDestroyImageView(vk_context.get_device(), view, nullptr);
-    }
-
-    if (swapchain != VK_NULL_HANDLE)
-        vkDestroySwapchainKHR(vk_context.get_device(), swapchain, nullptr);
 }
 
 auto main(int argc, char* argv[]) -> int
@@ -142,137 +130,13 @@ auto main(int argc, char* argv[]) -> int
 
     VkResult vk_result;
 
-    VkSurfaceCapabilitiesKHR surface_capabilities;
-    vk_result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-        vk_context.get_physical_device(), vk_context.get_surface(), &surface_capabilities
-    );
+    cielim::vk::Swapchain swapchain;
 
-    if (vk_result != VK_SUCCESS)
+    if (const auto result = swapchain.init(vk_context, window); !result.has_value())
     {
-        cielim::utils::log::critical("Surface capabilities could not be fetched!");
+        cielim::utils::log::critical(result.error().message());
         clean();
         return EXIT_FAILURE;
-    }
-
-    uint32_t surface_format_count = 0;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(
-        vk_context.get_physical_device(), vk_context.get_surface(), &surface_format_count, nullptr
-    );
-
-    std::vector<VkSurfaceFormatKHR> surface_formats(surface_format_count);
-
-    vk_result = vkGetPhysicalDeviceSurfaceFormatsKHR(
-        vk_context.get_physical_device(), vk_context.get_surface(), &surface_format_count, surface_formats.data()
-    );
-
-    if (vk_result != VK_SUCCESS)
-    {
-        cielim::utils::log::critical("Surface formats could not be fetched!");
-        clean();
-        return EXIT_FAILURE;
-    }
-
-    if (surface_formats.empty())
-    {
-        cielim::utils::log::critical("No available surface formats!");
-        clean();
-        return EXIT_FAILURE;
-    }
-
-    VkFormat req_format = VK_FORMAT_B8G8R8A8_SRGB;
-    VkColorSpaceKHR req_color_space = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-
-    bool found_format = false;
-    for (const auto& [format, color_space] : surface_formats)
-    {
-        if (format == req_format && color_space == req_color_space)
-            found_format = true;
-    }
-
-    if (!found_format)
-    {
-        cielim::utils::log::critical("Required surface format is not supported!");
-        clean();
-        return EXIT_FAILURE;
-    }
-
-    // We'll skip querying present modes and use VK_PRESENT_MODE_FIFO_KHR which is always present
-    VkPresentModeKHR req_present_mode = VK_PRESENT_MODE_FIFO_KHR;
-
-    VkExtent2D req_extent;
-
-    if (surface_capabilities.currentExtent.width == std::numeric_limits<uint32_t>::max())
-    {
-        req_extent.width = WINDOW_WIDTH;
-        req_extent.height = WINDOW_HEIGHT;
-    }
-    else
-    {
-        req_extent = surface_capabilities.currentExtent;
-    }
-
-    req_extent.width = std::clamp<uint32_t>(
-        req_extent.width, surface_capabilities.minImageExtent.width, surface_capabilities.maxImageExtent.width
-    );
-    req_extent.height = std::clamp<uint32_t>(
-        req_extent.height, surface_capabilities.minImageExtent.height, surface_capabilities.maxImageExtent.height
-    );
-
-    uint32_t min_image_count = surface_capabilities.minImageCount;
-
-    if (surface_capabilities.maxImageCount > 0 && min_image_count > surface_capabilities.maxImageCount)
-        min_image_count = surface_capabilities.maxImageCount;
-
-    VkSwapchainCreateInfoKHR swap_chain_create_info = {
-        .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-        .surface = vk_context.get_surface(),
-        .minImageCount = min_image_count,
-        .imageFormat = req_format,
-        .imageColorSpace = req_color_space,
-        .imageExtent = req_extent,
-        .imageArrayLayers = 1,
-        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-        .preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
-        .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-        .presentMode = req_present_mode,
-    };
-
-    vk_result = vkCreateSwapchainKHR(vk_context.get_device(), &swap_chain_create_info, nullptr, &swapchain);
-
-    if (swapchain == VK_NULL_HANDLE)
-    {
-        cielim::utils::log::critical("Swap-chain creation failed: {}", string_VkResult(vk_result));
-        clean();
-        return EXIT_FAILURE;
-    }
-
-    uint32_t image_count = 0;
-    vkGetSwapchainImagesKHR(vk_context.get_device(), swapchain, &image_count, nullptr);
-
-    swapchain_images.resize(image_count);
-    swapchain_views.resize(image_count);
-
-    vkGetSwapchainImagesKHR(vk_context.get_device(), swapchain, &image_count, swapchain_images.data());
-
-    VkImageViewCreateInfo image_view_create_info = {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-        .viewType = VK_IMAGE_VIEW_TYPE_2D,
-        .format = req_format,
-        .subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .levelCount = 1, .layerCount = 1},
-    };
-
-    for (int i = 0; auto& image : swapchain_images)
-    {
-        image_view_create_info.image = image;
-        vk_result = vkCreateImageView(vk_context.get_device(), &image_view_create_info, nullptr, &swapchain_views[i]);
-
-        if (vk_result != VK_SUCCESS)
-        {
-            cielim::utils::log::critical("Image view creation failed: {}", string_VkResult(vk_result));
-            clean();
-            return EXIT_FAILURE;
-        }
-        i++;
     }
 
     std::filesystem::path triangle_shader_path = base_path / "content" / "shaders" / "triangle.spv";
@@ -396,6 +260,8 @@ auto main(int argc, char* argv[]) -> int
         .pDynamicStates = dynamic_states.data(),
     };
 
+    VkFormat req_format = swapchain.get_format();
+
     VkPipelineRenderingCreateInfo pipeline_rendering_state = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
         .colorAttachmentCount = 1,
@@ -501,7 +367,7 @@ auto main(int argc, char* argv[]) -> int
         }
     }
 
-    render_finished_semaphores.resize(image_count);
+    render_finished_semaphores.resize(swapchain.get_num_images());
 
     for (auto& semaphore : render_finished_semaphores)
     {
@@ -564,7 +430,12 @@ auto main(int argc, char* argv[]) -> int
         uint32_t image_index;
 
         vk_result = vkAcquireNextImageKHR(
-            vk_context.get_device(), swapchain, UINT64_MAX, acquire_semaphores[frame_index], nullptr, &image_index
+            vk_context.get_device(),
+            swapchain.get_handle(),
+            UINT64_MAX,
+            acquire_semaphores[frame_index],
+            nullptr,
+            &image_index
         );
 
         if (vk_result == VK_ERROR_OUT_OF_DATE_KHR)
@@ -614,7 +485,7 @@ auto main(int argc, char* argv[]) -> int
             .newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = swapchain_images[image_index],
+            .image = swapchain.get_image(image_index),
             .subresourceRange = {
                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                 .baseMipLevel = 0,
@@ -638,12 +509,14 @@ auto main(int argc, char* argv[]) -> int
 
         VkRenderingAttachmentInfo rendering_attachment_info = {
             .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-            .imageView = swapchain_views[image_index],
+            .imageView = swapchain.get_view(image_index),
             .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
             .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
             .clearValue = clear_color,
         };
+
+        VkExtent2D req_extent = swapchain.get_extent();
 
         VkRenderingInfo rendering_info = {
             .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
@@ -688,7 +561,7 @@ auto main(int argc, char* argv[]) -> int
             .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .image = swapchain_images[image_index],
+            .image = swapchain.get_image(image_index),
             .subresourceRange = {
                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                 .baseMipLevel = 0,
@@ -762,12 +635,14 @@ auto main(int argc, char* argv[]) -> int
             return EXIT_FAILURE;
         }
 
+        VkSwapchainKHR swapchain_handle = swapchain.get_handle();
+
         VkPresentInfoKHR present_info = {
             .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
             .waitSemaphoreCount = 1,
             .pWaitSemaphores = &render_finished_semaphores[image_index],
             .swapchainCount = 1,
-            .pSwapchains = &swapchain,
+            .pSwapchains = &swapchain_handle,
             .pImageIndices = &image_index,
         };
 

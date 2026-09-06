@@ -9,6 +9,7 @@ module;
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <utility>
 #include <vector>
 
 #include <volk/volk.h>
@@ -138,14 +139,33 @@ public:
         return {};
     }
 
-    [[nodiscard]] auto get_width() const -> int { return width_; }
-    [[nodiscard]] auto get_height() const -> int { return height_; }
+    // Returns the window handle
+    [[nodiscard]] auto get_handle() const -> SDL_Window* { return window_; }
+
+    // Returns window size on success, error code on failure
+    [[nodiscard]] auto get_size() const -> std::expected<std::pair<int, int>, error::DetailedError>
+    {
+        int width = 0;
+        int height = 0;
+
+        const bool got_size = SDL_GetWindowSizeInPixels(this->window_, &width, &height);
+
+        if (!got_size)
+        {
+            error::DetailedError error = {
+                .errc = make_error_code(error::WindowError::GetSizeError),
+                .detail = SDL_GetError(),
+            };
+
+            return std::unexpected(error);
+        }
+
+        return std::make_pair(width, height);
+    }
 
 private:
     SDL_Window* window_ = nullptr;
     uint8_t id_ = 0; // Not used right now, will be if we have more than one window
-    int width_ = 0;
-    int height_ = 0;
 };
 
 } // namespace cielim::window

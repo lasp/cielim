@@ -79,6 +79,7 @@ enum class WindowError : std::uint8_t
     ExtensionEnumerateError,
     SurfaceCreateError,
     PresentationUnsupported,
+    GetSizeError,
 };
 
 template <>
@@ -97,6 +98,7 @@ struct ErrorType<WindowError>
         case ExtensionEnumerateError: return "Failed to enumerate required Vulkan instance extensions";
         case SurfaceCreateError: return "Failed to create window surface";
         case PresentationUnsupported: return "No queue family supports presentation";
+        case GetSizeError: return "Failed to get window size";
         }
 
         return "Unknown window error";
@@ -151,6 +153,42 @@ struct ErrorType<VkContextError>
     }
 };
 
+enum class VkSwapchainError : std::uint8_t
+{
+    SurfaceCapabilitiesError,
+    SurfaceFormatsError,
+    MissingSurfaceFormats,
+    NullExtent,
+    SwapchainCreateError,
+    GetImageError,
+    ViewCreateError,
+};
+
+template <>
+struct ErrorType<VkSwapchainError>
+{
+    static constexpr bool IS_ERROR = true;
+    static constexpr std::string_view CATEGORY_NAME = "VkSwapchainError";
+
+    static auto message(const VkSwapchainError error) -> std::string_view
+    {
+        using enum VkSwapchainError;
+
+        switch (error)
+        {
+        case SurfaceCapabilitiesError: return "Failed to get surface capabilities";
+        case SurfaceFormatsError: return "Failed to get surface formats";
+        case MissingSurfaceFormats: return "Required surface formats are not supported";
+        case NullExtent: return "Swapchain extent is invalid (0x0)";
+        case SwapchainCreateError: return "Failed to create swapchain";
+        case GetImageError: return "Failed to get swapchain images";
+        case ViewCreateError: return "Failed to create image view for swapchain image";
+        }
+
+        return "Unknown Vulkan swapchain error";
+    }
+};
+
 } // namespace cielim::error
 
 // Register custom error types with standard library
@@ -161,5 +199,9 @@ struct std::is_error_code_enum<cielim::error::WindowError> : std::true_type
 };
 template <>
 struct std::is_error_code_enum<cielim::error::VkContextError> : std::true_type
+{
+};
+template <>
+struct std::is_error_code_enum<cielim::error::VkSwapchainError> : std::true_type
 {
 };
