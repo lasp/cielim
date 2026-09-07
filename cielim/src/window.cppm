@@ -60,6 +60,17 @@ public:
         return {};
     }
 
+    /**
+     * @brief Displays an error message popup window.
+     * @details This should only ever be used for fatal errors as the popup window will stall the thread.
+     * @param message The error message to display.
+     */
+    auto error_popup(const std::string& message) const -> void
+    {
+        // Ignore any errors that may occur displaying this popup because the program is ending anyways
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Cielim - Fatal Error", message.c_str(), this->window_);
+    }
+
     // ----- Vulkan interop functions -----
 
     /**

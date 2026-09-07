@@ -67,6 +67,14 @@ static auto clean() -> void
         vkDestroyShaderModule(vk_context.get_device(), shader_module, nullptr);
 }
 
+static auto fatal_error(const cielim::window::Window* window, const std::string& message) -> void
+{
+    cielim::utils::log::critical("{}", message);
+
+    if (window != nullptr)
+        window->error_popup(message);
+}
+
 auto main(int argc, char* argv[]) -> int
 {
     // Create vulkan specific log for validation layers
@@ -88,7 +96,7 @@ auto main(int argc, char* argv[]) -> int
 
     if (base_path_raw == nullptr)
     {
-        cielim::utils::log::critical("Executable location could not be found: {}", SDL_GetError());
+        fatal_error(nullptr, fmt::format("Executable location could not be found: {}", SDL_GetError()));
         return EXIT_FAILURE;
     }
 
@@ -96,13 +104,13 @@ auto main(int argc, char* argv[]) -> int
 
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS))
     {
-        cielim::utils::log::critical("SDL failed to initialize: {}", SDL_GetError());
+        fatal_error(nullptr, fmt::format("SDL failed to initialize: {}", SDL_GetError()));
         return EXIT_FAILURE;
     }
 
     if (volkInitialize() != VK_SUCCESS)
     {
-        cielim::utils::log::critical("Volk failed to initialize!");
+        fatal_error(nullptr, "Volk failed to initialize!");
         return EXIT_FAILURE;
     }
 
@@ -116,13 +124,13 @@ auto main(int argc, char* argv[]) -> int
 
     if (!win_result.has_value())
     {
-        cielim::utils::log::critical(win_result.error().message());
+        fatal_error(nullptr, win_result.error().message());
         return EXIT_FAILURE;
     }
 
     if (auto const result = vk_context.init(window); !result.has_value())
     {
-        cielim::utils::log::critical(result.error().message());
+        fatal_error(&window, result.error().message());
         clean();
         return EXIT_FAILURE;
     }
@@ -134,7 +142,7 @@ auto main(int argc, char* argv[]) -> int
     if (const auto result = swapchain.init(vk_context, window);
         !result.has_value() && result.error().errc != cielim::error::VkSwapchainError::NullExtent)
     {
-        cielim::utils::log::critical(result.error().message());
+        fatal_error(&window, result.error().message());
         clean();
         return EXIT_FAILURE;
     }
@@ -145,8 +153,11 @@ auto main(int argc, char* argv[]) -> int
 
     if (!triangle_shader.has_value())
     {
-        cielim::utils::log::error(
-            "Shader {} could not be opened: {}", triangle_shader_path.string(), triangle_shader.error().message()
+        fatal_error(
+            &window,
+            fmt::format(
+                "Shader {} could not be opened: {}", triangle_shader_path.string(), triangle_shader.error().message()
+            )
         );
         clean();
         return EXIT_FAILURE;
@@ -162,7 +173,7 @@ auto main(int argc, char* argv[]) -> int
 
     if (vk_result != VK_SUCCESS)
     {
-        cielim::utils::log::error("Shader module could not be created: {}", string_VkResult(vk_result));
+        fatal_error(&window, fmt::format("Shader module could not be created: {}", string_VkResult(vk_result)));
         clean();
         return EXIT_FAILURE;
     }
@@ -247,7 +258,7 @@ auto main(int argc, char* argv[]) -> int
 
     if (vk_result != VK_SUCCESS)
     {
-        cielim::utils::log::critical("Pipeline layout could not be created: {}", string_VkResult(vk_result));
+        fatal_error(&window, fmt::format("Pipeline layout could not be created: {}", string_VkResult(vk_result)));
         clean();
         return EXIT_FAILURE;
     }
@@ -289,7 +300,7 @@ auto main(int argc, char* argv[]) -> int
 
     if (vk_result != VK_SUCCESS)
     {
-        cielim::utils::log::critical("Graphics pipeline could not be created: {}", string_VkResult(vk_result));
+        fatal_error(&window, fmt::format("Graphics pipeline could not be created: {}", string_VkResult(vk_result)));
         clean();
         return EXIT_FAILURE;
     }
@@ -311,7 +322,7 @@ auto main(int argc, char* argv[]) -> int
 
         if (vk_result != VK_SUCCESS)
         {
-            cielim::utils::log::critical("Command pool could not be created: {}", string_VkResult(vk_result));
+            fatal_error(&window, fmt::format("Command pool could not be created: {}", string_VkResult(vk_result)));
             clean();
             return EXIT_FAILURE;
         }
@@ -328,7 +339,7 @@ auto main(int argc, char* argv[]) -> int
 
         if (vk_result != VK_SUCCESS)
         {
-            cielim::utils::log::critical("Command buffer could not be allocated: {}", string_VkResult(vk_result));
+            fatal_error(&window, fmt::format("Command buffer could not be allocated: {}", string_VkResult(vk_result)));
             clean();
             return EXIT_FAILURE;
         }
@@ -361,7 +372,7 @@ auto main(int argc, char* argv[]) -> int
 
         if (vk_result != VK_SUCCESS)
         {
-            cielim::utils::log::critical("Binary semaphore failed to be created: {}", string_VkResult(vk_result));
+            fatal_error(&window, fmt::format("Binary semaphore failed to be created: {}", string_VkResult(vk_result)));
             clean();
             return EXIT_FAILURE;
         }
@@ -377,7 +388,7 @@ auto main(int argc, char* argv[]) -> int
 
         if (vk_result != VK_SUCCESS)
         {
-            cielim::utils::log::critical("Binary semaphore failed to be created: {}", string_VkResult(vk_result));
+            fatal_error(&window, fmt::format("Binary semaphore failed to be created: {}", string_VkResult(vk_result)));
             clean();
             return EXIT_FAILURE;
         }
@@ -403,7 +414,7 @@ auto main(int argc, char* argv[]) -> int
                 if (const auto result = swapchain.recreate(vk_context, window);
                     !result.has_value() && result.error().errc != cielim::error::VkSwapchainError::NullExtent)
                 {
-                    cielim::utils::log::critical(result.error().message());
+                    fatal_error(&window, result.error().message());
                     clean();
                     return EXIT_FAILURE;
                 }
@@ -424,8 +435,8 @@ auto main(int argc, char* argv[]) -> int
 
                     if (vk_result != VK_SUCCESS)
                     {
-                        cielim::utils::log::critical(
-                            "Failed to create binary semaphore: {}", string_VkResult(vk_result)
+                        fatal_error(
+                            &window, fmt::format("Failed to create binary semaphore: {}", string_VkResult(vk_result))
                         );
                         clean();
                         return EXIT_FAILURE;
@@ -464,7 +475,9 @@ auto main(int argc, char* argv[]) -> int
 
             if (vk_result != VK_SUCCESS)
             {
-                cielim::utils::log::critical("Failed waiting on timeline semaphore: {}", string_VkResult(vk_result));
+                fatal_error(
+                    &window, fmt::format("Failed waiting on timeline semaphore: {}", string_VkResult(vk_result))
+                );
                 clean();
                 return EXIT_FAILURE;
             }
@@ -490,7 +503,7 @@ auto main(int argc, char* argv[]) -> int
 
         if (vk_result != VK_SUCCESS && vk_result != VK_SUBOPTIMAL_KHR)
         {
-            cielim::utils::log::critical("Failed to acquire swapchain image: {}", string_VkResult(vk_result));
+            fatal_error(&window, fmt::format("Failed to acquire swapchain image: {}", string_VkResult(vk_result)));
             clean();
             return EXIT_FAILURE;
         }
@@ -499,7 +512,7 @@ auto main(int argc, char* argv[]) -> int
 
         if (vk_result != VK_SUCCESS)
         {
-            cielim::utils::log::critical("Failed to reset command pool: {}", string_VkResult(vk_result));
+            fatal_error(&window, fmt::format("Failed to reset command pool: {}", string_VkResult(vk_result)));
             clean();
             return EXIT_FAILURE;
         }
@@ -512,7 +525,7 @@ auto main(int argc, char* argv[]) -> int
 
         if (vk_result != VK_SUCCESS)
         {
-            cielim::utils::log::critical("Failed to begin command buffer: {}", string_VkResult(vk_result));
+            fatal_error(&window, fmt::format("Failed to begin command buffer: {}", string_VkResult(vk_result)));
             clean();
             return EXIT_FAILURE;
         }
@@ -627,7 +640,7 @@ auto main(int argc, char* argv[]) -> int
 
         if (vk_result != VK_SUCCESS)
         {
-            cielim::utils::log::critical("Failed to end command buffer: {}", string_VkResult(vk_result));
+            fatal_error(&window, fmt::format("Failed to end command buffer: {}", string_VkResult(vk_result)));
             clean();
             return EXIT_FAILURE;
         }
@@ -673,7 +686,7 @@ auto main(int argc, char* argv[]) -> int
 
         if (vk_result != VK_SUCCESS)
         {
-            cielim::utils::log::critical("Failed to submit command buffer: {}", string_VkResult(vk_result));
+            fatal_error(&window, fmt::format("Failed to submit command buffer: {}", string_VkResult(vk_result)));
             clean();
             return EXIT_FAILURE;
         }
@@ -697,7 +710,7 @@ auto main(int argc, char* argv[]) -> int
         }
         else if (vk_result != VK_SUCCESS)
         {
-            cielim::utils::log::critical("Failed to present swapchain image: {}", string_VkResult(vk_result));
+            fatal_error(&window, fmt::format("Failed to present swapchain image: {}", string_VkResult(vk_result)));
             clean();
             return EXIT_FAILURE;
         }
