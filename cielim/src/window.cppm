@@ -5,10 +5,8 @@
 
 module;
 
-#include <expected>
 #include <string>
 #include <string_view>
-#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -20,6 +18,7 @@ module;
 export module cielim.window;
 
 import cielim.error;
+import cielim.result;
 
 export namespace cielim::window
 {
@@ -43,9 +42,8 @@ public:
      * @param flags Bit string containing window flags.
      * @return Void on success, error code on failure.
      */
-    [[nodiscard]] auto
-    create_window(const std::string_view name, const uint16_t width, const uint16_t height, const uint64_t flags)
-        -> std::expected<void, error::DetailedError>
+    auto create_window(const std::string_view name, const uint16_t width, const uint16_t height, const uint64_t flags)
+        -> Result<void>
     {
         this->window_ = SDL_CreateWindow(std::string(name).c_str(), width, height, flags);
 
@@ -56,7 +54,7 @@ public:
                 .detail = SDL_GetError(),
             };
 
-            return std::unexpected(error);
+            return Err(error);
         }
 
         return {};
@@ -68,7 +66,7 @@ public:
      * @brief Gets a list of c strings for required Vulkan instance extensions.
      * @return The list of required instance extensions in success, error code on failure.
      */
-    [[nodiscard]] static auto vk_get_extensions() -> std::expected<std::vector<const char*>, error::DetailedError>
+    static auto vk_get_extensions() -> Result<std::vector<const char*>>
     {
         uint32_t sdl_extension_count = 0;
         const char* const* sdl_extensions = SDL_Vulkan_GetInstanceExtensions(&sdl_extension_count);
@@ -80,7 +78,7 @@ public:
                 .detail = SDL_GetError(),
             };
 
-            return std::unexpected(error);
+            return Err(error);
         }
 
         if (sdl_extension_count == 0)
@@ -96,9 +94,9 @@ public:
      * @param queue_family_index The index for the queue family in the physical device being queried.
      * @return Void if supported, error code otherwise.
      */
-    [[nodiscard]] static auto vk_get_presentation_support(
+    static auto vk_get_presentation_support(
         const VkInstance instance, const VkPhysicalDevice physical_device, const uint32_t queue_family_index
-    ) -> std::expected<void, error::DetailedError>
+    ) -> Result<void>
     {
         const bool supported = SDL_Vulkan_GetPresentationSupport(instance, physical_device, queue_family_index);
 
@@ -109,7 +107,7 @@ public:
                 .detail = "",
             };
 
-            return std::unexpected(error);
+            return Err(error);
         }
 
         return {};
@@ -121,8 +119,7 @@ public:
      * @param surface Pointer to the Vulkan surface object to be created.
      * @return Void on success, error code on failure.
      */
-    [[nodiscard]] auto vk_create_surface(const VkInstance instance, VkSurfaceKHR* surface) const
-        -> std::expected<void, error::DetailedError>
+    auto vk_create_surface(const VkInstance instance, VkSurfaceKHR* surface) const -> Result<void>
     {
         const bool created = SDL_Vulkan_CreateSurface(this->window_, instance, nullptr, surface);
 
@@ -133,7 +130,7 @@ public:
                 .detail = SDL_GetError(),
             };
 
-            return std::unexpected(error);
+            return Err(error);
         }
 
         return {};
@@ -143,7 +140,7 @@ public:
     [[nodiscard]] auto get_handle() const -> SDL_Window* { return window_; }
 
     // Returns window size on success, error code on failure
-    [[nodiscard]] auto get_size() const -> std::expected<std::pair<int, int>, error::DetailedError>
+    [[nodiscard]] auto get_size() const -> Result<std::pair<int, int>>
     {
         int width = 0;
         int height = 0;
@@ -157,7 +154,7 @@ public:
                 .detail = SDL_GetError(),
             };
 
-            return std::unexpected(error);
+            return Err(error);
         }
 
         return std::make_pair(width, height);

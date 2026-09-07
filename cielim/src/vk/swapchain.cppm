@@ -7,7 +7,7 @@
 module;
 
 #include <algorithm>
-#include <expected>
+#include <limits>
 #include <string>
 #include <utility>
 #include <vector>
@@ -18,6 +18,7 @@ module;
 export module cielim.vk:swapchain;
 
 import cielim.error;
+import cielim.result;
 import cielim.utils;
 import cielim.window;
 import :context;
@@ -38,8 +39,7 @@ public:
      * @param window The window to which the swapchain is connected.
      * @return Void on success, error code on failure.
      */
-    [[nodiscard]] auto init(const context::Context& context, window::Window& window)
-        -> std::expected<void, error::DetailedError>
+    auto init(const context::Context& context, window::Window& window) -> Result<void>
     {
         this->vk_device_handle_ = context.get_device(); // This is specifically a non-owning (borrow) handle
 
@@ -57,7 +57,7 @@ public:
                 .detail = string_VkResult(result),
             };
 
-            return std::unexpected(error);
+            return Err(error);
         }
 
         // Get surface formats
@@ -79,7 +79,7 @@ public:
                 .detail = string_VkResult(result),
             };
 
-            return std::unexpected(error);
+            return Err(error);
         }
 
         // Check that the required formats are supported (standard sRGB)
@@ -101,7 +101,7 @@ public:
                 .detail = "",
             };
 
-            return std::unexpected(error);
+            return Err(error);
         }
 
         // We'll skip querying present modes and use VK_PRESENT_MODE_FIFO_KHR which is always present
@@ -115,7 +115,7 @@ public:
             auto window_size = window.get_size();
 
             if (!window_size.has_value())
-                return std::unexpected(window_size.error());
+                return window_size.propagate();
 
             this->extent_.width = window_size.value().first;
             this->extent_.height = window_size.value().second;
@@ -145,7 +145,7 @@ public:
                 .detail = "",
             };
 
-            return std::unexpected(error);
+            return Err(error);
         }
 
         // Minimum number of images the swapchain should contain, dictated by the window manager
@@ -180,7 +180,7 @@ public:
                 .detail = string_VkResult(result),
             };
 
-            return std::unexpected(error);
+            return Err(error);
         }
 
         // Get all of the images from the swapchain and map to our list of VkImages
@@ -204,7 +204,7 @@ public:
                 .detail = string_VkResult(result),
             };
 
-            return std::unexpected(error);
+            return Err(error);
         }
 
         // Create image view for each image in the swapchain
@@ -229,7 +229,7 @@ public:
                     .detail = string_VkResult(result),
                 };
 
-                return std::unexpected(error);
+                return Err(error);
             }
 
             i++;
@@ -245,8 +245,7 @@ public:
      * @param window The window to which the swapchain is connected.
      * @return Void on success, error code on failure.
      */
-    [[nodiscard]] auto recreate(const context::Context& context, window::Window& window)
-        -> std::expected<void, error::DetailedError>
+    auto recreate(const context::Context& context, window::Window& window) -> Result<void>
     {
         // Check in case this is being called before first init
         if (this->vk_device_handle_ == nullptr)

@@ -32,6 +32,7 @@ target_sources(cielim
         BASE_DIRS "${CIELIM_CPP_SOURCE}"
         FILES
             ${CIELIM_CPP_SOURCE}/error.cppm
+            ${CIELIM_CPP_SOURCE}/result.cppm
             ${CIELIM_CPP_SOURCE}/utils.cppm
             ${CIELIM_CPP_SOURCE}/vk.cppm
             ${CIELIM_CPP_SOURCE}/window.cppm

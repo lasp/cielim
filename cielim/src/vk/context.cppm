@@ -7,7 +7,6 @@
 module;
 
 #include <cstring>
-#include <expected>
 #include <limits>
 #include <string>
 #include <vector>
@@ -18,6 +17,7 @@ module;
 export module cielim.vk:context;
 
 import cielim.error;
+import cielim.result;
 import cielim.utils;
 import cielim.window;
 
@@ -104,26 +104,26 @@ public:
      * @param window Window to link the Vulkan context to.
      * @return Void on success, error code on failure.
      */
-    [[nodiscard]] auto init(const window::Window& window) -> std::expected<void, error::DetailedError>
+    auto init(const window::Window& window) -> Result<void>
     {
         if (this->is_initialized_)
             return {}; // Don't initialize more than once
 
         // Init the Vulkan instance
         if (const auto result = this->init_instance(window); !result.has_value())
-            return std::unexpected(result.error());
+            return result.propagate();
 
         // Init the window surface
         if (const auto result = window.vk_create_surface(this->vk_instance_, &this->vk_surface_); !result.has_value())
-            return std::unexpected(result.error());
+            return result.propagate();
 
         // Find physical devices
         if (const auto result = this->find_physical_device(window); !result.has_value())
-            return std::unexpected(result.error());
+            return result.propagate();
 
         // Init the logical device
         if (const auto result = this->init_device(); !result.has_value())
-            return std::unexpected(result.error());
+            return result.propagate();
 
         this->is_initialized_ = true;
 
@@ -156,7 +156,7 @@ private:
     }
 
     // Initializes the Vulkan instance required API version, layers, and extensions.
-    [[nodiscard]] auto init_instance(const window::Window& window) -> std::expected<void, error::DetailedError>
+    auto init_instance(const window::Window& window) -> Result<void>
     {
         uint32_t vk_api_version = 0;
         if (const auto result = vkEnumerateInstanceVersion(&vk_api_version); result != VK_SUCCESS)
@@ -166,7 +166,7 @@ private:
                 .detail = string_VkResult(result),
             };
 
-            return std::unexpected(error);
+            return Err(error);
         }
 
         utils::log::info(
@@ -183,7 +183,7 @@ private:
                 .detail = "",
             };
 
-            return std::unexpected(error);
+            return Err(error);
         }
 
         // Setup application info
@@ -217,7 +217,7 @@ private:
                 .detail = string_VkResult(result),
             };
 
-            return std::unexpected(error);
+            return Err(error);
         }
 
         std::vector<const char*> missing_inst_layers;
@@ -246,7 +246,7 @@ private:
                 .detail = fmt::format("{}", fmt::join(missing_inst_layers, ", ")),
             };
 
-            return std::unexpected(error);
+            return Err(error);
         }
 
         // Check if any required Vulkan instance extensions are missing
@@ -254,7 +254,7 @@ private:
         auto ext_result = window::Window::vk_get_extensions();
 
         if (!ext_result.has_value())
-            return std::unexpected(ext_result.error());
+            return ext_result.propagate();
 
         std::vector<const char*> req_inst_extensions = ext_result.value(); // Initial list comes from the window
 
@@ -279,7 +279,7 @@ private:
                 .detail = string_VkResult(result),
             };
 
-            return std::unexpected(error);
+            return Err(error);
         }
 
         std::vector<const char*> missing_inst_extensions;
@@ -308,7 +308,7 @@ private:
                 .detail = fmt::format("{}", fmt::join(missing_inst_extensions, ", ")),
             };
 
-            return std::unexpected(error);
+            return Err(error);
         }
 
 #ifndef NDEBUG
@@ -346,7 +346,7 @@ private:
                 .detail = string_VkResult(result),
             };
 
-            return std::unexpected(error);
+            return Err(error);
         }
 
         volkLoadInstance(this->vk_instance_); // Initialize Vulkan instance
@@ -362,7 +362,7 @@ private:
                 .detail = string_VkResult(result),
             };
 
-            return std::unexpected(error);
+            return Err(error);
         }
 #endif
 
@@ -370,7 +370,7 @@ private:
     }
 
     // Finds a suitable physical device for rendering, compute, and presentation.
-    [[nodiscard]] auto find_physical_device(const window::Window& window) -> std::expected<void, error::DetailedError>
+    auto find_physical_device(const window::Window& window) -> Result<void>
     {
         VkPhysicalDevice physical_device = nullptr;
         uint32_t graphics_queue_family = std::numeric_limits<uint32_t>::max();
@@ -390,7 +390,7 @@ private:
                 .detail = string_VkResult(result),
             };
 
-            return std::unexpected(error);
+            return Err(error);
         }
 
         // Loop through all physical devices to find the most suitable one
@@ -440,7 +440,7 @@ private:
                 .detail = "",
             };
 
-            return std::unexpected(error);
+            return Err(error);
         }
 
         VkPhysicalDeviceProperties device_properties;
@@ -472,7 +472,7 @@ private:
     }
 
     // Initializes the logical device from the physical device and instance.
-    [[nodiscard]] auto init_device() -> std::expected<void, error::DetailedError>
+    auto init_device() -> Result<void>
     {
         // List required Vulkan features
 
@@ -536,7 +536,7 @@ private:
                 .detail = string_VkResult(result),
             };
 
-            return std::unexpected(error);
+            return Err(error);
         }
 
         std::vector<const char*> missing_dev_extensions;
@@ -565,7 +565,7 @@ private:
                 .detail = fmt::format("{}", fmt::join(missing_dev_extensions, ", ")),
             };
 
-            return std::unexpected(error);
+            return Err(error);
         }
 
         float queue_priority = 1.0f;
@@ -593,7 +593,7 @@ private:
                 .detail = string_VkResult(result),
             };
 
-            return std::unexpected(error);
+            return Err(error);
         }
 
         volkLoadDevice(this->vk_device_);

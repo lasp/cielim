@@ -5,10 +5,8 @@
 
 #include <algorithm>
 #include <cstdlib>
-#include <expected>
 #include <filesystem>
 #include <string>
-#include <system_error>
 #include <vector>
 
 #include <volk/volk.h>
@@ -20,6 +18,7 @@
 #include <SDL3/SDL_main.h> // This has to be the last SDL include
 
 import cielim.error;
+import cielim.result;
 import cielim.utils;
 import cielim.vk;
 import cielim.window;
@@ -115,7 +114,7 @@ auto main(int argc, char* argv[]) -> int
     auto win_result
         = window.create_window("cielim", WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
 
-    if (!win_result)
+    if (!win_result.has_value())
     {
         cielim::utils::log::critical(win_result.error().message());
         return EXIT_FAILURE;
@@ -155,8 +154,8 @@ auto main(int argc, char* argv[]) -> int
 
     VkShaderModuleCreateInfo shader_module_create_info = {
         .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-        .codeSize = triangle_shader->size() * sizeof(uint32_t),
-        .pCode = triangle_shader->data(),
+        .codeSize = triangle_shader.value().size() * sizeof(uint32_t),
+        .pCode = triangle_shader.value().data(),
     };
 
     vk_result = vkCreateShaderModule(vk_context.get_device(), &shader_module_create_info, nullptr, &shader_module);
