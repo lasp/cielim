@@ -295,12 +295,13 @@ class Scene(object):
             stuck_px_rate (float, optional): Stuck pixel rate (probability).
             dead_px_rate (float, optional): Dead pixel rate (probability).
         """
-        if dist_radial is not None and all(f >= 0 for f in dist_radial):
+
+        if dist_radial is not None:
             self.cielim_message.camera.lensModel.distortionK1 = dist_radial[0]
             self.cielim_message.camera.lensModel.distortionK2 = dist_radial[1]
             self.cielim_message.camera.lensModel.distortionK3 = dist_radial[2]
 
-        if dist_tangent is not None and all(f >= 0 for f in dist_tangent):
+        if dist_tangent is not None:
             self.cielim_message.camera.lensModel.distortionP1 = dist_tangent[0]
             self.cielim_message.camera.lensModel.distortionP2 = dist_tangent[1]
 
