@@ -189,6 +189,32 @@ struct ErrorType<VkSwapchainError>
     }
 };
 
+enum class VkShaderModuleError : std::uint8_t
+{
+    FileOpenError,
+    ModuleCreateError,
+};
+
+template <>
+struct ErrorType<VkShaderModuleError>
+{
+    static constexpr bool IS_ERROR = true;
+    static constexpr std::string_view CATEGORY_NAME = "VkShaderModuleError";
+
+    static auto message(const VkShaderModuleError error) -> std::string_view
+    {
+        using enum VkShaderModuleError;
+
+        switch (error)
+        {
+        case FileOpenError: return "Failed to open shader file";
+        case ModuleCreateError: return "Failed to create shader module";
+        }
+
+        return "Unknown Vulkan shader module error";
+    }
+};
+
 } // namespace cielim::error
 
 // Register custom error types with standard library
@@ -203,5 +229,9 @@ struct std::is_error_code_enum<cielim::error::VkContextError> : std::true_type
 };
 template <>
 struct std::is_error_code_enum<cielim::error::VkSwapchainError> : std::true_type
+{
+};
+template <>
+struct std::is_error_code_enum<cielim::error::VkShaderModuleError> : std::true_type
 {
 };

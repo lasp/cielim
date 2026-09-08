@@ -6,10 +6,12 @@
 export module cielim.vk;
 
 export import :context;
+export import :shader;
 export import :swapchain;
 
 export namespace cielim::vk
 {
 using namespace cielim::vk::context;
+using namespace cielim::vk::shader;
 using namespace cielim::vk::swapchain;
 } // namespace cielim::vk

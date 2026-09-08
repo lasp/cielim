@@ -24,7 +24,6 @@ import cielim.vk;
 import cielim.window;
 
 static cielim::vk::Context& vk_context = cielim::vk::Context::get_context();
-static VkShaderModule shader_module = VK_NULL_HANDLE; // Single shader for now
 static VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
 static VkPipeline graphics_pipeline = VK_NULL_HANDLE;
 static std::vector<VkCommandPool> command_pools;
@@ -62,9 +61,6 @@ static auto clean() -> void
 
     if (pipeline_layout != VK_NULL_HANDLE)
         vkDestroyPipelineLayout(vk_context.get_device(), pipeline_layout, nullptr);
-
-    if (shader_module != VK_NULL_HANDLE)
-        vkDestroyShaderModule(vk_context.get_device(), shader_module, nullptr);
 }
 
 static auto fatal_error(const cielim::window::Window* window, const std::string& message) -> void
@@ -149,31 +145,11 @@ auto main(int argc, char* argv[]) -> int
 
     std::filesystem::path triangle_shader_path = base_path / "content" / "shaders" / "triangle.spv";
 
-    auto triangle_shader = cielim::utils::file::read_file32(triangle_shader_path);
+    cielim::vk::Shader triangle_shader;
 
-    if (!triangle_shader.has_value())
+    if (const auto result = triangle_shader.create(vk_context, triangle_shader_path); !result.has_value())
     {
-        fatal_error(
-            &window,
-            fmt::format(
-                "Shader {} could not be opened: {}", triangle_shader_path.string(), triangle_shader.error().message()
-            )
-        );
-        clean();
-        return EXIT_FAILURE;
-    }
-
-    VkShaderModuleCreateInfo shader_module_create_info = {
-        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-        .codeSize = triangle_shader.value().size() * sizeof(uint32_t),
-        .pCode = triangle_shader.value().data(),
-    };
-
-    vk_result = vkCreateShaderModule(vk_context.get_device(), &shader_module_create_info, nullptr, &shader_module);
-
-    if (vk_result != VK_SUCCESS)
-    {
-        fatal_error(&window, fmt::format("Shader module could not be created: {}", string_VkResult(vk_result)));
+        fatal_error(&window, result.error().message());
         clean();
         return EXIT_FAILURE;
     }
@@ -181,14 +157,14 @@ auto main(int argc, char* argv[]) -> int
     VkPipelineShaderStageCreateInfo vertex_stage_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .stage = VK_SHADER_STAGE_VERTEX_BIT,
-        .module = shader_module,
+        .module = triangle_shader.get_handle(),
         .pName = "VertMain",
     };
 
     VkPipelineShaderStageCreateInfo frag_stage_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-        .module = shader_module,
+        .module = triangle_shader.get_handle(),
         .pName = "FragMain",
     };
 
