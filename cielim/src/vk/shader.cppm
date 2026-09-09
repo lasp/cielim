@@ -14,6 +14,7 @@ module;
 
 export module cielim.vk:shader;
 
+import cielim.handle;
 import cielim.result;
 import cielim.utils;
 import :context;
@@ -26,10 +27,20 @@ class Shader
 public:
     Shader() = default;
 
+    // Delete copy constructors
+
+    Shader(const Shader&) = delete;
+    auto operator=(const Shader&) -> Shader& = delete;
+
+    // Use default move constructors
+
+    Shader(Shader&&) = default;
+    auto operator=(Shader&&) -> Shader& = default;
+
     ~Shader()
     {
-        if (this->vk_shader_ != nullptr)
-            vkDestroyShaderModule(this->vk_device_handle_, this->vk_shader_, nullptr);
+        if (this->shader_)
+            vkDestroyShaderModule(this->vk_device_handle_, this->shader_.get(), nullptr);
     }
 
     /**
@@ -61,7 +72,7 @@ public:
         };
 
         if (const auto result
-            = vkCreateShaderModule(this->vk_device_handle_, &module_create_info, nullptr, &this->vk_shader_);
+            = vkCreateShaderModule(this->vk_device_handle_, &module_create_info, nullptr, this->shader_.put());
             result != VK_SUCCESS)
         {
             error::DetailedError error = {
@@ -75,14 +86,14 @@ public:
         return {};
     }
 
-    [[nodiscard]] auto get_handle() const -> VkShaderModule { return this->vk_shader_; }
+    [[nodiscard]] auto get_handle() const -> VkShaderModule { return this->shader_.get(); }
 
 private:
     // Non-owning handle for the Vulkan logical device
     VkDevice vk_device_handle_ = nullptr;
 
     // Shader module
-    VkShaderModule vk_shader_ = nullptr;
+    UniqueHandle<VkShaderModule> shader_;
 };
 
 } // namespace cielim::vk::shader

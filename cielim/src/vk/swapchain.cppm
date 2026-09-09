@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Laboratory for Atmospheric and Space Physics
 // SPDX-License-Identifier: GPL-3.0+
 
-/* Purpose: The swapchain is used to present rendered images to the window via its corresponding Vulkan surface object.
- */
+/* Purpose: A swapchain is used to present rendered images to the window via its corresponding Vulkan surface object.
+ * Each window has its own corresponding swapchain. */
 
 module;
 
@@ -18,6 +18,7 @@ module;
 export module cielim.vk:swapchain;
 
 import cielim.error;
+import cielim.handle;
 import cielim.result;
 import cielim.utils;
 import cielim.window;
@@ -31,6 +32,16 @@ class Swapchain
 public:
     Swapchain() = default;
 
+    // Delete copy constructors
+
+    Swapchain(const Swapchain&) = delete;
+    auto operator=(const Swapchain&) -> Swapchain& = delete;
+
+    // Use default move constructors
+
+    Swapchain(Swapchain&&) = default;
+    auto operator=(Swapchain&&) -> Swapchain& = default;
+
     ~Swapchain() { this->cleanup(); }
 
     /**
@@ -39,7 +50,7 @@ public:
      * @param window The window to which the swapchain is connected.
      * @return Void on success, error code on failure.
      */
-    auto init(const context::Context& context, window::Window& window) -> Result<void>
+    auto init(const context::Context& context, const window::Window& window) -> Result<void>
     {
         this->vk_device_handle_ = context.get_device(); // This is specifically a non-owning (borrow) handle
 
@@ -172,7 +183,7 @@ public:
         };
 
         if (const auto result
-            = vkCreateSwapchainKHR(context.get_device(), &swapchain_create_info, nullptr, &this->vk_swapchain_);
+            = vkCreateSwapchainKHR(context.get_device(), &swapchain_create_info, nullptr, this->swapchain_.put());
             result != VK_SUCCESS)
         {
             error::DetailedError error = {
@@ -186,7 +197,7 @@ public:
         // Get all of the images from the swapchain and map to our list of VkImages
 
         uint32_t image_count = 0;
-        vkGetSwapchainImagesKHR(context.get_device(), this->vk_swapchain_, &image_count, nullptr);
+        vkGetSwapchainImagesKHR(context.get_device(), this->swapchain_.get(), &image_count, nullptr);
 
         if (image_count > 0)
         {
@@ -195,7 +206,7 @@ public:
         }
 
         if (const auto result = vkGetSwapchainImagesKHR(
-                context.get_device(), this->vk_swapchain_, &image_count, this->swapchain_images_.data()
+                context.get_device(), this->swapchain_.get(), &image_count, this->swapchain_images_.data()
             );
             result != VK_SUCCESS)
         {
@@ -245,11 +256,11 @@ public:
      * @param window The window to which the swapchain is connected.
      * @return Void on success, error code on failure.
      */
-    auto recreate(const context::Context& context, window::Window& window) -> Result<void>
+    auto recreate(const context::Context& context, const window::Window& window) -> Result<void>
     {
-        // Check in case this is being called before first init
+        // Don't do anything if this is called before init
         if (this->vk_device_handle_ == nullptr)
-            this->vk_device_handle_ = context.get_device();
+            return {};
 
         // Wait for device to finish whatever it's doing
         vkDeviceWaitIdle(this->vk_device_handle_);
@@ -260,7 +271,7 @@ public:
         return this->init(context, window);
     }
 
-    [[nodiscard]] auto get_handle() const -> VkSwapchainKHR { return this->vk_swapchain_; }
+    [[nodiscard]] auto get_handle() const -> VkSwapchainKHR { return this->swapchain_.get(); }
     [[nodiscard]] auto get_extent() const -> VkExtent2D { return this->extent_; }
     [[nodiscard]] auto get_num_images() const -> uint32_t { return this->swapchain_images_.size(); }
     [[nodiscard]] auto get_image(const uint32_t index) const -> VkImage { return this->swapchain_images_[index]; }
@@ -280,10 +291,10 @@ private:
         this->swapchain_views_.clear();
         this->swapchain_images_.clear();
 
-        if (this->vk_swapchain_ != nullptr)
+        if (this->swapchain_)
         {
-            vkDestroySwapchainKHR(vk_device_handle_, this->vk_swapchain_, nullptr);
-            this->vk_swapchain_ = nullptr;
+            vkDestroySwapchainKHR(vk_device_handle_, this->swapchain_.get(), nullptr);
+            this->swapchain_.reset();
         }
     }
 
@@ -291,7 +302,7 @@ private:
     VkDevice vk_device_handle_ = nullptr;
 
     // Vulkan swapchain
-    VkSwapchainKHR vk_swapchain_ = nullptr;
+    UniqueHandle<VkSwapchainKHR> swapchain_;
 
     // Size of the swapchain
     VkExtent2D extent_{};

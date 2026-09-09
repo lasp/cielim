@@ -17,6 +17,7 @@ module;
 export module cielim.vk:context;
 
 import cielim.error;
+import cielim.handle;
 import cielim.result;
 import cielim.utils;
 import cielim.window;
@@ -110,15 +111,16 @@ public:
             return {}; // Don't initialize more than once
 
         // Init the Vulkan instance
-        if (const auto result = this->init_instance(window); !result.has_value())
+        if (const auto result = this->init_instance(); !result.has_value())
             return result.propagate();
 
         // Init the window surface
-        if (const auto result = window.vk_create_surface(this->vk_instance_, &this->vk_surface_); !result.has_value())
+        if (const auto result = window.vk_create_surface(this->instance_.get(), this->surface_.put());
+            !result.has_value())
             return result.propagate();
 
         // Find physical devices
-        if (const auto result = this->find_physical_device(window); !result.has_value())
+        if (const auto result = this->find_physical_device(); !result.has_value())
             return result.propagate();
 
         // Init the logical device
@@ -130,11 +132,11 @@ public:
         return {};
     }
 
-    [[nodiscard]] auto get_instance() const -> VkInstance { return this->vk_instance_; }
-    [[nodiscard]] auto get_surface() const -> VkSurfaceKHR { return this->vk_surface_; }
-    [[nodiscard]] auto get_physical_device() const -> VkPhysicalDevice { return this->vk_physical_device_; }
+    [[nodiscard]] auto get_instance() const -> VkInstance { return this->instance_.get(); }
+    [[nodiscard]] auto get_surface() const -> VkSurfaceKHR { return this->surface_.get(); }
+    [[nodiscard]] auto get_physical_device() const -> VkPhysicalDevice { return this->physical_device_.get(); }
     [[nodiscard]] auto get_queue() const -> uint32_t { return this->queue_index_; }
-    [[nodiscard]] auto get_device() const -> VkDevice { return this->vk_device_; }
+    [[nodiscard]] auto get_device() const -> VkDevice { return this->device_.get(); }
 
 private:
     Context() = default;
@@ -142,21 +144,21 @@ private:
     ~Context()
     {
 #ifndef NDEBUG
-        if (this->debug_messenger_ != nullptr)
-            vkDestroyDebugUtilsMessengerEXT(this->vk_instance_, this->debug_messenger_, nullptr);
+        if (this->debug_messenger_)
+            vkDestroyDebugUtilsMessengerEXT(this->instance_.get(), this->debug_messenger_.get(), nullptr);
 #endif
-        if (this->vk_device_ != nullptr)
-            vkDestroyDevice(this->vk_device_, nullptr);
+        if (this->device_)
+            vkDestroyDevice(this->device_.get(), nullptr);
 
-        if (this->vk_surface_ != nullptr)
-            vkDestroySurfaceKHR(this->vk_instance_, this->vk_surface_, nullptr);
+        if (this->surface_)
+            vkDestroySurfaceKHR(this->instance_.get(), this->surface_.get(), nullptr);
 
-        if (this->vk_instance_ != nullptr)
-            vkDestroyInstance(this->vk_instance_, nullptr);
+        if (this->instance_)
+            vkDestroyInstance(this->instance_.get(), nullptr);
     }
 
     // Initializes the Vulkan instance required API version, layers, and extensions.
-    auto init_instance(const window::Window& window) -> Result<void>
+    auto init_instance() -> Result<void>
     {
         uint32_t vk_api_version = 0;
         if (const auto result = vkEnumerateInstanceVersion(&vk_api_version); result != VK_SUCCESS)
@@ -338,7 +340,7 @@ private:
             .ppEnabledExtensionNames = req_inst_extensions.data(),
         };
 
-        if (const auto result = vkCreateInstance(&instance_create_info, nullptr, &this->vk_instance_);
+        if (const auto result = vkCreateInstance(&instance_create_info, nullptr, this->instance_.put());
             result != VK_SUCCESS)
         {
             error::DetailedError error = {
@@ -349,11 +351,11 @@ private:
             return Err(error);
         }
 
-        volkLoadInstance(this->vk_instance_); // Initialize Vulkan instance
+        volkLoadInstance(this->instance_.get()); // Initialize Vulkan instance
 
 #ifndef NDEBUG
         if (const auto result = vkCreateDebugUtilsMessengerEXT(
-                this->vk_instance_, &debug_messenger_create_info, nullptr, &this->debug_messenger_
+                this->instance_.get(), &debug_messenger_create_info, nullptr, this->debug_messenger_.put()
             );
             result != VK_SUCCESS)
         {
@@ -370,7 +372,7 @@ private:
     }
 
     // Finds a suitable physical device for rendering, compute, and presentation.
-    auto find_physical_device(const window::Window& window) -> Result<void>
+    auto find_physical_device() -> Result<void>
     {
         VkPhysicalDevice physical_device = nullptr;
         uint32_t graphics_queue_family = std::numeric_limits<uint32_t>::max();
@@ -378,11 +380,12 @@ private:
         // Get physical devices
 
         uint32_t num_devices = 0;
-        vkEnumeratePhysicalDevices(this->vk_instance_, &num_devices, nullptr);
+        vkEnumeratePhysicalDevices(this->instance_.get(), &num_devices, nullptr);
 
         std::vector<VkPhysicalDevice> physical_devices(num_devices);
 
-        if (const auto result = vkEnumeratePhysicalDevices(this->vk_instance_, &num_devices, physical_devices.data());
+        if (const auto result
+            = vkEnumeratePhysicalDevices(this->instance_.get(), &num_devices, physical_devices.data());
             result != VK_SUCCESS || physical_devices.empty())
         {
             error::DetailedError error = {
@@ -418,7 +421,7 @@ private:
             {
                 // Check that the GPU supports graphics computations and presentation
                 if ((queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0
-                    && window::Window::vk_get_presentation_support(this->vk_instance_, device, index).has_value())
+                    && window::Window::vk_get_presentation_support(this->instance_.get(), device, index).has_value())
                 {
                     physical_device = device;
                     graphics_queue_family = index;
@@ -465,7 +468,7 @@ private:
 
         utils::log::info("Device heap total: {:.2f} GB", static_cast<float>(dev_local_bytes) / BYTES_IN_GB);
 
-        this->vk_physical_device_ = physical_device;
+        this->physical_device_ = UniqueHandle(physical_device);
         this->queue_index_ = graphics_queue_family;
 
         return {};
@@ -522,12 +525,12 @@ private:
 #endif
 
         uint32_t dev_ext_count = 0;
-        vkEnumerateDeviceExtensionProperties(this->vk_physical_device_, nullptr, &dev_ext_count, nullptr);
+        vkEnumerateDeviceExtensionProperties(this->physical_device_.get(), nullptr, &dev_ext_count, nullptr);
 
         std::vector<VkExtensionProperties> dev_extensions(dev_ext_count);
 
         if (const auto result = vkEnumerateDeviceExtensionProperties(
-                this->vk_physical_device_, nullptr, &dev_ext_count, dev_extensions.data()
+                this->physical_device_.get(), nullptr, &dev_ext_count, dev_extensions.data()
             );
             result != VK_SUCCESS)
         {
@@ -585,7 +588,8 @@ private:
             .ppEnabledExtensionNames = req_dev_extensions.data(),
         };
 
-        if (const auto result = vkCreateDevice(this->vk_physical_device_, &device_info, nullptr, &this->vk_device_);
+        if (const auto result
+            = vkCreateDevice(this->physical_device_.get(), &device_info, nullptr, this->device_.put());
             result != VK_SUCCESS)
         {
             error::DetailedError error = {
@@ -596,7 +600,7 @@ private:
             return Err(error);
         }
 
-        volkLoadDevice(this->vk_device_);
+        volkLoadDevice(this->device_.get());
 
         return {};
     }
@@ -604,23 +608,23 @@ private:
     bool is_initialized_ = false;
 
 #ifndef NDEBUG
-    VkDebugUtilsMessengerEXT debug_messenger_ = nullptr; // Only included in debug builds
+    UniqueHandle<VkDebugUtilsMessengerEXT> debug_messenger_; // Only included in debug builds
 #endif
 
     // Vulkan window, corresponds to the Vulkan version present on the user's system
-    VkInstance vk_instance_ = nullptr;
+    UniqueHandle<VkInstance> instance_;
 
     // Vulkan surface, corresponds to the window (assuming just one for now)
-    VkSurfaceKHR vk_surface_ = nullptr;
+    UniqueHandle<VkSurfaceKHR> surface_;
 
     // Vulkan physical device, corresponds to the physical rendering hardware
-    VkPhysicalDevice vk_physical_device_ = nullptr;
+    UniqueHandle<VkPhysicalDevice> physical_device_;
 
     // The index for the queue family to use for rendering.
     uint32_t queue_index_ = 0;
 
     // Vulkan logical device, corresponds to device driver instance
-    VkDevice vk_device_ = nullptr;
+    UniqueHandle<VkDevice> device_;
 };
 
 } // namespace cielim::vk::context
