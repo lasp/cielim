@@ -8,8 +8,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-EXAMPLES_DIR = PROJECT_ROOT / "examples"
+project_root = Path(__file__).resolve().parent.parent
+examples_dir = project_root / "examples"
 
 
 def _load_module_from(path: Path, name: str):
@@ -25,11 +25,11 @@ def test_random_asteroid_generation(monkeypatch):
     os.environ.setdefault("MPLBACKEND", "Agg")
 
     # Load modules directly from files (no need for examples/__init__.py)
-    rag = _load_module_from(EXAMPLES_DIR / "random_asteroid_generation.py", "random_asteroid_generation")
-    cca = _load_module_from(EXAMPLES_DIR / "com_cob_analysis.py", "com_cob_analysis")
+    rag = _load_module_from(examples_dir / "random_asteroid_generation.py", "random_asteroid_generation")
+    cca = _load_module_from(examples_dir / "com_cob_analysis.py", "com_cob_analysis")
 
     # Figure out where the example writes (module usually defines current_file_path = os.path.dirname(__file__))
-    base_dir = Path(getattr(rag, "current_file_path", EXAMPLES_DIR))
+    base_dir = Path(getattr(rag, "current_file_path", examples_dir))
 
     gen_dir = base_dir / "images-com-cob"
     out_dir = base_dir / "images-com-cob-analysis"
@@ -65,10 +65,10 @@ def test_asteroid_departure():
     os.environ.setdefault("MPLBACKEND", "Agg")
 
     # Load modules directly from files (no need for examples/__init__.py)
-    dep = _load_module_from(EXAMPLES_DIR / "asteroid_departure.py", "departure_scene")
+    dep = _load_module_from(examples_dir / "asteroid_departure.py", "departure_scene")
 
     # where this example writes outputs (falls back to examples/ if attribute missing)
-    base_dir = Path(getattr(dep, "current_file_path", EXAMPLES_DIR))
+    base_dir = Path(getattr(dep, "current_file_path", examples_dir))
 
     out_dir = base_dir / "images-departure"
     bin_file = out_dir / "departure.bin"
@@ -92,11 +92,11 @@ def test_saved_monte_carlo_scenario():
     os.environ.setdefault("MPLBACKEND", "Agg")
 
     # Load modules directly from files
-    smc = _load_module_from(EXAMPLES_DIR / "saved_monte_carlo_scenario.py", "saved_monte_carlo_scenario")
-    ia = _load_module_from(EXAMPLES_DIR / "image_analysis.py", "image_analysis")
+    smc = _load_module_from(examples_dir / "saved_monte_carlo_scenario.py", "saved_monte_carlo_scenario")
+    ia = _load_module_from(examples_dir / "image_analysis.py", "image_analysis")
 
     # Base dir where the example writes outputs (fallback to examples/)
-    base_dir = Path(getattr(smc, "current_file_path", EXAMPLES_DIR))
+    base_dir = Path(getattr(smc, "current_file_path", examples_dir))
 
     mc_dir = base_dir / "images-saved-monte-carlo"
     coverage_png = base_dir / "coverage.png"
@@ -125,10 +125,10 @@ def test_corto_scenario():
     os.environ.setdefault("MPLBACKEND", "Agg")
 
     # Load modules directly from files
-    corto = _load_module_from(EXAMPLES_DIR / "corto_scenario.py", "corto_scenario")
+    corto = _load_module_from(examples_dir / "corto_scenario.py", "corto_scenario")
 
     # Base dir where the example writes outputs (fallback to examples/)
-    base_dir = Path(getattr(corto, "current_file_path", EXAMPLES_DIR))
+    base_dir = Path(getattr(corto, "current_file_path", examples_dir))
 
     image_dir = base_dir / "images-corto"
 
@@ -148,15 +148,15 @@ def test_spice_scenario():
     os.environ.setdefault("MPLBACKEND", "Agg")
 
     # Require kernels; xfail if not available
-    spice_root = PROJECT_ROOT / "support-data" / "cassini-spice.json"
+    spice_root = project_root / "support-data" / "cassini-spice.json"
     if not spice_root.exists():
         pytest.xfail(f"Missing SPICE kernels: {spice_root}")
 
     # Load the example module
-    sp = _load_module_from(EXAMPLES_DIR / "spice_scenario.py", "spice_scenario")
+    sp = _load_module_from(examples_dir / "spice_scenario.py", "spice_scenario")
 
     # Output dir lives next to the script by its own logic
-    base_dir = Path(getattr(sp, "current_file_path", EXAMPLES_DIR))
+    base_dir = Path(getattr(sp, "current_file_path", examples_dir))
     out_dir = base_dir / "images-cassini-spice"
 
     # clean slate
@@ -178,15 +178,15 @@ def test_deimos_flyby():
     os.environ.setdefault("MPLBACKEND", "Agg")
 
     # Require kernels; xfail if not available
-    spice_root = PROJECT_ROOT / "support-data" / "deimos-spice"
+    spice_root = project_root / "support-data" / "deimos-spice"
     if not spice_root.exists():
         pytest.skip(f"Missing SPICE kernels: {spice_root}")
 
     # Load the example module
-    df = _load_module_from(EXAMPLES_DIR / "deimos_flyby.py", "spice_scenario")
+    df = _load_module_from(examples_dir / "deimos_flyby.py", "spice_scenario")
 
     # Output dir lives next to the script by its own logic
-    base_dir = Path(getattr(df, "current_file_path", EXAMPLES_DIR))
+    base_dir = Path(getattr(df, "current_file_path", examples_dir))
     out_dir = base_dir / "images-deimos-spice"
 
     # clean slate
@@ -208,15 +208,15 @@ def test_bennu_tag():
     os.environ.setdefault("MPLBACKEND", "Agg")
 
     # Require kernels; xfail if not available
-    spice_root = PROJECT_ROOT / "support-data" / "bennu-tag-spice"
+    spice_root = project_root / "support-data" / "bennu-tag-spice"
     if not spice_root.exists():
         pytest.skip(f"Missing SPICE kernels: {spice_root}")
 
     # Load the example module
-    df = _load_module_from(EXAMPLES_DIR / "bennu_tag_scenario.py", "spice_scenario")
+    df = _load_module_from(examples_dir / "bennu_tag_scenario.py", "spice_scenario")
 
     # Output dir lives next to the script by its own logic
-    base_dir = Path(getattr(df, "current_file_path", EXAMPLES_DIR))
+    base_dir = Path(getattr(df, "current_file_path", examples_dir))
     out_dir = base_dir / "images-bennu-tag"
 
     # clean slate
@@ -238,15 +238,15 @@ def test_bennu():
     os.environ.setdefault("MPLBACKEND", "Agg")
 
     # Require kernels; xfail if not available
-    spice_root = PROJECT_ROOT / "support-data" / "bennu-spice"
+    spice_root = project_root / "support-data" / "bennu-spice"
     if not spice_root.exists():
         pytest.skip(f"Missing SPICE kernels: {spice_root}")
 
     # Load the example module
-    df = _load_module_from(EXAMPLES_DIR / "bennu_scenario.py", "spice_scenario")
+    df = _load_module_from(examples_dir / "bennu_scenario.py", "spice_scenario")
 
     # Output dir lives next to the script by its own logic
-    base_dir = Path(getattr(df, "current_file_path", EXAMPLES_DIR))
+    base_dir = Path(getattr(df, "current_file_path", examples_dir))
     out_dir = base_dir / "images-bennu"
 
     # clean slate
@@ -268,15 +268,15 @@ def test_vesta():
     os.environ.setdefault("MPLBACKEND", "Agg")
 
     # Require kernels; xfail if not available
-    spice_root = PROJECT_ROOT / "support-data" / "vesta-spice"
+    spice_root = project_root / "support-data" / "vesta-spice"
     if not spice_root.exists():
         pytest.skip(f"Missing SPICE kernels: {spice_root}")
 
     # Load the example module
-    df = _load_module_from(EXAMPLES_DIR / "vesta_scenario.py", "spice_scenario")
+    df = _load_module_from(examples_dir / "vesta_scenario.py", "spice_scenario")
 
     # Output dir lives next to the script by its own logic
-    base_dir = Path(getattr(df, "current_file_path", EXAMPLES_DIR))
+    base_dir = Path(getattr(df, "current_file_path", examples_dir))
     out_dir = base_dir / "images-vesta"
 
     # clean slate
@@ -297,10 +297,10 @@ def test_print_protobuffer_content():
     os.environ.setdefault("MPLBACKEND", "Agg")
 
     # Load the example module
-    ppc = _load_module_from(EXAMPLES_DIR / "print_protobuffer_content.py", "print_protobuffer_content")
+    ppc = _load_module_from(examples_dir / "print_protobuffer_content.py", "print_protobuffer_content")
 
     # Inputs live under project support-data
-    test_dir = PROJECT_ROOT / "support-data" / "protobufs"
+    test_dir = project_root / "support-data" / "protobufs"
     file_name = "bennu_image.bin"
     infile = test_dir / file_name
     if not infile.exists():
@@ -312,7 +312,7 @@ def test_print_protobuffer_content():
         test_dir_str += os.sep
 
     # Output is written next to the script (by its own logic)
-    base_dir = Path(getattr(ppc, "current_file_path", EXAMPLES_DIR))
+    base_dir = Path(getattr(ppc, "current_file_path", examples_dir))
     out_file = base_dir / "bennu_image_decoded.txt"
     if out_file.exists():
         out_file.unlink()
@@ -329,24 +329,24 @@ def test_send_protobuffer_file():
     os.environ.setdefault("MPLBACKEND", "Agg")
 
     # Input file lives under project support-data
-    test_dir = PROJECT_ROOT / "support-data" / "protobufs"
+    test_dir = project_root / "support-data" / "protobufs"
     file_name = "bennu_image.bin"
     infile = test_dir / file_name
     if not infile.exists():
         pytest.xfail(f"Missing {infile}")
 
-    out_dir = EXAMPLES_DIR / "bennu_image_images"
+    out_dir = examples_dir / "bennu_image_images"
     out_file = out_dir / "received_image_0.png"
     if out_file.exists():
         out_file.unlink()
 
     # Run the example exactly like a user would
     env = dict(os.environ)
-    env["PYTHONPATH"] = str(PROJECT_ROOT) + os.pathsep + env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = str(project_root) + os.pathsep + env.get("PYTHONPATH", "")
 
     result = subprocess.run(
-        [sys.executable, str(EXAMPLES_DIR / "send_protobuffer_file.py"), "--filename", file_name, "--hide_image"],
-        cwd=str(EXAMPLES_DIR),
+        [sys.executable, str(examples_dir / "send_protobuffer_file.py"), "--filename", file_name, "--hide_image"],
+        cwd=str(examples_dir),
         env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
@@ -361,3 +361,41 @@ def test_send_protobuffer_file():
 
     # Cleanup
     out_file.unlink()
+
+
+def test_speed_test_scenario(tmp_path):
+    # headless plotting
+    os.environ.setdefault("MPLBACKEND", "Agg")
+
+    # Load modules directly from files (no need for examples/__init__.py)
+    st = _load_module_from(examples_dir / "speed_test_scenario.py", "speed_test_scenario")
+
+    # Not examples/images-speed-test: that holds the gitignored engine timing CSVs, unrecoverable.
+    out_dir = tmp_path
+
+    scene = st.scene_setup()
+    scene.set_celestial_body_params(
+        st.central_body_index,
+        name="bennu",
+        mesh_shape="bennu_normalized",
+        mesh_brdf="Regolith",
+        mesh_radius=246.0,
+        albedo=0.044,
+    )
+    scene.gravitational_parameter = 5.2
+    scene.set_lens_params(fov=(20 * np.pi / 180, 15 * np.pi / 180))
+    scene.set_sensor_params(resolution=(2000, 1500), exposure=5e-4)
+
+    summary = st.speed_test_scenario(scene, number_of_images=3, output_directory=str(out_dir))
+
+    # assertions (numpy.testing)
+    np.testing.assert_equal(len(list(out_dir.glob("speed_test_*.png"))), 3, err_msg="Expected 3 rendered PNGs")
+    np.testing.assert_equal(summary["number_of_images"], 3)
+    np.testing.assert_(summary["images_per_second"] > 0, msg="No render throughput reported")
+
+    timing_csv = Path(summary["timing_csv"])
+    np.testing.assert_(timing_csv.exists(), msg="timing CSV was not written")
+    lines = timing_csv.read_text().strip().splitlines()
+    np.testing.assert_equal(lines[0], "frame_time_ms")
+    np.testing.assert_equal(len(lines) - 1, 3, err_msg="Expected 3 timing rows")
+
