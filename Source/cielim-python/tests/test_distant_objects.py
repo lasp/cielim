@@ -6,6 +6,7 @@ import pytest
 from matplotlib import pyplot as plt
 
 import cielim
+from cielim.utils import plot_style as ps
 
 # Read at import time so it survives pytest.main() re-importing this file as a module.
 show_plots = os.environ.get("show_plots", "False") == "True"
@@ -345,8 +346,8 @@ def test_distant_object_size(cielim_connection, test_name, width, height, expect
 # Test 3: Rendering path — albedo response proves the distant shader is active
 # ---------------------------------------------------------------------------
 
-BASELINE_DISTANCE = 40_000_000
-SRGB_GAMMA = 2.2
+baseline_distance = 40_000_000
+srgb_gamma = 2.2
 
 
 def _max_pixel_linear(image):
@@ -355,7 +356,7 @@ def _max_pixel_linear(image):
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     else:
         gray = image
-    return (float(np.max(gray)) / 255.0) ** SRGB_GAMMA
+    return (float(np.max(gray)) / 255.0) ** srgb_gamma
 
 
 # ---------------------------------------------------------------------------
@@ -369,7 +370,7 @@ def measure_brightness(image):
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     else:
         gray = image
-    return (float(np.max(gray)) / 255.0) ** SRGB_GAMMA
+    return (float(np.max(gray)) / 255.0) ** srgb_gamma
 
 
 def measure_mean_brightness(image):
@@ -383,7 +384,7 @@ def measure_mean_brightness(image):
     lit = gray[gray > 0]
     if len(lit) == 0:
         return 0.0
-    linear = (lit.astype(float) / 255.0) ** SRGB_GAMMA
+    linear = (lit.astype(float) / 255.0) ** srgb_gamma
     return float(np.mean(linear))
 
 
@@ -429,7 +430,7 @@ def test_distant_object_brightness(cielim_connection, test_name, object_z_shift,
     connector = cielim_connection
     connector.send_init_request()
 
-    scene = default_scene(BASELINE_DISTANCE)
+    scene = default_scene(baseline_distance)
     scene.set_sensor_params(exposure=exposure_time)
     render_frame(connector, scene)  # warm-up
 
@@ -445,8 +446,8 @@ def test_distant_object_brightness(cielim_connection, test_name, object_z_shift,
     shifted_brightness = measure_brightness(image)
 
     # Expected coverage ratio
-    baseline_coverage = compute_coverage(mean_radius, BASELINE_DISTANCE, fov_x, fov_y, width, height)
-    shifted_distance = BASELINE_DISTANCE + object_z_shift
+    baseline_coverage = compute_coverage(mean_radius, baseline_distance, fov_x, fov_y, width, height)
+    shifted_distance = baseline_distance + object_z_shift
     shifted_coverage = compute_coverage(mean_radius, shifted_distance, fov_x, fov_y, width, height)
     expected_ratio = shifted_coverage / baseline_coverage
 
@@ -585,7 +586,7 @@ def test_intensity_continuity(cielim_connection, test_name, brdf_model, phase_an
 )
 def test_cosine_loss(cielim_connection, brdf_model):
     """Verify that distant object brightness decreases with increasing phase angle."""
-    camera_distance = BASELINE_DISTANCE
+    camera_distance = baseline_distance
     phase_angles = [0, 30, 60, 90, 112, 135, 160]
 
     connector = cielim_connection
@@ -636,7 +637,7 @@ def test_cosine_loss(cielim_connection, brdf_model):
 # on-grid (bounding ≈4 px × crescent factor 0.03 → 0.12 px), so there is no mesh-side signal to
 # be continuous with. The off-grid sweep keeps 160° since the plus shape still renders and the
 # 112° / 160° cases self-skip via the "both too dim to compare" guard when exposure isn't enough.
-ON_GRID_HIGH_PHASE_PARAMS = [
+on_grid_high_phase_params = [
     ("Lambertian 90°", "Lambertian", 90, 0.5),
     ("Lambertian 112°", "Lambertian", 112, 100.0),
     ("Lambertian 135°", "Lambertian", 135, 500.0),
@@ -645,7 +646,7 @@ ON_GRID_HIGH_PHASE_PARAMS = [
     ("Regolith 135°", "Regolith", 135, 500.0),
 ]
 
-OFF_GRID_HIGH_PHASE_PARAMS = [
+off_grid_high_phase_params = [
     ("Lambertian 90°", "Lambertian", 90, 0.5),
     ("Lambertian 112°", "Lambertian", 112, 100.0),
     ("Lambertian 135°", "Lambertian", 135, 500.0),
@@ -731,7 +732,7 @@ def _run_high_phase_angle_continuity(
     )
 
 
-@pytest.mark.parametrize("test_name, brdf_model, phase_angle_deg, exposure_time", ON_GRID_HIGH_PHASE_PARAMS)
+@pytest.mark.parametrize("test_name, brdf_model, phase_angle_deg, exposure_time", on_grid_high_phase_params)
 def test_high_phase_angle_continuity_on_grid(cielim_connection, test_name, brdf_model, phase_angle_deg, exposure_time):
     """On-grid variant: even×even resolution → object center on pixel boundary → 2×2 quad.
 
@@ -751,7 +752,7 @@ def test_high_phase_angle_continuity_on_grid(cielim_connection, test_name, brdf_
     )
 
 
-@pytest.mark.parametrize("test_name, brdf_model, phase_angle_deg, exposure_time", OFF_GRID_HIGH_PHASE_PARAMS)
+@pytest.mark.parametrize("test_name, brdf_model, phase_angle_deg, exposure_time", off_grid_high_phase_params)
 def test_high_phase_angle_continuity_off_grid(cielim_connection, test_name, brdf_model, phase_angle_deg, exposure_time):
     """Off-grid variant: odd×odd resolution → object center in pixel interior → plus shape.
 
@@ -795,7 +796,7 @@ def test_exposure_scaling(cielim_connection, brdf_model):
     so the sweep doesn't camp in the flat saturated region — saturation kicks in around
     3e-2 s at this scene with AA disabled, so we stop at 1e-1.
     """
-    camera_distance = BASELINE_DISTANCE
+    camera_distance = baseline_distance
     phase_angle_deg = 90
     exposures = [1e-4, 3e-4, 1e-3, 3e-3, 1e-2, 3e-2, 1e-1]
 
@@ -958,7 +959,7 @@ def test_distant_object_occluded_by_mesh(cielim_connection):
         render_frame(connector, scene)  # warm-up
         image, _, _ = render_frame(connector, scene)
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
-        brightness = (float(np.max(crop_center(gray, 20))) / 255.0) ** SRGB_GAMMA  # linearized
+        brightness = (float(np.max(crop_center(gray, 20))) / 255.0) ** srgb_gamma  # linearized
         return brightness, gray
 
     b_distant, gray_distant = center_brightness([{"name": "distant", "position": distant, "albedo": 1.0}])
@@ -1013,8 +1014,146 @@ def test_distant_object_occluded_by_mesh(cielim_connection):
     )
 
 
+def _report_params(name, **facts):
+    """Echo the scene/camera settings showcase figure ``name`` was rendered with to stdout.
+
+    NOT drawn on the figure — the settings live in the ``Reference image`` section of
+    ``docs/distant_objects.tex``, so the paper carries them in text rather than as small print baked
+    into the image. Printing them keeps that sheet checkable: run the showcase with ``pytest -s`` and
+    diff what it reports against what the sheet claims. Several of these are derived (the transition
+    distances, the thresholds), so they move whenever the model does.
+    """
+    print(f"[showcase] {name}: " + "  ".join(f"{k}={v}" for k, v in facts.items()))
+
+
+# Showcase: page-ready distant-object demo images (opt-in via the showcase_dir env var)
+# ---------------------------------------------------------------------------
+
+# Each panel is its own file, sized so the five of a phase-angle row placed in one row of a LaTeX
+# figure span the text width at scale 1.0, with a small gutter between them.
+showcase_gutter_in = 0.06
+
+# Every panel shows the same 2*half square, so the target visibly shrinks inside a fixed window.
+# 13 fits the widest target (the alpha=135 crescent at 0.2*d_t, 8x22 px) with ~2 px to spare.
+showcase_crop_half = 13
+
+
+def _lit_bbox(gray, near, reach):
+    """``(x0, x1, y0, y1)`` of the lit pixels within ±``reach`` of ``near``, or None if none are.
+
+    Windowed on purpose. Measuring the lit box over the whole frame is what the reported
+    ``footprint`` does, and that is right for a number that describes the render — but for choosing
+    a crop center it is a trap: one stray nonzero pixel anywhere in the frame stretches the box
+    across the image and drags the center to the middle of nowhere, silently. Restricting to a
+    generous window around the peak keeps a hot pixel from moving the target off-panel.
+    """
+    cx, cy = int(near[0]), int(near[1])
+    h, w = gray.shape
+    x0, x1 = max(cx - reach, 0), min(cx + reach + 1, w)
+    y0, y1 = max(cy - reach, 0), min(cy + reach + 1, h)
+    ys, xs = np.nonzero(gray[y0:y1, x0:x1])
+    if not len(xs):
+        return None
+    return x0 + int(xs.min()), x0 + int(xs.max()), y0 + int(ys.min()), y0 + int(ys.max())
+
+
+@pytest.mark.showcase
+def test_showcase_distant_objects(cielim_connection):
+    """The mesh -> distant handover, at low and high phase angle.
+
+    One file per panel, named for the phase angle and the range it was rendered at, e.g.
+    ``distant_a135_0pnt45dt.png``. Every panel shows the same fixed-size crop, so the target visibly
+    shrinks with range; the point of the pair is why the threshold has to grow with phase angle: at
+    high alpha only a thin crescent is lit, so the body's *bounding box* is still several pixels
+    across when its visible signal has already gone sub-pixel.
+
+    Brightness is normalised per phase-angle row, so panels from the two rows are NOT photometrically
+    comparable with each other — within a row they are.
+    """
+    connector = cielim_connection
+
+    # Multiples of d_t. The far column sits well past it: coverage saturates just after the transition.
+    factors = [0.2, 0.45, 0.9, 1.05, 3.0]
+    phase_angles = [0, 135]
+    exposure, half = 1e-4, showcase_crop_half
+    panel_h = (ps.page_w - (len(factors) - 1) * showcase_gutter_in) / len(factors)
+    footprints, row_maxes = {}, {}
+
+    for phase_angle_deg in phase_angles:
+        transition = compute_transition_distance(phase_angle_deg=phase_angle_deg)
+
+        crops = []
+        for factor in factors:
+            scene = scene_with_phase_angle(
+                transition * factor, phase_angle_deg, "Lambertian", exposure_time=exposure
+            )
+            connector.send_init_request()
+            render_frame(connector, scene)  # warm-up; the first frame after an init can be blank
+            image, _, _ = render_frame(connector, scene)
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if image.ndim == 3 else image
+            peak_y, peak_x = np.unravel_index(np.argmax(gray), gray.shape)
+
+            # On the lit bounding box, not the brightest pixel: at high phase that would cut a horn off.
+            box = _lit_bbox(gray, near=(peak_x, peak_y), reach=4 * half)
+            if box is None:
+                box = (int(peak_x), int(peak_x), int(peak_y), int(peak_y))
+            bx0, bx1, by0, by1 = box
+            assert bx1 - bx0 < 2 * half and by1 - by0 < 2 * half, (
+                f"alpha={phase_angle_deg}, {factor:g}*d_t: lit target is "
+                f"{bx1 - bx0 + 1}x{by1 - by0 + 1} px and does not fit the {2 * half}x{2 * half} "
+                f"crop — it would be clipped. Raise showcase_crop_half."
+            )
+            x = int(np.clip((bx0 + bx1 + 1) // 2, half, gray.shape[1] - half))
+            y = int(np.clip((by0 + by1 + 1) // 2, half, gray.shape[0] - half))
+
+            # The footprint is measured over the WHOLE frame, unchanged: it describes the render, and
+            # the doc sheets quote it. If it disagrees with the windowed box there is signal outside
+            # the crop, which the crop would silently hide.
+            lit_y, lit_x = np.nonzero(gray)
+            footprint = (
+                f"{lit_x.max() - lit_x.min() + 1}x{lit_y.max() - lit_y.min() + 1}" if len(lit_x) else "-"
+            )
+            crops.append((gray[y - half : y + half, x - half : x + half], footprint))
+
+        # One display range per row, or the dim high-phase crescent is not visible at all.
+        row_max = max(int(crop.max()) for crop, _ in crops) or 255
+        row_maxes[phase_angle_deg] = row_max
+        footprints[phase_angle_deg] = ",".join(fp for _, fp in crops)
+
+        # Baked into the pixels: bare rasters have no imshow to apply the range at draw time.
+        for factor, (crop, _) in zip(factors, crops):
+            panel = np.clip(np.rint(crop.astype(np.float64) * (255.0 / row_max)), 0, 255).astype(np.uint8)
+            tag = f"{factor:.2f}".replace(".", "pnt")
+            ps.save_showcase_raster(panel, f"distant_a{phase_angle_deg:03d}_{tag}dt", panel_h)
+
+    _report_params(
+        "distant_objects",
+        fov_deg=f"{np.degrees(fov_x):g}x{np.degrees(fov_y):g}",
+        resolution=f"{width}x{height}",
+        mean_radius_m=f"{mean_radius:g}",
+        geometric_albedo=f"{albedo:g}",
+        brdf="Lambertian",
+        exposure_s=f"{exposure:g}",
+        crop_px=f"{2 * half}x{2 * half}",
+        crop_center="lit bounding box",
+        factors_of_d_t=",".join(f"{f:g}" for f in factors),
+        d_t_alpha0_m=f"{compute_transition_distance(phase_angle_deg=0):.3g}",
+        d_t_alpha135_m=f"{compute_transition_distance(phase_angle_deg=135):.3g}",
+        threshold_px=f"{_pixel_size_threshold(0):g}/{_pixel_size_threshold(135):.1f}",
+        # The measured lit footprint per column, in factor order. It used to label each panel; the
+        # panels carry no text now, so this record is the only place it survives — and the doc
+        # sheets quote these numbers as fact.
+        footprints_a000=footprints.get(0, "-"),
+        footprints_a135=footprints.get(135, "-"),
+        display="per-row normalised",
+        row_max_a000=row_maxes.get(0, "-"),
+        row_max_a135=row_maxes.get(135, "-"),
+        files="distant_a{000,135}_{0pnt20,0pnt45,0pnt90,1pnt05,3pnt00}dt.png",
+    )
+
+
 if __name__ == "__main__":
     # Set the env var BEFORE pytest re-imports this file so the module-level
     # `show_plots` reads it as True in the freshly-imported test module.
-    os.environ["show_plots"] = "True"
+    os.environ["show_plots"] = "False"
     pytest.main([__file__, "-v"])
