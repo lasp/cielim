@@ -1014,23 +1014,8 @@ def test_distant_object_occluded_by_mesh(cielim_connection):
     )
 
 
-def _report_params(name, **facts):
-    """Echo the scene/camera settings showcase figure ``name`` was rendered with to stdout.
-
-    NOT drawn on the figure — the settings live in the ``Reference image`` section of
-    ``docs/distant_objects.tex``, so the paper carries them in text rather than as small print baked
-    into the image. Printing them keeps that sheet checkable: run the showcase with ``pytest -s`` and
-    diff what it reports against what the sheet claims. Several of these are derived (the transition
-    distances, the thresholds), so they move whenever the model does.
-    """
-    print(f"[showcase] {name}: " + "  ".join(f"{k}={v}" for k, v in facts.items()))
-
-
 # Showcase: page-ready distant-object demo images (opt-in via the showcase_dir env var)
-# ---------------------------------------------------------------------------
 
-# Each panel is its own file, sized so the five of a phase-angle row placed in one row of a LaTeX
-# figure span the text width at scale 1.0, with a small gutter between them.
 SHOWCASE_GUTTER_IN = 0.06
 
 # Every panel shows the same 2*half square, so the target visibly shrinks inside a fixed window.
@@ -1077,7 +1062,7 @@ def test_showcase_distant_objects(cielim_connection):
     phase_angles = [0, 135]
     exposure, half = 1e-4, SHOWCASE_CROP_HALF
     panel_h = (ps.PAGE_W - (len(factors) - 1) * SHOWCASE_GUTTER_IN) / len(factors)
-    footprints, row_maxes = {}, {}
+    footprints, row_maxes, panel_files = {}, {}, []
 
     for phase_angle_deg in phase_angles:
         transition = compute_transition_distance(phase_angle_deg=phase_angle_deg)
@@ -1106,9 +1091,7 @@ def test_showcase_distant_objects(cielim_connection):
             x = int(np.clip((bx0 + bx1 + 1) // 2, half, gray.shape[1] - half))
             y = int(np.clip((by0 + by1 + 1) // 2, half, gray.shape[0] - half))
 
-            # The footprint is measured over the WHOLE frame, unchanged: it describes the render, and
-            # the doc sheets quote it. If it disagrees with the windowed box there is signal outside
-            # the crop, which the crop would silently hide.
+            # Measured over the whole frame: disagreeing with the windowed box means signal outside it.
             lit_y, lit_x = np.nonzero(gray)
             footprint = (
                 f"{lit_x.max() - lit_x.min() + 1}x{lit_y.max() - lit_y.min() + 1}" if len(lit_x) else "-"
@@ -1124,31 +1107,33 @@ def test_showcase_distant_objects(cielim_connection):
         for factor, (crop, _) in zip(factors, crops):
             panel = np.clip(np.rint(crop.astype(np.float64) * (255.0 / row_max)), 0, 255).astype(np.uint8)
             tag = f"{factor:.2f}".replace(".", "pnt")
-            ps.save_showcase_raster(panel, f"distant_a{phase_angle_deg:03d}_{tag}dt", panel_h)
+            name = f"distant_a{phase_angle_deg:03d}_{tag}dt"
+            ps.save_showcase_raster(panel, name, panel_h)
+            panel_files.append(f"{name}.png")
 
-    _report_params(
+    # Written beside the panels, not drawn on them; several values are derived and move with the model.
+    ps.save_context(
         "distant_objects",
-        fov_deg=f"{np.degrees(fov_x):g}x{np.degrees(fov_y):g}",
-        resolution=f"{width}x{height}",
-        mean_radius_m=f"{mean_radius:g}",
-        geometric_albedo=f"{albedo:g}",
-        brdf="Lambertian",
-        exposure_s=f"{exposure:g}",
-        crop_px=f"{2 * half}x{2 * half}",
-        crop_center="lit bounding box",
-        factors_of_d_t=",".join(f"{f:g}" for f in factors),
-        d_t_alpha0_m=f"{compute_transition_distance(phase_angle_deg=0):.3g}",
-        d_t_alpha135_m=f"{compute_transition_distance(phase_angle_deg=135):.3g}",
-        threshold_px=f"{_pixel_size_threshold(0):g}/{_pixel_size_threshold(135):.1f}",
-        # The measured lit footprint per column, in factor order. It used to label each panel; the
-        # panels carry no text now, so this record is the only place it survives — and the doc
-        # sheets quote these numbers as fact.
-        footprints_a000=footprints.get(0, "-"),
-        footprints_a135=footprints.get(135, "-"),
-        display="per-row normalised",
-        row_max_a000=row_maxes.get(0, "-"),
-        row_max_a135=row_maxes.get(135, "-"),
-        files="distant_a{000,135}_{0pnt20,0pnt45,0pnt90,1pnt05,3pnt00}dt.png",
+        {
+            "fov_deg": f"{np.degrees(fov_x):g}x{np.degrees(fov_y):g}",
+            "resolution": f"{width}x{height}",
+            "mean_radius_m": mean_radius,
+            "geometric_albedo": albedo,
+            "brdf": "Lambertian",
+            "exposure_s": exposure,
+            "crop_px": f"{2 * half}x{2 * half}",
+            "crop_center": "lit bounding box",
+            "factors_of_d_t": factors,
+            "d_t_alpha0_m": float(f"{compute_transition_distance(phase_angle_deg=0):.3g}"),
+            "d_t_alpha135_m": float(f"{compute_transition_distance(phase_angle_deg=135):.3g}"),
+            "threshold_px": f"{_pixel_size_threshold(0):g}/{_pixel_size_threshold(135):.1f}",
+            "footprints_a000": footprints.get(0, "-"),
+            "footprints_a135": footprints.get(135, "-"),
+            "display": "per-row normalised",
+            "row_max_a000": row_maxes.get(0, "-"),
+            "row_max_a135": row_maxes.get(135, "-"),
+        },
+        files=panel_files,
     )
 
 

@@ -14,9 +14,9 @@ from . import plot_style
 # Constants
 FIGURE_PX = 1024
 
-# Where set_qe_curve_fit writes its figure. Not gitignored, unlike examples/images*, so these are
-# committable alongside the paper.
-FIGURE_DIRECTORY = Path(__file__).resolve().parents[2] / "docs" / "figures"
+# Alongside every other saved figure set rather than in a documentation tree. examples/images* is
+# gitignored, so a regenerated fit does not show up as a working-tree change.
+FIGURE_DIRECTORY = Path(__file__).resolve().parents[2] / "examples" / "images-compared" / "qe"
 
 # Three inferno-sampled series; plot_style.SERIES_COLORS only holds two. CVD-checked.
 SERIES_COLORS_3 = (mpl.cm.inferno(0.38), mpl.cm.inferno(0.58), mpl.cm.inferno(0.76))
@@ -333,9 +333,7 @@ def qe_curve_fit(
 
     if output_path is not None:
         figure.tight_layout()
-        # The measured area error is stamped into the stem, since the figure no longer carries it.
-        # "0p00" not "0.00": a second dot in the stem makes LaTeX guess at the extension, and these
-        # go straight into the paper.
+        # Area error stamped into the stem; "0p00" not "0.00", a second dot confuses an include.
         base = Path(output_path)
         error_tag = f"{simpson_error:.2f}".replace(".", "p")
         output_path = base.with_name(f"{base.stem}_err{error_tag}pct{base.suffix}")
