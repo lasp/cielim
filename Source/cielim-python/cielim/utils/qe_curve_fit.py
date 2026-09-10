@@ -1,18 +1,30 @@
 from pathlib import Path
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator, ScalarFormatter
 import numpy as np
 import pandas as pd
 from scipy.integrate import simpson
 from scipy.optimize import basinhopping
 
 from ..cielimMessage_pb2 import CielimMessage
+from . import plot_style
 
 # Constants
-CONST_AU = 1.495978707e11  # Astronomical Unit in meters
-CONST_C = 299792458  # Speed of light, m/s
-CONST_H = 6.62607015e-34  # Planck constant, J·s
-CONST_K = 1.380649e-23  # Boltzmann constant, J/K
+figure_px = 1024
+
+# Where set_qe_curve_fit writes its figure. Not gitignored, unlike examples/images*, so these are
+# committable alongside the paper.
+figure_directory = Path(__file__).resolve().parents[2] / "docs" / "figures"
+
+# Three inferno-sampled series; plot_style.series_colors only holds two. CVD-checked.
+series_colors_3 = (mpl.cm.inferno(0.38), mpl.cm.inferno(0.58), mpl.cm.inferno(0.76))
+
+const_au = 1.495978707e11  # Astronomical Unit in meters
+const_c = 299792458  # Speed of light, m/s
+const_h = 6.62607015e-34  # Planck constant, J·s
+const_k = 1.380649e-23  # Boltzmann constant, J/K
 
 
 def _solar_irradiance_planck_nm(wavelengths: np.ndarray, temp: float = 5772.0, radius: float = 6.957e8) -> np.ndarray:
@@ -32,14 +44,14 @@ def _solar_irradiance_planck_nm(wavelengths: np.ndarray, temp: float = 5772.0, r
 
     # Planck spectral radiance per unit wavelength (per meter): B_λ [W·m^-2·sr^-1·m^-1]
     # Use expm1 for numerical stability.
-    x = (CONST_H * CONST_C) / (wl_m * CONST_K * temp)
-    B_lambda_per_m = (2.0 * CONST_H * CONST_C**2) / (wl_m**5) / np.expm1(x)
+    x = (const_h * const_c) / (wl_m * const_k * temp)
+    B_lambda_per_m = (2.0 * const_h * const_c**2) / (wl_m**5) / np.expm1(x)
 
     # Radiance -> surface flux per wavelength: F_λ = π B_λ  [W·m^-2·m^-1]
     F_lambda_per_m = np.pi * B_lambda_per_m
 
     # Geometric dilution to 1 AU: multiply by (R_sun / AU)^2
-    dilution = (radius / CONST_AU) ** 2
+    dilution = (radius / const_au) ** 2
     E_lambda_per_m = F_lambda_per_m * dilution  # [W·m^-2·m^-1]
 
     # Convert per meter to per nanometer
@@ -96,6 +108,7 @@ def qe_curve_fit(
     pixel_area: float,
     wavelength_window: list | None = None,
     show_plots: bool = True,
+    output_path: str | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     A function to fit a QE curve to three wavelengths that minimize the error in the integral of electrons per wavelength.
@@ -106,6 +119,8 @@ def qe_curve_fit(
         pixel_area (float): Pixel area in square meters.
         wavelength_window (list, optional): Two-element list specifying the wavelength range to consider (in nm). Defaults to None (use full range).
         show_plots (bool, optional): Whether to display plots of the QE curve and fit. Defaults to True.
+        output_path (str, optional): Base path for the PDF. The measured area error is appended to
+            the stem, so 'qe_fit_x.pdf' is written as 'qe_fit_x_err0p42pct.pdf'. None skips saving.
 
     Returns:
         tuple[np.ndarray, np.ndarray]: Fitted wavelengths (nm) and corresponding QE values (electrons/photon).
@@ -134,7 +149,7 @@ def qe_curve_fit(
     radiance_per_nm = irr_interp / np.pi
 
     # Photon energy at each wavelength
-    photon_energy = CONST_H * CONST_C / (1e-9 * wavelength_nm)  # Joules
+    photon_energy = const_h * const_c / (1e-9 * wavelength_nm)  # Joules
 
     # Power per wavelength (W/nm)
     power_lambda = solid_angle * pixel_area * radiance_per_nm  # W/nm
@@ -164,7 +179,7 @@ def qe_curve_fit(
         radiance_sample = irr_sample / np.pi  # W·m⁻²·sr⁻¹·nm⁻¹
 
         # Photon energy
-        photon_energy_sample = CONST_H * CONST_C / (1e-9 * sample_wl)  # Joules
+        photon_energy_sample = const_h * const_c / (1e-9 * sample_wl)  # Joules
 
         # Power per wavelength
         power_sample = solid_angle * pixel_area * radiance_sample  # W/nm
@@ -219,7 +234,7 @@ def qe_curve_fit(
 
     # Run basinhopping with SLSQP as the local optimizer
     minimizer_kwargs = {"method": "SLSQP", "bounds": bounds, "constraints": constrs}
-    result = basinhopping(fit_three_wavelengths, initial_guess, minimizer_kwargs=minimizer_kwargs, niter=100, rng=123)
+    result = basinhopping(fit_three_wavelengths, initial_guess, minimizer_kwargs=minimizer_kwargs, niter=100)
 
     if show_plots:
         print(f"Optimal variables: {result.x}")
@@ -238,7 +253,7 @@ def qe_curve_fit(
     radiance_sample = irr_sample / np.pi  # W·m⁻²·sr⁻¹·nm⁻¹
 
     # Photon energy
-    photon_energy_sample = CONST_H * CONST_C / (1e-9 * sample_wl)  # Joules
+    photon_energy_sample = const_h * const_c / (1e-9 * sample_wl)  # Joules
 
     # Power per wavelength
     power_sample = solid_angle * pixel_area * radiance_sample  # W/nm
@@ -284,25 +299,55 @@ def qe_curve_fit(
 
     # ---- Plot ----
 
-    plt.figure(figsize=(10, 6))
-    plt.plot(wavelength_nm, electrons_lambda, "k--", alpha=0.3, label="Actual electrons per wavelength (ref)")
-    plt.plot(wl_fine, electrons_fine, "b-", label="Quadratic interpolant (electrons)")
-    plt.scatter(sample_wl, electrons_sample, color="red", zorder=5, label="Sample points")
-    plt.xlabel("Wavelength (nm)")
-    plt.ylabel("Electrons / nm")
-    plt.title("Estimated vs actual electrons per wavelength")
-    plt.legend()
-    plt.ylim(0, np.max(electrons_lambda) * 1.1)
-    plt.grid(True)
+    plot_style.apply_showcase_style()
+    side_in = figure_px / plot_style.save_dpi  # square, 1024 px on a side at the save dpi
+    figure, axes = plt.subplots(figsize=(side_in, side_in))
+
+    # Bare panel: actual electrons, the 3-point Simpson fit, and the fitted sample wavelengths.
+    reference_color, fit_color, sample_color = series_colors_3
+    axes.plot(wavelength_nm, electrons_lambda, color=reference_color, linewidth=1.4)
+    axes.plot(wl_fine, electrons_fine, color=fit_color, linewidth=1.4)
+    axes.scatter(sample_wl, electrons_sample, color=sample_color, zorder=5, s=36)
+
+    axes.set_ylim(0, np.max(electrons_lambda) * 1.1)
+    axes.set_xlabel("Wavelength (nm)")
+    axes.set_ylabel("Electrons / nm")
+
+    # powerlimits (0, 0) forces the scientific form at every scale: left to itself matplotlib
+    # switches styles with the magnitude, so figures from different cameras could not be compared.
+    formatter = ScalarFormatter(useMathText=True)
+    formatter.set_scientific(True)
+    formatter.set_powerlimits((0, 0))
+    axes.yaxis.set_major_formatter(formatter)
+    axes.yaxis.set_major_locator(MaxNLocator(nbins=5))
+
+    axes.spines["top"].set_visible(False)
+    for side in ("left", "bottom", "right"):
+        axes.spines[side].set_linewidth(0.6)
+        axes.spines[side].set_color("0.6")
 
     fit_wavelengths = np.array(result.x)
 
     # interpolate to get the qe values (in the loaded qe_file_path: wavelength_nm, qe) corresponding to the fit_wavelengths
     fit_qe = np.interp(fit_wavelengths, wavelength_nm, qe)
 
+    if output_path is not None:
+        figure.tight_layout()
+        # The measured area error is stamped into the stem, since the figure no longer carries it.
+        # "0p00" not "0.00": a second dot in the stem makes LaTeX guess at the extension, and these
+        # go straight into the paper.
+        base = Path(output_path)
+        error_tag = f"{simpson_error:.2f}".replace(".", "p")
+        output_path = base.with_name(f"{base.stem}_err{error_tag}pct{base.suffix}")
+        plot_style.save_figure(figure, str(output_path))
+        if show_plots:
+            print(f"Saved QE fit figure -> {output_path}")
+
     if show_plots:
         plt.show()
         print(fit_wavelengths, fit_qe)
+    else:
+        plt.close(figure)
 
     return fit_wavelengths, fit_qe
 
@@ -313,6 +358,7 @@ def set_qe_curve_fit(
     solid_angle: float,
     pixel_area: float,
     wavelength_window: list | None = None,
+    figure_name: str | None = None,
 ) -> None:
     """
     Sets the wavelengths and QE values in the CielimMessage based on a QE curve fit from a CSV file.
@@ -323,9 +369,18 @@ def set_qe_curve_fit(
         solid_angle (float): Solid angle in steradians.
         pixel_area (float): Pixel area in square meters.
         wavelength_window (list, optional): Two-element list specifying the wavelength range to consider (in nm). Defaults to None (use full range).
+        figure_name (str, optional): Stem for the PDF written into docs/figures/. Defaults to the QE
+            file's own stem — pass an explicit name when two callers share a QE file but differ in
+            optics, or the second one silently overwrites the first's figure.
     """
+    figure_path = figure_directory / f"{figure_name or Path(qe_data_path).stem}.pdf"
     fit_wavelengths, fit_values = qe_curve_fit(
-        qe_data_path, solid_angle, pixel_area, wavelength_window=wavelength_window, show_plots=False
+        qe_data_path,
+        solid_angle,
+        pixel_area,
+        wavelength_window=wavelength_window,
+        show_plots=False,
+        output_path=str(figure_path),
     )
 
     message.renderParameters.wavelength1 = fit_wavelengths[0]
@@ -347,6 +402,16 @@ if __name__ == "__main__":
     # Parameters to modify
     solid_angle = np.pi * 0.005**2 / (0.16**2)  # steradians
     pixel_area = (0.022528 * 0.016896) / (4096 * 3072)  # m^2
-    qe_file_path = str(Path(__file__).resolve().parent.parent / "support-data/deimos-spice/qe-mod-5.csv")
+    qe_file_path = str(Path(__file__).resolve().parents[2] / "support-data/deimos-spice/qe-mod-5.csv")
 
-    qe_curve_fit(qe_file_path, solid_angle, pixel_area, show_plots=True)
+    # Same window deimos_flyby.py uses for F635, or this writes a full-spectrum fit under that name.
+    f635_window = [625, 645]
+
+    qe_curve_fit(
+        qe_file_path,
+        solid_angle,
+        pixel_area,
+        wavelength_window=f635_window,
+        show_plots=True,
+        output_path=str(figure_directory / "qe_fit_deimos_f635.pdf"),
+    )
