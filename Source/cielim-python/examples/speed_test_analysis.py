@@ -40,8 +40,6 @@ band_labels = ("Image generation", "PNG encoding", "Network round trip")
 # legend labelling every band directly.
 band_colors = (mpl.cm.inferno(0.38), mpl.cm.inferno(0.58), mpl.cm.inferno(0.76))
 
-# PDF, not PNG: the figure goes into a LaTeX paper, where a vector figure stays sharp at any
-# zoom and its 12 pt text is real text rather than pixels.
 output_name = "speed_test_breakdown.pdf"
 
 figure_px = 1024
