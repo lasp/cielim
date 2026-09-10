@@ -500,8 +500,9 @@ void FCielimSceneViewExtension::ReadNoisePass(FRDGBuilder &GraphBuilder, const F
 	RnParams->InputTexture = TextureIn;
 	RnParams->InputSampler = TStaticSamplerState<SF_Point>::GetRHI();
 	RnParams->CurrentTime = static_cast<uint32>(FDateTime::UtcNow().ToUnixTimestamp());
+	// Normalized here, once: the shader adds this straight onto an image that is already a fraction
+	// of full scale, so it must not divide by the full well again.
 	RnParams->ReadNoiseSigma = CorruptionParams.ReadNoiseSigma / FMath::Max(CameraParams.FullWellCapacity, 1e-6);
-	RnParams->InvFullWellCapacity = 1.0f / FMath::Max(CameraParams.FullWellCapacity, 1e-6);
 	RnParams->GrayscaleToggle = static_cast<uint32>(CameraParams.bIsGrayscale);
 	RnParams->PixelDefectPattern = CorruptionParams.PixelDefectPattern;
 	RnParams->StuckPixelRate = CorruptionParams.StuckPixelRate;

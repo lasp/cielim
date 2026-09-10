@@ -13,8 +13,7 @@ Texture2D InputTexture;
 SamplerState InputSampler;
 
 uint CurrentTime;
-float ReadNoiseSigma; // This is in electrons
-float InvFullWellCapacity; // This is in # of electrons (inverse)
+float ReadNoiseSigma; // Already normalized by the full well capacity, i.e. a fraction of full scale
 uint GrayscaleToggle;
 uint PixelDefectPattern;
 float StuckPixelRate;
@@ -31,7 +30,10 @@ float4 MainPS(float4 UV : TEXCOORD0, float4 Position : SV_Position) : SV_Target0
 	float4 ReadNoiseColor = float4(RandGaussians.x, RandGaussians.y, RandGaussians.z, 0.0f) * ReadNoiseSigma;
 	float4 ReadNoiseGrayscale = float4(RandGaussians.x, RandGaussians.x, RandGaussians.x, 0.0f) * ReadNoiseSigma;
 
-	float4 ReadNoise = saturate(lerp(ReadNoiseColor, ReadNoiseGrayscale, GrayscaleToggle) * InvFullWellCapacity);
+	// Not clamped here: read noise is zero-mean, and clipping the draw itself would throw away its
+	// negative half and bias the image bright. The clamp belongs on the sum below, where it is the
+	// sensor being unable to read past either end of its range.
+	float4 ReadNoise = lerp(ReadNoiseColor, ReadNoiseGrayscale, GrayscaleToggle);
 
 	// Determine if the pixel should be stuck or dead
 
