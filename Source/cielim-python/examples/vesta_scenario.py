@@ -1,5 +1,6 @@
 import contextlib
 import os
+import re
 from pathlib import Path
 
 import cv2
@@ -9,6 +10,7 @@ from astropy.io import fits
 from matplotlib import pyplot as plt
 
 import cielim
+from cielim.utils import image_comparison_toolkit as image_comparison
 from cielim.utils import qe_curve_fit as qefit
 from cielim.utils import rigid_body_kinematics as rbk
 
@@ -19,6 +21,117 @@ ROOT = HERE.parents[1]  # <repo root>
 MK = ROOT / "support-data" / "vesta-spice" / "vesta-spice.txt"
 FITS_DIR = ROOT / "support-data" / "vesta-spice" / "images"
 OUT_DIR = HERE.parent / "images-vesta"
+
+SHOWCASE_DIR = HERE.parent / "showcase_images" / "vesta"
+
+# Two comparison groups plus a dropped pair, keyed by observation-time stamp. These are the distant
+# approach frames, where Vesta covers little of the frame, so they get their own group in DISTANT_DIR.
+DISTANT_DIR = HERE.parent / "showcase_images" / "vesta_distant"
+DISTANT_STAMPS = frozenset(
+    {
+        "20110503T133601",
+        "20110510T070317",
+        "20110517T125701",
+        "20110524T085201",
+        "20110601T063701",
+        "20110608T152416",
+        "20110614T133816",
+        "20110617T123816",
+        "20110620T133816",
+        "20110624T040816",
+        "20110704T004002",
+        "20110704T023402",
+    }
+)
+
+EXCLUDED_STAMPS = frozenset({"20110718T204002", "20110718T223402"})
+
+# Frames come in pairs, a 1500 ms long exposure and a short one; the long exposures saturate to a
+# flat blob on both sides. Set EXPOSURE_MAX_MS = None to add them back.
+EXPOSURE_MAX_MS = 100
+
+
+def _sorted_fits():
+    return [p for p in sorted(FITS_DIR.iterdir()) if p.is_file() and p.suffix.lower() == ".fit"]
+
+
+def _real_entries():
+    """List of (ephemeris_time, fit_path) for the real frames, keyed by each frame's START_TIME
+    header. Matching on time (rather than list position) keeps the real/generated pairing correct
+    even if the file ordering changes. Requires SPICE kernels loaded (for str2et)."""
+    entries = []
+    for p in _sorted_fits():
+        try:
+            exp, time, *_ = get_header(str(p))
+            if EXPOSURE_MAX_MS is not None and exp > EXPOSURE_MAX_MS:
+                continue  # overexposed long exposure — re-added when EXPOSURE_MAX_MS is None
+            entries.append((spice.str2et(time), p))
+        except Exception:
+            continue
+    return entries
+
+
+def _real_gray_of(path):
+    """Grayscale uint8 of a real Vesta FITS frame (HDU[0]).
+
+    Min/max stretch computed in-memory (to_uint8_gray with 0/100 percentiles) — the same look the
+    saved PNG previews had, without saving/reading a PNG. Preserves the resolved disk's gradient; a
+    1-99 percentile stretch would clip the disk (it's <1% of the frame) to a flat white blob.
+    """
+    data = np.nan_to_num(fits.open(str(path))[0].data)
+    return image_comparison.to_uint8_gray(data, lo_pct=0, hi_pct=100)
+
+
+def _predicted_pixel(path):
+    """SPICE-projected Vesta pixel for a real frame — where cielim places Vesta given the ephemeris.
+
+    Validated against cielim's rendered COB to sub-pixel. Vesta is at the scene origin, so this
+    projects the origin from the Dawn position through the same pose cielim is pointed with (DAWN_FC2
+    via DAWN_SPACECRAFT), plus the render's vertical flip (np.flip(image, 0)). Kernels must be loaded;
+    the render time is the frame's START_TIME (as in the render loop). Keep FOV/resolution in sync
+    with scene_setup.
+    """
+    _, tstr, *_ = get_header(str(path))
+    time = spice.str2et(tstr)
+    position, _ = spice.spkpos("DAWN", time, "J2000", "NONE", "2000004")
+    BN = spice.pxform("DAWN_SPACECRAFT", "DAWN_FC2", time) @ spice.pxform("J2000", "DAWN_SPACECRAFT", time)
+    return image_comparison.project_to_pixel(
+        position, BN, (5.5 * np.pi / 180, 5.5 * np.pi / 180), (1024, 1024), flip_y=True
+    )
+
+
+def _stamp(et):
+    """Filesystem-safe compact UTC stamp for a render time, e.g. 20110503T133516."""
+    return spice.et2utc(et, "ISOC", 0).replace("-", "").replace(":", "")
+
+
+def _gen_time(path):
+    """Ephemeris time parsed from a saved generated filename's compact stamp (..._YYYYMMDDThhmmss)."""
+    m = re.search(r"(\d{8})T(\d{6})", path.name)
+    if not m:
+        return None
+    d, t = m.groups()
+    return spice.str2et(f"{d[:4]}-{d[4:6]}-{d[6:8]}T{t[:2]}:{t[2:4]}:{t[4:6]}")
+
+
+def _stamp_of(path):
+    """Compact observation stamp of a saved generated frame (..._YYYYMMDDThhmmss), or None."""
+    m = re.search(r"(\d{8})T(\d{6})", path.name)
+    return f"{m.group(1)}T{m.group(2)}" if m else None
+
+
+def _gen_time_if(keep):
+    """``gen_time`` for compare_saved restricted to the frames whose stamp satisfies ``keep``.
+
+    Returning None for every other frame leaves it unpaired, which is how compare_saved drops it: the
+    group's figures are numbered over the kept frames only.
+    """
+
+    def _timer(path):
+        stamp = _stamp_of(path)
+        return _gen_time(path) if stamp is not None and keep(stamp) else None
+
+    return _timer
 
 
 @contextlib.contextmanager
@@ -61,17 +174,6 @@ def get_header(filename: str) -> tuple:
     return exp, time, pos, sun_pos, mrp
 
 
-def _fits_to_png(filename: str) -> None:
-    image_data = fits.open(filename)[0]
-    image_data = np.nan_to_num(image_data)
-    plt.figure()
-    plt.xticks([])
-    plt.yticks([])
-    plt.tight_layout(pad=0)  # Remove padding around the image
-    plt.imshow(image_data.data, cmap="gray")
-    plt.imsave(str(filename).split(".")[0] + ".png", image_data.data, cmap="gray")
-
-
 def get_header_data():
     exposure_time_list = []
     time_list = []
@@ -80,8 +182,9 @@ def get_header_data():
     sun_list = []
     for p in sorted(FITS_DIR.iterdir()):
         if p.is_file() and p.suffix.lower() in {".fit"}:
-            _fits_to_png(str(p))
             exp, time, pos, sun_pos, mrp = get_header(str(p))
+            if EXPOSURE_MAX_MS is not None and exp > EXPOSURE_MAX_MS:
+                continue  # overexposed long exposure — re-added when EXPOSURE_MAX_MS is None
             exposure_time_list.append(exp * 1e-3)
             time_list.append(time)
             position_list.append(-pos)
@@ -122,7 +225,7 @@ def scene_setup() -> cielim.Scene:
 
     scene.set_spacecraft_params(name="dawn", position=(0, 0, -1000000), velocity=(0, 1000, 0))
 
-    scene.set_camera_params(name="dawn")
+    scene.set_camera_params(name="dawn", grayscale=True)
 
     # (https://link.springer.com/article/10.1007/s11214-011-9745-4)
     # (https://www.teledynespaceimaging.com/en-us/Products_/Documents/ccd-datasheets/CCD47-20%20FSI%20NIMO%20Datasheet%20(v9).pdf)
@@ -140,14 +243,14 @@ def scene_setup() -> cielim.Scene:
         well_capacity=120_000,
     )
 
-    scene.set_corruption_params(psf_sigma=1, read_noise=18, dc_rate=dark_current_rate_e_s(vesta_ccd_temp_k))
+    scene.set_corruption_params(psf_sigma=0.7 , read_noise=18, dc_rate=dark_current_rate_e_s(vesta_ccd_temp_k), dc_sigma=10, shot_noise=True)
 
     scene.set_celestial_body_params(0, position=(0, 0, -10000))
 
     index = scene.add_celestial_body("vesta")
 
     scene.set_celestial_body_params(
-        index, albedo=0.423, mesh_shape="vesta_normalized", mesh_brdf="Regolith", mesh_radius=262.7 * 1e3
+        index, albedo=0.423, mesh_shape="vesta_normalized", mesh_brdf="Lambertian", mesh_radius=262.7 * 1e3
     )
 
     return scene
@@ -163,7 +266,9 @@ def vesta_scenario(number_of_images: int | None = None):
     solid_angle = np.pi
     pixel_area = 2.2 * 2.2 * 10 ** (-12)  # m^2
 
-    qefit.set_qe_curve_fit(scene.get_scene(), str(qe_file_path), solid_angle, pixel_area)
+    qefit.set_qe_curve_fit(
+        scene.get_scene(), str(qe_file_path), solid_angle, pixel_area, figure_name="qe_fit_vesta_fc2"
+    )
 
     # Load SPICE kernels using a meta-kernel with RELATIVE paths.
     # We temporarily chdir to the repo root so 'support-data/…' resolves correctly.
@@ -245,10 +350,30 @@ def vesta_scenario(number_of_images: int | None = None):
 
         image, _, _ = connector.request_image_for_camera_id(1, True, False)
         image = np.flip(image, 0)
-        cv2.imwrite(os.path.join(current_file_path, f"images-vesta/vesta_image_{idx}.png"), image)
+        cv2.imwrite(os.path.join(current_file_path, f"images-vesta/vesta_{_stamp(time)}.png"), image)
 
     connector.disconnect()
     launcher.terminate()
+
+    real_entries = _real_entries()
+
+    n, stats = image_comparison.compare_saved(
+        OUT_DIR, _gen_time_if(lambda s: s not in DISTANT_STAMPS and s not in EXCLUDED_STAMPS),
+        real_entries, _real_gray_of, str(SHOWCASE_DIR),
+        title_real="real", title_generated="cielim",
+        average_batches=[("20110717", range(0, 2)), ("20110723", range(2, 6))],
+    )
+    print(f"Saved real-vs-generated batch comparison ({n} pairs) -> {SHOWCASE_DIR}")
+    print(image_comparison.format_error_stats(stats))
+
+    m, distant_stats = image_comparison.compare_saved(
+        OUT_DIR, _gen_time_if(lambda s: s in DISTANT_STAMPS),
+        real_entries, _real_gray_of, str(DISTANT_DIR),
+        title_real="real", title_generated="cielim",
+    )
+    print(f"Saved distant-approach batch comparison ({m} pairs) -> {DISTANT_DIR}")
+    print(image_comparison.format_error_stats(distant_stats))
+
     spice.kclear()
 
 
