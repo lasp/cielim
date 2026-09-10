@@ -14,11 +14,11 @@ from cielim.utils import rigid_body_kinematics as rbk
 
 # ---- Paths (portable) ----
 current_file_path = os.path.dirname(__file__)
-HERE = Path(__file__).resolve()
-ROOT = HERE.parents[1]  # <repo root>
-MK = ROOT / "support-data" / "bennu-tag-spice" / "bennu-tag-spice.txt"
-FITS_DIR = ROOT / "support-data" / "bennu-tag-spice" / "images"
-OUT_DIR = HERE.parent / "images-bennu-tag"
+here = Path(__file__).resolve()
+root = here.parents[1]  # <repo root>
+mk = root / "support-data" / "bennu-tag-spice" / "bennu-tag-spice.txt"
+fits_dir = root / "support-data" / "bennu-tag-spice" / "images"
+out_dir = here.parent / "images-bennu-tag"
 
 
 @contextlib.contextmanager
@@ -43,7 +43,7 @@ def _fits_to_png(filename: str) -> None:
 def _get_exposure_time():
     exposure_time_list = []
     time_list = []
-    for p in sorted(FITS_DIR.iterdir()):
+    for p in sorted(fits_dir.iterdir()):
         if p.is_file() and p.suffix.lower() in {".fits"}:
             exposure_time_list.append(_fits_to_png(str(p)))
             year = str(p).split("/")[-1][0:4]
@@ -108,7 +108,7 @@ def scene_setup() -> cielim.Scene:
     # NOTE: Effective albedo is calculated by taking average albedo (~0.044) and dividing by the average pixel (in linear RGB) 0.234745 of the albedo map
     # This is done so that average color of the shape model matches the real world average albedo
 
-    if os.path.exists(str(ROOT) + "/../../Content/AsteroidMeshes/bennu_medfi_normalized.uasset"):
+    if os.path.exists(str(root) + "/../../Content/AsteroidMeshes/bennu_medfi_normalized.uasset"):
         scene.set_celestial_body_params(index, albedo=0.044 / 0.234745, mesh_shape="bennu_medfi_normalized")
     else:
         scene.set_celestial_body_params(index, albedo=0.044, mesh_shape="bennu_normalized")
@@ -128,17 +128,19 @@ def tag_scenario(number_of_images: int | None = None):
     solid_angle = np.pi
     pixel_area = 2.2 * 2.2 * 10 ** (-12)  # m^2
 
-    qefit.set_qe_curve_fit(scene.get_scene(), str(qe_file_path), solid_angle, pixel_area)
+    qefit.set_qe_curve_fit(
+        scene.get_scene(), str(qe_file_path), solid_angle, pixel_area, figure_name="qe_fit_bennu_navcam"
+    )
 
     instrument_id = "ORX_NAVCAM2"
 
     # Load SPICE kernels using a meta-kernel with RELATIVE paths.
     # We temporarily chdir to the repo root so 'support-data/…' resolves correctly.
     spice.kclear()
-    with cd(ROOT):
-        spice.furnsh(str(MK))
+    with cd(root):
+        spice.furnsh(str(mk))
 
-    if os.path.exists(FITS_DIR):
+    if os.path.exists(fits_dir):
         exposure_time_list, time_list = _get_exposure_time()
     else:
         time_list = [
@@ -266,7 +268,7 @@ def tag_scenario(number_of_images: int | None = None):
     et_range = np.array(et_range)
 
     # Output dir
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     connector = cielim.Connector()
     launcher = cielim.Launcher()
