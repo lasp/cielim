@@ -15,9 +15,11 @@ from . import plot_style
 # Square figure, this many pixels on a side at plot_style.SAVE_DPI.
 FIGURE_PX = 1024
 
-# Where set_qe_curve_fit writes its figure. Not gitignored, unlike examples/images*, so these are
-# committable alongside the paper.
-FIGURE_DIRECTORY = Path(__file__).resolve().parents[2] / "docs" / "figures"
+# Where set_qe_curve_fit writes its figure: alongside every other saved figure set, rather than
+# into a documentation tree. examples/images* is gitignored (see .gitignore) but showcase_images is
+# not, so these PDFs are committable alongside the paper — only PNGs there fall under the global
+# *.png rule.
+FIGURE_DIRECTORY = Path(__file__).resolve().parents[2] / "examples" / "showcase_images" / "qe"
 
 # Three series, sampled from the repo's inferno convention (plot_style.SERIES_COLORS only holds
 # two). Checked with the dataviz palette validator against a light surface: lightness band, chroma
@@ -343,8 +345,8 @@ def qe_curve_fit(
         # first or they fall outside it and are cut.
         figure.tight_layout()
         # The measured area error is stamped into the stem, since the figure no longer carries it.
-        # "0p00" not "0.00": a second dot in the stem makes LaTeX guess at the extension, and these
-        # go straight into the paper.
+        # "0p00" not "0.00": a second dot in the stem makes a document's include guess at the
+        # extension, and these go straight into the paper.
         base = Path(output_path)
         error_tag = f"{simpson_error:.2f}".replace(".", "p")
         output_path = base.with_name(f"{base.stem}_err{error_tag}pct{base.suffix}")

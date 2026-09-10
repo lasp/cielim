@@ -1117,16 +1117,17 @@ def test_ghost_parameters_respond_off_axis(cielim_connection):
     assert signals[-1] > signals[0], f"Larger ghostSize should raise the off-axis ghost band: {signals}"
 
 
-def _param_caption(params, **extra):
-    """Compact record of the stray-light parameters a showcase figure was rendered with.
+def _save_context(name, params, files, **extra):
+    """Record the stray-light parameters showcase figure ``name`` was rendered with, beside it.
 
-    NOT drawn on the figure — the settings live in the ``Reference images`` section of
-    ``docs/stray_light.tex``, so the paper carries them in text rather than as small print baked into
-    the image. This record is echoed to stdout by :func:`_report_params` when the showcase runs, so
-    retuning surfaces the new values to copy into that sheet instead of letting it drift.
+    NOT drawn on the figure: the settings are written as ``<showcase_dir>/<name>.json`` by
+    :func:`plot_style.save_context`, so retuning updates the record in the same run that produces
+    the images instead of leaving a transcribed copy to drift.
 
     Args:
+        name (str): Figure set name; also the JSON's stem.
         params (dict): Effective stray-light tuning (the merged STRAY_LIGHT_TUNING + overrides).
+        files (list): Image filenames the record describes.
         **extra: Additional scene facts to append (exposure, FoV, sun placement, ...).
     """
     order = (
@@ -1144,23 +1145,11 @@ def _param_caption(params, **extra):
     )
 
     def fmt(value):
-        if isinstance(value, (tuple, list)):
-            return "(" + ",".join(f"{v:g}" for v in value) + ")"
-        return f"{value:g}" if isinstance(value, float) else str(value)
+        return list(value) if isinstance(value, (tuple, list)) else value
 
-    items = [f"{key}={fmt(params[key])}" for key in order if key in params]
-    items += [f"{key}={value}" for key, value in extra.items()]
-    return "  ".join(items)
-
-
-def _report_params(name, params, **extra):
-    """Echo the parameter record for showcase figure ``name`` to stdout.
-
-    The figures themselves are unannotated: these settings belong in
-    ``docs/stray_light.tex``. Printing them keeps that sheet checkable — run the showcase with
-    ``pytest -s`` and diff what it reports against what the sheet claims.
-    """
-    print(f"[showcase] {name}: {_param_caption(params, **extra)}")
+    facts = {key: fmt(params[key]) for key in order if key in params}
+    facts.update(extra)
+    return ps.save_context(name, facts, files=files)
 
 
 # ===========================================================================
@@ -1185,15 +1174,16 @@ def test_showcase_stray_light(cielim_connection):
     gray = render_gray(cielim_connection, _flare_scene(exp))
     # Half text width: one square render printed at the size of a single side-by-side panel. At full
     # width it ran the height of a page, which is what made it dominate everything it sat next to.
-    # Bare — no title, no annotation: what the figure shows and what it was rendered with are both
-    # described in docs/stray_light.tex, so nothing in the image can go stale against the settings.
+    # Bare — no title, no annotation: what it was rendered with goes in the sidecar JSON beside it,
+    # so nothing in the image can go stale against the settings.
     fig, ax = plt.subplots(figsize=ps.figsize_half())
     ax.imshow(gray, cmap=ps.SCENE_CMAP, vmin=0, vmax=255)
     ax.axis("off")
     fig.tight_layout()
-    _report_params(
+    _save_context(
         "stray_light_flare",
         _ghost_params(SHOWCASE_FLARE_TUNING),
+        ["stray_light_flare.png"],
         exposure_s=f"{exp:.3g}",
         fov_deg=f"{np.degrees(FOV):g}",
         sun_off_axis=f"{SHOWCASE_FLARE_OFFSET_X / (np.tan(FOV / 2) * AU):.2f}x_half_frame",
@@ -1215,14 +1205,14 @@ def test_showcase_stray_light(cielim_connection):
     # of a uint8 frame, i.e. the identity, so this is the same pixels with no margins or resampling.
     for angle, gray_sweep in zip(angles, grays):
         ps.save_showcase_raster(gray_sweep, f"sweep_{angle:02d}deg", SWEEP_PANEL_H)
-    _report_params(
+    _save_context(
         "stray_light_sweep",
         _ghost_params({"baffle_shield_angle": SWEEP_BAFFLE}),
+        [f"sweep_{a:02d}deg.png" for a in angles],
         exposure_s=f"{exp_sweep:.3g}",
         fov_deg=f"{np.degrees(SWEEP_FOV):g}",
         cutoff_deg=f"{np.degrees(SWEEP_FOV) / 2 + SWEEP_BAFFLE:g}",
-        angles_deg=",".join(str(a) for a in angles),
-        files=",".join(f"sweep_{a:02d}deg.png" for a in angles),
+        angles_deg=[int(a) for a in angles],
     )
 
 
