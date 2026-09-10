@@ -21,18 +21,18 @@ from cielim.utils import qe_curve_fit as qefit
 from cielim.utils import rigid_body_kinematics as rbk
 
 
-HERE = Path(__file__).resolve()
-CIELIM_ROOT = HERE.parents[1]
+here = Path(__file__).resolve()
+cielim_root = here.parents[1]
 
-sys.path.insert(0, str(CIELIM_ROOT / "cielim"))
-sys.path.insert(0, str(HERE.parent))
+sys.path.insert(0, str(cielim_root / "cielim"))
+sys.path.insert(0, str(here.parent))
 
-MK = CIELIM_ROOT / "support-data" / "vesta-spice" / "vesta-spice.txt"
-FIT_DIR = CIELIM_ROOT / "support-data" / "vesta-spice" / "opnav"
-OUT_DIR = HERE.parent / "images-cielim-giant"
-QE_FILE = CIELIM_ROOT / "support-data" / "vesta-spice" / "f2_qe_curve.csv"
-GIANT_GIF = CIELIM_ROOT / "support-data" / "vesta-spice" / "templatesummary.gif"
-OUT_GIF = OUT_DIR / "comparison.gif"
+mk = cielim_root / "support-data" / "vesta-spice" / "vesta-spice.txt"
+fit_dir = cielim_root / "support-data" / "vesta-spice" / "opnav"
+out_dir = here.parent / "images-cielim-giant"
+qe_file = cielim_root / "support-data" / "vesta-spice" / "f2_qe_curve.csv"
+giant_gif_path = cielim_root / "support-data" / "vesta-spice" / "templatesummary.gif"
+out_gif = out_dir / "comparison.gif"
 
 
 @contextlib.contextmanager
@@ -66,9 +66,9 @@ def parse_lbl(lbl_path: str) -> dict:
 def collect_image_lbl_pairs() -> list:
     """Return sorted list of (fit_path, lbl_path) tuples — short exposure only."""
     fits_files = sorted(
-        glob.glob(str(FIT_DIR / "2011123_OPNAV_001/*.FIT"))
-        + glob.glob(str(FIT_DIR / "2011165_OPNAV_007/*.FIT"))
-        + glob.glob(str(FIT_DIR / "2011198_OPNAV_017/*.FIT"))
+        glob.glob(str(fit_dir / "2011123_OPNAV_001/*.FIT"))
+        + glob.glob(str(fit_dir / "2011165_OPNAV_007/*.FIT"))
+        + glob.glob(str(fit_dir / "2011198_OPNAV_017/*.FIT"))
     )
     pairs = []
     for fit in fits_files:
@@ -161,7 +161,7 @@ def scene_setup() -> cielim.Scene:
 
 def create_comparison_gif() -> None:
     """Create side-by-side comparison GIF of GIANT template summary and CIELIM."""
-    giant_gif = Image.open(GIANT_GIF)
+    giant_gif = Image.open(giant_gif_path)
     giant_frames = []
     try:
         while True:
@@ -179,9 +179,9 @@ def create_comparison_gif() -> None:
     GIANT_W, GIANT_H = giant_frames[0].size
 
     lbl_files = sorted(
-        glob.glob(str(FIT_DIR / "2011123_OPNAV_001/*.LBL"))
-        + glob.glob(str(FIT_DIR / "2011165_OPNAV_007/*.LBL"))
-        + glob.glob(str(FIT_DIR / "2011198_OPNAV_017/*.LBL"))
+        glob.glob(str(fit_dir / "2011123_OPNAV_001/*.LBL"))
+        + glob.glob(str(fit_dir / "2011165_OPNAV_007/*.LBL"))
+        + glob.glob(str(fit_dir / "2011198_OPNAV_017/*.LBL"))
     )
     short_lbls = []
     for lbl in lbl_files:
@@ -191,7 +191,7 @@ def create_comparison_gif() -> None:
         if m and float(m.group(1)) < 1000:
             short_lbls.append(lbl)
 
-    cielim_paths = sorted(glob.glob(str(OUT_DIR / "giant-cielim-vesta_*.png")))
+    cielim_paths = sorted(glob.glob(str(out_dir / "giant-cielim-vesta_*.png")))
     cielim_frames = []
 
     for path in cielim_paths:
@@ -258,33 +258,35 @@ def create_comparison_gif() -> None:
 
         frames.append(canvas)
 
-    frames[0].save(OUT_GIF, save_all=True, append_images=frames[1:], duration=500, loop=0)
-    print(f"\nComparison GIF saved to {OUT_GIF}")
+    frames[0].save(out_gif, save_all=True, append_images=frames[1:], duration=500, loop=0)
+    print(f"\nComparison GIF saved to {out_gif}")
 
 
 def cielim_giant(number_of_images: int = None):
     pairs = collect_image_lbl_pairs()
     if not pairs:
-        raise FileNotFoundError(f"No .FIT/.LBL pairs found under {FIT_DIR}")
+        raise FileNotFoundError(f"No .FIT/.LBL pairs found under {fit_dir}")
 
     if number_of_images is not None:
         pairs = pairs[:number_of_images]
 
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     scene = scene_setup()
 
-    if QE_FILE.exists():
+    if qe_file.exists():
         solid_angle = np.pi
         pixel_area = 14e-6 * 14e-6
-        qefit.set_qe_curve_fit(scene.get_scene(), str(QE_FILE), solid_angle, pixel_area)
-        print(f"QE curve loaded: {QE_FILE.name}")
+        qefit.set_qe_curve_fit(
+            scene.get_scene(), str(qe_file), solid_angle, pixel_area, figure_name="qe_fit_giant_fc2"
+        )
+        print(f"QE curve loaded: {qe_file.name}")
     else:
-        print(f"WARNING: QE file not found at {QE_FILE}")
+        print(f"WARNING: QE file not found at {qe_file}")
 
     spice.kclear()
-    with cd(CIELIM_ROOT):
-        spice.furnsh(str(MK))
+    with cd(cielim_root):
+        spice.furnsh(str(mk))
 
     connector = cielim.Connector()
     launcher = cielim.Launcher()
@@ -317,7 +319,7 @@ def cielim_giant(number_of_images: int = None):
 
         image, _, _ = connector.request_image_for_camera_id(1, True, False)
         image = np.flip(image, 0)
-        cv2.imwrite(str(OUT_DIR / f"giant-cielim-vesta_{idx:03d}.png"), image)
+        cv2.imwrite(str(out_dir / f"giant-cielim-vesta_{idx:03d}.png"), image)
 
     connector.disconnect()
     launcher.terminate()

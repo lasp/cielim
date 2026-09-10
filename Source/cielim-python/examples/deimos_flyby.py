@@ -14,6 +14,7 @@ Goal:
 
 import contextlib
 import os
+import re
 from pathlib import Path
 
 import cv2
@@ -23,6 +24,7 @@ from astropy.io import fits
 from matplotlib import pyplot as plt
 
 import cielim
+from cielim.utils import image_comparison_toolkit as image_comparison
 from cielim.utils import qe_curve_fit as qefit
 from cielim.utils import rigid_body_kinematics as rbk
 
@@ -30,11 +32,78 @@ from cielim.utils import rigid_body_kinematics as rbk
 
 # ---- Paths (portable) ----
 current_file_path = os.path.dirname(__file__)
-HERE = Path(__file__).resolve()
-ROOT = HERE.parents[1]  # <repo root>
-MK = ROOT / "support-data" / "deimos-spice" / "deimos-spice.txt"
-FITS_DIR = ROOT / "support-data" / "deimos-spice" / "fits_images"
-OUT_DIR = HERE.parent / "images-deimos-spice"
+here = Path(__file__).resolve()
+root = here.parents[1]  # <repo root>
+mk = root / "support-data" / "deimos-spice" / "deimos-spice.txt"
+fits_dir = root / "support-data" / "deimos-spice" / "fits_images"
+out_dir = here.parent / "images-deimos-spice"
+
+showcase_dir = here.parent / "images-compared" / "deimos"
+
+# Only f635 is rendered, so the real frames are restricted to it or the by-time pairing is polluted.
+_fname_time = re.compile(r"(\d{8})T(\d{6})")
+_render_filter = "f635"
+
+# Too noisy to compare against an unmodelled render; still rendered, just left out of the comparison.
+_noisy_stamps = {
+    "20231101T034225",
+    "20231101T034357",
+    "20231101T035640",
+    "20231101T040154",
+    "20231101T040654",
+}
+
+
+def _sorted_fits():
+    return [
+        p
+        for p in sorted(fits_dir.iterdir())
+        if p.is_file() and p.suffix.lower() == ".fits" and _render_filter in p.name
+    ]
+
+
+def _filename_et(path):
+    """SPICE ephemeris time parsed from the FITS filename timestamp (requires kernels loaded)."""
+    m = _fname_time.search(path.name)
+    if not m:
+        return None
+    d, t = m.groups()
+    iso = f"{d[:4]}-{d[4:6]}-{d[6:8]}T{t[:2]}:{t[2:4]}:{t[4:6]}"
+    return spice.str2et(iso)
+
+
+def _comparison_et(path):
+    """``gen_time`` for the comparison: as _filename_et, but None for the noisy frames so they are
+    never paired and hence dropped from the comparison entirely."""
+    m = _fname_time.search(path.name)
+    if m and f"{m.group(1)}T{m.group(2)}" in _noisy_stamps:
+        return None
+    return _filename_et(path)
+
+
+def _real_entries():
+    """List of (ephemeris_time, fits_path) for the f635 real frames, keyed by filename timestamp."""
+    entries = []
+    for p in _sorted_fits():
+        et = _filename_et(p)
+        if et is not None:
+            entries.append((et, p))
+    return entries
+
+
+def _exposure_of(path):
+    return fits.open(str(path))[0].header.cards["XPOSURE"][1]
+
+
+def _real_gray_of(path):
+    data = np.nan_to_num(fits.open(str(path))[1].data)
+    return image_comparison.to_uint8_gray(data)
+
+
+def _stamp(et):
+    """Filesystem-safe compact UTC stamp for a render time, e.g. 20231101T034225 (parsed by
+    _filename_et, which the comparison uses for both real and generated filenames)."""
+    return spice.et2utc(et, "ISOC", 0).replace("-", "").replace(":", "")
 
 
 @contextlib.contextmanager
@@ -57,14 +126,6 @@ def _fits_to_png(filename: str, show_plots=False) -> None:
         plt.title("Image")
         plt.show()
     return fits.open(filename)[0].header.cards["XPOSURE"][1]
-
-
-def _get_exposure_time():
-    exposure_time_list = []
-    for p in sorted(FITS_DIR.iterdir()):
-        if p.is_file() and p.suffix.lower() in {".fits"}:
-            exposure_time_list.append(_fits_to_png(p))
-    return exposure_time_list
 
 
 def scene_setup() -> cielim.Scene:
@@ -99,7 +160,7 @@ def scene_setup() -> cielim.Scene:
     # This is done so that average color of the shape model matches the real world average albedo.
 
     scene.set_celestial_body_params(
-        index, albedo=0.12, mesh_shape="deimos_normalized", mesh_brdf="Regolith", mesh_radius=6.2 * 1e3
+        index, albedo=0.07, mesh_shape="deimos_normalized", mesh_brdf="Lambertian", mesh_radius=6.2 * 1e3
     )
 
     return scene
@@ -116,13 +177,20 @@ def spice_scenario():
     pixel_area = (0.022528 * 0.016896) / (4096 * 3072)  # m^2
     f635_window = [625, 645]
 
-    qefit.set_qe_curve_fit(scene.get_scene(), str(qe_file_path), solid_angle, pixel_area, f635_window)
+    qefit.set_qe_curve_fit(
+        scene.get_scene(),
+        str(qe_file_path),
+        solid_angle,
+        pixel_area,
+        f635_window,
+        figure_name="qe_fit_deimos_f635",
+    )
 
     # Load SPICE kernels using a meta-kernel with RELATIVE paths.
     # We temporarily chdir to the repo root so 'support-data/…' resolves correctly.
     spice.kclear()
-    with cd(ROOT):
-        spice.furnsh(str(MK))
+    with cd(root):
+        spice.furnsh(str(mk))
 
     instrument_id = "HOPE_EXI_VIS"
 
@@ -148,11 +216,11 @@ def spice_scenario():
         et_range.append(spice.str2et(_str))
     et_range = np.array(et_range)
 
-    # exposure time (sec) of the fits files
-    exposure_time_list = _get_exposure_time()
+    real_entries = _real_entries()
+    real_ets = [e[0] for e in real_entries]
 
     # Output dir
-    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     connector = cielim.Connector()
     launcher = cielim.Launcher()
@@ -183,8 +251,9 @@ def spice_scenario():
 
         scene.set_spacecraft_params(position=tuple(position * 1e3), attitude=tuple(rbk.dcm_to_mrp(BN)))
 
-        # update exposure time per image
-        scene.set_sensor_params(exposure=exposure_time_list[idx])
+        match = image_comparison.nearest_time_index(time, real_ets, tol_s=2.0)
+        if match is not None:
+            scene.set_sensor_params(exposure=_exposure_of(real_entries[match][1]))
         print(f"exposure time: {scene.get_scene().camera.sensorModel.exposureTime:.4f} sec")
 
         connector.send_frame(scene.get_scene())
@@ -192,10 +261,20 @@ def spice_scenario():
         print(f"Generating image for time {time_range_str[idx]}")
 
         [image, _, _] = connector.request_image_for_camera_id(1, True, False)
-        cv2.imwrite(os.path.join(current_file_path, f"images-deimos-spice/deimos_image_{idx}.png"), image)
+        image = np.flip(image, 0)  # vertical flip so the render matches the real EMM frame orientation
+        cv2.imwrite(os.path.join(current_file_path, f"images-deimos-spice/deimos_{_stamp(time)}.png"), image)
 
     connector.disconnect()
     launcher.terminate()
+
+    # Compared by observation time, skipping _noisy_stamps; raw/ and aligned/ subsets.
+    n, stats = image_comparison.compare_saved(
+        out_dir, _comparison_et, real_entries, _real_gray_of, str(showcase_dir),
+        title_real="real", title_generated="cielim",
+    )
+    print(f"Saved real-vs-generated batch comparison ({n} pairs) -> {showcase_dir}")
+    print(image_comparison.format_error_stats(stats))
+
     spice.kclear()
 
 
