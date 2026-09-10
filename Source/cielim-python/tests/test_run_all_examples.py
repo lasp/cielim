@@ -361,3 +361,46 @@ def test_send_protobuffer_file():
 
     # Cleanup
     out_file.unlink()
+
+
+def test_speed_test_scenario(tmp_path):
+    # headless plotting
+    os.environ.setdefault("MPLBACKEND", "Agg")
+
+    # Load modules directly from files (no need for examples/__init__.py)
+    st = _load_module_from(EXAMPLES_DIR / "speed_test_scenario.py", "speed_test_scenario")
+
+    # Render into tmp_path rather than examples/images-speed-test. That directory holds the
+    # engine-side timing CSVs, which are gitignored and therefore unrecoverable — this test used to
+    # rmtree it on entry and exit, which silently destroyed them.
+    out_dir = tmp_path
+
+    # Build and edit the scene exactly as the example's __main__ does
+    scene = st.scene_setup()
+    scene.set_celestial_body_params(
+        st.CENTRAL_BODY_INDEX,
+        name="bennu",
+        mesh_shape="bennu_normalized",
+        mesh_brdf="Regolith",
+        mesh_radius=246.0,
+        albedo=0.044,
+    )
+    scene.gravitational_parameter = 5.2
+    scene.set_lens_params(fov=(20 * np.pi / 180, 15 * np.pi / 180))
+    scene.set_sensor_params(resolution=(2000, 1500), exposure=5e-4)
+
+    summary = st.speed_test_scenario(scene, number_of_images=3, output_directory=str(out_dir))
+
+    # assertions (numpy.testing)
+    np.testing.assert_equal(len(list(out_dir.glob("speed_test_*.png"))), 3, err_msg="Expected 3 rendered PNGs")
+    np.testing.assert_equal(summary["number_of_images"], 3)
+    np.testing.assert_(summary["images_per_second"] > 0, msg="No render throughput reported")
+
+    # The timing CSV is what examples/speed_test_analysis.py consumes: header plus one row per frame.
+    timing_csv = Path(summary["timing_csv"])
+    np.testing.assert_(timing_csv.exists(), msg="timing CSV was not written")
+    lines = timing_csv.read_text().strip().splitlines()
+    np.testing.assert_equal(lines[0], "frame_time_ms")
+    np.testing.assert_equal(len(lines) - 1, 3, err_msg="Expected 3 timing rows")
+
+    # No cleanup needed: pytest owns tmp_path, and nothing was written into the repo tree.
