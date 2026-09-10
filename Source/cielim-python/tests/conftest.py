@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from typing import Generator
 
@@ -16,6 +18,24 @@ def pytest_addoption(parser):
 @pytest.fixture
 def show_plots(request) -> bool:
     return request.config.getoption("--show_plots")
+
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "showcase: opt-in test that renders and saves a page-ready feature-demo image "
+        "(runs only when the showcase_dir env var is set).",
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    """Skip @pytest.mark.showcase tests unless the showcase_dir env var points somewhere to save to."""
+    if os.environ.get("showcase_dir"):
+        return
+    skip = pytest.mark.skip(reason="showcase image test; set showcase_dir env var to run")
+    for item in items:
+        if "showcase" in item.keywords:
+            item.add_marker(skip)
 
 
 @pytest.fixture(scope="session")
