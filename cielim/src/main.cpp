@@ -24,8 +24,6 @@ import cielim.vk;
 import cielim.window;
 
 static cielim::vk::Context& vk_context = cielim::vk::Context::get_context();
-static VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
-static VkPipeline graphics_pipeline = VK_NULL_HANDLE;
 static std::vector<VkCommandPool> command_pools;
 static std::vector<VkCommandBuffer> command_buffers;
 static VkSemaphore timeline_semaphore = VK_NULL_HANDLE;
@@ -55,12 +53,6 @@ static auto clean() -> void
         if (pool != VK_NULL_HANDLE)
             vkDestroyCommandPool(vk_context.get_device(), pool, nullptr);
     }
-
-    if (graphics_pipeline != VK_NULL_HANDLE)
-        vkDestroyPipeline(vk_context.get_device(), graphics_pipeline, nullptr);
-
-    if (pipeline_layout != VK_NULL_HANDLE)
-        vkDestroyPipelineLayout(vk_context.get_device(), pipeline_layout, nullptr);
 }
 
 static auto fatal_error(const cielim::window::Window* window, const std::string& message) -> void
@@ -154,129 +146,16 @@ auto main(int argc, char* argv[]) -> int
         return EXIT_FAILURE;
     }
 
-    VkPipelineShaderStageCreateInfo vertex_stage_info = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .stage = VK_SHADER_STAGE_VERTEX_BIT,
-        .module = triangle_shader.get_handle(),
-        .pName = "VertMain",
+    cielim::vk::Pipeline render_pipeline;
+
+    std::vector<cielim::vk::ShaderStage> stages = {
+        {.stage_flag = VK_SHADER_STAGE_VERTEX_BIT, .shader_module = triangle_shader, .entry_point = "VertMain"},
+        {.stage_flag = VK_SHADER_STAGE_FRAGMENT_BIT, .shader_module = triangle_shader, .entry_point = "FragMain"},
     };
 
-    VkPipelineShaderStageCreateInfo frag_stage_info = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-        .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-        .module = triangle_shader.get_handle(),
-        .pName = "FragMain",
-    };
-
-    VkPipelineShaderStageCreateInfo shader_stages[] = {vertex_stage_info, frag_stage_info};
-
-    // Empty for now because of shader hard-coding vertex buffer
-    VkPipelineVertexInputStateCreateInfo vertex_input_state = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-    };
-
-    VkPipelineInputAssemblyStateCreateInfo input_assembly_state = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-        .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
-    };
-
-    VkPipelineViewportStateCreateInfo viewport_state = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-        .viewportCount = 1,
-        .scissorCount = 1,
-    };
-
-    VkPipelineRasterizationStateCreateInfo rasterization_state = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-        .depthClampEnable = VK_FALSE,
-        .rasterizerDiscardEnable = VK_FALSE,
-        .polygonMode = VK_POLYGON_MODE_FILL,
-        .cullMode = VK_CULL_MODE_BACK_BIT,
-        .frontFace = VK_FRONT_FACE_CLOCKWISE,
-        .depthBiasEnable = VK_FALSE,
-        .lineWidth = 1.0f,
-    };
-
-    VkPipelineMultisampleStateCreateInfo multisample_state = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-        .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
-        .sampleShadingEnable = VK_FALSE,
-    };
-
-    VkPipelineColorBlendAttachmentState color_blend_attachment_state = {
-        .blendEnable = VK_TRUE,
-        .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
-        .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-        .colorBlendOp = VK_BLEND_OP_ADD,
-        .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
-        .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
-        .alphaBlendOp = VK_BLEND_OP_ADD,
-        .colorWriteMask
-        = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-    };
-
-    VkPipelineColorBlendStateCreateInfo color_blend_state = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-        .logicOpEnable = VK_FALSE,
-        .logicOp = VK_LOGIC_OP_COPY,
-        .attachmentCount = 1,
-        .pAttachments = &color_blend_attachment_state,
-    };
-
-    // This is empty because no uniforms are used yet
-    VkPipelineLayoutCreateInfo layout_create_info = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .setLayoutCount = 0,
-        .pushConstantRangeCount = 0,
-    };
-
-    vk_result = vkCreatePipelineLayout(vk_context.get_device(), &layout_create_info, nullptr, &pipeline_layout);
-
-    if (vk_result != VK_SUCCESS)
+    if (const auto result = render_pipeline.create(vk_context, swapchain, stages); !result.has_value())
     {
-        fatal_error(&window, fmt::format("Pipeline layout could not be created: {}", string_VkResult(vk_result)));
-        clean();
-        return EXIT_FAILURE;
-    }
-
-    std::vector<VkDynamicState> dynamic_states = {VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR};
-
-    VkPipelineDynamicStateCreateInfo dynamic_state = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-        .dynamicStateCount = static_cast<uint32_t>(dynamic_states.size()),
-        .pDynamicStates = dynamic_states.data(),
-    };
-
-    VkFormat req_format = swapchain.get_format();
-
-    VkPipelineRenderingCreateInfo pipeline_rendering_state = {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
-        .colorAttachmentCount = 1,
-        .pColorAttachmentFormats = &req_format,
-    };
-
-    VkGraphicsPipelineCreateInfo pipeline_info = {
-        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .pNext = &pipeline_rendering_state,
-        .stageCount = 2,
-        .pStages = shader_stages,
-        .pVertexInputState = &vertex_input_state,
-        .pInputAssemblyState = &input_assembly_state,
-        .pViewportState = &viewport_state,
-        .pRasterizationState = &rasterization_state,
-        .pMultisampleState = &multisample_state,
-        .pColorBlendState = &color_blend_state,
-        .pDynamicState = &dynamic_state,
-        .layout = pipeline_layout,
-        .renderPass = nullptr,
-    };
-
-    vk_result
-        = vkCreateGraphicsPipelines(vk_context.get_device(), nullptr, 1, &pipeline_info, nullptr, &graphics_pipeline);
-
-    if (vk_result != VK_SUCCESS)
-    {
-        fatal_error(&window, fmt::format("Graphics pipeline could not be created: {}", string_VkResult(vk_result)));
+        fatal_error(&window, result.error().message());
         clean();
         return EXIT_FAILURE;
     }
@@ -560,7 +439,7 @@ auto main(int argc, char* argv[]) -> int
 
         vkCmdBeginRendering(command_buffers[frame_index], &rendering_info);
 
-        vkCmdBindPipeline(command_buffers[frame_index], VK_PIPELINE_BIND_POINT_GRAPHICS, graphics_pipeline);
+        vkCmdBindPipeline(command_buffers[frame_index], VK_PIPELINE_BIND_POINT_GRAPHICS, render_pipeline.get_handle());
 
         VkViewport viewport = {
             .x = 0.0f,

@@ -215,6 +215,32 @@ struct ErrorType<VkShaderModuleError>
     }
 };
 
+enum class VkPipelineError : std::uint8_t
+{
+    LayoutCreateError,
+    PipelineCreateError,
+};
+
+template <>
+struct ErrorType<VkPipelineError>
+{
+    static constexpr bool IS_ERROR = true;
+    static constexpr std::string_view CATEGORY_NAME = "VkPipelineError";
+
+    static auto message(const VkPipelineError error) -> std::string_view
+    {
+        using enum VkPipelineError;
+
+        switch (error)
+        {
+        case LayoutCreateError: return "Failed to create pipeline layout";
+        case PipelineCreateError: return "Failed to create render pipeline";
+        }
+
+        return "Unknown Vulkan pipeline error";
+    }
+};
+
 } // namespace cielim::error
 
 // Register custom error types with standard library
@@ -233,5 +259,9 @@ struct std::is_error_code_enum<cielim::error::VkSwapchainError> : std::true_type
 };
 template <>
 struct std::is_error_code_enum<cielim::error::VkShaderModuleError> : std::true_type
+{
+};
+template <>
+struct std::is_error_code_enum<cielim::error::VkPipelineError> : std::true_type
 {
 };
