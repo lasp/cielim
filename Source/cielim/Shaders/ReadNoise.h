@@ -22,6 +22,7 @@ class FReadNoise : public FGlobalShader
 	SHADER_PARAMETER_SAMPLER(SamplerState, InputSampler)
 	SHADER_PARAMETER(uint32, CurrentTime)
 	SHADER_PARAMETER(float, ReadNoiseSigma)
+	SHADER_PARAMETER(float, InvFullWellCapacity)
 	SHADER_PARAMETER(uint32, GrayscaleToggle)
 	SHADER_PARAMETER(uint32, PixelDefectPattern)
 	SHADER_PARAMETER(float, StuckPixelRate)

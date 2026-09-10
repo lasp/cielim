@@ -61,26 +61,31 @@ float4 MainPS(float4 UV : TEXCOORD0, float4 Position : SV_Position) : SV_Target0
 	float NumElectronsG = SimpsonFactor * (NumW1ElectronsG + 4.0f * NumW2ElectronsG + NumW3ElectronsG);
 	float NumElectronsB = SimpsonFactor * (NumW1ElectronsB + 4.0f * NumW2ElectronsB + NumW3ElectronsB);
 
+	// Apply manual integration correction if necessary
+
 	NumElectronsR *= CorrectionFactor;
 	NumElectronsG *= CorrectionFactor;
 	NumElectronsB *= CorrectionFactor;
 
-	/* Here, we add photon shot noise, dark current, and dark shot noise to the image.
-	 * All of these effects can only add electrons, not subtract. */
+	NumElectronsR = max(NumElectronsR, 0.0f); // These should never be negative
+	NumElectronsG = max(NumElectronsG, 0.0f);
+	NumElectronsB = max(NumElectronsB, 0.0f);
 
-	uint Seed1 = (uint(Position.x) * 1973u) ^ (uint(Position.y) * 9277u) ^ (CurrentTime * 2663u);
-	uint Seed2 = (uint(Position.x) * 6158u) ^ (uint(Position.y) * 4986u) ^ (DarkCurrentPattern * 1654u);
-	uint Seed3 = Seed2 ^ (CurrentTime * 3756u);
+	// Calculate photon shot noise with Gaussian approximation of Poisson distribution
 
-	float4 RandGaussians = max(ComputeRandGaussians(Seed1), 0);
+	uint Seed = (uint(Position.x) * 1973u) ^ (uint(Position.y) * 9277u) ^ (CurrentTime * 2663u);
+	float4 RandGaussians = ComputeRandGaussians(Seed);
 
-	float PhotonShotNoiseR = EnableShotNoise * RandGaussians.x * sqrt(NumElectronsR);
-	float PhotonShotNoiseG = EnableShotNoise * RandGaussians.y * sqrt(NumElectronsG);
-	float PhotonShotNoiseB = EnableShotNoise * RandGaussians.z * sqrt(NumElectronsB);
+	NumElectronsR += EnableShotNoise * RandGaussians.x * sqrt(NumElectronsR);
+	NumElectronsG += EnableShotNoise * RandGaussians.y * sqrt(NumElectronsG);
+	NumElectronsB += EnableShotNoise * RandGaussians.z * sqrt(NumElectronsB);
 
-	// We model dark current as log-normal distribution with median=DarkCurrent and sigma=DarkCurrentStdDeviation
+	// Calculate dark current shot noise with fixed pattern and Gaussian approximation of Poisson distribution
 
-	RandGaussians = ComputeRandGaussians(Seed2); // Dark current pattern should be fixed in time
+	Seed = (uint(Position.x) * 6158u) ^ (uint(Position.y) * 4986u) ^ (DarkCurrentPattern * 1654u); // time independent
+	RandGaussians = ComputeRandGaussians(Seed);
+
+	// Dark current fixed pattern modeled as log-normal distribution with median=DarkCurrent and sigma=DarkCurrentStdDeviation
 
 	float TotalDarkRateR = DarkCurrent * exp(RandGaussians.x * DarkCurrentLogSigma);
 	float DarkElectronsR = TotalDarkRateR * ExposureTime;
@@ -91,15 +96,20 @@ float4 MainPS(float4 UV : TEXCOORD0, float4 Position : SV_Position) : SV_Target0
 	float TotalDarkRateB = DarkCurrent * exp(RandGaussians.z * DarkCurrentLogSigma);
 	float DarkElectronsB = TotalDarkRateB * ExposureTime;
 
-	RandGaussians = max(ComputeRandGaussians(Seed3), 0);
+	Seed = (uint(Position.x) * 1865u) ^ (uint(Position.y) * 6974u) ^ (CurrentTime * 5162u);
+	RandGaussians = ComputeRandGaussians(Seed);
 
-	float DarkShotNoiseR = EnableShotNoise * RandGaussians.x * sqrt(DarkElectronsR);
-	float DarkShotNoiseG = EnableShotNoise * RandGaussians.y * sqrt(DarkElectronsG);
-	float DarkShotNoiseB = EnableShotNoise * RandGaussians.z * sqrt(DarkElectronsB);
+	DarkElectronsR += EnableShotNoise * RandGaussians.x * sqrt(DarkElectronsR);
+	DarkElectronsG += EnableShotNoise * RandGaussians.y * sqrt(DarkElectronsG);
+	DarkElectronsB += EnableShotNoise * RandGaussians.z * sqrt(DarkElectronsB);
 
-	NumElectronsR += PhotonShotNoiseR + DarkElectronsR + DarkShotNoiseR;
-	NumElectronsG += PhotonShotNoiseG + DarkElectronsG + DarkShotNoiseG;
-	NumElectronsB += PhotonShotNoiseB + DarkElectronsB + DarkShotNoiseB;
+	DarkElectronsR = max(DarkElectronsR, 0.0f); // These should never be negative
+	DarkElectronsG = max(DarkElectronsG, 0.0f);
+	DarkElectronsB = max(DarkElectronsB, 0.0f);
+
+	NumElectronsR += DarkElectronsR;
+	NumElectronsG += DarkElectronsG;
+	NumElectronsB += DarkElectronsB;
 
 	// Set final output color to NumElectrons / FWC clamped to [0-1]
 
