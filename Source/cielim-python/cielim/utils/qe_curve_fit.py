@@ -1,14 +1,29 @@
 from pathlib import Path
 
+import matplotlib as mpl
 import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator, ScalarFormatter
 import numpy as np
 import pandas as pd
 from scipy.integrate import simpson
 from scipy.optimize import basinhopping
 
 from ..cielimMessage_pb2 import CielimMessage
+from . import plot_style
 
 # Constants
+# Square figure, this many pixels on a side at plot_style.SAVE_DPI.
+FIGURE_PX = 1024
+
+# Where set_qe_curve_fit writes its figure. Not gitignored, unlike examples/images*, so these are
+# committable alongside the paper.
+FIGURE_DIRECTORY = Path(__file__).resolve().parents[2] / "docs" / "figures"
+
+# Three series, sampled from the repo's inferno convention (plot_style.SERIES_COLORS only holds
+# two). Checked with the dataviz palette validator against a light surface: lightness band, chroma
+# floor, CVD separation (worst adjacent dE 16.3 deutan / 14.0 tritan) and normal-vision floor pass.
+SERIES_COLORS_3 = (mpl.cm.inferno(0.38), mpl.cm.inferno(0.58), mpl.cm.inferno(0.76))
+
 CONST_AU = 1.495978707e11  # Astronomical Unit in meters
 CONST_C = 299792458  # Speed of light, m/s
 CONST_H = 6.62607015e-34  # Planck constant, J·s
@@ -96,6 +111,7 @@ def qe_curve_fit(
     pixel_area: float,
     wavelength_window: list | None = None,
     show_plots: bool = True,
+    output_path: str | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     A function to fit a QE curve to three wavelengths that minimize the error in the integral of electrons per wavelength.
@@ -106,6 +122,8 @@ def qe_curve_fit(
         pixel_area (float): Pixel area in square meters.
         wavelength_window (list, optional): Two-element list specifying the wavelength range to consider (in nm). Defaults to None (use full range).
         show_plots (bool, optional): Whether to display plots of the QE curve and fit. Defaults to True.
+        output_path (str, optional): Base path for the PDF. The measured area error is appended to
+            the stem, so 'qe_fit_x.pdf' is written as 'qe_fit_x_err0p42pct.pdf'. None skips saving.
 
     Returns:
         tuple[np.ndarray, np.ndarray]: Fitted wavelengths (nm) and corresponding QE values (electrons/photon).
@@ -219,7 +237,7 @@ def qe_curve_fit(
 
     # Run basinhopping with SLSQP as the local optimizer
     minimizer_kwargs = {"method": "SLSQP", "bounds": bounds, "constraints": constrs}
-    result = basinhopping(fit_three_wavelengths, initial_guess, minimizer_kwargs=minimizer_kwargs, niter=100, rng=123)
+    result = basinhopping(fit_three_wavelengths, initial_guess, minimizer_kwargs=minimizer_kwargs, niter=100)
 
     if show_plots:
         print(f"Optimal variables: {result.x}")
@@ -284,25 +302,62 @@ def qe_curve_fit(
 
     # ---- Plot ----
 
-    plt.figure(figsize=(10, 6))
-    plt.plot(wavelength_nm, electrons_lambda, "k--", alpha=0.3, label="Actual electrons per wavelength (ref)")
-    plt.plot(wl_fine, electrons_fine, "b-", label="Quadratic interpolant (electrons)")
-    plt.scatter(sample_wl, electrons_sample, color="red", zorder=5, label="Sample points")
-    plt.xlabel("Wavelength (nm)")
-    plt.ylabel("Electrons / nm")
-    plt.title("Estimated vs actual electrons per wavelength")
-    plt.legend()
-    plt.ylim(0, np.max(electrons_lambda) * 1.1)
-    plt.grid(True)
+    plot_style.apply_showcase_style()
+    side_in = FIGURE_PX / plot_style.SAVE_DPI  # square, 1024 px on a side at the save dpi
+    figure, axes = plt.subplots(figsize=(side_in, side_in))
+
+    # Bare panel: no title, no legend, no axis labels. The three series are the actual electrons
+    # curve, the 3-point Simpson fit through them, and the fitted sample wavelengths; the area
+    # error travels in the filename instead of on the figure. Tick numbers are kept.
+    reference_color, fit_color, sample_color = SERIES_COLORS_3
+    axes.plot(wavelength_nm, electrons_lambda, color=reference_color, linewidth=1.4)
+    axes.plot(wl_fine, electrons_fine, color=fit_color, linewidth=1.4)
+    axes.scatter(sample_wl, electrons_sample, color=sample_color, zorder=5, s=36)
+
+    axes.set_ylim(0, np.max(electrons_lambda) * 1.1)
+    axes.set_xlabel("Wavelength (nm)")
+    axes.set_ylabel("Electrons / nm")
+
+    # Always scientific on y, with a single shared power of ten above the axis and an x.y mantissa
+    # on every tick. Left to itself matplotlib switches styles with the magnitude -- plain 160000
+    # for one camera, an offset 1e6 for another -- so figures from different cameras could not be
+    # read against each other. powerlimits (0, 0) forces the scientific form at every scale.
+    formatter = ScalarFormatter(useMathText=True)
+    formatter.set_scientific(True)
+    formatter.set_powerlimits((0, 0))
+    axes.yaxis.set_major_formatter(formatter)
+    axes.yaxis.set_major_locator(MaxNLocator(nbins=5))
+
+    axes.spines["top"].set_visible(False)
+    for side in ("left", "bottom", "right"):
+        axes.spines[side].set_linewidth(0.6)
+        axes.spines[side].set_color("0.6")
 
     fit_wavelengths = np.array(result.x)
 
     # interpolate to get the qe values (in the loaded qe_file_path: wavelength_nm, qe) corresponding to the fit_wavelengths
     fit_qe = np.interp(fit_wavelengths, wavelength_nm, qe)
 
+    if output_path is not None:
+        # save_figure writes the canvas at its built size with no tight crop, so lay the labels out
+        # first or they fall outside it and are cut.
+        figure.tight_layout()
+        # The measured area error is stamped into the stem, since the figure no longer carries it.
+        # "0p00" not "0.00": a second dot in the stem makes LaTeX guess at the extension, and these
+        # go straight into the paper.
+        base = Path(output_path)
+        error_tag = f"{simpson_error:.2f}".replace(".", "p")
+        output_path = base.with_name(f"{base.stem}_err{error_tag}pct{base.suffix}")
+        plot_style.save_figure(figure, str(output_path))
+        if show_plots:
+            print(f"Saved QE fit figure -> {output_path}")
+
     if show_plots:
         plt.show()
         print(fit_wavelengths, fit_qe)
+    else:
+        # The figure used to be built unconditionally and never closed, leaking one per call.
+        plt.close(figure)
 
     return fit_wavelengths, fit_qe
 
@@ -313,6 +368,7 @@ def set_qe_curve_fit(
     solid_angle: float,
     pixel_area: float,
     wavelength_window: list | None = None,
+    figure_name: str | None = None,
 ) -> None:
     """
     Sets the wavelengths and QE values in the CielimMessage based on a QE curve fit from a CSV file.
@@ -323,9 +379,18 @@ def set_qe_curve_fit(
         solid_angle (float): Solid angle in steradians.
         pixel_area (float): Pixel area in square meters.
         wavelength_window (list, optional): Two-element list specifying the wavelength range to consider (in nm). Defaults to None (use full range).
+        figure_name (str, optional): Stem for the PDF written into docs/figures/. Defaults to the QE
+            file's own stem — pass an explicit name when two callers share a QE file but differ in
+            optics, or the second one silently overwrites the first's figure.
     """
+    figure_path = FIGURE_DIRECTORY / f"{figure_name or Path(qe_data_path).stem}.pdf"
     fit_wavelengths, fit_values = qe_curve_fit(
-        qe_data_path, solid_angle, pixel_area, wavelength_window=wavelength_window, show_plots=False
+        qe_data_path,
+        solid_angle,
+        pixel_area,
+        wavelength_window=wavelength_window,
+        show_plots=False,
+        output_path=str(figure_path),
     )
 
     message.renderParameters.wavelength1 = fit_wavelengths[0]
@@ -347,6 +412,20 @@ if __name__ == "__main__":
     # Parameters to modify
     solid_angle = np.pi * 0.005**2 / (0.16**2)  # steradians
     pixel_area = (0.022528 * 0.016896) / (4096 * 3072)  # m^2
-    qe_file_path = str(Path(__file__).resolve().parent.parent / "support-data/deimos-spice/qe-mod-5.csv")
+    # parents[2] is the cielim-python root; parent.parent resolved to cielim/, where there is no
+    # support-data, so this entry point could never find its input.
+    qe_file_path = str(Path(__file__).resolve().parents[2] / "support-data/deimos-spice/qe-mod-5.csv")
 
-    qe_curve_fit(qe_file_path, solid_angle, pixel_area, show_plots=True)
+    # Same window deimos_flyby.py uses for the F635 filter. Without it this entry point wrote a
+    # full-spectrum fit under the same qe_fit_deimos_f635 name the scenario uses for a 625-645 nm
+    # one -- two different figures answering to one name.
+    f635_window = [625, 645]
+
+    qe_curve_fit(
+        qe_file_path,
+        solid_angle,
+        pixel_area,
+        wavelength_window=f635_window,
+        show_plots=True,
+        output_path=str(FIGURE_DIRECTORY / "qe_fit_deimos_f635.pdf"),
+    )
