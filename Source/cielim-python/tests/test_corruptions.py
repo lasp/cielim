@@ -364,16 +364,19 @@ def test_showcase_sensor_effects(cielim_connection, default_scene):
     connector = cielim_connection
     scene = default_scene
 
-    scene.set_spacecraft_params(position=(0, 0, 100))  # fill the frame with the lit plane
-    scene.set_sensor_params(exposure=2e-5)  # low exposure -> mid-gray field so the effects read
-    scene.set_corruption_params(
-        read_noise=3000,
-        dc_rate=50,
-        dc_sigma=800,
-        stuck_px_rate=0.0005,
-        dead_px_rate=0.0005,
-        cosmic_rays=100,
-    )
+    position, exposure = (0, 0, 100), 2e-5
+    corruptions = {
+        "read_noise": 3000,
+        "dc_rate": 50,
+        "dc_sigma": 800,
+        "stuck_px_rate": 0.0005,
+        "dead_px_rate": 0.0005,
+        "cosmic_rays": 100,
+    }
+
+    scene.set_spacecraft_params(position=position)  # fill the frame with the lit plane
+    scene.set_sensor_params(exposure=exposure)  # low exposure -> mid-gray field so the effects read
+    scene.set_corruption_params(**corruptions)
 
     image = _render(connector, scene)
 
@@ -384,6 +387,11 @@ def test_showcase_sensor_effects(cielim_connection, default_scene):
     _show_scene(ax, image, title, title_width_in=ps.half_w)
     fig.tight_layout()
     ps.save_showcase(fig, "sensor_effects")
+    ps.save_context(
+        "sensor_effects",
+        {"target": "lit plane", "position_m": list(position), "exposure_s": exposure, **corruptions},
+        files=["sensor_effects.png"],
+    )
     plt.close(fig)
 
 
@@ -393,14 +401,15 @@ def test_showcase_lens_effects(cielim_connection, default_scene):
     ps.apply_showcase_style()
     connector = cielim_connection
     scene = default_scene
-    scene.set_spacecraft_params(position=(0, 0, 1000))  # closer -> distortion/blur are pronounced
+    position, dist_radial, psf_sigma = (0, 0, 1000), (0.5, 0.0, 0.0), 50
+    scene.set_spacecraft_params(position=position)  # closer -> distortion/blur are pronounced
 
     clean = _render(connector, scene)
 
-    scene.set_corruption_params(dist_radial=(0.5, 0.0, 0.0), dist_tangent=(0.0, 0.0))
+    scene.set_corruption_params(dist_radial=dist_radial, dist_tangent=(0.0, 0.0))
     distorted = _render(connector, scene)
 
-    scene.set_corruption_params(dist_radial=(0.0, 0.0, 0.0), dist_tangent=(0.0, 0.0), psf_sigma=50)
+    scene.set_corruption_params(dist_radial=(0.0, 0.0, 0.0), dist_tangent=(0.0, 0.0), psf_sigma=psf_sigma)
     blurred = _render(connector, scene)
 
     panel_w = ps.page_w / 3
@@ -411,4 +420,16 @@ def test_showcase_lens_effects(cielim_connection, default_scene):
     fig.suptitle("Lens models")
     fig.tight_layout()
     ps.save_showcase(fig, "lens_effects")
+    ps.save_context(
+        "lens_effects",
+        {
+            "target": "lit plane",
+            "position_m": list(position),
+            "panels": ["clean", "radial distortion", "gaussian psf"],
+            "dist_radial_k": list(dist_radial),
+            "dist_tangent_p": [0.0, 0.0],
+            "psf_sigma": psf_sigma,
+        },
+        files=["lens_effects.png"],
+    )
     plt.close(fig)
