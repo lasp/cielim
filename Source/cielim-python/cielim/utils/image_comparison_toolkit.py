@@ -1,19 +1,10 @@
 """Real-vs-generated image comparison plots.
 
 Per image pair we emit one **comparison row** — the real frame, the cielim frame and their
-difference **heatmap** as three separate files, so a document can lay them out as a single row of
-panels — plus an intensity **histogram**. Every file in the row is written :data:`PANEL_PX` pixels
-tall and tagged with a print size that makes the three of them span the text width together, so the
-row lines up and needs no scaling:
-
-.. code-block:: latex
-
-    \\begin{figure}
-      \\includegraphics{raw/real_00}\\hfill
-      \\includegraphics{raw/cielim_00}\\hfill
-      \\includegraphics{raw/heatmap_00}
-      \\caption{Real, cielim, and their signed difference (real - cielim).}
-    \\end{figure}
+difference **heatmap** as three separate files, named ``real_NN`` / ``cielim_NN`` / ``heatmap_NN``
+so a document can lay them out as a single row of panels — plus an intensity **histogram**. Every
+file in the row is written :data:`PANEL_PX` pixels tall and tagged with a print size that makes the
+three of them span the text width together, so the row lines up and needs no scaling when placed.
 
 Cross-correlation and background masking are preprocessing toggles, not
 figures: a batch is rendered in three variants so they can be compared side by side —
@@ -75,14 +66,8 @@ MIN_FRAME_HALF = 6
 
 MASK_DILATE = 2
 
-# --- comparison row geometry -------------------------------------------------------------------
-# Each pair is emitted as three files meant to sit in ONE row of a LaTeX figure:
-# real_NN | cielim_NN | heatmap_NN. Every one is written PANEL_PX pixels tall, so the row lines up
-# whichever way it is placed, and each is tagged with the print size that makes the three of them
-# span the text width at scale 1.0 (no \includegraphics scaling, so 12 pt stays 12 pt).
-#
-#   PAGE_W = 2 * ROW_PANEL_H  +  HEATMAP_ASPECT * ROW_PANEL_H
-#            \_ the two square image panels _/    \_ heatmap: square + its colorbar _/
+# Row geometry: PAGE_W = 2 * ROW_PANEL_H + HEATMAP_ASPECT * ROW_PANEL_H, the two square image
+# panels plus the heatmap and its colorbar, so the three span the text width at scale 1.0.
 PANEL_PX = 1024
 HEATMAP_ASPECT = 1.4  # heatmap width / height: 1 for the square image + 0.4 for the colorbar strip
 ROW_PANEL_H = ps.PAGE_W / (2 + HEATMAP_ASPECT)
@@ -510,13 +495,8 @@ def plot_diff_heatmap(img1, img2, title1="real", title2="cielim", mask=None):
     diff = img1.astype(float) - img2.astype(float)
     st = pixel_error_stats(img1, img2, mask)
 
-    # Third panel of a real | cielim | heatmap row: exactly as tall as the two image panels beside
-    # it, and wider only by its colorbar strip. The axes are placed explicitly rather than by
-    # tight_layout so the diff image spans the FULL figure height — with a margin above and below it
-    # the target would render smaller here than in the panels next to it and the row would not read
-    # across. The colorbar carries numeric ticks but no label: a rotated label needs more height
-    # than the row has, and what the numbers mean (the sign convention, title1 − title2) belongs in
-    # the figure's LaTeX caption.
+    # Axes placed explicitly, not by tight_layout: the diff must span the full figure height or the
+    # target renders smaller here than in the panels beside it and the row stops reading across.
     fig = plt.figure(figsize=(HEATMAP_ASPECT * ROW_PANEL_H, ROW_PANEL_H))
     img_frac = 1.0 / HEATMAP_ASPECT  # square image axes, full height
     ax = fig.add_axes((0.0, 0.0, img_frac, 1.0))
@@ -738,7 +718,6 @@ def generate_batch(
     if not full:
         return stats
 
-    # The panels are named for what they hold, so a LaTeX row reads real | cielim | heatmap.
     real_name = _slug(title_real)
     gen_name = _slug(title_generated)
 
