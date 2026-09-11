@@ -183,7 +183,7 @@ public:
         };
 
         if (const auto result
-            = vkCreateSwapchainKHR(context.get_device(), &swapchain_create_info, nullptr, this->swapchain_.put());
+            = vkCreateSwapchainKHR(this->vk_device_handle_, &swapchain_create_info, nullptr, this->swapchain_.put());
             result != VK_SUCCESS)
         {
             error::DetailedError error = {
@@ -197,7 +197,7 @@ public:
         // Get all of the images from the swapchain and map to our list of VkImages
 
         uint32_t image_count = 0;
-        vkGetSwapchainImagesKHR(context.get_device(), this->swapchain_.get(), &image_count, nullptr);
+        vkGetSwapchainImagesKHR(this->vk_device_handle_, this->swapchain_.get(), &image_count, nullptr);
 
         if (image_count > 0)
         {
@@ -206,7 +206,7 @@ public:
         }
 
         if (const auto result = vkGetSwapchainImagesKHR(
-                context.get_device(), this->swapchain_.get(), &image_count, this->swapchain_images_.data()
+                this->vk_device_handle_, this->swapchain_.get(), &image_count, this->swapchain_images_.data()
             );
             result != VK_SUCCESS)
         {
@@ -232,7 +232,7 @@ public:
             view_create_info.image = image;
 
             if (const auto result
-                = vkCreateImageView(context.get_device(), &view_create_info, nullptr, &this->swapchain_views_[i]);
+                = vkCreateImageView(this->vk_device_handle_, &view_create_info, nullptr, &this->swapchain_views_[i]);
                 result != VK_SUCCESS)
             {
                 error::DetailedError error = {
@@ -244,6 +244,29 @@ public:
             }
 
             i++;
+        }
+
+        // Create render finished semaphores
+
+        constexpr VkSemaphoreCreateInfo BINARY_SEMAPHORE_INFO = {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        };
+
+        this->image_finished_semaphores_.resize(this->swapchain_images_.size());
+
+        for (auto& semaphore : this->image_finished_semaphores_)
+        {
+            if (const auto result
+                = vkCreateSemaphore(this->vk_device_handle_, &BINARY_SEMAPHORE_INFO, nullptr, &semaphore);
+                result != VK_SUCCESS)
+            {
+                error::DetailedError error = {
+                    .errc = make_error_code(error::VkResourcesError::SemaphoreCreateError),
+                    .detail = std::string("image finished semaphore: ") + string_VkResult(result),
+                };
+
+                return Err(error);
+            }
         }
 
         return {};
@@ -274,10 +297,12 @@ public:
     [[nodiscard]] auto get_handle() const -> VkSwapchainKHR { return this->swapchain_.get(); }
     [[nodiscard]] auto get_extent() const -> VkExtent2D { return this->extent_; }
     [[nodiscard]] auto get_num_images() const -> uint32_t { return this->swapchain_images_.size(); }
-    [[nodiscard]] auto get_image(const uint32_t index) const -> VkImage { return this->swapchain_images_[index]; }
-    [[nodiscard]] auto get_view(const uint32_t index) const -> VkImageView { return this->swapchain_views_[index]; }
+    [[nodiscard]] auto get_image(const uint32_t index) const -> VkImage { return this->swapchain_images_.at(index); }
+    [[nodiscard]] auto get_view(const uint32_t index) const -> VkImageView { return this->swapchain_views_.at(index); }
     [[nodiscard]] auto get_format() const -> VkFormat { return this->format_; }
     [[nodiscard]] auto get_color_space() const -> VkColorSpaceKHR { return this->color_space_; }
+    [[nodiscard]] auto get_semaphore(const uint32_t index) const -> VkSemaphore
+    { return this->image_finished_semaphores_.at(index); }
 
 private:
     auto cleanup() -> void
@@ -285,7 +310,7 @@ private:
         for (const auto& view : this->swapchain_views_)
         {
             if (view != nullptr)
-                vkDestroyImageView(vk_device_handle_, view, nullptr);
+                vkDestroyImageView(this->vk_device_handle_, view, nullptr);
         }
 
         this->swapchain_views_.clear();
@@ -293,9 +318,17 @@ private:
 
         if (this->swapchain_)
         {
-            vkDestroySwapchainKHR(vk_device_handle_, this->swapchain_.get(), nullptr);
+            vkDestroySwapchainKHR(this->vk_device_handle_, this->swapchain_.get(), nullptr);
             this->swapchain_.reset();
         }
+
+        for (const auto& semaphore : image_finished_semaphores_)
+        {
+            if (semaphore != nullptr)
+                vkDestroySemaphore(this->vk_device_handle_, semaphore, nullptr);
+        }
+
+        image_finished_semaphores_.clear();
     }
 
     // Non-owning handle for the Vulkan logical device
@@ -315,6 +348,9 @@ private:
 
     VkFormat format_ = VK_FORMAT_MAX_ENUM;
     VkColorSpaceKHR color_space_ = VK_COLOR_SPACE_MAX_ENUM_KHR;
+
+    // List of semaphores used to signal when a swapchain image has finished rendering and can be presented
+    std::vector<VkSemaphore> image_finished_semaphores_;
 };
 
 } // namespace cielim::vk::swapchain

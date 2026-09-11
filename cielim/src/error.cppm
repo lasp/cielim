@@ -241,6 +241,34 @@ struct ErrorType<VkPipelineError>
     }
 };
 
+enum class VkResourcesError : std::uint8_t
+{
+    CommandPoolCreateError,
+    CommandBufferCreateError,
+    SemaphoreCreateError,
+};
+
+template <>
+struct ErrorType<VkResourcesError>
+{
+    static constexpr bool IS_ERROR = true;
+    static constexpr std::string_view CATEGORY_NAME = "VkResourcesError";
+
+    static auto message(const VkResourcesError error) -> std::string_view
+    {
+        using enum VkResourcesError;
+
+        switch (error)
+        {
+        case CommandPoolCreateError: return "Failed to create command pool";
+        case CommandBufferCreateError: return "Failed to create command buffer";
+        case SemaphoreCreateError: return "Failed to create semaphore";
+        }
+
+        return "Unknown Vulkan resource error";
+    }
+};
+
 } // namespace cielim::error
 
 // Register custom error types with standard library
@@ -263,5 +291,9 @@ struct std::is_error_code_enum<cielim::error::VkShaderModuleError> : std::true_t
 };
 template <>
 struct std::is_error_code_enum<cielim::error::VkPipelineError> : std::true_type
+{
+};
+template <>
+struct std::is_error_code_enum<cielim::error::VkResourcesError> : std::true_type
 {
 };

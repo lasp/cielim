@@ -24,35 +24,13 @@ import cielim.vk;
 import cielim.window;
 
 static cielim::vk::Context& vk_context = cielim::vk::Context::get_context();
-static std::vector<VkCommandPool> command_pools;
-static std::vector<VkCommandBuffer> command_buffers;
 static VkSemaphore timeline_semaphore = VK_NULL_HANDLE;
-static std::vector<VkSemaphore> acquire_semaphores;
-static std::vector<VkSemaphore> render_finished_semaphores;
 
 // Clean up Vulkan resources
 static auto clean() -> void
 {
-    for (const auto& semaphore : render_finished_semaphores)
-    {
-        if (semaphore != VK_NULL_HANDLE)
-            vkDestroySemaphore(vk_context.get_device(), semaphore, nullptr);
-    }
-
-    for (const auto& semaphore : acquire_semaphores)
-    {
-        if (semaphore != VK_NULL_HANDLE)
-            vkDestroySemaphore(vk_context.get_device(), semaphore, nullptr);
-    }
-
     if (timeline_semaphore != VK_NULL_HANDLE)
         vkDestroySemaphore(vk_context.get_device(), timeline_semaphore, nullptr);
-
-    for (const auto& pool : command_pools)
-    {
-        if (pool != VK_NULL_HANDLE)
-            vkDestroyCommandPool(vk_context.get_device(), pool, nullptr);
-    }
 }
 
 static auto fatal_error(const cielim::window::Window* window, const std::string& message) -> void
@@ -160,45 +138,16 @@ auto main(int argc, char* argv[]) -> int
         return EXIT_FAILURE;
     }
 
-    constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
+    cielim::vk::FrameResources frame_resources;
 
-    command_pools.resize(MAX_FRAMES_IN_FLIGHT);
-    command_buffers.resize(MAX_FRAMES_IN_FLIGHT);
-
-    for (uint32_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+    if (const auto result = frame_resources.init(vk_context, false); !result.has_value())
     {
-        VkCommandPoolCreateInfo command_pool_create_info = {
-            .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-            .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-            .queueFamilyIndex = vk_context.get_queue(),
-        };
-
-        vk_result = vkCreateCommandPool(vk_context.get_device(), &command_pool_create_info, nullptr, &command_pools[i]);
-
-        if (vk_result != VK_SUCCESS)
-        {
-            fatal_error(&window, fmt::format("Command pool could not be created: {}", string_VkResult(vk_result)));
-            clean();
-            return EXIT_FAILURE;
-        }
-
-        VkCommandBufferAllocateInfo command_buffer_allocate_info = {
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-            .commandPool = command_pools[i],
-            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-            .commandBufferCount = 1,
-        };
-
-        vk_result
-            = vkAllocateCommandBuffers(vk_context.get_device(), &command_buffer_allocate_info, &command_buffers[i]);
-
-        if (vk_result != VK_SUCCESS)
-        {
-            fatal_error(&window, fmt::format("Command buffer could not be allocated: {}", string_VkResult(vk_result)));
-            clean();
-            return EXIT_FAILURE;
-        }
+        fatal_error(&window, result.error().message());
+        clean();
+        return EXIT_FAILURE;
     }
+
+    uint32_t frames_in_flight = frame_resources.get_frames_in_flight();
 
     VkSemaphoreTypeCreateInfo timeline_semaphore_type_info = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
@@ -211,46 +160,17 @@ auto main(int argc, char* argv[]) -> int
         .pNext = &timeline_semaphore_type_info,
     };
 
-    vkCreateSemaphore(vk_context.get_device(), &timeline_semaphore_info, nullptr, &timeline_semaphore);
+    vk_result = vkCreateSemaphore(vk_context.get_device(), &timeline_semaphore_info, nullptr, &timeline_semaphore);
 
-    VkSemaphoreCreateInfo binary_semaphore_info = {
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-    };
-
-    acquire_semaphores.resize(MAX_FRAMES_IN_FLIGHT);
-
-    for (auto& semaphore : acquire_semaphores)
+    if (vk_result != VK_SUCCESS)
     {
-        vk_result = vkCreateSemaphore(
-            vk_context.get_device(), &binary_semaphore_info, nullptr, &semaphore
-        ); // One per frame-in-flight
-
-        if (vk_result != VK_SUCCESS)
-        {
-            fatal_error(&window, fmt::format("Binary semaphore failed to be created: {}", string_VkResult(vk_result)));
-            clean();
-            return EXIT_FAILURE;
-        }
-    }
-
-    render_finished_semaphores.resize(swapchain.get_num_images());
-
-    for (auto& semaphore : render_finished_semaphores)
-    {
-        vk_result = vkCreateSemaphore(
-            vk_context.get_device(), &binary_semaphore_info, nullptr, &semaphore
-        ); // One per swapchain image
-
-        if (vk_result != VK_SUCCESS)
-        {
-            fatal_error(&window, fmt::format("Binary semaphore failed to be created: {}", string_VkResult(vk_result)));
-            clean();
-            return EXIT_FAILURE;
-        }
+        fatal_error(&window, fmt::format("Failed to create timeline semaphore: {}", string_VkResult(vk_result)));
+        clean();
+        return EXIT_FAILURE;
     }
 
     VkQueue graphics_queue;
-    vkGetDeviceQueue(vk_context.get_device(), vk_context.get_queue(), 0, &graphics_queue);
+    vkGetDeviceQueue(vk_context.get_device(), vk_context.get_queue_family(), 0, &graphics_queue);
 
     uint64_t frame_counter = 0;
 
@@ -273,30 +193,6 @@ auto main(int argc, char* argv[]) -> int
                     clean();
                     return EXIT_FAILURE;
                 }
-
-                // Per-image semaphores need to be recreated as the number of swapchain images may have changed
-
-                for (const auto& semaphore : render_finished_semaphores)
-                {
-                    if (semaphore != nullptr)
-                        vkDestroySemaphore(vk_context.get_device(), semaphore, nullptr);
-                }
-
-                render_finished_semaphores.assign(swapchain.get_num_images(), nullptr);
-
-                for (auto& semaphore : render_finished_semaphores)
-                {
-                    vk_result = vkCreateSemaphore(vk_context.get_device(), &binary_semaphore_info, nullptr, &semaphore);
-
-                    if (vk_result != VK_SUCCESS)
-                    {
-                        fatal_error(
-                            &window, fmt::format("Failed to create binary semaphore: {}", string_VkResult(vk_result))
-                        );
-                        clean();
-                        return EXIT_FAILURE;
-                    }
-                }
                 break;
 
             default: break;
@@ -313,11 +209,11 @@ auto main(int argc, char* argv[]) -> int
 
         frame_counter++;
 
-        const uint32_t frame_index = (frame_counter - 1) % MAX_FRAMES_IN_FLIGHT;
+        const uint32_t frame_index = (frame_counter - 1) % frames_in_flight;
 
-        if (frame_counter > MAX_FRAMES_IN_FLIGHT)
+        if (frame_counter > frames_in_flight)
         {
-            uint64_t wait_value = frame_counter - MAX_FRAMES_IN_FLIGHT;
+            uint64_t wait_value = frame_counter - frames_in_flight;
 
             VkSemaphoreWaitInfo wait_info = {
                 .sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
@@ -340,13 +236,10 @@ auto main(int argc, char* argv[]) -> int
 
         uint32_t image_index;
 
+        auto image_acquire_semaphore = frame_resources.get_semaphore(frame_index);
+
         vk_result = vkAcquireNextImageKHR(
-            vk_context.get_device(),
-            swapchain.get_handle(),
-            UINT64_MAX,
-            acquire_semaphores[frame_index],
-            nullptr,
-            &image_index
+            vk_context.get_device(), swapchain.get_handle(), UINT64_MAX, image_acquire_semaphore, nullptr, &image_index
         );
 
         if (vk_result == VK_ERROR_OUT_OF_DATE_KHR)
@@ -363,7 +256,12 @@ auto main(int argc, char* argv[]) -> int
             return EXIT_FAILURE;
         }
 
-        vk_result = vkResetCommandPool(vk_context.get_device(), command_pools[frame_index], 0);
+        auto render_finished_semaphore = swapchain.get_semaphore(image_index);
+
+        auto command_pool = frame_resources.get_command_pool(frame_index);
+        auto command_buffer = frame_resources.get_command_buffer(frame_index);
+
+        vk_result = vkResetCommandPool(vk_context.get_device(), command_pool, 0);
 
         if (vk_result != VK_SUCCESS)
         {
@@ -376,7 +274,7 @@ auto main(int argc, char* argv[]) -> int
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         };
 
-        vk_result = vkBeginCommandBuffer(command_buffers[frame_index], &begin_info);
+        vk_result = vkBeginCommandBuffer(command_buffer, &begin_info);
 
         if (vk_result != VK_SUCCESS)
         {
@@ -414,7 +312,7 @@ auto main(int argc, char* argv[]) -> int
             .pImageMemoryBarriers = &barrier,
         };
 
-        vkCmdPipelineBarrier2(command_buffers[frame_index], &dependency_info);
+        vkCmdPipelineBarrier2(command_buffer, &dependency_info);
 
         VkClearValue clear_color = {{0.12f, 0.12f, 0.12f, 1.0f}};
 
@@ -437,9 +335,9 @@ auto main(int argc, char* argv[]) -> int
             .pColorAttachments = &rendering_attachment_info,
         };
 
-        vkCmdBeginRendering(command_buffers[frame_index], &rendering_info);
+        vkCmdBeginRendering(command_buffer, &rendering_info);
 
-        vkCmdBindPipeline(command_buffers[frame_index], VK_PIPELINE_BIND_POINT_GRAPHICS, render_pipeline.get_handle());
+        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_pipeline.get_handle());
 
         VkViewport viewport = {
             .x = 0.0f,
@@ -455,12 +353,12 @@ auto main(int argc, char* argv[]) -> int
             .extent = req_extent,
         };
 
-        vkCmdSetViewport(command_buffers[frame_index], 0, 1, &viewport);
-        vkCmdSetScissor(command_buffers[frame_index], 0, 1, &scissor);
+        vkCmdSetViewport(command_buffer, 0, 1, &viewport);
+        vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
-        vkCmdDraw(command_buffers[frame_index], 3, 1, 0, 0);
+        vkCmdDraw(command_buffer, 3, 1, 0, 0);
 
-        vkCmdEndRendering(command_buffers[frame_index]);
+        vkCmdEndRendering(command_buffer);
 
         barrier = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
@@ -489,9 +387,9 @@ auto main(int argc, char* argv[]) -> int
             .pImageMemoryBarriers = &barrier,
         };
 
-        vkCmdPipelineBarrier2(command_buffers[frame_index], &dependency_info);
+        vkCmdPipelineBarrier2(command_buffer, &dependency_info);
 
-        vk_result = vkEndCommandBuffer(command_buffers[frame_index]);
+        vk_result = vkEndCommandBuffer(command_buffer);
 
         if (vk_result != VK_SUCCESS)
         {
@@ -502,18 +400,18 @@ auto main(int argc, char* argv[]) -> int
 
         VkCommandBufferSubmitInfo buffer_submit_info = {
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
-            .commandBuffer = command_buffers[frame_index],
+            .commandBuffer = command_buffer,
         };
 
         VkSemaphoreSubmitInfo wait_binary_info = {
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-            .semaphore = acquire_semaphores[frame_index],
+            .semaphore = image_acquire_semaphore,
             .stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
         };
 
         VkSemaphoreSubmitInfo signal_binary_info = {
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-            .semaphore = render_finished_semaphores[image_index],
+            .semaphore = render_finished_semaphore,
             .stageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
         };
 
@@ -551,7 +449,7 @@ auto main(int argc, char* argv[]) -> int
         VkPresentInfoKHR present_info = {
             .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
             .waitSemaphoreCount = 1,
-            .pWaitSemaphores = &render_finished_semaphores[image_index],
+            .pWaitSemaphores = &render_finished_semaphore,
             .swapchainCount = 1,
             .pSwapchains = &swapchain_handle,
             .pImageIndices = &image_index,

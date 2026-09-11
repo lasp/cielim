@@ -135,7 +135,7 @@ public:
     [[nodiscard]] auto get_instance() const -> VkInstance { return this->instance_.get(); }
     [[nodiscard]] auto get_surface() const -> VkSurfaceKHR { return this->surface_.get(); }
     [[nodiscard]] auto get_physical_device() const -> VkPhysicalDevice { return this->physical_device_.get(); }
-    [[nodiscard]] auto get_queue() const -> uint32_t { return this->queue_index_; }
+    [[nodiscard]] auto get_queue_family() const -> uint32_t { return this->queue_family_index_; }
     [[nodiscard]] auto get_device() const -> VkDevice { return this->device_.get(); }
 
 private:
@@ -469,7 +469,7 @@ private:
         utils::log::info("Device heap total: {:.2f} GB", static_cast<float>(dev_local_bytes) / BYTES_IN_GB);
 
         this->physical_device_ = UniqueHandle(physical_device);
-        this->queue_index_ = graphics_queue_family;
+        this->queue_family_index_ = graphics_queue_family;
 
         return {};
     }
@@ -574,7 +574,7 @@ private:
         float queue_priority = 1.0f;
         const VkDeviceQueueCreateInfo queue_info = {
             .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-            .queueFamilyIndex = this->queue_index_,
+            .queueFamilyIndex = this->queue_family_index_,
             .queueCount = 1,
             .pQueuePriorities = &queue_priority,
         };
@@ -621,7 +621,7 @@ private:
     UniqueHandle<VkPhysicalDevice> physical_device_;
 
     // The index for the queue family to use for rendering.
-    uint32_t queue_index_ = 0;
+    uint32_t queue_family_index_ = 0;
 
     // Vulkan logical device, corresponds to device driver instance
     UniqueHandle<VkDevice> device_;
