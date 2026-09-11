@@ -228,9 +228,7 @@ def speed_test_scenario(
     elements.argument_periapsis = 0.0
 
     elements.true_anomaly = np.pi
-    apoapse_position, apoapse_velocity = orbital_motion.orbital_elements_to_cartesian(
-        gravitational_parameter, elements
-    )
+    apoapse_position, apoapse_velocity = orbital_motion.orbital_elements_to_cartesian(gravitational_parameter, elements)
     orbit_normal = np.cross(apoapse_position, apoapse_velocity)
     orbit_normal /= np.linalg.norm(orbit_normal)
     radial = apoapse_position / np.linalg.norm(apoapse_position)
@@ -364,7 +362,7 @@ if __name__ == "__main__":
         mesh_radius=262.7 * 1e3,
         albedo=0.432,
     )
-    scene.gravitational_parameter = 1.728 * 10 ** 10
+    scene.gravitational_parameter = 1.728 * 10**10
     scene.target_name = "vesta"
 
     scene.set_lens_params(fov=(5 * np.pi / 180, 5 * np.pi / 180))
@@ -377,4 +375,3 @@ if __name__ == "__main__":
         apoapse_angular_radius=0.57,
         phase_angle=130.0,
     )
-

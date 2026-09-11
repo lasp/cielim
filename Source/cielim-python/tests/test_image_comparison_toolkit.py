@@ -72,9 +72,7 @@ def test_pixel_error_uniform_offset(circle_image):
 
     np.testing.assert_allclose(
         [stats["mean_error"], stats["mae"], stats["std_error"]],
-        [offset * disk_fraction,
-         offset * disk_fraction,
-         offset * np.sqrt(disk_fraction * (1 - disk_fraction))],
+        [offset * disk_fraction, offset * disk_fraction, offset * np.sqrt(disk_fraction * (1 - disk_fraction))],
         rtol=1e-12,
         atol=0,
         err_msg="Pixel error statistics do not match the injected offset",

@@ -326,7 +326,9 @@ def frame_pair(real, generated, mask=False):
 
     cx0, cy0 = (rcx + gcx) // 2, (rcy + gcy) // 2
     marks = [(rcx, rcy), (gcx, gcy)]
-    reach = max([max(rbw, rbh, gbw, gbh)] + [2 * abs(mx - cx0) for mx, my in marks] + [2 * abs(my - cy0) for mx, my in marks])
+    reach = max(
+        [max(rbw, rbh, gbw, gbh)] + [2 * abs(mx - cx0) for mx, my in marks] + [2 * abs(my - cy0) for mx, my in marks]
+    )
     x1, x2, y1, y2 = _frame_box(real, cx0, cy0, reach)
     return real[y1:y2, x1:x2], generated[y1:y2, x1:x2]
 
@@ -363,7 +365,7 @@ def locate_peak(img, center, search=15, blur=1.0):
 
 def _aperture_sum(img, cx, cy, r):
     """(summed, peak) intensity in a ±r px box around (cx, cy)."""
-    sub = img[max(cy - r, 0):cy + r + 1, max(cx - r, 0):cx + r + 1].astype(float)
+    sub = img[max(cy - r, 0) : cy + r + 1, max(cx - r, 0) : cx + r + 1].astype(float)
     return float(sub.sum()), float(sub.max())
 
 
@@ -390,8 +392,16 @@ def project_to_pixel(position, world_to_cam, fov, resolution, flip_x=False, flip
 
 
 def plot_point_source_pair(
-    real, generated, real_anchor, gen_anchor=None, predicted_xy=None,
-    search=15, zoom=25, aperture=6, title_real="real", title_generated="cielim",
+    real,
+    generated,
+    real_anchor,
+    gen_anchor=None,
+    predicted_xy=None,
+    search=15,
+    zoom=25,
+    aperture=6,
+    title_real="real",
+    title_generated="cielim",
 ):
     """Zoomed real-vs-generated comparison of a compact bright object near a known position.
 
@@ -439,8 +449,14 @@ def plot_point_source_pair(
         ax.set_xlabel("x (px)")
         ax.set_ylabel("y (px)")
     fig.tight_layout()
-    info = {"real_xy": (rx, ry), "gen_xy": (gx, gy), "offset": (gx - rx, gy - ry),
-            "predicted": pred, "real_flux": fluxes[0], "gen_flux": fluxes[1]}
+    info = {
+        "real_xy": (rx, ry),
+        "gen_xy": (gx, gy),
+        "offset": (gx - rx, gy - ry),
+        "predicted": pred,
+        "real_flux": fluxes[0],
+        "gen_flux": fluxes[1],
+    }
     return fig, info
 
 
@@ -503,9 +519,18 @@ def plot_diff_heatmap(img1, img2, title1="real", title2="cielim", mask=None):
     im = ax.imshow(diff, cmap=diff_cmap, vmin=-128, vmax=128)  # aspect stays equal: never distorted
     ax.axis("off")
     # Inside the image: the axes fill the canvas, so there is no margin to caption.
-    ax.text(0.02, 0.98, f"μ = {st['mean_error']:+.1f} DN\nσ = {st['std_error']:.1f} DN",
-            transform=ax.transAxes, ha="left", va="top", color="white", fontsize=ps.body_pt,
-            linespacing=1.3, bbox=dict(facecolor="black", edgecolor="none", alpha=0.55, pad=2.5))
+    ax.text(
+        0.02,
+        0.98,
+        f"μ = {st['mean_error']:+.1f} DN\nσ = {st['std_error']:.1f} DN",
+        transform=ax.transAxes,
+        ha="left",
+        va="top",
+        color="white",
+        fontsize=ps.body_pt,
+        linespacing=1.3,
+        bbox=dict(facecolor="black", edgecolor="none", alpha=0.55, pad=2.5),
+    )
     cax = fig.add_axes((img_frac + 0.03, 0.04, 0.035, 0.92))
     fig.colorbar(im, cax=cax)
     return fig
@@ -543,17 +568,23 @@ def _error_moments(real, gen, mask=None):
     g = gen.astype(float)
     r, g = (r[mask], g[mask]) if mask is not None else (r.ravel(), g.ravel())
     err = r - g
-    return {"n": int(err.size), "sum_r": float(r.sum()), "sum_g": float(g.sum()),
-            "sum_e": float(err.sum()), "sum_e2": float(np.square(err).sum()),
-            "sum_abs_e": float(np.abs(err).sum())}
+    return {
+        "n": int(err.size),
+        "sum_r": float(r.sum()),
+        "sum_g": float(g.sum()),
+        "sum_e": float(err.sum()),
+        "sum_e2": float(np.square(err).sum()),
+        "sum_abs_e": float(np.abs(err).sum()),
+    }
 
 
 def _stats_from_moments(moments):
     """Turn a list of per-frame :func:`_error_moments` into the reported statistics."""
     n = sum(m["n"] for m in moments)
     if n == 0:
-        return {k: 0.0 for k in ("real_mean", "gen_mean", "mean_error", "std_error", "mae", "rmse",
-                                 "frame_mean_std")} | {"frames": len(moments), "pixels": 0}
+        return {
+            k: 0.0 for k in ("real_mean", "gen_mean", "mean_error", "std_error", "mae", "rmse", "frame_mean_std")
+        } | {"frames": len(moments), "pixels": 0}
     mean_e = sum(m["sum_e"] for m in moments) / n
     mean_e2 = sum(m["sum_e2"] for m in moments) / n
     frame_means = [m["sum_e"] / m["n"] for m in moments if m["n"]]
@@ -599,18 +630,26 @@ def batch_pixel_error(pairs, masks=None):
 
 
 # Columns of the per-mode error CSVs; every one after the first is a key of the stats dict.
-frame_error_csv_columns = ("frame", "pixels", "real_mean", "gen_mean", "mean_error",
-                           "std_error", "mae", "rmse")
-batch_error_csv_columns = ("batch", "frames", "pixels", "real_mean", "gen_mean", "mean_error",
-                           "std_error", "mae", "rmse", "frame_mean_std")
+frame_error_csv_columns = ("frame", "pixels", "real_mean", "gen_mean", "mean_error", "std_error", "mae", "rmse")
+batch_error_csv_columns = (
+    "batch",
+    "frames",
+    "pixels",
+    "real_mean",
+    "gen_mean",
+    "mean_error",
+    "std_error",
+    "mae",
+    "rmse",
+    "frame_mean_std",
+)
 
 
 def _error_csv(columns, rows):
     """CSV text for ``rows`` of ``(label, stats)``, one column per name in ``columns``."""
     out = [",".join(columns)]
     for label, st in rows:
-        values = [label] + [f"{st[c]:.4f}" if isinstance(st[c], float) else str(st[c])
-                            for c in columns[1:]]
+        values = [label] + [f"{st[c]:.4f}" if isinstance(st[c], float) else str(st[c]) for c in columns[1:]]
         out.append(",".join(values))
     return "\n".join(out) + "\n"
 
@@ -630,8 +669,9 @@ def format_error_stats(stats, title_real="real", title_generated="cielim"):
     return "\n".join(lines)
 
 
-def plot_average_histogram(cropped_pairs, title1="real", title2="cielim", bins=256, drop_zero_bin=False,
-                           error_stats=None):
+def plot_average_histogram(
+    cropped_pairs, title1="real", title2="cielim", bins=256, drop_zero_bin=False, error_stats=None
+):
     """Average intensity histogram across a batch of (real, generated) grayscale pairs.
 
     Pairs are expected already aligned/masked (see :func:`generate_batch`). Each frame's histogram is
@@ -662,8 +702,15 @@ def plot_average_histogram(cropped_pairs, title1="real", title2="cielim", bins=2
     ax.plot(centers, gm, color=c2, label=title2)
     ax.fill_between(centers, np.clip(gm - gs, 0, None), gm + gs, color=c2, alpha=0.2)
     if error_stats is not None:
-        ax.plot([], [], " ", label=(f"error ({title1} − {title2}) {error_stats['mean_error']:+.1f} ± "
-                                   f"{error_stats['std_error']:.1f} DN, {error_stats['frames']} frames"))
+        ax.plot(
+            [],
+            [],
+            " ",
+            label=(
+                f"error ({title1} − {title2}) {error_stats['mean_error']:+.1f} ± "
+                f"{error_stats['std_error']:.1f} DN, {error_stats['frames']} frames"
+            ),
+        )
 
     ax.set_yscale("log")
     ax.set_xlim(0, 255)
@@ -755,8 +802,7 @@ def generate_batch(
             plt.close(fig)
 
         (mode_dir / "pixel_error_frames.csv").write_text(
-            _error_csv(frame_error_csv_columns,
-                       [(f"{i:02d}", _stats_from_moments([m])) for i, m in enumerate(moments)])
+            _error_csv(frame_error_csv_columns, [(f"{i:02d}", _stats_from_moments([m])) for i, m in enumerate(moments)])
         )
 
         exclude = set(average_exclude or ())
@@ -767,8 +813,9 @@ def generate_batch(
             if not keep:
                 return
             batch = _stats_from_moments([moments[i] for i in keep])
-            fig = plot_average_histogram([cropped[i] for i in keep], title_real, title_generated,
-                                         drop_zero_bin=cfg["mask"], error_stats=batch)
+            fig = plot_average_histogram(
+                [cropped[i] for i in keep], title_real, title_generated, drop_zero_bin=cfg["mask"], error_stats=batch
+            )
             ps.save_figure(fig, mode_dir / f"histogram_average{suffix}.png")
             plt.close(fig)
             mode_stats[label] = batch

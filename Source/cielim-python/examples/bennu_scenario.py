@@ -109,6 +109,7 @@ def _fits_exposure(filename: str) -> float:
     """Exposure time (s) from the frame's EXPOSEC header card."""
     return fits.open(filename)[0].header.cards["EXPOSEC"][1]
 
+
 def _poly_ccd_temp(filename: str) -> float:
     return fits.open(filename)[0].header.cards["PCCCDTMP"][1]
 
@@ -222,9 +223,9 @@ def scene_setup() -> cielim.Scene:
     )
 
     ccd_temp_c = -10.0
-    dark_current_e_s = dark_signal_rate_dn_s(ccd_temp_c) / 4.5 # DN/s -> e-/s, same 4.5 DN/e- gain as well_capacity
+    dark_current_e_s = dark_signal_rate_dn_s(ccd_temp_c) / 4.5  # DN/s -> e-/s, same 4.5 DN/e- gain as well_capacity
 
-    scene.set_corruption_params(read_noise=1 , dc_rate=dark_current_e_s , dc_sigma=0.1  , psf_sigma=0.9, shot_noise=False )
+    scene.set_corruption_params(read_noise=1, dc_rate=dark_current_e_s, dc_sigma=0.1, psf_sigma=0.9, shot_noise=False)
 
     scene.set_celestial_body_params(0, position=(0, 0, -10000))  # Sets the position of the sun
 
@@ -259,13 +260,20 @@ def compare_distant_objects(tol_s: float = 60.0):
         if dt > tol_s:
             continue
         hdr = fits.open(str(p))[0].header
-        truth = (hdr.cards["CRPIX1"][1] + hdr.cards["BENNUNX1"][1],   # measured/nav centroid (real)
-                 hdr.cards["CRPIX2"][1] + hdr.cards["BENNUNX2"][1])
-        predicted = _predicted_pixel(p)                               # SPICE projection (where cielim places it)
+        truth = (
+            hdr.cards["CRPIX1"][1] + hdr.cards["BENNUNX1"][1],  # measured/nav centroid (real)
+            hdr.cards["CRPIX2"][1] + hdr.cards["BENNUNX2"][1],
+        )
+        predicted = _predicted_pixel(p)  # SPICE projection (where cielim places it)
         fig, info = image_comparison.plot_point_source_pair(
-            _real_gray_minmax(p), image_comparison.load_grayscale(gp),
-            real_anchor=truth, gen_anchor=predicted, predicted_xy=predicted, search=25,
-            title_real="real", title_generated="cielim",
+            _real_gray_minmax(p),
+            image_comparison.load_grayscale(gp),
+            real_anchor=truth,
+            gen_anchor=predicted,
+            predicted_xy=predicted,
+            search=25,
+            title_real="real",
+            title_generated="cielim",
         )
         dx, dy = info["offset"]
         ps.save_figure(fig, distant_dir / f"distant_{_stamp(et)}_dx{dx:+d}_dy{dy:+d}.png")
@@ -368,7 +376,7 @@ def bennu_scenario(number_of_images: int | None = None):
         scene.set_sensor_params(exposure=exposure_time_list[idx])
         print(f"exposure time: {scene.get_scene().camera.sensorModel.exposureTime:.4f} sec")
 
-        scene.set_corruption_params(dc_rate=dark_signal_rate_dn_s(ccd_temps[idx])/4.5)
+        scene.set_corruption_params(dc_rate=dark_signal_rate_dn_s(ccd_temps[idx]) / 4.5)
 
         connector.send_frame(scene.get_scene())
 
@@ -392,8 +400,13 @@ def bennu_scenario(number_of_images: int | None = None):
     launcher.terminate()
 
     n, stats = image_comparison.compare_saved(
-        out_dir, _gen_time, _real_entries(), _real_gray_of, str(showcase_dir),
-        title_real="real", title_generated="cielim",
+        out_dir,
+        _gen_time,
+        _real_entries(),
+        _real_gray_of,
+        str(showcase_dir),
+        title_real="real",
+        title_generated="cielim",
         average_exclude={0},  # drop image 0 from the average (its individual plots are kept)
     )
     print(f"Saved real-vs-generated batch comparison ({n} pairs) -> {showcase_dir}")
