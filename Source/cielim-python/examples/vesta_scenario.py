@@ -50,6 +50,26 @@ excluded_stamps = frozenset({"20110718T204002", "20110718T223402"})
 # flat blob on both sides. Set exposure_max_ms = None to add them back.
 exposure_max_ms = 100
 
+albedo = 0.423  # published geometric albedo, both modes
+
+# One run renders and compares one mode. The close frames resolve a disk and take a Regolith BRDF;
+# the distant approach frames are a few pixels across and take a Lambertian one. `keep` decides both
+# which frames the run renders and which ones it compares, so the two can never disagree.
+render_modes = {
+    "close": {
+        "brdf": "Regolith",
+        "out": showcase_dir,
+        "keep": lambda s: s not in distant_stamps and s not in excluded_stamps,
+        "batches": [("20110717", range(0, 2)), ("20110723", range(2, 6))],
+    },
+    "distant": {
+        "brdf": "Lambertian",
+        "out": distant_dir,
+        "keep": lambda s: s in distant_stamps,
+        "batches": None,
+    },
+}
+
 
 def _sorted_fits():
     return [p for p in sorted(fits_dir.iterdir()) if p.is_file() and p.suffix.lower() == ".fit"]
@@ -220,7 +240,7 @@ def dark_current_rate_e_s(temp_k: float) -> float:
     return dn_rate * vesta_gain_e_per_dn
 
 
-def scene_setup() -> cielim.Scene:
+def scene_setup(mode: str = "close") -> cielim.Scene:
     scene = cielim.Scene()
 
     scene.set_spacecraft_params(name="dawn", position=(0, 0, -1000000), velocity=(0, 1000, 0))
@@ -250,14 +270,26 @@ def scene_setup() -> cielim.Scene:
     index = scene.add_celestial_body("vesta")
 
     scene.set_celestial_body_params(
-        index, albedo=0.423, mesh_shape="vesta_normalized", mesh_brdf="Lambertian", mesh_radius=262.7 * 1e3
+        index,
+        albedo=albedo,
+        mesh_shape="vesta_normalized",
+        mesh_brdf=render_modes[mode]["brdf"],
+        mesh_radius=262.7 * 1e3,
     )
 
     return scene
 
 
-def vesta_scenario(number_of_images: int | None = None):
-    scene = scene_setup()
+def vesta_scenario(number_of_images: int | None = None, mode: str = "close"):
+    """Render and compare one mode's frames. See render_modes for what each renders.
+
+    ``number_of_images`` is applied after the mode's frame selection, so a truncated run still
+    renders frames belonging to ``mode``.
+    """
+    if mode not in render_modes:
+        raise ValueError(f"unknown mode {mode!r}; expected one of {', '.join(render_modes)}")
+
+    scene = scene_setup(mode)
 
     qe_file_path = (
         Path(__file__).resolve().parent.parent.parent / "cielim-python/support-data/vesta-spice/f2_qe_curve.csv"
@@ -300,16 +332,17 @@ def vesta_scenario(number_of_images: int | None = None):
             0.002554475,
         ]
 
-    if number_of_images is not None:
-        if number_of_images > len(exposure_time_list):
-            number_of_images = len(exposure_time_list)
-        time_list = time_list[:number_of_images]
-        exposure_time_list = exposure_time_list[:number_of_images]
-
     et_range = []
     for _str in time_list:
         et_range.append(spice.str2et(_str))
     et_range = np.array(et_range)
+
+    # Keep only the frames this mode owns, then truncate, so a short run is still this mode's frames.
+    keep = render_modes[mode]["keep"]
+    selected = [i for i, et in enumerate(et_range) if keep(_stamp(et))]
+    if number_of_images is not None:
+        selected = selected[:number_of_images]
+    print(f"[{mode}] rendering {len(selected)} of {len(et_range)} frames with {render_modes[mode]['brdf']} BRDF")
 
     # Output dir
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -319,7 +352,8 @@ def vesta_scenario(number_of_images: int | None = None):
     connector.connect(launcher.launch())
     connector.send_init_request()
 
-    for idx, time in enumerate(et_range):
+    for idx in selected:
+        time = et_range[idx]
         position, _ = spice.spkpos("DAWN", time, "J2000", "NONE", "2000004")
         sun_pos, _ = spice.spkpos("SUN", time, "J2000", "NONE", "2000004")
         phase_angle = (
@@ -357,25 +391,20 @@ def vesta_scenario(number_of_images: int | None = None):
 
     real_entries = _real_entries()
 
+    comparison_dir = render_modes[mode]["out"]
     n, stats = image_comparison.compare_saved(
-        out_dir, _gen_time_if(lambda s: s not in distant_stamps and s not in excluded_stamps),
-        real_entries, _real_gray_of, str(showcase_dir),
+        out_dir, _gen_time_if(keep),
+        real_entries, _real_gray_of, str(comparison_dir),
         title_real="real", title_generated="cielim",
-        average_batches=[("20110717", range(0, 2)), ("20110723", range(2, 6))],
+        average_batches=render_modes[mode]["batches"],
     )
-    print(f"Saved real-vs-generated batch comparison ({n} pairs) -> {showcase_dir}")
+    print(f"Saved {mode} real-vs-generated batch comparison ({n} pairs) -> {comparison_dir}")
     print(image_comparison.format_error_stats(stats))
-
-    m, distant_stats = image_comparison.compare_saved(
-        out_dir, _gen_time_if(lambda s: s in distant_stamps),
-        real_entries, _real_gray_of, str(distant_dir),
-        title_real="real", title_generated="cielim",
-    )
-    print(f"Saved distant-approach batch comparison ({m} pairs) -> {distant_dir}")
-    print(image_comparison.format_error_stats(distant_stats))
 
     spice.kclear()
 
 
 if __name__ == "__main__":
-    vesta_scenario()
+    import sys
+
+    vesta_scenario(mode=sys.argv[1] if len(sys.argv) > 1 else "close")
