@@ -42,6 +42,7 @@ target_sources(cielim
             ${CIELIM_CPP_SOURCE}/vk/context.cppm
             ${CIELIM_CPP_SOURCE}/vk/frame_resources.cppm
             ${CIELIM_CPP_SOURCE}/vk/pipeline.cppm
+            ${CIELIM_CPP_SOURCE}/vk/renderer.cppm
             ${CIELIM_CPP_SOURCE}/vk/shader.cppm
             ${CIELIM_CPP_SOURCE}/vk/swapchain.cppm
 )

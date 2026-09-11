@@ -1,8 +1,8 @@
 // Copyright (c) 2026 Laboratory for Atmospheric and Space Physics
 // SPDX-License-Identifier: GPL-3.0+
 
-/* The Vulkan context is a singleton that contains global context and state for Vulkan. This class contains and manages
- * the Vulkan instance, the windowing surface, and the logical device. */
+/* The Vulkan context contains global context and state for Vulkan. This class contains and manages the Vulkan
+ * instance, the windowing surface, and the logical device. Only one instance should exist at a time. */
 
 module;
 
@@ -82,22 +82,32 @@ export namespace cielim::vk::context
 class Context
 {
 public:
-    // Delete copy and move constructors to prevent duplication
+    Context() = default;
+
+    // Delete copy constructors
 
     Context(const Context&) = delete;
     auto operator=(const Context&) -> Context& = delete;
-    Context(Context&&) = delete;
-    auto operator=(Context&&) -> Context& = delete;
 
-    /**
-     * @brief Gets a reference to the global Vulkan context object.
-     * @return Reference to the global Vulkan context object.
-     */
-    [[nodiscard]] static auto get_context() noexcept -> Context&
+    // Use default move constructors
+
+    Context(Context&&) = default;
+    auto operator=(Context&&) -> Context& = default;
+
+    ~Context()
     {
-        // Guaranteed instantiated on first use
-        static Context context;
-        return context;
+#ifndef NDEBUG
+        if (this->debug_messenger_)
+            vkDestroyDebugUtilsMessengerEXT(this->instance_.get(), this->debug_messenger_.get(), nullptr);
+#endif
+        if (this->device_)
+            vkDestroyDevice(this->device_.get(), nullptr);
+
+        if (this->surface_)
+            vkDestroySurfaceKHR(this->instance_.get(), this->surface_.get(), nullptr);
+
+        if (this->instance_)
+            vkDestroyInstance(this->instance_.get(), nullptr);
     }
 
     /**
@@ -139,24 +149,6 @@ public:
     [[nodiscard]] auto get_device() const -> VkDevice { return this->device_.get(); }
 
 private:
-    Context() = default;
-
-    ~Context()
-    {
-#ifndef NDEBUG
-        if (this->debug_messenger_)
-            vkDestroyDebugUtilsMessengerEXT(this->instance_.get(), this->debug_messenger_.get(), nullptr);
-#endif
-        if (this->device_)
-            vkDestroyDevice(this->device_.get(), nullptr);
-
-        if (this->surface_)
-            vkDestroySurfaceKHR(this->instance_.get(), this->surface_.get(), nullptr);
-
-        if (this->instance_)
-            vkDestroyInstance(this->instance_.get(), nullptr);
-    }
-
     // Initializes the Vulkan instance required API version, layers, and extensions.
     auto init_instance() -> Result<void>
     {

@@ -162,6 +162,7 @@ enum class VkSwapchainError : std::uint8_t
     SwapchainCreateError,
     GetImageError,
     ViewCreateError,
+    AcquireImageError,
 };
 
 template <>
@@ -183,6 +184,7 @@ struct ErrorType<VkSwapchainError>
         case SwapchainCreateError: return "Failed to create swapchain";
         case GetImageError: return "Failed to get swapchain images";
         case ViewCreateError: return "Failed to create image view for swapchain image";
+        case AcquireImageError: return "Failed to acquire swapchain image";
         }
 
         return "Unknown Vulkan swapchain error";
@@ -244,8 +246,12 @@ struct ErrorType<VkPipelineError>
 enum class VkResourcesError : std::uint8_t
 {
     CommandPoolCreateError,
+    CommandPoolResetError,
     CommandBufferCreateError,
+    CommandBufferBeginError,
+    CommandBufferEndError,
     SemaphoreCreateError,
+    SemaphoreWaitError,
 };
 
 template <>
@@ -261,11 +267,41 @@ struct ErrorType<VkResourcesError>
         switch (error)
         {
         case CommandPoolCreateError: return "Failed to create command pool";
+        case CommandPoolResetError: return "Failed to reset command pool";
         case CommandBufferCreateError: return "Failed to create command buffer";
+        case CommandBufferBeginError: return "Failed to begin command buffer";
+        case CommandBufferEndError: return "Failed to end command buffer";
         case SemaphoreCreateError: return "Failed to create semaphore";
+        case SemaphoreWaitError: return "Failed to wait on semaphore";
         }
 
         return "Unknown Vulkan resource error";
+    }
+};
+
+enum class VkRenderError : std::uint8_t
+{
+    QueueSubmitError,
+    QueuePresentError,
+};
+
+template <>
+struct ErrorType<VkRenderError>
+{
+    static constexpr bool IS_ERROR = true;
+    static constexpr std::string_view CATEGORY_NAME = "VkRenderError";
+
+    static auto message(const VkRenderError error) -> std::string_view
+    {
+        using enum VkRenderError;
+
+        switch (error)
+        {
+        case QueueSubmitError: return "Failed to submit commands to queue";
+        case QueuePresentError: return "Failed to present to swapchain";
+        }
+
+        return "Unknown Vulkan render error";
     }
 };
 
@@ -295,5 +331,9 @@ struct std::is_error_code_enum<cielim::error::VkPipelineError> : std::true_type
 };
 template <>
 struct std::is_error_code_enum<cielim::error::VkResourcesError> : std::true_type
+{
+};
+template <>
+struct std::is_error_code_enum<cielim::error::VkRenderError> : std::true_type
 {
 };
