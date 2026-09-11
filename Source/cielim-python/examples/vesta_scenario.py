@@ -263,7 +263,9 @@ def scene_setup(mode: str = "close") -> cielim.Scene:
         well_capacity=120_000,
     )
 
-    scene.set_corruption_params(psf_sigma=0.7 , read_noise=18, dc_rate=dark_current_rate_e_s(vesta_ccd_temp_k), dc_sigma=10, shot_noise=True)
+    scene.set_corruption_params(
+        psf_sigma=0.7, read_noise=18, dc_rate=dark_current_rate_e_s(vesta_ccd_temp_k), dc_sigma=10, shot_noise=True
+    )
 
     scene.set_celestial_body_params(0, position=(0, 0, -10000))
 
@@ -393,9 +395,13 @@ def vesta_scenario(number_of_images: int | None = None, mode: str = "close"):
 
     comparison_dir = render_modes[mode]["out"]
     n, stats = image_comparison.compare_saved(
-        out_dir, _gen_time_if(keep),
-        real_entries, _real_gray_of, str(comparison_dir),
-        title_real="real", title_generated="cielim",
+        out_dir,
+        _gen_time_if(keep),
+        real_entries,
+        _real_gray_of,
+        str(comparison_dir),
+        title_real="real",
+        title_generated="cielim",
         average_batches=render_modes[mode]["batches"],
     )
     print(f"Saved {mode} real-vs-generated batch comparison ({n} pairs) -> {comparison_dir}")

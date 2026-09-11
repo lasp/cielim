@@ -832,7 +832,9 @@ def test_grayscale_from_image_settings(cielim_connection):
     """
 
     def build_color(e):
-        s = stray_light_scene(sun_offset=(default_sun_offset_x, 0.0), exposure=e, grayscale=False, stray_light=_ghost_params())
+        s = stray_light_scene(
+            sun_offset=(default_sun_offset_x, 0.0), exposure=e, grayscale=False, stray_light=_ghost_params()
+        )
         s.set_sensor_params(**diagonal_qe)
         return s
 
@@ -1169,7 +1171,11 @@ def test_showcase_stray_light(cielim_connection):
     plt.close(fig)
 
     exp_sweep = cached_exposure(
-        cielim_connection, "sweep", lambda e: _sweep_scene(sweep_cal_angle, e), target=ghost_target, measure=ghost_window_peak
+        cielim_connection,
+        "sweep",
+        lambda e: _sweep_scene(sweep_cal_angle, e),
+        target=ghost_target,
+        measure=ghost_window_peak,
     )
     angles = showcase_sweep_angles
     grays = [render_gray(cielim_connection, _sweep_scene(a, exp_sweep)) for a in angles]

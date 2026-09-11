@@ -269,8 +269,13 @@ def spice_scenario():
 
     # Compared by observation time, skipping _noisy_stamps; raw/ and aligned/ subsets.
     n, stats = image_comparison.compare_saved(
-        out_dir, _comparison_et, real_entries, _real_gray_of, str(showcase_dir),
-        title_real="real", title_generated="cielim",
+        out_dir,
+        _comparison_et,
+        real_entries,
+        _real_gray_of,
+        str(showcase_dir),
+        title_real="real",
+        title_generated="cielim",
     )
     print(f"Saved real-vs-generated batch comparison ({n} pairs) -> {showcase_dir}")
     print(image_comparison.format_error_stats(stats))

@@ -1069,9 +1069,7 @@ def test_showcase_distant_objects(cielim_connection):
 
         crops = []
         for factor in factors:
-            scene = scene_with_phase_angle(
-                transition * factor, phase_angle_deg, "Lambertian", exposure_time=exposure
-            )
+            scene = scene_with_phase_angle(transition * factor, phase_angle_deg, "Lambertian", exposure_time=exposure)
             connector.send_init_request()
             render_frame(connector, scene)  # warm-up; the first frame after an init can be blank
             image, _, _ = render_frame(connector, scene)
@@ -1093,9 +1091,7 @@ def test_showcase_distant_objects(cielim_connection):
 
             # Measured over the whole frame: disagreeing with the windowed box means signal outside it.
             lit_y, lit_x = np.nonzero(gray)
-            footprint = (
-                f"{lit_x.max() - lit_x.min() + 1}x{lit_y.max() - lit_y.min() + 1}" if len(lit_x) else "-"
-            )
+            footprint = f"{lit_x.max() - lit_x.min() + 1}x{lit_y.max() - lit_y.min() + 1}" if len(lit_x) else "-"
             crops.append((gray[y - half : y + half, x - half : x + half], footprint))
 
         # One display range per row, or the dim high-phase crescent is not visible at all.

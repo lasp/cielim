@@ -403,4 +403,3 @@ def test_speed_test_scenario(tmp_path):
     lines = timing_csv.read_text().strip().splitlines()
     np.testing.assert_equal(lines[0], "frame_time_ms")
     np.testing.assert_equal(len(lines) - 1, 3, err_msg="Expected 3 timing rows")
-
