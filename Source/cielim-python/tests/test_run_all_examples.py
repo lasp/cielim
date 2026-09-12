@@ -393,6 +393,11 @@ def test_speed_test_scenario(tmp_path):
     np.testing.assert_equal(summary["number_of_images"], 3)
     np.testing.assert_(summary["images_per_second"] > 0, msg="No render throughput reported")
 
+    # One protobuf record per frame, holding the message that produced it.
+    records = sorted(out_dir.glob("speed_test_*.txt"))
+    np.testing.assert_equal(len(records), 3, err_msg="Expected one protobuf record per frame")
+    np.testing.assert_("camera" in records[0].read_text(), msg="Protobuf record is not the scene message")
+
     timing_csv = Path(summary["timing_csv"])
     np.testing.assert_(timing_csv.exists(), msg="timing CSV was not written")
     lines = timing_csv.read_text().strip().splitlines()
