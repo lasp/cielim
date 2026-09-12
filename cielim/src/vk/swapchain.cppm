@@ -56,10 +56,15 @@ public:
 
         // Get surface capabilities
 
-        VkSurfaceCapabilitiesKHR surface_capabilities;
+        const VkPhysicalDeviceSurfaceInfo2KHR surface_info = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SURFACE_INFO_2_KHR,
+            .surface = context.get_surface(),
+        };
 
-        if (const auto result = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
-                context.get_physical_device(), context.get_surface(), &surface_capabilities
+        VkSurfaceCapabilities2KHR surface_capabilities2 = {.sType = VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_KHR};
+
+        if (const auto result = vkGetPhysicalDeviceSurfaceCapabilities2KHR(
+                context.get_physical_device(), &surface_info, &surface_capabilities2
             );
             result != VK_SUCCESS)
         {
@@ -71,17 +76,21 @@ public:
             return Err(error);
         }
 
+        const VkSurfaceCapabilitiesKHR& surface_capabilities = surface_capabilities2.surfaceCapabilities;
+
         // Get surface formats
 
         uint32_t surface_format_count = 0;
-        vkGetPhysicalDeviceSurfaceFormatsKHR(
-            context.get_physical_device(), context.get_surface(), &surface_format_count, nullptr
+        vkGetPhysicalDeviceSurfaceFormats2KHR(
+            context.get_physical_device(), &surface_info, &surface_format_count, nullptr
         );
 
-        std::vector<VkSurfaceFormatKHR> surface_formats(surface_format_count);
+        std::vector<VkSurfaceFormat2KHR> surface_formats(
+            surface_format_count, VkSurfaceFormat2KHR{.sType = VK_STRUCTURE_TYPE_SURFACE_FORMAT_2_KHR}
+        );
 
-        if (const auto result = vkGetPhysicalDeviceSurfaceFormatsKHR(
-                context.get_physical_device(), context.get_surface(), &surface_format_count, surface_formats.data()
+        if (const auto result = vkGetPhysicalDeviceSurfaceFormats2KHR(
+                context.get_physical_device(), &surface_info, &surface_format_count, surface_formats.data()
             );
             result != VK_SUCCESS)
         {
@@ -99,8 +108,10 @@ public:
         this->color_space_ = VK_COLOR_SPACE_SRGB_NONLINEAR_KHR; // The color space corresponds to the format
 
         bool found_format = false;
-        for (const auto& [format, color_space] : surface_formats)
+        for (const auto& surface_format2 : surface_formats)
         {
+            const auto& [format, color_space] = surface_format2.surfaceFormat;
+
             if (format == this->format_ && color_space == this->color_space_)
                 found_format = true;
         }
