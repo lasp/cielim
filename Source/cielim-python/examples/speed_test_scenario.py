@@ -248,7 +248,8 @@ def speed_test_scenario(
     print(f"  {number_of_images} images evenly spaced in time, starting at apoapse")
 
     connector = cielim.Connector()
-    connector.connect()
+    launcher = cielim.Launcher()
+    connector.connect(launcher.launch())
     connector.send_init_request()
 
     render_times = []
@@ -298,6 +299,7 @@ def speed_test_scenario(
         )
 
     connector.disconnect()
+    launcher.terminate()
 
     render_times = np.array(render_times)
 
