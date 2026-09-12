@@ -8,9 +8,10 @@ Goal:
     periapse to the radius of apoapse then sets how far into "the body overflows the frame"
     territory the orbit dives.
 
-    Images are captured evenly spaced in time along one full orbit, starting at apoapse. The
-    per-frame round-trip time is written to a CSV for examples/speed_test_analysis.py, which
-    plots it against the engine-side timings; this module only generates data.
+    Images are captured evenly spaced in time along one full orbit, starting at apoapse. Each frame
+    is written with the protobuf message that produced it, and the per-frame round-trip time goes to
+    a CSV for examples/speed_test_analysis.py, which plots it against the engine-side timings; this
+    module only generates data.
 
     Pointing is nadir (boresight on the body center), automatically switching to horizon pointing
     (boresight offset onto the lit limb) once the body grows larger than the field of view.
@@ -168,9 +169,11 @@ def speed_test_scenario(
         horizon_trigger_fov_fraction (float): Fraction of the (smaller) field of view that the
             angular diameter must exceed before horizon pointing engages. 1.0 means "once the body
             is larger than the field of view".
-        save_images (bool): Whether to write the rendered frames to disk.
-        output_directory (str, optional): Where the frames and the timing CSV go. Defaults to
-            examples/images-speed-test/. Point it elsewhere to keep a run out of the repo tree.
+        save_images (bool): Whether to write the rendered PNGs to disk. The per-frame protobuf
+            record is written either way.
+        output_directory (str, optional): Where the frames, their protobuf records and the timing
+            CSV go. Defaults to examples/images-speed-test/. Point it elsewhere to keep a run out
+            of the repo tree.
 
     Returns:
         dict: Orbit geometry and render timing summary.
@@ -283,11 +286,19 @@ def speed_test_scenario(
         angular_radii.append(angular_radius * 180 / np.pi)
         phase_angles.append(frame_phase_angle * 180 / np.pi)
 
+        message = scene.get_scene()
+
         start = time.perf_counter()
-        connector.send_frame(scene.get_scene())
+        connector.send_frame(message)
         image, _, _ = connector.request_image_for_camera_id(1, save_images, True)
         render_time = time.perf_counter() - start
         render_times.append(render_time)
+
+        # Both written outside the timed block so disk IO stays out of the round-trip measurement.
+        # The protobuf goes out every frame, save_images or not: it records what produced the frame,
+        # and the no-PNG run is the one whose timings the analysis differences.
+        with open(os.path.join(directory_path, f"speed_test_{idx:03d}.txt"), "w") as handle:
+            print(message, file=handle)
 
         if save_images and image is not None:
             cv2.imwrite(os.path.join(directory_path, f"speed_test_{idx:03d}.png"), image)
