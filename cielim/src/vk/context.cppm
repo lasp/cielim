@@ -252,6 +252,8 @@ private:
 
         std::vector<const char*> req_inst_extensions = ext_result.value(); // Initial list comes from the window
 
+        req_inst_extensions.push_back("VK_KHR_get_surface_capabilities2"); // Support querying extended surface info
+
 #ifndef NDEBUG
         req_inst_extensions.push_back("VK_EXT_debug_utils"); // Add debug extension in debug builds
 #endif
@@ -305,6 +307,8 @@ private:
             return Err(error);
         }
 
+        // Create Vulkan instance
+
 #ifndef NDEBUG
         VkDebugUtilsMessengerCreateInfoEXT debug_messenger_create_info = {
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
@@ -343,7 +347,8 @@ private:
             return Err(error);
         }
 
-        volkLoadInstance(this->instance_.get()); // Initialize Vulkan instance
+        // Initialize Vulkan instance
+        volkLoadInstance(this->instance_.get());
 
 #ifndef NDEBUG
         if (const auto result = vkCreateDebugUtilsMessengerEXT(
@@ -388,30 +393,39 @@ private:
             return Err(error);
         }
 
-        // Loop through all physical devices to find the most suitable one
+        // Find a suitable physical device
+
         // TODO: Make this more robust instead of choosing first suitable device
 
         bool found_device = false;
 
         for (const auto& device : physical_devices)
         {
-            VkPhysicalDeviceProperties device_properties;
-            vkGetPhysicalDeviceProperties(device, &device_properties);
+            VkPhysicalDeviceProperties2 device_properties2 = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
+
+            vkGetPhysicalDeviceProperties2(device, &device_properties2);
+
+            const VkPhysicalDeviceProperties& device_properties = device_properties2.properties;
 
             // Reject devices that can't support Vulkan 1.4+
             if (device_properties.apiVersion < VK_API_VERSION_1_4)
                 continue;
 
             uint32_t num_queue_families = 0;
-            vkGetPhysicalDeviceQueueFamilyProperties(device, &num_queue_families, nullptr);
+            vkGetPhysicalDeviceQueueFamilyProperties2(device, &num_queue_families, nullptr);
 
-            std::vector<VkQueueFamilyProperties> queue_families(num_queue_families);
+            std::vector<VkQueueFamilyProperties2> queue_families2(
+                num_queue_families, VkQueueFamilyProperties2{.sType = VK_STRUCTURE_TYPE_QUEUE_FAMILY_PROPERTIES_2}
+            );
 
-            vkGetPhysicalDeviceQueueFamilyProperties(device, &num_queue_families, queue_families.data());
+            vkGetPhysicalDeviceQueueFamilyProperties2(device, &num_queue_families, queue_families2.data());
 
-            for (uint32_t index = 0; const auto& queue_family : queue_families)
+            // Find the first queue family that supports graphics, compute, and presentation
+            for (uint32_t index = 0; const auto& queue_family2 : queue_families2)
             {
-                // Check that the GPU supports graphics computations and presentation
+                const auto& queue_family = queue_family2.queueFamilyProperties;
+
+                // Check that the GPU supports required properties
                 if ((queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0
                     && window::Window::vk_get_presentation_support(this->instance_.get(), device, index).has_value())
                 {
@@ -438,15 +452,28 @@ private:
             return Err(error);
         }
 
-        VkPhysicalDeviceProperties device_properties;
-        vkGetPhysicalDeviceProperties(physical_device, &device_properties);
+        this->physical_device_ = UniqueHandle(physical_device);
+        this->queue_family_index_ = graphics_queue_family;
+
+        // Log properties of the physical device
+
+        VkPhysicalDeviceProperties2 found_device_properties2
+            = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
+
+        vkGetPhysicalDeviceProperties2(physical_device, &found_device_properties2);
+
+        const VkPhysicalDeviceProperties& found_device_properties = found_device_properties2.properties;
 
         utils::log::info(
-            "Found device {} (graphics queue family {})", device_properties.deviceName, graphics_queue_family
+            "Found device {} (graphics queue family {})", found_device_properties.deviceName, graphics_queue_family
         );
 
-        VkPhysicalDeviceMemoryProperties memory_properties;
-        vkGetPhysicalDeviceMemoryProperties(physical_device, &memory_properties);
+        VkPhysicalDeviceMemoryProperties2 memory_properties2
+            = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2};
+
+        vkGetPhysicalDeviceMemoryProperties2(physical_device, &memory_properties2);
+
+        const VkPhysicalDeviceMemoryProperties& memory_properties = memory_properties2.memoryProperties;
 
         // Total heap size in bytes for device
         VkDeviceSize dev_local_bytes = 0;
@@ -460,9 +487,6 @@ private:
 
         utils::log::info("Device heap total: {:.2f} GB", static_cast<float>(dev_local_bytes) / BYTES_IN_GB);
 
-        this->physical_device_ = UniqueHandle(physical_device);
-        this->queue_family_index_ = graphics_queue_family;
-
         return {};
     }
 
@@ -471,7 +495,7 @@ private:
     {
         // List required Vulkan features
 
-        /* TODO: Add checking for support for each feature, assuming support for basic features for now. */
+        // TODO: Add checking for support for each feature, assuming support for basic features for now.
 
         VkPhysicalDeviceVulkan11Features req_dev_vulkan11_features = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
@@ -562,6 +586,8 @@ private:
 
             return Err(error);
         }
+
+        // Create the logical device
 
         float queue_priority = 1.0f;
         const VkDeviceQueueCreateInfo queue_info = {
