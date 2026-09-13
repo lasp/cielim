@@ -497,37 +497,38 @@ private:
 
         // TODO: Add checking for support for each feature, assuming support for basic features for now.
 
-        VkPhysicalDeviceVulkan11Features req_dev_vulkan11_features = {
-            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
-            .shaderDrawParameters = VK_TRUE,
-        };
-
-        VkPhysicalDeviceVulkan12Features req_dev_vulkan12_features = {
-            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
-            .pNext = &req_dev_vulkan11_features,
-            .scalarBlockLayout = VK_TRUE,
-            .timelineSemaphore = VK_TRUE,
-            .bufferDeviceAddress = VK_TRUE,
+        VkPhysicalDeviceVulkan14Features req_dev_vulkan14_features = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES,
         };
 
         VkPhysicalDeviceVulkan13Features req_dev_vulkan13_features = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-            .pNext = &req_dev_vulkan12_features,
+            .pNext = &req_dev_vulkan14_features,
             .synchronization2 = VK_TRUE,
             .dynamicRendering = VK_TRUE,
             .maintenance4 = VK_TRUE,
         };
 
-        VkPhysicalDeviceVulkan14Features req_dev_vulkan14_features = {
-            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES,
+        VkPhysicalDeviceVulkan12Features req_dev_vulkan12_features = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
             .pNext = &req_dev_vulkan13_features,
+            .scalarBlockLayout = VK_TRUE,
+            .timelineSemaphore = VK_TRUE,
+            .bufferDeviceAddress = VK_TRUE,
+        };
+
+        VkPhysicalDeviceVulkan11Features req_dev_vulkan11_features = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+            .pNext = &req_dev_vulkan12_features,
+            .shaderDrawParameters = VK_TRUE,
         };
 
         VkPhysicalDeviceFeatures2 req_dev_features = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-            .pNext = &req_dev_vulkan14_features,
+            .pNext = &req_dev_vulkan11_features,
             .features = {
                 .samplerAnisotropy = VK_TRUE,
+                .shaderInt64 = VK_TRUE,
             },
         };
 
@@ -535,7 +536,8 @@ private:
 
         std::vector<const char*> req_dev_extensions;
 
-        req_dev_extensions.push_back("VK_KHR_swapchain"); // Required for image presentation to window
+        req_dev_extensions.push_back("VK_KHR_swapchain");     // Required for image presentation to window
+        req_dev_extensions.push_back("VK_EXT_memory_budget"); // Lets VMA query memory budget and pressure
 #ifdef __APPLE__
         req_dev_extensions.push_back("VK_KHR_portability_subset");
 #endif
