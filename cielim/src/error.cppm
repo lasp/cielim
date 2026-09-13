@@ -279,6 +279,32 @@ struct ErrorType<VkResourcesError>
     }
 };
 
+enum class VkAllocatorError : std::uint8_t
+{
+    ImportFunctionsError,
+    AllocatorCreateError,
+};
+
+template <>
+struct ErrorType<VkAllocatorError>
+{
+    static constexpr bool IS_ERROR = true;
+    static constexpr std::string_view CATEGORY_NAME = "VkAllocatorError";
+
+    static auto message(const VkAllocatorError error) -> std::string_view
+    {
+        using enum VkAllocatorError;
+
+        switch (error)
+        {
+        case ImportFunctionsError: return "Failed to import Vulkan functions";
+        case AllocatorCreateError: return "Failed to create VMA allocator";
+        }
+
+        return "Unknown VMA allocator error";
+    }
+};
+
 enum class VkRenderError : std::uint8_t
 {
     QueueSubmitError,
@@ -331,6 +357,10 @@ struct std::is_error_code_enum<cielim::error::VkPipelineError> : std::true_type
 };
 template <>
 struct std::is_error_code_enum<cielim::error::VkResourcesError> : std::true_type
+{
+};
+template <>
+struct std::is_error_code_enum<cielim::error::VkAllocatorError> : std::true_type
 {
 };
 template <>

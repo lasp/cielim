@@ -104,6 +104,14 @@ auto run(const std::filesystem::path& base_path) -> int
         return EXIT_FAILURE;
     }
 
+    cielim::vk::Allocator vk_allocator;
+
+    if (const auto result = vk_allocator.init(vk_context); !result.has_value())
+    {
+        fatal_error(&window, result.error().message());
+        return EXIT_FAILURE;
+    }
+
     cielim::vk::Swapchain vk_swapchain;
 
     if (const auto result = vk_swapchain.init(vk_context, window);

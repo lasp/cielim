@@ -23,6 +23,7 @@ set(CIELIM_CPP_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_sources(cielim
     PRIVATE
         ${CIELIM_CPP_SOURCE}/main.cpp
+        ${CIELIM_CPP_SOURCE}/vk/vma.cpp
 )
 
 # Add C++20 module files
@@ -39,6 +40,7 @@ target_sources(cielim
             ${CIELIM_CPP_SOURCE}/window.cppm
             ${CIELIM_CPP_SOURCE}/utils/file.cppm
             ${CIELIM_CPP_SOURCE}/utils/log.cppm
+            ${CIELIM_CPP_SOURCE}/vk/allocator.cppm
             ${CIELIM_CPP_SOURCE}/vk/context.cppm
             ${CIELIM_CPP_SOURCE}/vk/frame_resources.cppm
             ${CIELIM_CPP_SOURCE}/vk/pipeline.cppm
