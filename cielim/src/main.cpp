@@ -12,14 +12,14 @@
 #include <volk/volk.h>
 #include <vulkan/vk_enum_string_helper.h>
 
-#include <vma/vk_mem_alloc.h>
-
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 
 #include <SDL3/SDL_main.h> // This has to be the last SDL include
 
+import cielim.default_shape;
 import cielim.error;
+import cielim.mesh_elements;
 import cielim.result;
 import cielim.utils;
 import cielim.vk;
@@ -131,19 +131,19 @@ auto run(const std::filesystem::path& base_path) -> int
         return EXIT_FAILURE;
     }
 
-    std::filesystem::path triangle_shader_path = base_path / "content" / "shaders" / "triangle.spv";
+    std::filesystem::path cube_shader_path = base_path / "content" / "shaders" / "cube.spv";
 
-    cielim::vk::Shader triangle_shader;
+    cielim::vk::Shader cube_shader;
 
-    if (const auto result = triangle_shader.create(vk_context, triangle_shader_path); !result.has_value())
+    if (const auto result = cube_shader.create(vk_context, cube_shader_path); !result.has_value())
     {
         fatal_error(&window, result.error().message());
         return EXIT_FAILURE;
     }
 
     std::vector<cielim::vk::ShaderStage> shader_stages = {
-        {.stage_flag = VK_SHADER_STAGE_VERTEX_BIT, .shader_module = triangle_shader, .entry_point = "VertMain"},
-        {.stage_flag = VK_SHADER_STAGE_FRAGMENT_BIT, .shader_module = triangle_shader, .entry_point = "FragMain"},
+        {.stage_flag = VK_SHADER_STAGE_VERTEX_BIT, .shader_module = cube_shader, .entry_point = "VertMain"},
+        {.stage_flag = VK_SHADER_STAGE_FRAGMENT_BIT, .shader_module = cube_shader, .entry_point = "FragMain"},
     };
 
     cielim::vk::Pipeline vk_render_pipeline;
@@ -165,26 +165,23 @@ auto run(const std::filesystem::path& base_path) -> int
         return EXIT_FAILURE;
     }
 
-    std::array vertex_info
-        = {0.0f, -0.5f, 1.0f, 0.0f, 0.0f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f};
+    cielim::vk::MeshRegistry mesh_registry;
 
-    cielim::vk::Buffer vertex_info_buffer;
+    constexpr uint32_t MESH_REGISTRY_BUFFER_SIZE = 65536;
 
-    if (const auto result = vertex_info_buffer.create(
-            vk_context,
-            vk_allocator,
-            sizeof(vertex_info),
-            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-            VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
-        );
+    if (const auto result = mesh_registry.create(vk_context, vk_allocator, MESH_REGISTRY_BUFFER_SIZE);
         !result.has_value())
     {
         fatal_error(&window, result.error().message());
         return EXIT_FAILURE;
     }
 
-    // Copy vertex info from CPU to GPU
-    std::memcpy(vertex_info_buffer.get_mapped_data(), vertex_info.data(), sizeof(vertex_info));
+    if (const auto result = mesh_registry.upload(cielim::default_shape::vertices, cielim::default_shape::indices);
+        !result.has_value())
+    {
+        fatal_error(&window, result.error().message());
+        return EXIT_FAILURE;
+    }
 
     bool is_running = true;
 
@@ -220,11 +217,12 @@ auto run(const std::filesystem::path& base_path) -> int
         }
 
         const cielim::vk::SceneDataAddresses push_constants = {
-            .vertex_info_address = vertex_info_buffer.get_device_address(),
+            .vertex_info_address = mesh_registry.get_vertex_address(),
         };
 
-        if (const auto result
-            = vk_renderer.draw_frame(vk_context, vk_swapchain, vk_frame_resources, vk_render_pipeline, push_constants);
+        if (const auto result = vk_renderer.draw_frame(
+                vk_context, vk_swapchain, vk_frame_resources, vk_render_pipeline, push_constants, mesh_registry
+            );
             !result.has_value())
         {
             fatal_error(&window, result.error().message());

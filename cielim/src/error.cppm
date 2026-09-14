@@ -283,7 +283,6 @@ enum class VkAllocatorError : std::uint8_t
 {
     ImportFunctionsError,
     AllocatorCreateError,
-    BufferCreateError,
 };
 
 template <>
@@ -300,10 +299,37 @@ struct ErrorType<VkAllocatorError>
         {
         case ImportFunctionsError: return "Failed to import Vulkan functions";
         case AllocatorCreateError: return "Failed to create VMA allocator";
-        case BufferCreateError: return "Failed to allocate buffer memory";
         }
 
         return "Unknown VMA allocator error";
+    }
+};
+
+enum class VkBufferError : std::uint8_t
+{
+    BufferCreateError,
+    NullMappedMemory,
+    BufferOverflow,
+};
+
+template <>
+struct ErrorType<VkBufferError>
+{
+    static constexpr bool IS_ERROR = true;
+    static constexpr std::string_view CATEGORY_NAME = "VkBufferError";
+
+    static auto message(const VkBufferError error) -> std::string_view
+    {
+        using enum VkBufferError;
+
+        switch (error)
+        {
+        case BufferCreateError: return "Failed to allocate buffer memory";
+        case NullMappedMemory: return "Mapped memory is not allocated or could not be found";
+        case BufferOverflow: return "Buffer overflow";
+        }
+
+        return "Unknown buffer error";
     }
 };
 
@@ -363,6 +389,10 @@ struct std::is_error_code_enum<cielim::error::VkResourcesError> : std::true_type
 };
 template <>
 struct std::is_error_code_enum<cielim::error::VkAllocatorError> : std::true_type
+{
+};
+template <>
+struct std::is_error_code_enum<cielim::error::VkBufferError> : std::true_type
 {
 };
 template <>
