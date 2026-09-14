@@ -56,6 +56,38 @@ def test_sub_solar_radius_follows_the_mesh_attitude(ec):
     np.testing.assert_allclose(ec.sub_solar_radius([0, 1, 0], roll, semi_axes), 2.0, rtol=1e-9)
 
 
+def test_sub_solar_point_of_a_sphere_is_on_the_sun_line(ec):
+    for heading in ([1, 0, 0], [0, 0, 1], np.array([0.6, -0.8, 0.0])):
+        point = ec.sub_solar_point(heading, [0, 0, 0], [7.0, 7.0, 7.0])
+        np.testing.assert_allclose(point, 7.0 * np.asarray(heading, float), atol=1e-9)
+
+
+def test_sub_solar_point_normal_is_parallel_to_the_sun(ec):
+    # The defining property: the outward normal (x/a^2, y/b^2, z/c^2) is parallel to the sun there.
+    semi_axes = np.array([3.0, 1.5, 1.0])
+    heading = np.array([0.4, -0.7, 0.59])
+    heading /= np.linalg.norm(heading)
+
+    point = ec.sub_solar_point(heading, [0, 0, 0], semi_axes)
+
+    np.testing.assert_allclose(np.sum((point / semi_axes) ** 2), 1.0, rtol=1e-9)  # on the surface
+    normal = point / semi_axes**2
+    np.testing.assert_allclose(normal / np.linalg.norm(normal), heading, atol=1e-9)
+
+
+def test_sub_solar_point_is_not_the_pierce_point_for_a_triaxial_body(ec):
+    # The two definitions coincide only on a sphere or along a principal axis; this is why the
+    # scenario plots the normal-parallel point rather than the sun-line intersection.
+    semi_axes = np.array([3.0, 1.5, 1.0])
+    heading = np.array([0.5, 0.5, np.sqrt(0.5)])
+
+    normal_point = ec.sub_solar_point(heading, [0, 0, 0], semi_axes)
+    pierce_point = ec.sub_solar_radius(heading, [0, 0, 0], semi_axes) * heading
+
+    separation = np.linalg.norm(normal_point - pierce_point)
+    np.testing.assert_(separation > 0.5, msg=f"Expected the two definitions to differ, got {separation}")
+
+
 def _disk(size=101, radius=30, ramp=False):
     """A lit disk, optionally with a left-to-right intensity ramp across it."""
     rows, columns = np.indices((size, size))
@@ -136,10 +168,17 @@ def test_plot_sample_pair_writes_a_figure(ec, tmp_path):
         "scale_factor": 1.08,
         "sunline_px": sunline.tolist(),
         "centre_of_mass_px": [100.0, 100.0],
+        "sub_solar_px": {"sphere": [96.0, 100.0], "ellipsoid": [88.0, 94.0]},
+        "sub_solar_shift_px": [-8.0, -6.0],
+        "sub_solar_shift_norm_px": 10.0,
+        "sub_solar_unit_px": [-0.8, -0.6],
         "shift_geometric": {
             "sphere": [100.0, 100.0],
             "ellipsoid": [100.0 + shift[0], 100.0 + shift[1]],
+            "magnitude_px": float(np.linalg.norm(shift)),
             "along_sunline_px": float(np.dot(shift, sunline)),
+            "along_sub_solar_px": float(np.dot(shift, [-0.8, -0.6])),
+            "sub_solar_alignment": 0.0,
         },
     }
 

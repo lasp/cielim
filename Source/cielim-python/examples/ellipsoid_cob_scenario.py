@@ -252,9 +252,34 @@ def _roll_z(angle):
 # 90 degrees about the boresight, so mesh_attitude does orient the scaling axes and the sub-solar
 # direction has to be rotated into the principal frame by that same attitude.
 def sub_solar_radius(sun_heading, mesh_attitude_mrp, semi_axes):
-    """Distance from centre to surface at the sub-solar point, for a body at the world origin."""
+    """Distance from centre to surface where the sun direction pierces it, body at the world origin."""
     principal = rbk.mrp_to_dcm(np.asarray(mesh_attitude_mrp, float)) @ np.asarray(sun_heading, float)
     return ellipsoid_radius(principal, semi_axes)
+
+
+def sub_solar_point(sun_heading, mesh_attitude_mrp, semi_axes):
+    """
+    The surface point whose outward normal points at the sun — the brightest point on a Lambertian
+    body, and for an ellipsoid *not* the point where the sun direction pierces the surface.
+
+    The normal to x^2/a^2 + y^2/b^2 + z^2/c^2 = 1 is proportional to (x/a^2, y/b^2, z/c^2), so the
+    normal is parallel to the sun direction at p = (a^2 sx, b^2 sy, c^2 sz) / sqrt(sum (a_i s_i)^2).
+    For a sphere that collapses to R * s_hat; for a triaxial body it swings well off the sun line,
+    by a median 72 degrees over this scenario's draws.
+
+    Args:
+        sun_heading (ndarray): Unit vector from the body centre toward the sun, in world axes.
+        mesh_attitude_mrp (ndarray): The ellipsoid's attitude, as passed to mesh_attitude.
+        semi_axes (ndarray): The three semi-axis lengths.
+
+    Returns:
+        ndarray: The point in world axes, relative to the body centre at the origin.
+    """
+    dcm = rbk.mrp_to_dcm(np.asarray(mesh_attitude_mrp, float))
+    unit = dcm @ np.asarray(sun_heading, float)
+    axes = np.asarray(semi_axes, float)
+    principal = (axes**2 * unit) / np.sqrt(np.sum((axes * unit) ** 2))
+    return dcm.T @ principal
 
 
 def ellipsoid_cob_scenario(
@@ -333,16 +358,39 @@ def ellipsoid_cob_scenario(
             continue
 
         sunline = sunline_pixel_direction(sun_heading, spacecraft_position, world_to_camera, fov, resolution)
+
+        # Where each body's brightest point sits, and how far that moves between the two. The sphere's
+        # is r_reference * s_hat; the ellipsoid's swings off the sun line (see sub_solar_point).
+        sub_solar_world = {
+            "ellipsoid": sub_solar_point(sun_heading, attitude, semi_axes),
+            "sphere": r_reference * sun_heading,
+        }
+        sub_solar_px = {
+            label: np.array(project(point, spacecraft_position, world_to_camera, fov, resolution))
+            for label, point in sub_solar_world.items()
+        }
+        sub_solar_shift = sub_solar_px["ellipsoid"] - sub_solar_px["sphere"]
+        sub_solar_norm = float(np.linalg.norm(sub_solar_shift))
+        sub_solar_unit = sub_solar_shift / sub_solar_norm if sub_solar_norm > 1e-9 else np.zeros(2)
+
         shifts = {}
         for mode, binary in (("photometric", False), ("geometric", True)):
             cob_ellipsoid = centroid(ellipsoid_image, binary=binary, gamma=gamma)
             cob_sphere = centroid(sphere_image, binary=binary, gamma=gamma)
             if cob_ellipsoid is None or cob_sphere is None:
                 break
+            displacement = np.array(cob_ellipsoid) - np.array(cob_sphere)
+            magnitude = float(np.linalg.norm(displacement))
             shifts[mode] = {
                 "ellipsoid": list(cob_ellipsoid),
                 "sphere": list(cob_sphere),
-                "along_sunline_px": float(np.dot(np.array(cob_ellipsoid) - np.array(cob_sphere), sunline)),
+                "magnitude_px": magnitude,
+                "along_sunline_px": float(np.dot(displacement, sunline)),
+                "along_sub_solar_px": float(np.dot(displacement, sub_solar_unit)),
+                # 1 means the CoB moved exactly along the sub-solar point's own displacement.
+                "sub_solar_alignment": (
+                    float(np.dot(displacement, sub_solar_unit) / magnitude) if magnitude > 1e-9 else 0.0
+                ),
             }
         if len(shifts) != 2:
             skipped += 1
@@ -373,6 +421,10 @@ def ellipsoid_cob_scenario(
                 "apparent_radius_px": apparent_radius_px,
                 "sunline_px": sunline.tolist(),
                 "centre_of_mass_px": centre_px.tolist(),
+                "sub_solar_px": {label: point.tolist() for label, point in sub_solar_px.items()},
+                "sub_solar_shift_px": sub_solar_shift.tolist(),
+                "sub_solar_shift_norm_px": sub_solar_norm,
+                "sub_solar_unit_px": sub_solar_unit.tolist(),
                 "engine_cob_ellipsoid": list(engine_cob_ellipsoid),
                 "engine_cob_sphere": list(engine_cob_sphere),
                 "scale_factor": r_sub / r_reference,
@@ -493,7 +545,8 @@ def plot_sample_pair(ellipsoid_image, sphere_image, row, output_path, cob_mode="
     shift = row[f"shift_{cob_mode}"]
     cob = {label: np.array(shift[label], float) for label in frames}
     centre_of_mass = np.array(row["centre_of_mass_px"], float)
-    sunline = np.array(row["sunline_px"], float)
+    sub_solar = {label: np.array(point, float) for label, point in row["sub_solar_px"].items()}
+    reference = np.array(row["sub_solar_unit_px"], float)
     displacement = cob["ellipsoid"] - cob["sphere"]
 
     height, width = frames["ellipsoid"].shape
@@ -516,8 +569,10 @@ def plot_sample_pair(ellipsoid_image, sphere_image, row, output_path, cob_mode="
             vmin=0,
             vmax=255,
         )
-        _mark(ax, cob, centre_of_mass)
-        _arrow(ax, centre_of_mass, 0.35 * (x2 - x1) * sunline, "#00d0ff")
+        _mark(ax, cob, centre_of_mass, sub_solar)
+        # The sub-solar points are where each body is brightest; the arrow between them is the
+        # direction the CoB is being tested against.
+        _arrow(ax, sub_solar["sphere"], sub_solar["ellipsoid"] - sub_solar["sphere"], "#00d0ff")
         ax.set_title(label)
 
     half = zoom_half_width(np.linalg.norm(displacement))
@@ -533,11 +588,11 @@ def plot_sample_pair(ellipsoid_image, sphere_image, row, output_path, cob_mode="
         vmin=0,
         vmax=255,
     )
-    # Both arrows leave the sphere CoB at the same length: they coincide when the slide is along the
-    # sunline, so the figure answers the alignment question by eye.
+    # Both arrows leave the sphere CoB at the same length: they coincide when the CoB moves along the
+    # sub-solar point's own displacement, so the figure answers the alignment question by eye.
     _arrow(zoom, cob["sphere"], displacement, ps.series_colors[1])
-    _arrow(zoom, cob["sphere"], np.linalg.norm(displacement) * sunline, "#00d0ff")
-    _mark(zoom, cob, centre_of_mass)
+    _arrow(zoom, cob["sphere"], np.linalg.norm(displacement) * reference, "#00d0ff")
+    _mark(zoom, cob, centre_of_mass, sub_solar)
     zoom.set_xlim(zx1, zx2)
     zoom.set_ylim(zy2, zy1)
     zoom.set_title(f"zoom: shift {np.linalg.norm(displacement):.1f} px")
@@ -545,25 +600,37 @@ def plot_sample_pair(ellipsoid_image, sphere_image, row, output_path, cob_mode="
     for ax in axes:
         ax.set_xlabel("x (px)")
     axes[0].set_ylabel("y (px)")
-    figure.suptitle(
+    title = (
         f"sample {row['sample']}  {cob_mode} CoB  phase {row['phase_angle_deg']:.1f} deg  "
-        f"scale {row['scale_factor']:.3f}  along sunline {shift['along_sunline_px']:+.2f} px"
+        f"CoB shift {shift['magnitude_px']:.2f} px, {shift['along_sub_solar_px']:+.2f} along sub-solar  "
+        f"(sub-solar point moved {row['sub_solar_shift_norm_px']:.1f} px)"
     )
+    figure.suptitle(ps.wrap_to_width(title, ps.page_w, ps.body_pt, family="sans"))
     handles, labels = axes[0].get_legend_handles_labels()
     handles.append(Line2D([], [], color="#00d0ff", linewidth=1.4))
-    labels.append("sunline")
+    labels.append("sub-solar shift")
     handles.append(Line2D([], [], color=ps.series_colors[1], linewidth=1.4))
     labels.append("shift (zoom)")
-    figure.legend(handles, labels, loc="lower center", ncol=5, frameon=False)
+    figure.legend(handles, labels, loc="lower center", ncol=4, frameon=False, fontsize=ps.body_pt - 2)
     figure.tight_layout(rect=(0, 0.09, 1, 1))
     ps.save_figure(figure, output_path)
     plt.close(figure)
     return output_path
 
 
-def _mark(ax, cob, centre_of_mass):
-    """Centre of mass and the two centres of brightness, same styling on every panel."""
+def _mark(ax, cob, centre_of_mass, sub_solar=None):
+    """Centre of mass, the two centres of brightness, and the sub-solar points, on every panel."""
     ax.plot(*centre_of_mass, "o", mfc="none", mec="#00d0ff", markersize=9, markeredgewidth=1.2, label="CoM")
+    if sub_solar is not None:
+        for label, style in (("sphere", "1"), ("ellipsoid", "2")):
+            ax.plot(
+                *sub_solar[label],
+                style,
+                color="#00d0ff",
+                markersize=11,
+                markeredgewidth=1.4,
+                label=f"sub-solar {label}",
+            )
     ax.plot(*cob["sphere"], "+", color=ps.series_colors[0], markersize=11, markeredgewidth=1.6, label="sphere CoB")
     ax.plot(*cob["ellipsoid"], "x", color=ps.series_colors[1], markersize=9, markeredgewidth=1.6, label="ellipsoid CoB")
 
@@ -576,6 +643,53 @@ def _arrow(ax, origin, vector, color):
         xytext=(origin[0], origin[1]),
         arrowprops=dict(arrowstyle="->", color=color, linewidth=1.4, shrinkA=0, shrinkB=0),
     )
+
+
+def plot_sub_solar_tracking(summary, cob_mode="geometric", output_path=None):
+    """
+    Does the CoB move along, and in step with, the sub-solar point?
+
+    x is how far the sub-solar point itself moved between the two bodies, y is the CoB shift
+    projected onto that same direction, both in units of the sphere's apparent radius. Points on the
+    dashed 1:1 line moved exactly with the sub-solar point; points near y = 0 did not follow it at
+    all. Coloured by phase angle, since past 90 degrees the sub-solar point is on the far side and
+    cannot be driving what the camera sees.
+    """
+    rows = summary["rows"]
+    if not rows:
+        raise ValueError("no samples to plot")
+
+    radius = np.array([row["apparent_radius_px"] for row in rows])
+    x = np.array([row["sub_solar_shift_norm_px"] for row in rows]) / radius
+    y = np.array([row[f"shift_{cob_mode}"]["along_sub_solar_px"] for row in rows]) / radius
+    phase = np.array([row["phase_angle_deg"] for row in rows])
+
+    ps.apply_showcase_style()
+    figure, axes = plt.subplots(figsize=ps.figsize_half(title_lines=2))
+    points = axes.scatter(x, y, c=phase, cmap="inferno", s=14, edgecolor="none")
+    figure.colorbar(points, ax=axes, label="phase angle (deg)")
+
+    limit = float(max(x.max(), abs(y).max())) * 1.05
+    axes.plot([0, limit], [0, limit], "--", color="0.6", linewidth=0.8)
+    axes.axhline(0.0, color="0.6", linewidth=0.6)
+    axes.set_xlabel("sub-solar point shift / apparent radius")
+    axes.set_ylabel("CoB shift along that direction / apparent radius")
+    axes.set_title(
+        ps.wrap_to_width(
+            f"{cob_mode} CoB vs sub-solar point, {summary['reference_rule']} sphere",
+            ps.half_w,
+            ps.body_pt,
+            family="sans",
+        )
+    )
+    figure.tight_layout()
+
+    output_path = output_path or os.path.join(
+        current_file_path, "images-ellipsoid-cob", f"sub_solar_tracking_{summary['reference_rule']}_{cob_mode}.pdf"
+    )
+    ps.save_figure(figure, output_path)
+    plt.close(figure)
+    return output_path
 
 
 def plot_cob_shift(summary, cob_mode="geometric", output_path=None):
@@ -595,7 +709,7 @@ def plot_cob_shift(summary, cob_mode="geometric", output_path=None):
     phase = np.array([row["phase_angle_deg"] for row in rows])
 
     ps.apply_showcase_style()
-    figure, axes = plt.subplots(figsize=ps.figsize_half(title_lines=1))
+    figure, axes = plt.subplots(figsize=ps.figsize_half(title_lines=2))
     points = axes.scatter(x, y, c=phase, cmap="inferno", s=14, edgecolor="none")
     figure.colorbar(points, ax=axes, label="phase angle (deg)")
 
@@ -603,7 +717,9 @@ def plot_cob_shift(summary, cob_mode="geometric", output_path=None):
     axes.axvline(1.0, color="0.6", linewidth=0.6)
     axes.set_xlabel(f"sub-solar radius / {summary['reference_rule']} sphere radius")
     axes.set_ylabel("CoB shift along sunline / apparent radius")
-    axes.set_title(f"{cob_mode} CoB, {summary['reference_rule']} sphere")
+    axes.set_title(
+        ps.wrap_to_width(f"{cob_mode} CoB, {summary['reference_rule']} sphere", ps.half_w, ps.body_pt, family="sans")
+    )
     figure.tight_layout()
 
     output_path = output_path or os.path.join(
@@ -634,3 +750,4 @@ if __name__ == "__main__":
     )
     for mode in ("geometric", "photometric"):
         print(f"Wrote {plot_cob_shift(run, mode)}")
+        print(f"Wrote {plot_sub_solar_tracking(run, mode)}")
