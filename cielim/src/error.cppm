@@ -283,6 +283,7 @@ enum class VkAllocatorError : std::uint8_t
 {
     ImportFunctionsError,
     AllocatorCreateError,
+    BufferCreateError,
 };
 
 template <>
@@ -299,6 +300,7 @@ struct ErrorType<VkAllocatorError>
         {
         case ImportFunctionsError: return "Failed to import Vulkan functions";
         case AllocatorCreateError: return "Failed to create VMA allocator";
+        case BufferCreateError: return "Failed to allocate buffer memory";
         }
 
         return "Unknown VMA allocator error";

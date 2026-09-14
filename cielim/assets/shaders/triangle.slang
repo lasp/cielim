@@ -1,22 +1,26 @@
 // Copyright (c) 2026 Laboratory for Atmospheric and Space Physics
 // SPDX-License-Identifier: GPL-3.0+
 
-static float2 positions[3] = float2[](
-    float2(0.0, -0.5),
-    float2(0.5, 0.5),
-    float2(-0.5, 0.5)
-);
+struct VertexData
+{
+    float2 vert_position;
+    float3 vert_color;
+};
 
-static float3 colors[3] = float3[](
-    float3(1.0, 0.0, 0.0),
-    float3(0.0, 1.0, 0.0),
-    float3(0.0, 0.0, 1.0)
-);
+struct PushConstants
+{
+    VertexData* vertex_info;
+    uint64_t not_used1;
+    uint64_t not_used2;
+};
+
+[[vk::push_constant]]
+PushConstants pc;
 
 struct VertexOutput
 {
-    float3 color;
     float4 sv_position : SV_Position;
+    float3 color;
 };
 
 [shader("vertex")]
@@ -24,8 +28,8 @@ VertexOutput VertMain(uint vid : SV_VertexID)
 {
     VertexOutput output;
 
-    output.color = colors[vid];
-    output.sv_position = float4(positions[vid], 0.0, 1.0);
+    output.sv_position = float4(pc.vertex_info[vid].vert_position, 0.0, 1.0);
+    output.color = pc.vertex_info[vid].vert_color;
 
     return output;
 }

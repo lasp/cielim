@@ -18,6 +18,7 @@ import cielim.utils;
 import :context;
 import :frame_resources;
 import :pipeline;
+import :push_constants;
 import :swapchain;
 
 export namespace cielim::vk::renderer
@@ -82,16 +83,18 @@ public:
     /**
      * @brief Draws a frame.
      * @param context The Vulkan context.
+     * @param swapchain The swapchain to which the frame should be presented.
      * @param frame_resources The frame resources to use for drawing.
      * @param render_pipeline The pipeline to be used for rendering.
-     * @param swapchain The swapchain to which the frame should be presented.
+     * @param scene_data_addresses Push constant struct containing scene data device addresses.
      * @return Void on success, error code on failure.
      */
     auto draw_frame(
         const context::Context& context,
+        const swapchain::Swapchain& swapchain,
         const frame_resources::FrameResources& frame_resources,
         const pipeline::Pipeline& render_pipeline,
-        const swapchain::Swapchain& swapchain
+        const push_constants::SceneDataAddresses& scene_data_addresses
     ) -> Result<void>
     {
         // Don't do anything if renderer is not initialized
@@ -257,6 +260,16 @@ public:
         };
 
         vkCmdSetScissor(command_buffer, 0, 1, &scissor);
+
+        // Inject the push constants
+        vkCmdPushConstants(
+            command_buffer,
+            render_pipeline.get_layout(),
+            render_pipeline.get_push_stages(),
+            0,
+            sizeof(scene_data_addresses),
+            &scene_data_addresses
+        );
 
         // Draw a single triangle
         vkCmdDraw(command_buffer, 3, 1, 0, 0);
