@@ -23,6 +23,7 @@ import os
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib.lines import Line2D
 from scipy.spatial.transform import Rotation
 
 import cielim
@@ -190,9 +191,16 @@ def scene_setup() -> cielim.Scene:
 
 
 def _render(connector, scene):
-    """Re-init (the shape model is only re-read then), send, and return the frame plus engine CoB."""
+    """
+    Re-init (the shape model is only re-read then), send, and return the frame plus engine CoB.
+
+    The image is requested twice and the second kept: the first request after an init can come back
+    blank, the same quirk tests/test_corruptions.py guards against. Every sample re-inits to pick up
+    the new shape, so without this any sample can silently lose a frame — it cost one intermittently.
+    """
     connector.send_init_request()
     connector.send_frame(scene.get_scene())
+    connector.request_image_for_camera_id(1)
     image, engine_cob, coverage = connector.request_image_for_camera_id(1)
     return image, engine_cob, coverage
 
@@ -255,6 +263,7 @@ def ellipsoid_cob_scenario(
     axis_sigma: float = axis_log_sigma,
     seed: int | None = None,
     save_first: int = 5,
+    cob_mode: str = "geometric",
     output_directory: str | None = None,
 ) -> dict:
     """
@@ -267,7 +276,9 @@ def ellipsoid_cob_scenario(
         axis_sigma (float): Lognormal spread on the axis scales. Zero makes every body a sphere,
             which is the degenerate self-check: the shift must come out at ~0.
         seed (int, optional): Seed for the draws, so a run can be repeated under another rule.
-        save_first (int): Save the renders and lit masks for this many samples, for eyeballing.
+        save_first (int): Write the pair figure, renders and lit masks for this many samples.
+        cob_mode (str): Which CoB the pair figure marks and the scatter defaults to. Both modes are
+            recorded either way, so the other one needs no re-render.
         output_directory (str, optional): Defaults to examples/images-ellipsoid-cob/.
 
     Returns:
@@ -361,6 +372,7 @@ def ellipsoid_cob_scenario(
                 "candidate_radii_m": candidate_radii,
                 "apparent_radius_px": apparent_radius_px,
                 "sunline_px": sunline.tolist(),
+                "centre_of_mass_px": centre_px.tolist(),
                 "engine_cob_ellipsoid": list(engine_cob_ellipsoid),
                 "engine_cob_sphere": list(engine_cob_sphere),
                 "scale_factor": r_sub / r_reference,
@@ -369,6 +381,13 @@ def ellipsoid_cob_scenario(
         )
 
         if idx < save_first:
+            plot_sample_pair(
+                ellipsoid_image,
+                sphere_image,
+                rows[-1],
+                os.path.join(directory_path, f"sample{idx:03d}_pair.png"),
+                cob_mode=cob_mode,
+            )
             for label, frame in (("ellipsoid", ellipsoid_image), ("sphere", sphere_image)):
                 gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY) if frame.ndim == 3 else frame
                 cv2.imwrite(os.path.join(directory_path, f"sample{idx:03d}_{label}.png"), frame)
@@ -398,6 +417,7 @@ def ellipsoid_cob_scenario(
         "camera_range_m": camera_range,
         "lit_threshold": lit_threshold,
         "gamma": gamma,
+        "cob_mode": cob_mode,
         "rows": rows,
     }
     _write_run(summary, directory_path)
@@ -438,7 +458,127 @@ def _write_run(summary, directory_path):
             )
 
 
-def plot_cob_shift(summary, cob_mode="photometric", output_path=None):
+def zoom_half_width(shift_px, minimum=15.0):
+    """Half-width of the CoB zoom window: enough to hold the shift with context around it."""
+    return float(max(3.0 * abs(shift_px), minimum))
+
+
+def plot_sample_pair(ellipsoid_image, sphere_image, row, output_path, cob_mode="geometric"):
+    """
+    Ellipsoid and sphere side by side, plus a zoom on the CoB pair, for one sample.
+
+    The two wide panels share one crop window so they are comparable pixel for pixel, and the axes
+    stay in original pixel coordinates (the ``extent`` idiom from
+    image_comparison_toolkit.plot_point_source_pair) so every marker plots at its true position.
+
+    The zoom panel is the point of the figure: the shift vector and the projected sunline are drawn
+    from the same origin at the same length, so they overlap exactly when the CoB slides along the
+    sun direction and the alignment is read off rather than computed.
+
+    Args:
+        ellipsoid_image (ndarray): The ellipsoid render.
+        sphere_image (ndarray): The matched sphere render.
+        row (dict): One entry of the run's ``rows``.
+        output_path (str): Where to write the figure.
+        cob_mode (str): Which recorded CoB to mark, "geometric" or "photometric".
+
+    Returns:
+        str: The path written.
+    """
+    ps.apply_showcase_style()
+    frames = {}
+    for label, image in (("ellipsoid", ellipsoid_image), ("sphere", sphere_image)):
+        frames[label] = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if image.ndim == 3 else image
+
+    shift = row[f"shift_{cob_mode}"]
+    cob = {label: np.array(shift[label], float) for label in frames}
+    centre_of_mass = np.array(row["centre_of_mass_px"], float)
+    sunline = np.array(row["sunline_px"], float)
+    displacement = cob["ellipsoid"] - cob["sphere"]
+
+    height, width = frames["ellipsoid"].shape
+    boxes = [lit_extent(frame) for frame in frames.values()]
+    pad = 25
+    x1 = max(min(b[2] for b in boxes) - pad, 0)
+    y1 = max(min(b[3] for b in boxes) - pad, 0)
+    x2 = min(max(b[2] + b[0] for b in boxes) + pad, width)
+    y2 = min(max(b[3] + b[1] for b in boxes) + pad, height)
+
+    # Extra height for the legend band below the panels; in-axes it sits on top of the body.
+    strip_width, strip_height = ps.figsize_strip(3)
+    figure, axes = plt.subplots(1, 3, figsize=(strip_width, strip_height + 0.4))
+    for ax, label in zip(axes[:2], ("ellipsoid", "sphere")):
+        ax.imshow(
+            frames[label][y1:y2, x1:x2],
+            cmap=ps.scene_cmap,
+            extent=[x1 - 0.5, x2 - 0.5, y2 - 0.5, y1 - 0.5],
+            interpolation="nearest",
+            vmin=0,
+            vmax=255,
+        )
+        _mark(ax, cob, centre_of_mass)
+        _arrow(ax, centre_of_mass, 0.35 * (x2 - x1) * sunline, "#00d0ff")
+        ax.set_title(label)
+
+    half = zoom_half_width(np.linalg.norm(displacement))
+    midpoint = 0.5 * (cob["ellipsoid"] + cob["sphere"])
+    zoom = axes[2]
+    zx1, zx2 = midpoint[0] - half, midpoint[0] + half
+    zy1, zy2 = midpoint[1] - half, midpoint[1] + half
+    zoom.imshow(
+        frames["sphere"][max(int(zy1), 0) : int(zy2), max(int(zx1), 0) : int(zx2)],
+        cmap=ps.scene_cmap,
+        extent=[max(int(zx1), 0) - 0.5, int(zx2) - 0.5, int(zy2) - 0.5, max(int(zy1), 0) - 0.5],
+        interpolation="nearest",
+        vmin=0,
+        vmax=255,
+    )
+    # Both arrows leave the sphere CoB at the same length: they coincide when the slide is along the
+    # sunline, so the figure answers the alignment question by eye.
+    _arrow(zoom, cob["sphere"], displacement, ps.series_colors[1])
+    _arrow(zoom, cob["sphere"], np.linalg.norm(displacement) * sunline, "#00d0ff")
+    _mark(zoom, cob, centre_of_mass)
+    zoom.set_xlim(zx1, zx2)
+    zoom.set_ylim(zy2, zy1)
+    zoom.set_title(f"zoom: shift {np.linalg.norm(displacement):.1f} px")
+
+    for ax in axes:
+        ax.set_xlabel("x (px)")
+    axes[0].set_ylabel("y (px)")
+    figure.suptitle(
+        f"sample {row['sample']}  {cob_mode} CoB  phase {row['phase_angle_deg']:.1f} deg  "
+        f"scale {row['scale_factor']:.3f}  along sunline {shift['along_sunline_px']:+.2f} px"
+    )
+    handles, labels = axes[0].get_legend_handles_labels()
+    handles.append(Line2D([], [], color="#00d0ff", linewidth=1.4))
+    labels.append("sunline")
+    handles.append(Line2D([], [], color=ps.series_colors[1], linewidth=1.4))
+    labels.append("shift (zoom)")
+    figure.legend(handles, labels, loc="lower center", ncol=5, frameon=False)
+    figure.tight_layout(rect=(0, 0.09, 1, 1))
+    ps.save_figure(figure, output_path)
+    plt.close(figure)
+    return output_path
+
+
+def _mark(ax, cob, centre_of_mass):
+    """Centre of mass and the two centres of brightness, same styling on every panel."""
+    ax.plot(*centre_of_mass, "o", mfc="none", mec="#00d0ff", markersize=9, markeredgewidth=1.2, label="CoM")
+    ax.plot(*cob["sphere"], "+", color=ps.series_colors[0], markersize=11, markeredgewidth=1.6, label="sphere CoB")
+    ax.plot(*cob["ellipsoid"], "x", color=ps.series_colors[1], markersize=9, markeredgewidth=1.6, label="ellipsoid CoB")
+
+
+def _arrow(ax, origin, vector, color):
+    """Arrow from ``origin`` along ``vector``, in pixel coordinates."""
+    ax.annotate(
+        "",
+        xy=(origin[0] + vector[0], origin[1] + vector[1]),
+        xytext=(origin[0], origin[1]),
+        arrowprops=dict(arrowstyle="->", color=color, linewidth=1.4, shrinkA=0, shrinkB=0),
+    )
+
+
+def plot_cob_shift(summary, cob_mode="geometric", output_path=None):
     """
     Scatter the normalized CoB shift against the sub-solar scale factor, coloured by phase angle.
 
@@ -475,11 +615,22 @@ def plot_cob_shift(summary, cob_mode="photometric", output_path=None):
 
 
 if __name__ == "__main__":
-    import sys
+    import argparse
 
-    rule = sys.argv[1] if len(sys.argv) > 1 else "arithmetic"
-    count = int(sys.argv[2]) if len(sys.argv) > 2 else 200
+    parser = argparse.ArgumentParser(description="Ellipsoid vs sphere centre-of-brightness sensitivity")
+    parser.add_argument("--rule", default="arithmetic", choices=sorted(reference_radius_rules), help="reference sphere")
+    parser.add_argument("--samples", type=int, default=200, help="ellipsoid/sphere pairs to render")
+    parser.add_argument("--figures", type=int, default=5, help="samples to save a pair figure for")
+    parser.add_argument("--cob-mode", default="geometric", choices=("geometric", "photometric"), help="CoB to mark")
+    parser.add_argument("--seed", type=int, default=20260914)
+    args = parser.parse_args()
 
-    run = ellipsoid_cob_scenario(number_of_samples=count, reference_rule=rule, seed=20260914)
-    for mode in ("photometric", "geometric"):
+    run = ellipsoid_cob_scenario(
+        number_of_samples=args.samples,
+        reference_rule=args.rule,
+        seed=args.seed,
+        save_first=args.figures,
+        cob_mode=args.cob_mode,
+    )
+    for mode in ("geometric", "photometric"):
         print(f"Wrote {plot_cob_shift(run, mode)}")

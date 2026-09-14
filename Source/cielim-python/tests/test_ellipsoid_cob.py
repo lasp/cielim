@@ -115,3 +115,36 @@ def test_sunline_pixel_direction_is_a_unit_vector(ec):
     for heading in ([1, 0, 0], [0, 1, 0], [0.6, -0.8, 0.0]):
         direction = ec.sunline_pixel_direction(heading, position, world_to_camera, (0.35, 0.26), (2000, 1500))
         np.testing.assert_allclose(np.linalg.norm(direction), 1.0, rtol=1e-9)
+
+
+def test_zoom_half_width_holds_the_shift_with_context(ec):
+    # Scales with the shift so both markers stay in view, with a floor so a sub-pixel shift still
+    # gets a readable window.
+    np.testing.assert_allclose(ec.zoom_half_width(20.0), 60.0)
+    np.testing.assert_allclose(ec.zoom_half_width(-20.0), 60.0)
+    np.testing.assert_allclose(ec.zoom_half_width(0.1), 15.0)
+
+
+def test_plot_sample_pair_writes_a_figure(ec, tmp_path):
+    ellipsoid = _disk(size=200, radius=60, ramp=True)
+    sphere = _disk(size=200, radius=55)
+    shift = [7.0, -3.0]
+    sunline = np.array([1.0, 0.0])
+    row = {
+        "sample": 0,
+        "phase_angle_deg": 42.0,
+        "scale_factor": 1.08,
+        "sunline_px": sunline.tolist(),
+        "centre_of_mass_px": [100.0, 100.0],
+        "shift_geometric": {
+            "sphere": [100.0, 100.0],
+            "ellipsoid": [100.0 + shift[0], 100.0 + shift[1]],
+            "along_sunline_px": float(np.dot(shift, sunline)),
+        },
+    }
+
+    out = tmp_path / "pair.png"
+    ec.plot_sample_pair(ellipsoid, sphere, row, str(out))
+
+    np.testing.assert_(out.exists(), msg="Pair figure was not written")
+    np.testing.assert_(out.stat().st_size > 5000, msg="Pair figure looks empty")
