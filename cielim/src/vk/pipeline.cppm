@@ -8,6 +8,7 @@
 module;
 
 #include <array>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -62,21 +63,34 @@ public:
      * @param context The Vulkan context.
      * @param swapchain The swapchain the pipeline should render to.
      * @param stages List of shader stages to include in the pipeline.
+     * @param push_stages Shader stages that should receive push constants.
+     * @param push_size Size in bytes of the push constants that shaders should receive.
      * @return Void on success, error code on failure
      */
     auto create(
-        const context::Context& context, const swapchain::Swapchain& swapchain, const std::vector<ShaderStage>& stages
+        const context::Context& context,
+        const swapchain::Swapchain& swapchain,
+        const std::span<const ShaderStage> stages,
+        const VkShaderStageFlags push_stages,
+        const uint32_t push_size
     ) -> Result<void>
     {
         this->vk_device_handle_ = context.get_device(); // This is specifically a non-owning (borrow) handle
 
         // Specify shader uniform data layout
 
-        // This is empty because no uniforms are used yet
+        this->push_stages_ = push_stages;
+
+        VkPushConstantRange push_constant_range = {
+            .stageFlags = push_stages,
+            .offset = 0,
+            .size = push_size,
+        };
+
         VkPipelineLayoutCreateInfo layout_create_info = {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-            .setLayoutCount = 0,
-            .pushConstantRangeCount = 0,
+            .pushConstantRangeCount = 1,
+            .pPushConstantRanges = &push_constant_range,
         };
 
         if (const auto result = vkCreatePipelineLayout(
@@ -95,6 +109,8 @@ public:
         // Collect all of the shader stage info structs
 
         std::vector<VkPipelineShaderStageCreateInfo> shader_stages;
+
+        shader_stages.reserve(stages.size());
 
         for (const auto& [stage_flag, shader_module, entry_point] : stages)
         {
@@ -211,11 +227,16 @@ public:
         return {};
     }
 
+    [[nodiscard]] auto get_push_stages() const -> VkShaderStageFlags { return this->push_stages_; }
+    [[nodiscard]] auto get_layout() const -> VkPipelineLayout { return this->pipeline_layout_.get(); }
     [[nodiscard]] auto get_handle() const -> VkPipeline { return this->pipeline_.get(); }
 
 private:
     // Non-owning handle for the Vulkan logical device
     VkDevice vk_device_handle_ = nullptr;
+
+    // The shader stages that should receive push constants
+    VkShaderStageFlags push_stages_ = 0;
 
     // Vulkan pipeline layout (assumed unique per pipeline for now, may not be the case later)
     UniqueHandle<VkPipelineLayout> pipeline_layout_;

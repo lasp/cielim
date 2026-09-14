@@ -12,6 +12,8 @@
 #include <volk/volk.h>
 #include <vulkan/vk_enum_string_helper.h>
 
+#include <vma/vk_mem_alloc.h>
+
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 
@@ -121,6 +123,14 @@ auto run(const std::filesystem::path& base_path) -> int
         return EXIT_FAILURE;
     }
 
+    cielim::vk::FrameResources vk_frame_resources;
+
+    if (const auto result = vk_frame_resources.init(vk_context, false); !result.has_value())
+    {
+        fatal_error(&window, result.error().message());
+        return EXIT_FAILURE;
+    }
+
     std::filesystem::path triangle_shader_path = base_path / "content" / "shaders" / "triangle.spv";
 
     cielim::vk::Shader triangle_shader;
@@ -131,22 +141,17 @@ auto run(const std::filesystem::path& base_path) -> int
         return EXIT_FAILURE;
     }
 
-    cielim::vk::Pipeline vk_render_pipeline;
-
     std::vector<cielim::vk::ShaderStage> shader_stages = {
         {.stage_flag = VK_SHADER_STAGE_VERTEX_BIT, .shader_module = triangle_shader, .entry_point = "VertMain"},
         {.stage_flag = VK_SHADER_STAGE_FRAGMENT_BIT, .shader_module = triangle_shader, .entry_point = "FragMain"},
     };
 
-    if (const auto result = vk_render_pipeline.create(vk_context, vk_swapchain, shader_stages); !result.has_value())
-    {
-        fatal_error(&window, result.error().message());
-        return EXIT_FAILURE;
-    }
+    cielim::vk::Pipeline vk_render_pipeline;
 
-    cielim::vk::FrameResources vk_frame_resources;
-
-    if (const auto result = vk_frame_resources.init(vk_context, false); !result.has_value())
+    if (const auto result = vk_render_pipeline.create(
+            vk_context, vk_swapchain, shader_stages, VK_SHADER_STAGE_VERTEX_BIT, sizeof(cielim::vk::SceneDataAddresses)
+        );
+        !result.has_value())
     {
         fatal_error(&window, result.error().message());
         return EXIT_FAILURE;
@@ -159,6 +164,27 @@ auto run(const std::filesystem::path& base_path) -> int
         fatal_error(&window, result.error().message());
         return EXIT_FAILURE;
     }
+
+    std::array vertex_info
+        = {0.0f, -0.5f, 1.0f, 0.0f, 0.0f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f};
+
+    cielim::vk::Buffer vertex_info_buffer;
+
+    if (const auto result = vertex_info_buffer.create(
+            vk_context,
+            vk_allocator,
+            sizeof(vertex_info),
+            VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+            VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
+        );
+        !result.has_value())
+    {
+        fatal_error(&window, result.error().message());
+        return EXIT_FAILURE;
+    }
+
+    // Copy vertex info from CPU to GPU
+    std::memcpy(vertex_info_buffer.get_mapped_data(), vertex_info.data(), sizeof(vertex_info));
 
     bool is_running = true;
 
@@ -193,8 +219,12 @@ auto run(const std::filesystem::path& base_path) -> int
             continue;
         }
 
+        const cielim::vk::SceneDataAddresses push_constants = {
+            .vertex_info_address = vertex_info_buffer.get_device_address(),
+        };
+
         if (const auto result
-            = vk_renderer.draw_frame(vk_context, vk_frame_resources, vk_render_pipeline, vk_swapchain);
+            = vk_renderer.draw_frame(vk_context, vk_swapchain, vk_frame_resources, vk_render_pipeline, push_constants);
             !result.has_value())
         {
             fatal_error(&window, result.error().message());
