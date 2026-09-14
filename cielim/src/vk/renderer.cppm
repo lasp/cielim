@@ -6,6 +6,7 @@
 module;
 
 #include <array>
+#include <optional>
 
 #include <volk/volk.h>
 #include <vulkan/vk_enum_string_helper.h>
@@ -17,6 +18,7 @@ import cielim.result;
 import cielim.utils;
 import :context;
 import :frame_resources;
+import :mesh_registry;
 import :pipeline;
 import :push_constants;
 import :swapchain;
@@ -87,6 +89,7 @@ public:
      * @param frame_resources The frame resources to use for drawing.
      * @param render_pipeline The pipeline to be used for rendering.
      * @param scene_data_addresses Push constant struct containing scene data device addresses.
+     * @param mesh_registry The mesh registry from which the meshes to be rendered are pulled.
      * @return Void on success, error code on failure.
      */
     auto draw_frame(
@@ -94,7 +97,8 @@ public:
         const swapchain::Swapchain& swapchain,
         const frame_resources::FrameResources& frame_resources,
         const pipeline::Pipeline& render_pipeline,
-        const push_constants::SceneDataAddresses& scene_data_addresses
+        const push_constants::SceneDataAddresses& scene_data_addresses,
+        const mesh_registry::MeshRegistry& mesh_registry
     ) -> Result<void>
     {
         // Don't do anything if renderer is not initialized
@@ -249,7 +253,7 @@ public:
             .width = static_cast<float>(req_extent.width),
             .height = static_cast<float>(req_extent.height),
             .minDepth = 0.0f,
-            .maxDepth = 0.0f,
+            .maxDepth = 1.0f,
         };
 
         vkCmdSetViewport(command_buffer, 0, 1, &viewport);
@@ -271,8 +275,17 @@ public:
             &scene_data_addresses
         );
 
-        // Draw a single triangle
-        vkCmdDraw(command_buffer, 3, 1, 0, 0);
+        vkCmdBindIndexBuffer(command_buffer, mesh_registry.get_index_handle(), 0, VK_INDEX_TYPE_UINT32);
+
+        // Draw just the first (and only for now) object in the registry
+
+        auto first_mesh = mesh_registry.get_mesh({.index = 0});
+
+        if (first_mesh.has_value())
+        {
+            const auto [vertex_offset, index_offset, index_count] = first_mesh.value();
+            vkCmdDrawIndexed(command_buffer, index_count, 1, index_offset, vertex_offset, 0);
+        }
 
         vkCmdEndRendering(command_buffer);
 

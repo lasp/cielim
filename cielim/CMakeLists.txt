@@ -32,8 +32,10 @@ target_sources(cielim
         FILE_SET CXX_MODULES
         BASE_DIRS "${CIELIM_CPP_SOURCE}"
         FILES
+            ${CIELIM_CPP_SOURCE}/default_shape.cppm
             ${CIELIM_CPP_SOURCE}/error.cppm
             ${CIELIM_CPP_SOURCE}/handle.cppm
+            ${CIELIM_CPP_SOURCE}/mesh_elements.cppm
             ${CIELIM_CPP_SOURCE}/result.cppm
             ${CIELIM_CPP_SOURCE}/utils.cppm
             ${CIELIM_CPP_SOURCE}/vk.cppm
@@ -44,6 +46,7 @@ target_sources(cielim
             ${CIELIM_CPP_SOURCE}/vk/buffer.cppm
             ${CIELIM_CPP_SOURCE}/vk/context.cppm
             ${CIELIM_CPP_SOURCE}/vk/frame_resources.cppm
+            ${CIELIM_CPP_SOURCE}/vk/mesh_registry.cppm
             ${CIELIM_CPP_SOURCE}/vk/pipeline.cppm
             ${CIELIM_CPP_SOURCE}/vk/push_constants.cppm
             ${CIELIM_CPP_SOURCE}/vk/renderer.cppm
