@@ -272,7 +272,7 @@ public:
         );
 
         // Draw a single triangle
-        vkCmdDraw(command_buffer, 3, 1, 0, 0);
+        vkCmdDraw(command_buffer, 36, 1, 0, 0);
 
         vkCmdEndRendering(command_buffer);
 
