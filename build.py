@@ -51,7 +51,8 @@ def compile_shaders():
                 str(shader),
                 "-target",
                 "spirv",
-                "-fvk-use-entrypoint-name",
+                "-matrix-layout-column-major",  # Use column major layout (M x v)
+                "-fvk-use-entrypoint-name",  # Allow a single shader to have multiple entrypoints
                 "-entry",
                 "VertMain",
                 "-entry",
@@ -68,15 +69,15 @@ def compile_shaders():
         print(f"Finished compiling {shader.name}")
 
 
-def configure(platform_name: str, preset: str):
-    print(f"Configuring build for {platform_name} as {preset}...")
+def configure(platform_name_: str, preset_: str):
+    print(f"Configuring build for {platform_name_} as {preset_}...")
 
     # Generate build files and install vcpkg dependencies with CMake
     process = subprocess.Popen(
         [
             "cmake",
             "--preset",
-            f"{preset}",
+            f"{preset_}",
         ],
         cwd=cielim_path,
         stdout=sys.stdout,
@@ -87,7 +88,7 @@ def configure(platform_name: str, preset: str):
 
     # Copy compile_commands.json to base build directory for Clangd
 
-    target_path = os.path.join(cielim_path, "build", preset, "compile_commands.json")
+    target_path = os.path.join(cielim_path, "build", preset_, "compile_commands.json")
     link_path = os.path.join(cielim_path, "build", "compile_commands.json")
 
     if os.path.isfile(target_path):
@@ -99,15 +100,15 @@ def configure(platform_name: str, preset: str):
             print(f"Skipped compile_commands.json symlink, permission denied: {e}")
 
 
-def build(platform_name: str, preset: str):
-    print(f"Building for {platform_name} as {preset}...")
+def build(platform_name_: str, preset_: str):
+    print(f"Building for {platform_name_} as {preset_}...")
 
     # Build binaries with CMake
     process = subprocess.Popen(
         [
             "cmake",
             "--build",
-            f"{os.path.join(cielim_path, "build", preset)}",
+            f"{os.path.join(cielim_path, "build", preset_)}",
         ],
         stdout=sys.stdout,
         stderr=sys.stderr,
@@ -116,13 +117,13 @@ def build(platform_name: str, preset: str):
     process.wait()
 
 
-def package(system: str, architecture: str, preset: str):
+def package(system_: str, architecture_: str, preset_: str):
     print("Packaging build...")
 
-    build_dir = Path(os.path.join(cielim_path, "build", preset))
-    out_dir = Path(os.path.join(base_path, "bin", f"{architecture}_{system}_{preset}"))
+    build_dir = Path(os.path.join(cielim_path, "build", preset_))
+    out_dir = Path(os.path.join(base_path, "bin", f"{architecture_}_{system_}_{preset_}"))
 
-    exe_name = "cielim.exe" if system == "windows" else "cielim"
+    exe_name = "cielim.exe" if system_ == "windows" else "cielim"
     candidates = [
         executable
         for executable in build_dir.rglob(exe_name)
