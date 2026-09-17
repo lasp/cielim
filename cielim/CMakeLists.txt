@@ -10,6 +10,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Find dependencies
 
+find_package(glm CONFIG REQUIRED) # From vcpkg
 find_package(SDL3 CONFIG REQUIRED) # From vcpkg
 find_package(spdlog CONFIG REQUIRED) # From vcpkg
 find_package(Vulkan REQUIRED COMPONENTS volk) # From VulkanSDK
@@ -35,11 +36,14 @@ target_sources(cielim
             ${CIELIM_CPP_SOURCE}/default_shape.cppm
             ${CIELIM_CPP_SOURCE}/error.cppm
             ${CIELIM_CPP_SOURCE}/handle.cppm
+            ${CIELIM_CPP_SOURCE}/math.cppm
             ${CIELIM_CPP_SOURCE}/mesh_elements.cppm
             ${CIELIM_CPP_SOURCE}/result.cppm
             ${CIELIM_CPP_SOURCE}/utils.cppm
             ${CIELIM_CPP_SOURCE}/vk.cppm
             ${CIELIM_CPP_SOURCE}/window.cppm
+            ${CIELIM_CPP_SOURCE}/math/projection.cppm
+            ${CIELIM_CPP_SOURCE}/math/tensors.cppm
             ${CIELIM_CPP_SOURCE}/utils/file.cppm
             ${CIELIM_CPP_SOURCE}/utils/log.cppm
             ${CIELIM_CPP_SOURCE}/vk/allocator.cppm
@@ -56,6 +60,7 @@ target_sources(cielim
 
 # Link dependencies
 
+target_link_libraries(cielim PRIVATE glm::glm)
 target_link_libraries(cielim PRIVATE SDL3::SDL3)
 target_link_libraries(cielim PRIVATE spdlog::spdlog)
 target_link_libraries(cielim PRIVATE Vulkan::volk)
