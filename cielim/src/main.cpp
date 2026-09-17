@@ -12,6 +12,8 @@
 #include <volk/volk.h>
 #include <vulkan/vk_enum_string_helper.h>
 
+#include <vma/vk_mem_alloc.h>
+
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 
@@ -19,6 +21,7 @@
 
 import cielim.default_shape;
 import cielim.error;
+import cielim.math;
 import cielim.mesh_elements;
 import cielim.result;
 import cielim.utils;
@@ -183,6 +186,44 @@ auto run(const std::filesystem::path& base_path) -> int
         return EXIT_FAILURE;
     }
 
+    constexpr float FOV = 60;
+
+    float fov = cielim::math::radians(FOV);
+
+    cielim::math::Mat4 projection_matrix = cielim::math::perspective_infinite_reverse_z(fov, fov, 0.0f);
+
+    cielim::math::Vec3 camera_position(0.0f, -3.0f, 0.0f);
+    cielim::math::Vec3 lookat(0.0f, 0.1f, 0.0f);
+    cielim::math::Vec3 world_up(0.0f, 0.0f, 1.0f);
+
+    cielim::math::Mat4 view_matrix = cielim::math::lookAt(camera_position, lookat, world_up);
+
+    cielim::math::Mat4 view_projection_matrix = projection_matrix * view_matrix;
+
+    cielim::vk::Buffer camera_info_buffer;
+
+    if (const auto result = camera_info_buffer.create(
+            vk_context,
+            vk_allocator,
+            sizeof(view_projection_matrix),
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+            VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
+        );
+        !result.has_value())
+    {
+        fatal_error(&window, result.error().message());
+        return EXIT_FAILURE;
+    }
+
+    if (const auto result = camera_info_buffer.direct_write(
+            0, cielim::math::value_ptr(view_projection_matrix), sizeof(view_projection_matrix)
+        );
+        !result.has_value())
+    {
+        fatal_error(&window, result.error().message());
+        return EXIT_FAILURE;
+    }
+
     bool is_running = true;
 
     while (is_running)
@@ -218,6 +259,7 @@ auto run(const std::filesystem::path& base_path) -> int
 
         const cielim::vk::SceneDataAddresses push_constants = {
             .vertex_info_address = mesh_registry.get_vertex_address(),
+            .frame_data_address = camera_info_buffer.get_device_address(),
         };
 
         if (const auto result = vk_renderer.draw_frame(
