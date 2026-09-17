@@ -247,11 +247,13 @@ public:
 
         vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_pipeline.get_handle());
 
+        /* We flip the viewport upside down here to account for the fact that Vulkan expects the +Y direction to
+         * point downwards in NDC, but GLM implicitly assumes OpenGL's convention of +Y pointing up in NDC. */
         VkViewport viewport = {
             .x = 0.0f,
-            .y = 0.0f,
+            .y = static_cast<float>(req_extent.height),
             .width = static_cast<float>(req_extent.width),
-            .height = static_cast<float>(req_extent.height),
+            .height = -static_cast<float>(req_extent.height),
             .minDepth = 0.0f,
             .maxDepth = 1.0f,
         };
