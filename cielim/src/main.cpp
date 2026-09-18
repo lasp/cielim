@@ -19,6 +19,7 @@
 
 #include <SDL3/SDL_main.h> // This has to be the last SDL include
 
+import cielim.camera;
 import cielim.default_shape;
 import cielim.error;
 import cielim.math;
@@ -186,19 +187,13 @@ auto run(const std::filesystem::path& base_path) -> int
         return EXIT_FAILURE;
     }
 
-    constexpr float FOV = 60;
+    cielim::camera::Camera camera;
 
-    float fov = cielim::math::radians(FOV);
+    camera.set_position({0.0f, 0.0f, 3.0f});
+    camera.set_orientation({0.7071f, -0.7071f, 0.0f, 0.0f}); // Look directly down
+    camera.set_fov_aspect(cielim::math::radians(60.0f), 1);
 
-    cielim::math::Mat4 projection_matrix = cielim::math::perspective_infinite_reverse_z(fov, fov, 0.0f);
-
-    cielim::math::Vec3 camera_position(0.0f, -3.0f, 0.0f);
-    cielim::math::Vec3 lookat(0.0f, 0.1f, 0.0f);
-    cielim::math::Vec3 world_up(0.0f, 0.0f, 1.0f);
-
-    cielim::math::Mat4 view_matrix = cielim::math::lookAt(camera_position, lookat, world_up);
-
-    cielim::math::Mat4 view_projection_matrix = projection_matrix * view_matrix;
+    cielim::math::Mat4 view_projection_matrix = camera.get_view_projection_matrix();
 
     cielim::vk::Buffer camera_info_buffer;
 
