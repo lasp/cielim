@@ -1,7 +1,8 @@
 // Copyright (c) 2026 Laboratory for Atmospheric and Space Physics
 // SPDX-License-Identifier: GPL-3.0+
 
-/* Purpose: Defines constructor for infinite-far-plane reverse-Z perspective projection matrix. */
+/* Purpose: Defines constructor for infinite-far-plane reverse-Z perspective projection matrix. This matrix form
+ * assumes camera (view) space has a right-handed Z-up coordinate system, and projects to Vulkan NDC with Y-down. */
 
 module;
 
@@ -36,9 +37,9 @@ export namespace cielim::math::projection
 
     tensors::Mat4 perspective_matrix(0.0f);
     perspective_matrix[0][0] = focal_length_x;
-    perspective_matrix[1][1] = focal_length_y;
-    perspective_matrix[2][3] = -1.0f;
+    perspective_matrix[2][1] = focal_length_y;
     perspective_matrix[3][2] = effective_z_near;
+    perspective_matrix[1][3] = 1.0f;
 
     return perspective_matrix;
 }
@@ -65,9 +66,9 @@ export namespace cielim::math::projection
 
     tensors::Mat4 perspective_matrix(0.0f);
     perspective_matrix[0][0] = focal_length_x;
-    perspective_matrix[1][1] = focal_length_y;
-    perspective_matrix[2][3] = -1.0f;
+    perspective_matrix[2][1] = focal_length_y;
     perspective_matrix[3][2] = effective_z_near;
+    perspective_matrix[1][3] = 1.0f;
 
     return perspective_matrix;
 }

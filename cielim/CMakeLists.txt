@@ -33,6 +33,7 @@ target_sources(cielim
         FILE_SET CXX_MODULES
         BASE_DIRS "${CIELIM_CPP_SOURCE}"
         FILES
+            ${CIELIM_CPP_SOURCE}/camera.cppm
             ${CIELIM_CPP_SOURCE}/default_shape.cppm
             ${CIELIM_CPP_SOURCE}/error.cppm
             ${CIELIM_CPP_SOURCE}/handle.cppm
