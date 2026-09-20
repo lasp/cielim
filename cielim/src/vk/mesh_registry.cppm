@@ -69,14 +69,7 @@ public:
                 VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
             );
             !result.has_value())
-        {
-            error::DetailedError error = {
-                .errc = result.error().errc,
-                .detail = "mesh_registry vertex buffer",
-            };
-
-            return Err(error);
-        }
+            return Err(result.error().with_trace("failed to create mesh registry vertex buffer"));
 
         if (const auto result = this->index_buffer_.create(
                 context,
@@ -86,14 +79,7 @@ public:
                 VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
             );
             !result.has_value())
-        {
-            error::DetailedError error = {
-                .errc = result.error().errc,
-                .detail = "mesh_registry index buffer",
-            };
-
-            return Err(error);
-        }
+            return Err(result.error().with_trace("failed to create mesh registry index buffer"));
 
         return {};
     }
@@ -112,28 +98,14 @@ public:
         if (const auto result
             = vertex_buffer_.direct_write(vertex_write_pos_bytes, vertex_info.data(), vertex_info.size_bytes());
             !result.has_value())
-        {
-            error::DetailedError error = {
-                .errc = result.error().errc,
-                .detail = result.error().detail + ": could not upload mesh vertex data to registry",
-            };
-
-            return Err(error);
-        }
+            return Err(result.error().with_trace("failed to upload mesh vertex data to registry"));
 
         const size_t index_write_pos_bytes = this->index_write_pos_ * sizeof(uint32_t);
 
         if (const auto result
             = index_buffer_.direct_write(index_write_pos_bytes, index_info.data(), index_info.size_bytes());
             !result.has_value())
-        {
-            error::DetailedError error = {
-                .errc = result.error().errc,
-                .detail = result.error().detail + ": could not upload mesh index data to registry",
-            };
-
-            return Err(error);
-        }
+            return Err(result.error().with_trace("failed to upload mesh index data to registry"));
 
         const auto mesh_index = static_cast<uint32_t>(meshes_.size());
 

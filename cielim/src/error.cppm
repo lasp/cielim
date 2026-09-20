@@ -7,6 +7,7 @@
 
 module;
 
+#include <cctype>
 #include <format>
 #include <ranges>
 #include <string>
@@ -18,19 +19,59 @@ export module cielim.error;
 export namespace cielim::error
 {
 
+// Trims trailing periods and lowercases a leading capital
+[[nodiscard]] inline auto sanitize_fragment(std::string text) -> std::string
+{
+    // Remove the last character until the last character is no longer a period
+    while (!text.empty() && text.back() == '.') text.pop_back();
+
+    // Lowercase the first letter
+    if (!text.empty() && !text.starts_with("VK_"))
+        text.front() = static_cast<char>(std::tolower(static_cast<unsigned char>(text.front())));
+
+    return text;
+}
+
 // Error type that contains standard error and optional detail string
 struct DetailedError
 {
     std::error_code errc;
     std::string detail;
+    std::string trace;
 
-    // Return error message with optional details
+    /**
+     * @brief Returns a copy of this error with an added trace.
+     * @details This should be used when returning the same error further up the call stack.
+     * @param trace A description of the operation that was being attempted when this error occurred.
+     * @return A copy of this error with an added trace.
+     */
+    [[nodiscard]] auto with_trace(std::string trace) const -> DetailedError
+    {
+        DetailedError copy = *this;
+        copy.trace = this->trace.empty() ? std::move(trace) : trace + ": " + this->trace;
+        return copy;
+    }
+
+    // Returns the error message formatted as "[trace]: [error]: [detail]".
     [[nodiscard]] auto message() const -> std::string
     {
-        if (detail.empty())
-            return errc.message();
+        const std::string sanitized_error = sanitize_fragment(this->errc.message());
+        const std::string sanitized_detail = sanitize_fragment(this->detail);
+        const std::string sanitized_trace = sanitize_fragment(this->trace);
 
-        return std::format("{:s}: {:s}", errc.message(), detail);
+        std::string message = sanitized_error;
+
+        if (!sanitized_detail.empty())
+            message = std::format("{:s}: {:s}", message, sanitized_detail);
+
+        if (!sanitized_trace.empty())
+            message = std::format("{:s}: {:s}", sanitized_trace, message);
+
+        // Uppercase the first letter in the combined string
+        if (!message.empty())
+            message.front() = static_cast<char>(std::toupper(static_cast<unsigned char>(message.front())));
+
+        return message;
     }
 };
 
@@ -94,14 +135,14 @@ struct ErrorType<WindowError>
 
         switch (error)
         {
-        case WindowCreateError: return "Failed to create window";
-        case ExtensionEnumerateError: return "Failed to enumerate required Vulkan instance extensions";
-        case SurfaceCreateError: return "Failed to create window surface";
-        case PresentationUnsupported: return "No queue family supports presentation";
-        case GetSizeError: return "Failed to get window size";
+        case WindowCreateError: return "failed to create window";
+        case ExtensionEnumerateError: return "failed to enumerate required Vulkan instance extensions";
+        case SurfaceCreateError: return "failed to create window surface";
+        case PresentationUnsupported: return "no queue family supports presentation";
+        case GetSizeError: return "failed to get window size";
         }
 
-        return "Unknown window error";
+        return "unknown window error";
     }
 };
 
@@ -134,22 +175,22 @@ struct ErrorType<VkContextError>
 
         switch (error)
         {
-        case EnumerateVersionError: return "Failed to enumerate Vulkan instance version";
+        case EnumerateVersionError: return "failed to enumerate Vulkan instance version";
         case VersionUnsupported: return "Vulkan instance does not support version 1.4";
-        case EnumerateInstanceLayersError: return "Failed to enumerate supported Vulkan instance layers";
-        case MissingInstanceLayer: return "Missing required Vulkan instance layer";
-        case EnumerateInstanceExtsError: return "Failed to enumerated supported Vulkan instance extensions";
-        case MissingInstanceExt: return "Missing required Vulkan instance extension";
-        case InstanceCreateError: return "Failed to create Vulkan instance";
-        case DebugMessengerCreateError: return "Failed to create Vulkan debug messenger";
-        case EnumeratePhysicalDevicesError: return "Failed to enumerate Vulkan physical devices";
-        case NoSupportedDevice: return "Failed to find supported Vulkan physical device";
-        case EnumerateDeviceExtsError: return "Failed to enumerate Vulkan device extensions";
-        case MissingDeviceExt: return "Missing required Vulkan device extensions";
-        case DeviceCreateError: return "Failed to create Vulkan device";
+        case EnumerateInstanceLayersError: return "failed to enumerate supported Vulkan instance layers";
+        case MissingInstanceLayer: return "missing required Vulkan instance layer";
+        case EnumerateInstanceExtsError: return "failed to enumerated supported Vulkan instance extensions";
+        case MissingInstanceExt: return "missing required Vulkan instance extension";
+        case InstanceCreateError: return "failed to create Vulkan instance";
+        case DebugMessengerCreateError: return "failed to create Vulkan debug messenger";
+        case EnumeratePhysicalDevicesError: return "failed to enumerate Vulkan physical devices";
+        case NoSupportedDevice: return "failed to find supported Vulkan physical device";
+        case EnumerateDeviceExtsError: return "failed to enumerate Vulkan device extensions";
+        case MissingDeviceExt: return "missing required Vulkan device extensions";
+        case DeviceCreateError: return "failed to create Vulkan device";
         }
 
-        return "Unknown Vulkan instance error";
+        return "unknown Vulkan instance error";
     }
 };
 
@@ -177,17 +218,17 @@ struct ErrorType<VkSwapchainError>
 
         switch (error)
         {
-        case SurfaceCapabilitiesError: return "Failed to get surface capabilities";
-        case SurfaceFormatsError: return "Failed to get surface formats";
-        case MissingSurfaceFormats: return "Required surface formats are not supported";
-        case NullExtent: return "Swapchain extent is invalid (0x0)";
-        case SwapchainCreateError: return "Failed to create swapchain";
-        case GetImageError: return "Failed to get swapchain images";
-        case ViewCreateError: return "Failed to create image view for swapchain image";
-        case AcquireImageError: return "Failed to acquire swapchain image";
+        case SurfaceCapabilitiesError: return "failed to get surface capabilities";
+        case SurfaceFormatsError: return "failed to get surface formats";
+        case MissingSurfaceFormats: return "required surface formats are not supported";
+        case NullExtent: return "swapchain extent is invalid (0x0)";
+        case SwapchainCreateError: return "failed to create swapchain";
+        case GetImageError: return "failed to get swapchain images";
+        case ViewCreateError: return "failed to create image view for swapchain image";
+        case AcquireImageError: return "failed to acquire swapchain image";
         }
 
-        return "Unknown Vulkan swapchain error";
+        return "unknown Vulkan swapchain error";
     }
 };
 
@@ -209,11 +250,11 @@ struct ErrorType<VkShaderModuleError>
 
         switch (error)
         {
-        case FileOpenError: return "Failed to open shader file";
-        case ModuleCreateError: return "Failed to create shader module";
+        case FileOpenError: return "failed to open shader file";
+        case ModuleCreateError: return "failed to create shader module";
         }
 
-        return "Unknown Vulkan shader module error";
+        return "unknown Vulkan shader module error";
     }
 };
 
@@ -235,11 +276,11 @@ struct ErrorType<VkPipelineError>
 
         switch (error)
         {
-        case LayoutCreateError: return "Failed to create pipeline layout";
-        case PipelineCreateError: return "Failed to create render pipeline";
+        case LayoutCreateError: return "failed to create pipeline layout";
+        case PipelineCreateError: return "failed to create render pipeline";
         }
 
-        return "Unknown Vulkan pipeline error";
+        return "unknown Vulkan pipeline error";
     }
 };
 
@@ -266,16 +307,16 @@ struct ErrorType<VkResourcesError>
 
         switch (error)
         {
-        case CommandPoolCreateError: return "Failed to create command pool";
-        case CommandPoolResetError: return "Failed to reset command pool";
-        case CommandBufferCreateError: return "Failed to create command buffer";
-        case CommandBufferBeginError: return "Failed to begin command buffer";
-        case CommandBufferEndError: return "Failed to end command buffer";
-        case SemaphoreCreateError: return "Failed to create semaphore";
-        case SemaphoreWaitError: return "Failed to wait on semaphore";
+        case CommandPoolCreateError: return "failed to create command pool";
+        case CommandPoolResetError: return "failed to reset command pool";
+        case CommandBufferCreateError: return "failed to create command buffer";
+        case CommandBufferBeginError: return "failed to begin command buffer";
+        case CommandBufferEndError: return "failed to end command buffer";
+        case SemaphoreCreateError: return "failed to create semaphore";
+        case SemaphoreWaitError: return "failed to wait on semaphore";
         }
 
-        return "Unknown Vulkan resource error";
+        return "unknown Vulkan resource error";
     }
 };
 
@@ -297,11 +338,11 @@ struct ErrorType<VkAllocatorError>
 
         switch (error)
         {
-        case ImportFunctionsError: return "Failed to import Vulkan functions";
-        case AllocatorCreateError: return "Failed to create VMA allocator";
+        case ImportFunctionsError: return "failed to import Vulkan functions";
+        case AllocatorCreateError: return "failed to create VMA allocator";
         }
 
-        return "Unknown VMA allocator error";
+        return "unknown VMA allocator error";
     }
 };
 
@@ -325,13 +366,13 @@ struct ErrorType<VkBufferError>
 
         switch (error)
         {
-        case InvalidBufferCount: return "Invalid buffer count";
-        case BufferCreateError: return "Failed to allocate buffer memory";
-        case NullMappedMemory: return "Mapped memory is not allocated or could not be found";
-        case BufferOverflow: return "Buffer overflow";
+        case InvalidBufferCount: return "invalid buffer count";
+        case BufferCreateError: return "failed to allocate buffer memory";
+        case NullMappedMemory: return "mapped memory is not allocated or could not be found";
+        case BufferOverflow: return "buffer overflow";
         }
 
-        return "Unknown buffer error";
+        return "unknown buffer error";
     }
 };
 
@@ -353,11 +394,11 @@ struct ErrorType<VkRenderError>
 
         switch (error)
         {
-        case QueueSubmitError: return "Failed to submit commands to queue";
-        case QueuePresentError: return "Failed to present to swapchain";
+        case QueueSubmitError: return "failed to submit commands to queue";
+        case QueuePresentError: return "failed to present to swapchain";
         }
 
-        return "Unknown Vulkan render error";
+        return "unknown Vulkan render error";
     }
 };
 

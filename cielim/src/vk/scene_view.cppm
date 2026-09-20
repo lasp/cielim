@@ -53,14 +53,7 @@ public:
 
         if (const auto result = this->camera_info_.create(context, allocator, frames_in_flight, 1, FLAGS);
             !result.has_value())
-        {
-            error::DetailedError error = {
-                .errc = result.error().errc,
-                .detail = result.error().detail + ": failed to create scene view",
-            };
-
-            return Err(error);
-        }
+            return Err(result.error().with_trace("failed to create scene view"));
 
         return {};
     }
@@ -75,14 +68,7 @@ public:
         const math::Mat4 view_projection = camera.get_view_projection_matrix();
 
         if (const auto result = this->camera_info_.write(frame_index, 0, view_projection); !result.has_value())
-        {
-            error::DetailedError error = {
-                .errc = result.error().errc,
-                .detail = result.error().detail + ": failed to update scene view",
-            };
-
-            return Err(error);
-        }
+            return Err(result.error().with_trace("failed to update scene view"));
 
         return {};
     }
