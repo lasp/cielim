@@ -307,6 +307,7 @@ struct ErrorType<VkAllocatorError>
 
 enum class VkBufferError : std::uint8_t
 {
+    InvalidBufferCount,
     BufferCreateError,
     NullMappedMemory,
     BufferOverflow,
@@ -324,6 +325,7 @@ struct ErrorType<VkBufferError>
 
         switch (error)
         {
+        case InvalidBufferCount: return "Invalid buffer count";
         case BufferCreateError: return "Failed to allocate buffer memory";
         case NullMappedMemory: return "Mapped memory is not allocated or could not be found";
         case BufferOverflow: return "Buffer overflow";

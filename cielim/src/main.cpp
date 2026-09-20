@@ -143,6 +143,8 @@ auto run(const std::filesystem::path& base_path) -> int
         return EXIT_FAILURE;
     }
 
+    const uint32_t frames_in_flight = vk_frame_resources.get_frames_in_flight();
+
     std::filesystem::path cube_shader_path = base_path / "content" / "shaders" / "cube.spv";
 
     cielim::vk::Shader cube_shader;
@@ -199,29 +201,15 @@ auto run(const std::filesystem::path& base_path) -> int
 
     camera.set_position({0.0f, 0.0f, 3.0f});
     camera.set_orientation({0.7071f, -0.7071f, 0.0f, 0.0f}); // Look directly down
-    camera.set_fov_aspect(cielim::math::radians(60.0f), 1);
 
-    cielim::math::Mat4 view_projection_matrix = camera.get_view_projection_matrix();
+    float view_width = static_cast<float>(vk_swapchain.get_extent().width);
+    float view_height = static_cast<float>(vk_swapchain.get_extent().height);
 
-    cielim::vk::Buffer camera_info_buffer;
+    camera.set_fov_aspect(cielim::math::radians(60.0f), view_width / view_height);
 
-    if (const auto result = camera_info_buffer.create(
-            vk_context,
-            vk_allocator,
-            sizeof(view_projection_matrix),
-            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-            VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
-        );
-        !result.has_value())
-    {
-        fatal_error(&window, result.error().message());
-        return EXIT_FAILURE;
-    }
+    cielim::vk::SceneView view;
 
-    if (const auto result = camera_info_buffer.direct_write(
-            0, cielim::math::value_ptr(view_projection_matrix), sizeof(view_projection_matrix)
-        );
-        !result.has_value())
+    if (const auto result = view.create(vk_context, vk_allocator, frames_in_flight); !result.has_value())
     {
         fatal_error(&window, result.error().message());
         return EXIT_FAILURE;
@@ -245,6 +233,11 @@ auto run(const std::filesystem::path& base_path) -> int
                     fatal_error(&window, result.error().message());
                     return EXIT_FAILURE;
                 }
+
+                view_width = static_cast<float>(vk_swapchain.get_extent().width);
+                view_height = static_cast<float>(vk_swapchain.get_extent().height);
+
+                camera.set_fov_aspect(cielim::math::radians(60.0f), view_width / view_height);
                 break;
 
             default: break;
@@ -260,9 +253,17 @@ auto run(const std::filesystem::path& base_path) -> int
             continue;
         }
 
+        const uint32_t frame_index = vk_frame_counter.get_current_index(frames_in_flight);
+
+        if (const auto result = view.update(camera, frame_index); !result.has_value())
+        {
+            fatal_error(&window, result.error().message());
+            return EXIT_FAILURE;
+        }
+
         const cielim::vk::SceneDataAddresses push_constants = {
             .vertex_info_address = mesh_registry.get_vertex_address(),
-            .frame_data_address = camera_info_buffer.get_device_address(),
+            .frame_data_address = view.get_camera_info_address(frame_index),
         };
 
         if (const auto result = cielim::vk::Recorder::draw_frame(
