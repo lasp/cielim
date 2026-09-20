@@ -8,9 +8,9 @@ module;
 
 #include <volk/volk.h>
 
-export module cielim.vk:push_constants;
+export module cielim.render.vk:push_constants;
 
-export namespace cielim::vk::push_constants
+export namespace cielim::render::vk
 {
 
 struct SceneDataAddresses
@@ -25,4 +25,4 @@ struct SceneDataAddresses
     VkDeviceAddress frame_data_address = 0;
 };
 
-} // namespace cielim::vk::push_constants
+} // namespace cielim::render::vk

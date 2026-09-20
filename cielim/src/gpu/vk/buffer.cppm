@@ -15,14 +15,15 @@ module;
 
 #include <vma/vk_mem_alloc.h>
 
-export module cielim.vk:buffer;
+export module cielim.gpu.vk:buffer;
 
+import cielim.error;
 import cielim.handle;
 import cielim.result;
 import :allocator;
 import :context;
 
-export namespace cielim::vk::buffer
+export namespace cielim::gpu::vk
 {
 
 class Buffer
@@ -57,8 +58,8 @@ public:
      * @return Void on success, error code on failure.
      */
     auto create(
-        const context::Context& context,
-        const allocator::Allocator& allocator,
+        const Context& context,
+        const Allocator& allocator,
         const VkDeviceSize size,
         const VkBufferUsageFlags usage_flags = {},
         const VmaAllocationCreateFlags alloc_flags = {},
@@ -193,4 +194,4 @@ private:
     VkDeviceAddress address_ = 0;
 };
 
-} // namespace cielim::vk::buffer
+} // namespace cielim::gpu::vk

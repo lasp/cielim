@@ -6,17 +6,19 @@
 module;
 
 #include <array>
+#include <cstdint>
 #include <optional>
 
 #include <volk/volk.h>
 #include <vulkan/vk_enum_string_helper.h>
 
-export module cielim.vk:recorder;
+export module cielim.render.vk:recorder;
 
+import cielim.error;
+import cielim.gpu.vk;
 import cielim.handle;
 import cielim.result;
 import cielim.utils;
-import :context;
 import :frame_counter;
 import :frame_resources;
 import :mesh_registry;
@@ -24,7 +26,7 @@ import :pipeline;
 import :push_constants;
 import :swapchain;
 
-export namespace cielim::vk::recorder
+export namespace cielim::render::vk
 {
 
 class Recorder
@@ -54,13 +56,13 @@ public:
      * @return Void on success, error code on failure.
      */
     static auto draw_frame(
-        const context::Context& context,
-        const swapchain::Swapchain& swapchain,
-        const frame_resources::FrameResources& frame_resources,
-        frame_counter::FrameCounter& frame_counter,
-        const pipeline::Pipeline& render_pipeline,
-        const push_constants::SceneDataAddresses& scene_data_addresses,
-        const mesh_registry::MeshRegistry& mesh_registry
+        const gpu::vk::Context& context,
+        const Swapchain& swapchain,
+        const FrameResources& frame_resources,
+        FrameCounter& frame_counter,
+        const Pipeline& render_pipeline,
+        const SceneDataAddresses& scene_data_addresses,
+        const MeshRegistry& mesh_registry
     ) -> Result<void>
     {
         const VkDevice vk_device_handle = context.get_device();
@@ -426,4 +428,4 @@ private:
     }
 };
 
-} // namespace cielim::vk::recorder
+} // namespace cielim::render::vk

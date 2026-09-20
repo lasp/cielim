@@ -5,19 +5,19 @@
 
 module;
 
+#include <cstdint>
 #include <string>
 
 #include <volk/volk.h>
 
-export module cielim.vk:scene_view;
+export module cielim.render.vk:scene_view;
 
-import cielim.camera;
+import cielim.gpu.vk;
 import cielim.math;
-import :allocator;
-import :buffer_ring;
-import :context;
+import cielim.result;
+import cielim.snapshot;
 
-export namespace cielim::vk::scene_view
+export namespace cielim::render::vk
 {
 
 class SceneView
@@ -44,7 +44,7 @@ public:
      * @param frames_in_flight The number of frames in flight.
      * @return Void on success, error code on failure.
      */
-    auto create(const context::Context& context, const allocator::Allocator& allocator, const uint32_t frames_in_flight)
+    auto create(const gpu::vk::Context& context, const gpu::vk::Allocator& allocator, const uint32_t frames_in_flight)
         -> Result<void>
     {
         // These flags are needed so that we can fetch buffer contents from shaders with device addresses
@@ -63,7 +63,7 @@ public:
      * @param camera The camera from which to update.
      * @param frame_index The current frame index.
      */
-    auto update(const camera::Camera& camera, const uint32_t frame_index) -> Result<void>
+    auto update(const snapshot::Camera& camera, const uint32_t frame_index) -> Result<void>
     {
         const math::Mat4 view_projection = camera.get_view_projection_matrix();
 
@@ -78,7 +78,7 @@ public:
 
 private:
     // The list of camera info buffers for each frame in flight
-    buffer_ring::BufferRing<math::Mat4> camera_info_;
+    gpu::vk::BufferRing<math::Mat4> camera_info_;
 };
 
-} // namespace cielim::vk::scene_view
+} // namespace cielim::render::vk

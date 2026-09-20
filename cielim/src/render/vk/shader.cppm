@@ -5,6 +5,7 @@
 
 module;
 
+#include <cstdint>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -12,14 +13,15 @@ module;
 #include <volk/volk.h>
 #include <vulkan/vk_enum_string_helper.h>
 
-export module cielim.vk:shader;
+export module cielim.render.vk:shader;
 
+import cielim.error;
+import cielim.gpu.vk;
 import cielim.handle;
 import cielim.result;
 import cielim.utils;
-import :context;
 
-export namespace cielim::vk::shader
+export namespace cielim::render::vk
 {
 
 class Shader
@@ -49,7 +51,7 @@ public:
      * @param path The path to the .spv shader file.
      * @return Void on success, error code on failure.
      */
-    auto create(const context::Context& context, const std::filesystem::path& path) -> Result<void>
+    auto create(const gpu::vk::Context& context, const std::filesystem::path& path) -> Result<void>
     {
         this->vk_device_handle_ = context.get_device(); // This is specifically a non-owning (borrow) handle
 
@@ -98,4 +100,4 @@ private:
     UniqueHandle<VkShaderModule> shader_;
 };
 
-} // namespace cielim::vk::shader
+} // namespace cielim::render::vk

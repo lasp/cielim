@@ -8,14 +8,14 @@ module;
 
 #include <volk/volk.h>
 
-export module cielim.vk:surface;
+export module cielim.render.vk:surface;
 
+import cielim.gpu.vk;
 import cielim.handle;
+import cielim.platform;
 import cielim.result;
-import cielim.window;
-import :context;
 
-export namespace cielim::vk::surface
+export namespace cielim::render::vk
 {
 
 class Surface
@@ -45,7 +45,7 @@ public:
      * @param window The window for which to create the surface.
      * @return Void on success, error code on failure.
      */
-    auto init(const context::Context& context, const window::Window& window) -> Result<void>
+    auto init(const gpu::vk::Context& context, const platform::Window& window) -> Result<void>
     {
         this->vk_instance_handle_ = context.get_instance(); // This is specifically a non-owning (borrow) handle
 
@@ -66,4 +66,4 @@ private:
     UniqueHandle<VkSurfaceKHR> surface_;
 };
 
-} // namespace cielim::vk::surface
+} // namespace cielim::render::vk

@@ -9,13 +9,13 @@ module;
 #include <cmath>
 #include <utility>
 
-export module cielim.camera;
+export module cielim.snapshot:camera;
 
 import cielim.math;
 
 constexpr float DEFAULT_FOV = cielim::math::radians(90.0f);
 
-export namespace cielim::camera
+export namespace cielim::snapshot
 {
 
 class Camera
@@ -186,4 +186,4 @@ private:
     float near_plane_distance_ = 0.0f;
 };
 
-} // namespace cielim::camera
+} // namespace cielim::snapshot

@@ -12,14 +12,14 @@ module;
 #include <volk/volk.h>
 #include <vulkan/vk_enum_string_helper.h>
 
-export module cielim.vk:frame_counter;
+export module cielim.render.vk:frame_counter;
 
 import cielim.error;
+import cielim.gpu.vk;
 import cielim.handle;
 import cielim.result;
-import :context;
 
-export namespace cielim::vk::frame_counter
+export namespace cielim::render::vk
 {
 
 class FrameCounter
@@ -48,7 +48,7 @@ public:
      * @param context The Vulkan context.
      * @return Void on success, error code on failure.
      */
-    auto init(const context::Context& context) -> Result<void>
+    auto init(const gpu::vk::Context& context) -> Result<void>
     {
         this->vk_device_handle_ = context.get_device(); // This is specifically a non-owning (borrow) handle
 
@@ -145,4 +145,4 @@ private:
     UniqueHandle<VkSemaphore> timeline_semaphore_;
 };
 
-} // namespace cielim::vk::frame_counter
+} // namespace cielim::render::vk

@@ -5,19 +5,21 @@
 
 module;
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
 #include <volk/volk.h>
 #include <vulkan/vk_enum_string_helper.h>
 
-export module cielim.vk:frame_resources;
+export module cielim.render.vk:frame_resources;
 
+import cielim.error;
+import cielim.gpu.vk;
 import cielim.helpers;
 import cielim.result;
-import :context;
 
-export namespace cielim::vk::frame_resources
+export namespace cielim::render::vk
 {
 
 class FrameResources
@@ -57,7 +59,7 @@ public:
      * @param triple_buffer Whether rendering should be triple buffered. If not, it will be double buffered.
      * @return Void on success, error code on failure.
      */
-    auto init(const context::Context& context, const bool triple_buffer) -> Result<void>
+    auto init(const gpu::vk::Context& context, const bool triple_buffer) -> Result<void>
     {
         this->vk_device_handle_ = context.get_device(); // This is specifically a non-owning (borrow) handle
 
@@ -165,4 +167,4 @@ private:
     std::vector<VkSemaphore> image_acquire_semaphores_;
 };
 
-} // namespace cielim::vk::frame_resources
+} // namespace cielim::render::vk

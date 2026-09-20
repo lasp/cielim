@@ -24,7 +24,7 @@ set(CIELIM_CPP_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 target_sources(cielim
     PRIVATE
         ${CIELIM_CPP_SOURCE}/main.cpp
-        ${CIELIM_CPP_SOURCE}/vk/vma.cpp
+        ${CIELIM_CPP_SOURCE}/gpu/vk/vma.cpp
 )
 
 # Add C++20 module files
@@ -33,35 +33,38 @@ target_sources(cielim
         FILE_SET CXX_MODULES
         BASE_DIRS "${CIELIM_CPP_SOURCE}"
         FILES
-            ${CIELIM_CPP_SOURCE}/camera.cppm
-            ${CIELIM_CPP_SOURCE}/default_shape.cppm
             ${CIELIM_CPP_SOURCE}/error.cppm
             ${CIELIM_CPP_SOURCE}/handle.cppm
             ${CIELIM_CPP_SOURCE}/helpers.cppm
             ${CIELIM_CPP_SOURCE}/math.cppm
-            ${CIELIM_CPP_SOURCE}/mesh_elements.cppm
+            ${CIELIM_CPP_SOURCE}/mesh.cppm
+            ${CIELIM_CPP_SOURCE}/platform.cppm
             ${CIELIM_CPP_SOURCE}/result.cppm
+            ${CIELIM_CPP_SOURCE}/snapshot.cppm
             ${CIELIM_CPP_SOURCE}/utils.cppm
-            ${CIELIM_CPP_SOURCE}/vk.cppm
-            ${CIELIM_CPP_SOURCE}/window.cppm
             ${CIELIM_CPP_SOURCE}/math/projection.cppm
             ${CIELIM_CPP_SOURCE}/math/tensors.cppm
+            ${CIELIM_CPP_SOURCE}/mesh/default_shape.cppm
+            ${CIELIM_CPP_SOURCE}/mesh/elements.cppm
+            ${CIELIM_CPP_SOURCE}/snapshot/camera.cppm
             ${CIELIM_CPP_SOURCE}/utils/file.cppm
             ${CIELIM_CPP_SOURCE}/utils/log.cppm
-            ${CIELIM_CPP_SOURCE}/vk/allocator.cppm
-            ${CIELIM_CPP_SOURCE}/vk/buffer.cppm
-            ${CIELIM_CPP_SOURCE}/vk/buffer_ring.cppm
-            ${CIELIM_CPP_SOURCE}/vk/context.cppm
-            ${CIELIM_CPP_SOURCE}/vk/frame_counter.cppm
-            ${CIELIM_CPP_SOURCE}/vk/frame_resources.cppm
-            ${CIELIM_CPP_SOURCE}/vk/mesh_registry.cppm
-            ${CIELIM_CPP_SOURCE}/vk/pipeline.cppm
-            ${CIELIM_CPP_SOURCE}/vk/push_constants.cppm
-            ${CIELIM_CPP_SOURCE}/vk/recorder.cppm
-            ${CIELIM_CPP_SOURCE}/vk/scene_view.cppm
-            ${CIELIM_CPP_SOURCE}/vk/shader.cppm
-            ${CIELIM_CPP_SOURCE}/vk/surface.cppm
-            ${CIELIM_CPP_SOURCE}/vk/swapchain.cppm
+            ${CIELIM_CPP_SOURCE}/gpu/vk.cppm
+            ${CIELIM_CPP_SOURCE}/gpu/vk/allocator.cppm
+            ${CIELIM_CPP_SOURCE}/gpu/vk/buffer.cppm
+            ${CIELIM_CPP_SOURCE}/gpu/vk/buffer_ring.cppm
+            ${CIELIM_CPP_SOURCE}/gpu/vk/context.cppm
+            ${CIELIM_CPP_SOURCE}/render/vk.cppm
+            ${CIELIM_CPP_SOURCE}/render/vk/frame_counter.cppm
+            ${CIELIM_CPP_SOURCE}/render/vk/frame_resources.cppm
+            ${CIELIM_CPP_SOURCE}/render/vk/mesh_registry.cppm
+            ${CIELIM_CPP_SOURCE}/render/vk/pipeline.cppm
+            ${CIELIM_CPP_SOURCE}/render/vk/push_constants.cppm
+            ${CIELIM_CPP_SOURCE}/render/vk/recorder.cppm
+            ${CIELIM_CPP_SOURCE}/render/vk/scene_view.cppm
+            ${CIELIM_CPP_SOURCE}/render/vk/shader.cppm
+            ${CIELIM_CPP_SOURCE}/render/vk/surface.cppm
+            ${CIELIM_CPP_SOURCE}/render/vk/swapchain.cppm
 )
 
 # Link dependencies

@@ -10,13 +10,14 @@ module;
 
 #include <vma/vk_mem_alloc.h>
 
-export module cielim.vk:allocator;
+export module cielim.gpu.vk:allocator;
 
+import cielim.error;
 import cielim.handle;
 import cielim.result;
 import :context;
 
-export namespace cielim::vk::allocator
+export namespace cielim::gpu::vk
 {
 
 class Allocator
@@ -45,7 +46,7 @@ public:
      * @param context The Vulkan context.
      * @return Void on success, error code on failure.
      */
-    auto init(const context::Context& context) -> Result<void>
+    auto init(const Context& context) -> Result<void>
     {
         VmaAllocatorCreateInfo allocator_create_info = {
             .flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT      // Uses memory budget feature
@@ -92,4 +93,4 @@ private:
     UniqueHandle<VmaAllocator> allocator_;
 };
 
-} // namespace cielim::vk::allocator
+} // namespace cielim::gpu::vk

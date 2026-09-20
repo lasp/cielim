@@ -6,10 +6,11 @@
 module;
 
 #include <array>
+#include <cstdint>
 
-export module cielim.mesh_elements;
+export module cielim.mesh:elements;
 
-export namespace cielim::mesh_elements
+export namespace cielim::mesh
 {
 
 struct MeshHandle
@@ -24,4 +25,4 @@ struct Vertex
     std::array<float, 3> color;
 };
 
-} // namespace cielim::mesh_elements
+} // namespace cielim::mesh

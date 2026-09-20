@@ -7,6 +7,7 @@
 module;
 
 #include <algorithm>
+#include <cstdint>
 #include <limits>
 #include <string>
 #include <utility>
@@ -15,17 +16,17 @@ module;
 #include <volk/volk.h>
 #include <vulkan/vk_enum_string_helper.h>
 
-export module cielim.vk:swapchain;
+export module cielim.render.vk:swapchain;
 
 import cielim.error;
+import cielim.gpu.vk;
 import cielim.handle;
 import cielim.helpers;
+import cielim.platform;
 import cielim.result;
-import cielim.window;
-import :context;
 import :surface;
 
-export namespace cielim::vk::swapchain
+export namespace cielim::render::vk
 {
 
 class Swapchain
@@ -52,8 +53,7 @@ public:
      * @param window The window to which the swapchain is connected.
      * @return Void on success, error code on failure.
      */
-    auto init(const context::Context& context, const surface::Surface& surface, const window::Window& window)
-        -> Result<void>
+    auto init(const gpu::vk::Context& context, const Surface& surface, const platform::Window& window) -> Result<void>
     {
         this->vk_device_handle_ = context.get_device(); // This is specifically a non-owning (borrow) handle
 
@@ -294,7 +294,7 @@ public:
      * @param window The window to which the swapchain is connected.
      * @return Void on success, error code on failure.
      */
-    auto recreate(const context::Context& context, const surface::Surface& surface, const window::Window& window)
+    auto recreate(const gpu::vk::Context& context, const Surface& surface, const platform::Window& window)
         -> Result<void>
     {
         // Don't do anything if this is called before init
@@ -369,4 +369,4 @@ private:
     std::vector<VkSemaphore> image_finished_semaphores_;
 };
 
-} // namespace cielim::vk::swapchain
+} // namespace cielim::render::vk
