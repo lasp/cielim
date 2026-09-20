@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0+
 
 /* The Vulkan context contains global context and state for Vulkan. This class contains and manages the Vulkan
- * instance, the windowing surface, and the logical device. Only one instance should exist at a time. */
+ * instance and the logical device. Only one instance should exist at a time. The context can be initialized for
+ * windowed or headless presentation modes. */
 
 module;
 
@@ -103,38 +104,31 @@ public:
         if (this->device_)
             vkDestroyDevice(this->device_.get(), nullptr);
 
-        if (this->surface_)
-            vkDestroySurfaceKHR(this->instance_.get(), this->surface_.get(), nullptr);
-
         if (this->instance_)
             vkDestroyInstance(this->instance_.get(), nullptr);
     }
 
     /**
      * @brief Initializes the Vulkan context.
-     * @param window Window to link the Vulkan context to.
+     * @param headless Whether the context should be initialized for headless (offscreen-only) use with no window
+     * presentation capability.
      * @return Void on success, error code on failure.
      */
-    auto init(const window::Window& window) -> Result<void>
+    auto init(const bool headless = false) -> Result<void>
     {
         if (this->is_initialized_)
             return {}; // Don't initialize more than once
 
         // Init the Vulkan instance
-        if (const auto result = this->init_instance(); !result.has_value())
-            return result.propagate();
-
-        // Init the window surface
-        if (const auto result = window.vk_create_surface(this->instance_.get(), this->surface_.put());
-            !result.has_value())
+        if (const auto result = this->init_instance(headless); !result.has_value())
             return result.propagate();
 
         // Find physical devices
-        if (const auto result = this->find_physical_device(); !result.has_value())
+        if (const auto result = this->find_physical_device(headless); !result.has_value())
             return result.propagate();
 
         // Init the logical device
-        if (const auto result = this->init_device(); !result.has_value())
+        if (const auto result = this->init_device(headless); !result.has_value())
             return result.propagate();
 
         this->is_initialized_ = true;
@@ -143,14 +137,13 @@ public:
     }
 
     [[nodiscard]] auto get_instance() const -> VkInstance { return this->instance_.get(); }
-    [[nodiscard]] auto get_surface() const -> VkSurfaceKHR { return this->surface_.get(); }
     [[nodiscard]] auto get_physical_device() const -> VkPhysicalDevice { return this->physical_device_.get(); }
     [[nodiscard]] auto get_queue_family() const -> uint32_t { return this->queue_family_index_; }
     [[nodiscard]] auto get_device() const -> VkDevice { return this->device_.get(); }
 
 private:
     // Initializes the Vulkan instance required API version, layers, and extensions.
-    auto init_instance() -> Result<void>
+    auto init_instance(const bool headless) -> Result<void>
     {
         uint32_t vk_api_version = 0;
         if (const auto result = vkEnumerateInstanceVersion(&vk_api_version); result != VK_SUCCESS)
@@ -245,14 +238,21 @@ private:
 
         // Check if any required Vulkan instance extensions are missing
 
-        auto ext_result = window::Window::vk_get_extensions();
+        std::vector<const char*> req_inst_extensions;
 
-        if (!ext_result.has_value())
-            return ext_result.propagate();
+        // Windowing extensions are only needed for window presentation mode
+        if (!headless)
+        {
+            auto ext_result = window::Window::vk_get_extensions();
 
-        std::vector<const char*> req_inst_extensions = ext_result.value(); // Initial list comes from the window
+            if (!ext_result.has_value())
+                return ext_result.propagate();
 
-        req_inst_extensions.push_back("VK_KHR_get_surface_capabilities2"); // Support querying extended surface info
+            req_inst_extensions = ext_result.value();
+
+            // Support querying extended surface info
+            req_inst_extensions.push_back("VK_KHR_get_surface_capabilities2");
+        }
 
 #ifndef NDEBUG
         req_inst_extensions.push_back("VK_EXT_debug_utils"); // Add debug extension in debug builds
@@ -368,8 +368,8 @@ private:
         return {};
     }
 
-    // Finds a suitable physical device for rendering, compute, and presentation.
-    auto find_physical_device() -> Result<void>
+    // Finds a suitable physical device for rendering, compute, and (if not headless) presentation.
+    auto find_physical_device(const bool headless) -> Result<void>
     {
         VkPhysicalDevice physical_device = nullptr;
         uint32_t graphics_queue_family = std::numeric_limits<uint32_t>::max();
@@ -414,20 +414,24 @@ private:
             uint32_t num_queue_families = 0;
             vkGetPhysicalDeviceQueueFamilyProperties2(device, &num_queue_families, nullptr);
 
-            std::vector<VkQueueFamilyProperties2> queue_families2(
+            std::vector queue_families2(
                 num_queue_families, VkQueueFamilyProperties2{.sType = VK_STRUCTURE_TYPE_QUEUE_FAMILY_PROPERTIES_2}
             );
 
             vkGetPhysicalDeviceQueueFamilyProperties2(device, &num_queue_families, queue_families2.data());
 
-            // Find the first queue family that supports graphics, compute, and presentation
+            // Find the first queue family that supports graphics, and presentation if a window was given
             for (uint32_t index = 0; const auto& queue_family2 : queue_families2)
             {
                 const auto& queue_family = queue_family2.queueFamilyProperties;
 
+                const bool supports_graphics = (queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0;
+                const bool supports_presentation
+                    = headless
+                   || window::Window::vk_get_presentation_support(this->instance_.get(), device, index).has_value();
+
                 // Check that the GPU supports required properties
-                if ((queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0
-                    && window::Window::vk_get_presentation_support(this->instance_.get(), device, index).has_value())
+                if (supports_graphics && supports_presentation)
                 {
                     physical_device = device;
                     graphics_queue_family = index;
@@ -491,7 +495,7 @@ private:
     }
 
     // Initializes the logical device from the physical device and instance.
-    auto init_device() -> Result<void>
+    auto init_device(const bool headless) -> Result<void>
     {
         // List required Vulkan features
 
@@ -536,7 +540,10 @@ private:
 
         std::vector<const char*> req_dev_extensions;
 
-        req_dev_extensions.push_back("VK_KHR_swapchain");     // Required for image presentation to window
+        // Swapchain support is only needed when this context will present to a window
+        if (!headless)
+            req_dev_extensions.push_back("VK_KHR_swapchain");
+
         req_dev_extensions.push_back("VK_EXT_memory_budget"); // Lets VMA query memory budget and pressure
 #ifdef __APPLE__
         req_dev_extensions.push_back("VK_KHR_portability_subset");
@@ -633,9 +640,6 @@ private:
 
     // Vulkan window, corresponds to the Vulkan version present on the user's system
     UniqueHandle<VkInstance> instance_;
-
-    // Vulkan surface, corresponds to the window (assuming just one for now)
-    UniqueHandle<VkSurfaceKHR> surface_;
 
     // Vulkan physical device, corresponds to the physical rendering hardware
     UniqueHandle<VkPhysicalDevice> physical_device_;

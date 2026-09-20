@@ -23,6 +23,7 @@ import cielim.result;
 import cielim.utils;
 import cielim.window;
 import :context;
+import :surface;
 
 export namespace cielim::vk::swapchain
 {
@@ -47,10 +48,12 @@ public:
     /**
      * @brief Initializes the swapchain for the Vulkan context and window.
      * @param context The Vulkan context.
+     * @param surface The surface to which the swapchain is connected.
      * @param window The window to which the swapchain is connected.
      * @return Void on success, error code on failure.
      */
-    auto init(const context::Context& context, const window::Window& window) -> Result<void>
+    auto init(const context::Context& context, const surface::Surface& surface, const window::Window& window)
+        -> Result<void>
     {
         this->vk_device_handle_ = context.get_device(); // This is specifically a non-owning (borrow) handle
 
@@ -58,7 +61,7 @@ public:
 
         const VkPhysicalDeviceSurfaceInfo2KHR surface_info = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SURFACE_INFO_2_KHR,
-            .surface = context.get_surface(),
+            .surface = surface.get_handle(),
         };
 
         VkSurfaceCapabilities2KHR surface_capabilities2 = {.sType = VK_STRUCTURE_TYPE_SURFACE_CAPABILITIES_2_KHR};
@@ -181,7 +184,7 @@ public:
 
         VkSwapchainCreateInfoKHR swapchain_create_info = {
             .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-            .surface = context.get_surface(),
+            .surface = surface.get_handle(),
             .minImageCount = min_image_count,
             .imageFormat = this->format_,
             .imageColorSpace = this->color_space_,
@@ -287,10 +290,12 @@ public:
      * @brief Destroys the swapchain and recreates it.
      * @details This should not be called before init.
      * @param context The Vulkan context.
+     * @param surface The surface to which the swapchain is connected.
      * @param window The window to which the swapchain is connected.
      * @return Void on success, error code on failure.
      */
-    auto recreate(const context::Context& context, const window::Window& window) -> Result<void>
+    auto recreate(const context::Context& context, const surface::Surface& surface, const window::Window& window)
+        -> Result<void>
     {
         // Don't do anything if this is called before init
         if (this->vk_device_handle_ == nullptr)
@@ -302,7 +307,7 @@ public:
         // Destroy everything
         this->cleanup();
 
-        return this->init(context, window);
+        return this->init(context, surface, window);
     }
 
     [[nodiscard]] auto get_handle() const -> VkSwapchainKHR { return this->swapchain_.get(); }
