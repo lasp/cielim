@@ -169,9 +169,9 @@ auto run(const std::filesystem::path& base_path) -> int
         return EXIT_FAILURE;
     }
 
-    cielim::vk::Renderer vk_renderer;
+    cielim::vk::FrameCounter vk_frame_counter;
 
-    if (const auto result = vk_renderer.init(vk_context); !result.has_value())
+    if (const auto result = vk_frame_counter.init(vk_context); !result.has_value())
     {
         fatal_error(&window, result.error().message());
         return EXIT_FAILURE;
@@ -265,8 +265,14 @@ auto run(const std::filesystem::path& base_path) -> int
             .frame_data_address = camera_info_buffer.get_device_address(),
         };
 
-        if (const auto result = vk_renderer.draw_frame(
-                vk_context, vk_swapchain, vk_frame_resources, vk_render_pipeline, push_constants, mesh_registry
+        if (const auto result = cielim::vk::Recorder::draw_frame(
+                vk_context,
+                vk_swapchain,
+                vk_frame_resources,
+                vk_frame_counter,
+                vk_render_pipeline,
+                push_constants,
+                mesh_registry
             );
             !result.has_value())
         {
