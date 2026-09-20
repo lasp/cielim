@@ -5,6 +5,8 @@
 
 module;
 
+#include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <span>
 #include <string>
@@ -14,14 +16,14 @@ module;
 
 #include <vma/vk_mem_alloc.h>
 
-export module cielim.vk:mesh_registry;
+export module cielim.render.vk:mesh_registry;
 
 import cielim.error;
-import cielim.mesh_elements;
+import cielim.gpu.vk;
+import cielim.mesh;
 import cielim.result;
-import :buffer;
 
-export namespace cielim::vk::mesh_registry
+export namespace cielim::render::vk
 {
 
 struct MeshInfo
@@ -58,7 +60,7 @@ public:
      * @param init_size Initial size in bytes for the registry's vertex and index buffers.
      * @return Void on success, error code on failure.
      */
-    auto create(const context::Context& context, const allocator::Allocator& allocator, const uint32_t init_size)
+    auto create(const gpu::vk::Context& context, const gpu::vk::Allocator& allocator, const uint32_t init_size)
         -> Result<void>
     {
         if (const auto result = this->vertex_buffer_.create(
@@ -90,10 +92,10 @@ public:
      * @param index_info List of indices for the mesh.
      * @return Handle to the mesh on success, an error code on failure.
      */
-    auto upload(const std::span<const mesh_elements::Vertex> vertex_info, const std::span<const uint32_t> index_info)
-        -> Result<mesh_elements::MeshHandle>
+    auto upload(const std::span<const mesh::Vertex> vertex_info, const std::span<const uint32_t> index_info)
+        -> Result<mesh::MeshHandle>
     {
-        const size_t vertex_write_pos_bytes = this->vertex_write_pos_ * sizeof(mesh_elements::Vertex);
+        const size_t vertex_write_pos_bytes = this->vertex_write_pos_ * sizeof(mesh::Vertex);
 
         if (const auto result
             = vertex_buffer_.direct_write(vertex_write_pos_bytes, vertex_info.data(), vertex_info.size_bytes());
@@ -122,10 +124,10 @@ public:
         vertex_write_pos_ += static_cast<int32_t>(vertex_info.size());
         index_write_pos_ += static_cast<uint32_t>(index_info.size());
 
-        return mesh_elements::MeshHandle{.index = mesh_index};
+        return mesh::MeshHandle{.index = mesh_index};
     }
 
-    [[nodiscard]] auto get_mesh(const mesh_elements::MeshHandle mesh_handle) const -> std::optional<MeshInfo>
+    [[nodiscard]] auto get_mesh(const mesh::MeshHandle mesh_handle) const -> std::optional<MeshInfo>
     {
         if (mesh_handle.index >= meshes_.size())
             return std::nullopt;
@@ -149,10 +151,10 @@ private:
     uint32_t index_write_pos_ = 0;
 
     // Contiguous GPU buffer containing global mesh vertex data
-    buffer::Buffer vertex_buffer_;
+    gpu::vk::Buffer vertex_buffer_;
 
     // Contiguous GPU buffer containing global mesh index data
-    buffer::Buffer index_buffer_;
+    gpu::vk::Buffer index_buffer_;
 };
 
-} // namespace cielim::vk::mesh_registry
+} // namespace cielim::render::vk

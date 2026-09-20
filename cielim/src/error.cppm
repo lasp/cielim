@@ -8,11 +8,13 @@
 module;
 
 #include <cctype>
+#include <cstdint>
 #include <format>
 #include <ranges>
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <utility>
 
 export module cielim.error;
 
@@ -194,6 +196,62 @@ struct ErrorType<VkContextError>
     }
 };
 
+enum class VkAllocatorError : std::uint8_t
+{
+    ImportFunctionsError,
+    AllocatorCreateError,
+};
+
+template <>
+struct ErrorType<VkAllocatorError>
+{
+    static constexpr bool IS_ERROR = true;
+    static constexpr std::string_view CATEGORY_NAME = "VkAllocatorError";
+
+    static auto message(const VkAllocatorError error) -> std::string_view
+    {
+        using enum VkAllocatorError;
+
+        switch (error)
+        {
+        case ImportFunctionsError: return "failed to import Vulkan functions";
+        case AllocatorCreateError: return "failed to create VMA allocator";
+        }
+
+        return "unknown VMA allocator error";
+    }
+};
+
+enum class VkBufferError : std::uint8_t
+{
+    InvalidBufferCount,
+    BufferCreateError,
+    NullMappedMemory,
+    BufferOverflow,
+};
+
+template <>
+struct ErrorType<VkBufferError>
+{
+    static constexpr bool IS_ERROR = true;
+    static constexpr std::string_view CATEGORY_NAME = "VkBufferError";
+
+    static auto message(const VkBufferError error) -> std::string_view
+    {
+        using enum VkBufferError;
+
+        switch (error)
+        {
+        case InvalidBufferCount: return "invalid buffer count";
+        case BufferCreateError: return "failed to allocate buffer memory";
+        case NullMappedMemory: return "mapped memory is not allocated or could not be found";
+        case BufferOverflow: return "buffer overflow";
+        }
+
+        return "unknown buffer error";
+    }
+};
+
 enum class VkSwapchainError : std::uint8_t
 {
     SurfaceCapabilitiesError,
@@ -320,62 +378,6 @@ struct ErrorType<VkResourcesError>
     }
 };
 
-enum class VkAllocatorError : std::uint8_t
-{
-    ImportFunctionsError,
-    AllocatorCreateError,
-};
-
-template <>
-struct ErrorType<VkAllocatorError>
-{
-    static constexpr bool IS_ERROR = true;
-    static constexpr std::string_view CATEGORY_NAME = "VkAllocatorError";
-
-    static auto message(const VkAllocatorError error) -> std::string_view
-    {
-        using enum VkAllocatorError;
-
-        switch (error)
-        {
-        case ImportFunctionsError: return "failed to import Vulkan functions";
-        case AllocatorCreateError: return "failed to create VMA allocator";
-        }
-
-        return "unknown VMA allocator error";
-    }
-};
-
-enum class VkBufferError : std::uint8_t
-{
-    InvalidBufferCount,
-    BufferCreateError,
-    NullMappedMemory,
-    BufferOverflow,
-};
-
-template <>
-struct ErrorType<VkBufferError>
-{
-    static constexpr bool IS_ERROR = true;
-    static constexpr std::string_view CATEGORY_NAME = "VkBufferError";
-
-    static auto message(const VkBufferError error) -> std::string_view
-    {
-        using enum VkBufferError;
-
-        switch (error)
-        {
-        case InvalidBufferCount: return "invalid buffer count";
-        case BufferCreateError: return "failed to allocate buffer memory";
-        case NullMappedMemory: return "mapped memory is not allocated or could not be found";
-        case BufferOverflow: return "buffer overflow";
-        }
-
-        return "unknown buffer error";
-    }
-};
-
 enum class VkRenderError : std::uint8_t
 {
     QueueSubmitError,
@@ -415,6 +417,14 @@ struct std::is_error_code_enum<cielim::error::VkContextError> : std::true_type
 {
 };
 template <>
+struct std::is_error_code_enum<cielim::error::VkAllocatorError> : std::true_type
+{
+};
+template <>
+struct std::is_error_code_enum<cielim::error::VkBufferError> : std::true_type
+{
+};
+template <>
 struct std::is_error_code_enum<cielim::error::VkSwapchainError> : std::true_type
 {
 };
@@ -428,14 +438,6 @@ struct std::is_error_code_enum<cielim::error::VkPipelineError> : std::true_type
 };
 template <>
 struct std::is_error_code_enum<cielim::error::VkResourcesError> : std::true_type
-{
-};
-template <>
-struct std::is_error_code_enum<cielim::error::VkAllocatorError> : std::true_type
-{
-};
-template <>
-struct std::is_error_code_enum<cielim::error::VkBufferError> : std::true_type
 {
 };
 template <>

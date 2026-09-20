@@ -8,6 +8,7 @@
 module;
 
 #include <array>
+#include <cstdint>
 #include <span>
 #include <string>
 #include <vector>
@@ -15,21 +16,22 @@ module;
 #include <volk/volk.h>
 #include <vulkan/vk_enum_string_helper.h>
 
-export module cielim.vk:pipeline;
+export module cielim.render.vk:pipeline;
 
+import cielim.error;
+import cielim.gpu.vk;
 import cielim.handle;
 import cielim.result;
-import :context;
 import :shader;
 import :swapchain;
 
-export namespace cielim::vk::pipeline
+export namespace cielim::render::vk
 {
 
 struct ShaderStage
 {
     VkShaderStageFlagBits stage_flag;
-    const shader::Shader& shader_module;
+    const Shader& shader_module;
     std::string entry_point;
 };
 
@@ -68,8 +70,8 @@ public:
      * @return Void on success, error code on failure
      */
     auto create(
-        const context::Context& context,
-        const swapchain::Swapchain& swapchain,
+        const gpu::vk::Context& context,
+        const Swapchain& swapchain,
         const std::span<const ShaderStage> stages,
         const VkShaderStageFlags push_stages,
         const uint32_t push_size
@@ -245,4 +247,4 @@ private:
     UniqueHandle<VkPipeline> pipeline_;
 };
 
-} // namespace cielim::vk::pipeline
+} // namespace cielim::render::vk

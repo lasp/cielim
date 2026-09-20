@@ -7,21 +7,23 @@
 
 module;
 
+#include <cstdint>
 #include <cstring>
 #include <limits>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <volk/volk.h>
 #include <vulkan/vk_enum_string_helper.h>
 
-export module cielim.vk:context;
+export module cielim.gpu.vk:context;
 
 import cielim.error;
 import cielim.handle;
+import cielim.platform;
 import cielim.result;
 import cielim.utils;
-import cielim.window;
 
 #ifndef NDEBUG
 namespace
@@ -77,7 +79,7 @@ VKAPI_ATTR auto VKAPI_CALL debug_callback(
 } // namespace
 #endif
 
-export namespace cielim::vk::context
+export namespace cielim::gpu::vk
 {
 
 class Context
@@ -243,12 +245,12 @@ private:
         // Windowing extensions are only needed for window presentation mode
         if (!headless)
         {
-            auto ext_result = window::Window::vk_get_extensions();
+            auto ext_result = platform::Window::vk_get_extensions();
 
             if (!ext_result.has_value())
                 return ext_result.propagate();
 
-            req_inst_extensions = ext_result.value();
+            req_inst_extensions = std::move(ext_result).value();
 
             // Support querying extended surface info
             req_inst_extensions.push_back("VK_KHR_get_surface_capabilities2");
@@ -428,7 +430,7 @@ private:
                 const bool supports_graphics = (queue_family.queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0;
                 const bool supports_presentation
                     = headless
-                   || window::Window::vk_get_presentation_support(this->instance_.get(), device, index).has_value();
+                   || platform::Window::vk_get_presentation_support(this->instance_.get(), device, index).has_value();
 
                 // Check that the GPU supports required properties
                 if (supports_graphics && supports_presentation)
@@ -651,4 +653,4 @@ private:
     UniqueHandle<VkDevice> device_;
 };
 
-} // namespace cielim::vk::context
+} // namespace cielim::gpu::vk

@@ -5,21 +5,23 @@
 
 module;
 
+#include <cstdint>
 #include <vector>
 
 #include <volk/volk.h>
 
 #include <vma/vk_mem_alloc.h>
 
-export module cielim.vk:buffer_ring;
+export module cielim.gpu.vk:buffer_ring;
 
+import cielim.error;
 import cielim.helpers;
 import cielim.result;
 import :allocator;
 import :buffer;
 import :context;
 
-export namespace cielim::vk::buffer_ring
+export namespace cielim::gpu::vk
 {
 
 template <typename T>
@@ -50,8 +52,8 @@ public:
      * @return Void on success, error code on failure.
      */
     auto create(
-        const context::Context& context,
-        const allocator::Allocator& allocator,
+        const Context& context,
+        const Allocator& allocator,
         const uint32_t num_buffers,
         const uint32_t element_capacity,
         const VkBufferUsageFlags usage_flags = {}
@@ -106,7 +108,7 @@ public:
         if (!gpu_buffer_result.has_value())
             return gpu_buffer_result.propagate();
 
-        const buffer::Buffer& gpu_buffer = gpu_buffer_result.value().get();
+        const Buffer& gpu_buffer = gpu_buffer_result.value().get();
 
         // In the future, this should ideally resize buffer on overflow
         if (const auto result = gpu_buffer.direct_write(slot * sizeof(T), &value, sizeof(T)); !result.has_value())
@@ -130,7 +132,7 @@ private:
     uint32_t num_buffers_ = 0;
 
     // The list of GPU buffers sized by the number of frames in flight
-    std::vector<buffer::Buffer> gpu_buffers_;
+    std::vector<Buffer> gpu_buffers_;
 };
 
-} // namespace cielim::vk::buffer_ring
+} // namespace cielim::gpu::vk

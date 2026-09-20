@@ -5,6 +5,7 @@
 
 module;
 
+#include <cstdint>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -15,12 +16,12 @@ module;
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 
-export module cielim.window;
+export module cielim.platform;
 
 import cielim.error;
 import cielim.result;
 
-export namespace cielim::window
+export namespace cielim::platform
 {
 
 class Window
@@ -176,4 +177,4 @@ private:
     uint8_t id_ = 0; // Not used right now, will be if we have more than one window
 };
 
-} // namespace cielim::window
+} // namespace cielim::platform
