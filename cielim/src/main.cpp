@@ -199,8 +199,11 @@ auto run(const std::filesystem::path& base_path) -> int
 
     cielim::camera::Camera camera;
 
-    camera.set_position({0.0f, 0.0f, 3.0f});
-    camera.set_orientation({0.7071f, -0.7071f, 0.0f, 0.0f}); // Look directly down
+    float camera_yaw = 0.0f;
+    float camera_pitch = 0.0f;
+
+    camera.set_position({0.0f, -3.0f, 0.0f});
+    camera.set_orientation(camera_yaw, camera_pitch, 0.0f);
 
     float view_width = static_cast<float>(vk_swapchain.get_extent().width);
     float view_height = static_cast<float>(vk_swapchain.get_extent().height);
@@ -215,16 +218,33 @@ auto run(const std::filesystem::path& base_path) -> int
         return EXIT_FAILURE;
     }
 
+    bool mouse_capture = true;
+
+    // Capture the mouse in the window
+    SDL_SetWindowRelativeMouseMode(window.get_handle(), mouse_capture);
+
+    uint64_t previous_time_ms = SDL_GetTicks();
+    float delta_time = 0.0f;
+
     bool is_running = true;
 
     while (is_running)
     {
+        bool skip_frame = false;
+
+        // Check for window events
+
+        float mouse_x = 0.0f;
+        float mouse_y = 0.0f;
+
         SDL_Event event;
         while (SDL_PollEvent(&event))
         {
             switch (event.type)
             {
             case SDL_EVENT_QUIT: is_running = false; break;
+
+            case SDL_EVENT_WINDOW_MINIMIZED: skip_frame = true; break;
 
             case SDL_EVENT_WINDOW_RESIZED:
                 if (const auto result = vk_swapchain.recreate(vk_context, vk_surface, window);
@@ -240,18 +260,87 @@ auto run(const std::filesystem::path& base_path) -> int
                 camera.set_fov_aspect(cielim::math::radians(60.0f), view_width / view_height);
                 break;
 
+            case SDL_EVENT_KEY_DOWN:
+                if (event.key.scancode == SDL_SCANCODE_ESCAPE)
+                {
+                    mouse_capture = !mouse_capture;
+                    SDL_SetWindowRelativeMouseMode(window.get_handle(), mouse_capture);
+                }
+                break;
+
+            case SDL_EVENT_MOUSE_MOTION:
+                if (mouse_capture)
+                {
+                    mouse_x = event.motion.xrel;
+                    mouse_y = event.motion.yrel;
+                }
+                break;
+
             default: break;
             }
         }
 
-        SDL_WindowFlags window_flags = SDL_GetWindowFlags(window.get_handle());
-
-        if ((window_flags & SDL_WINDOW_MINIMIZED) != 0 || vk_swapchain.get_handle() == nullptr)
+        if (skip_frame || vk_swapchain.get_handle() == nullptr)
         {
             constexpr uint32_t STALL_DELAY = 8;
             SDL_Delay(STALL_DELAY); // Wait a bit to reduce CPU usage when not rendering
             continue;
         }
+
+        // Check for user keyboard input
+
+        cielim::math::Vec3 move_direction(0.0f, 0.0f, 0.0f);
+
+        int keys;
+        const bool* key_state = SDL_GetKeyboardState(&keys);
+
+        if (key_state[SDL_SCANCODE_W])
+        {
+            move_direction += camera.get_look_at();
+        }
+        if (key_state[SDL_SCANCODE_S])
+        {
+            move_direction -= camera.get_look_at();
+        }
+        if (key_state[SDL_SCANCODE_D])
+        {
+            move_direction += cielim::math::cross(camera.get_look_at(), camera.get_up());
+        }
+        if (key_state[SDL_SCANCODE_A])
+        {
+            move_direction -= cielim::math::cross(camera.get_look_at(), camera.get_up());
+        }
+        if (key_state[SDL_SCANCODE_LSHIFT])
+        {
+            move_direction += camera.get_up();
+        }
+        if (key_state[SDL_SCANCODE_LCTRL])
+        {
+            move_direction -= camera.get_up();
+        }
+
+        // Update camera
+
+        uint64_t current_time_ms = SDL_GetTicks();
+        constexpr float SECOND_IN_MS = 1000.0f;
+        delta_time = static_cast<float>(current_time_ms - previous_time_ms) / SECOND_IN_MS;
+        previous_time_ms = current_time_ms;
+
+        constexpr float CAMERA_SPEED = 5.0f;
+
+        move_direction *= delta_time * CAMERA_SPEED;
+
+        camera.move(move_direction);
+
+        constexpr float MOUSE_SENSITIVITY = 0.005f;
+        constexpr float PITCH_LIMIT = cielim::math::radians(90.0f);
+
+        camera_yaw += -mouse_x * MOUSE_SENSITIVITY;
+        camera_pitch = std::clamp(camera_pitch + (-mouse_y * MOUSE_SENSITIVITY), -PITCH_LIMIT, PITCH_LIMIT);
+
+        camera.set_orientation(camera_yaw, camera_pitch, 0.0f);
+
+        // Render the scene view
 
         const uint32_t frame_index = vk_frame_counter.get_current_index(frames_in_flight);
 
