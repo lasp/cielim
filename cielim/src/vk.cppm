@@ -7,6 +7,7 @@ export module cielim.vk;
 
 export import :allocator;
 export import :buffer;
+export import :buffer_ring;
 export import :context;
 export import :frame_counter;
 export import :frame_resources;
@@ -14,6 +15,7 @@ export import :mesh_registry;
 export import :pipeline;
 export import :push_constants;
 export import :recorder;
+export import :scene_view;
 export import :shader;
 export import :surface;
 export import :swapchain;
@@ -23,6 +25,7 @@ export namespace cielim::vk
 {
 using namespace cielim::vk::allocator;
 using namespace cielim::vk::buffer;
+using namespace cielim::vk::buffer_ring;
 using namespace cielim::vk::context;
 using namespace cielim::vk::frame_counter;
 using namespace cielim::vk::frame_resources;
@@ -30,6 +33,7 @@ using namespace cielim::vk::mesh_registry;
 using namespace cielim::vk::pipeline;
 using namespace cielim::vk::push_constants;
 using namespace cielim::vk::recorder;
+using namespace cielim::vk::scene_view;
 using namespace cielim::vk::shader;
 using namespace cielim::vk::surface;
 using namespace cielim::vk::swapchain;
