@@ -13,6 +13,7 @@ module;
 
 export module cielim.vk:buffer_ring;
 
+import cielim.helpers;
 import cielim.result;
 import :allocator;
 import :buffer;
@@ -100,7 +101,12 @@ public:
      */
     auto write(const uint32_t index, const uint32_t slot, const T& value) -> Result<void>
     {
-        const auto& gpu_buffer = this->gpu_buffers_.at(index);
+        const auto gpu_buffer_result = try_at_ref(this->gpu_buffers_, index);
+
+        if (!gpu_buffer_result.has_value())
+            return gpu_buffer_result.propagate();
+
+        const buffer::Buffer& gpu_buffer = gpu_buffer_result.value().get();
 
         // In the future, this should ideally resize buffer on overflow
         if (const auto result = gpu_buffer.direct_write(slot * sizeof(T), &value, sizeof(T)); !result.has_value())
@@ -109,8 +115,15 @@ public:
         return {};
     }
 
-    [[nodiscard]] auto get_address(const uint32_t index) const -> VkDeviceAddress
-    { return this->gpu_buffers_.at(index).get_device_address(); }
+    auto get_address(const uint32_t index) const -> Result<VkDeviceAddress>
+    {
+        const auto gpu_buffer_result = try_at_ref(this->gpu_buffers_, index);
+
+        if (!gpu_buffer_result.has_value())
+            return gpu_buffer_result.propagate();
+
+        return gpu_buffer_result.value().get().get_device_address();
+    }
 
 private:
     // The number of GPU buffers to hold

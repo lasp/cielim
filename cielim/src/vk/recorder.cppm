@@ -79,7 +79,12 @@ public:
             return result.propagate();
 
         // This semaphore is signaled when the image has been acquired and can be rendered to
-        VkSemaphore image_acquire_semaphore = frame_resources.get_semaphore(frame_index);
+        const auto image_acquire_semaphore_result = frame_resources.get_semaphore(frame_index);
+
+        if (!image_acquire_semaphore_result.has_value())
+            return image_acquire_semaphore_result.propagate();
+
+        VkSemaphore image_acquire_semaphore = image_acquire_semaphore_result.value();
 
         // The image in the list of swapchain images this frame should be presented to
         uint32_t image_index;
@@ -110,12 +115,44 @@ public:
         }
 
         // This semaphore is signaled when the GPU is done rendering the frame
-        VkSemaphore render_finished_semaphore = swapchain.get_semaphore(image_index);
+        const auto render_finished_semaphore_result = swapchain.get_semaphore(image_index);
+
+        if (!render_finished_semaphore_result.has_value())
+            return render_finished_semaphore_result.propagate();
+
+        VkSemaphore render_finished_semaphore = render_finished_semaphore_result.value();
+
+        // The image (and its view) in the swapchain this frame should render to and present
+
+        const auto swapchain_image_result = swapchain.get_image(image_index);
+
+        if (!swapchain_image_result.has_value())
+            return swapchain_image_result.propagate();
+
+        VkImage swapchain_image = swapchain_image_result.value();
+
+        const auto swapchain_view_result = swapchain.get_view(image_index);
+
+        if (!swapchain_view_result.has_value())
+            return swapchain_view_result.propagate();
+
+        VkImageView swapchain_view = swapchain_view_result.value();
 
         // Get GPU command resources for the frame in the frame buffer we're rendering to
 
-        VkCommandPool command_pool = frame_resources.get_command_pool(frame_index);
-        VkCommandBuffer command_buffer = frame_resources.get_command_buffer(frame_index);
+        const auto command_pool_result = frame_resources.get_command_pool(frame_index);
+
+        if (!command_pool_result.has_value())
+            return command_pool_result.propagate();
+
+        VkCommandPool command_pool = command_pool_result.value();
+
+        const auto command_buffer_result = frame_resources.get_command_buffer(frame_index);
+
+        if (!command_buffer_result.has_value())
+            return command_buffer_result.propagate();
+
+        VkCommandBuffer command_buffer = command_buffer_result.value();
 
         // Flush all commands from previous rendering
         if (const auto result = vkResetCommandPool(vk_device_handle, command_pool, 0); result != VK_SUCCESS)
@@ -146,7 +183,7 @@ public:
         // Transition image to color write
         transition_image_layout(
             command_buffer,
-            swapchain.get_image(image_index),
+            swapchain_image,
             VK_IMAGE_LAYOUT_UNDEFINED,
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,
@@ -163,7 +200,7 @@ public:
 
         VkRenderingAttachmentInfo rendering_attachment_info = {
             .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-            .imageView = swapchain.get_view(image_index),
+            .imageView = swapchain_view,
             .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
             .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -231,7 +268,7 @@ public:
         // Transition image to presentation
         transition_image_layout(
             command_buffer,
-            swapchain.get_image(image_index),
+            swapchain_image,
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
             VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
             VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT,

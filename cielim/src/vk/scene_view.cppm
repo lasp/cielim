@@ -87,7 +87,7 @@ public:
         return {};
     }
 
-    [[nodiscard]] auto get_camera_info_address(const uint32_t frame_index) const -> VkDeviceAddress
+    auto get_camera_info_address(const uint32_t frame_index) const -> Result<VkDeviceAddress>
     { return this->camera_info_.get_address(frame_index); }
 
 private:

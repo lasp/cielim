@@ -350,9 +350,17 @@ auto run(const std::filesystem::path& base_path) -> int
             return EXIT_FAILURE;
         }
 
+        const auto camera_info_address_result = view.get_camera_info_address(frame_index);
+
+        if (!camera_info_address_result.has_value())
+        {
+            fatal_error(&window, camera_info_address_result.error().message());
+            return EXIT_FAILURE;
+        }
+
         const cielim::vk::SceneDataAddresses push_constants = {
             .vertex_info_address = mesh_registry.get_vertex_address(),
-            .frame_data_address = view.get_camera_info_address(frame_index),
+            .frame_data_address = camera_info_address_result.value(),
         };
 
         if (const auto result = cielim::vk::Recorder::draw_frame(
