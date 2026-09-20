@@ -1,7 +1,7 @@
 // Copyright (c) 2026 Laboratory for Atmospheric and Space Physics
 // SPDX-License-Identifier: GPL-3.0+
 
-/* The renderer renders a frame using Vulkan objects. */
+/* The recorder records and submits a frame's rendering commands using Vulkan objects. */
 
 module;
 
@@ -11,135 +11,72 @@ module;
 #include <volk/volk.h>
 #include <vulkan/vk_enum_string_helper.h>
 
-export module cielim.vk:renderer;
+export module cielim.vk:recorder;
 
 import cielim.handle;
 import cielim.result;
 import cielim.utils;
 import :context;
+import :frame_counter;
 import :frame_resources;
 import :mesh_registry;
 import :pipeline;
 import :push_constants;
 import :swapchain;
 
-export namespace cielim::vk::renderer
+export namespace cielim::vk::recorder
 {
 
-class Renderer
+class Recorder
 {
 public:
-    Renderer() = default;
+    Recorder() = default;
 
     // Delete copy constructors
 
-    Renderer(const Renderer&) = delete;
-    auto operator=(const Renderer&) -> Renderer& = delete;
+    Recorder(const Recorder&) = delete;
+    auto operator=(const Recorder&) -> Recorder& = delete;
 
     // Use default move constructors
 
-    Renderer(Renderer&&) = default;
-    auto operator=(Renderer&&) -> Renderer& = default;
-
-    ~Renderer()
-    {
-        if (timeline_semaphore_)
-            vkDestroySemaphore(this->vk_device_handle_, this->timeline_semaphore_.get(), nullptr);
-    }
-
-    /**
-     * @brief Initializes the renderer.
-     * @param context The Vulkan context.
-     * @return Void on success, error code on failure.
-     */
-    auto init(const context::Context& context) -> Result<void>
-    {
-        this->vk_device_handle_ = context.get_device(); // This is specifically a non-owning (borrow) handle
-
-        VkSemaphoreTypeCreateInfo timeline_semaphore_type_info = {
-            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
-            .semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE,
-            .initialValue = 0,
-        };
-
-        const VkSemaphoreCreateInfo timeline_semaphore_info = {
-            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-            .pNext = &timeline_semaphore_type_info,
-        };
-
-        if (const auto result
-            = vkCreateSemaphore(this->vk_device_handle_, &timeline_semaphore_info, nullptr, timeline_semaphore_.put());
-            result != VK_SUCCESS)
-        {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkResourcesError::SemaphoreCreateError),
-                .detail = string_VkResult(result),
-            };
-
-            return Err(error);
-        }
-
-        return {};
-    }
+    Recorder(Recorder&&) = default;
+    auto operator=(Recorder&&) -> Recorder& = default;
 
     /**
      * @brief Draws a frame.
      * @param context The Vulkan context.
      * @param swapchain The swapchain to which the frame should be presented.
      * @param frame_resources The frame resources to use for drawing.
+     * @param frame_counter The frame counter used to pace this stream's frames and reuse of its frame resources.
      * @param render_pipeline The pipeline to be used for rendering.
      * @param scene_data_addresses Push constant struct containing scene data device addresses.
      * @param mesh_registry The mesh registry from which the meshes to be rendered are pulled.
      * @return Void on success, error code on failure.
      */
-    auto draw_frame(
+    static auto draw_frame(
         const context::Context& context,
         const swapchain::Swapchain& swapchain,
         const frame_resources::FrameResources& frame_resources,
+        frame_counter::FrameCounter& frame_counter,
         const pipeline::Pipeline& render_pipeline,
         const push_constants::SceneDataAddresses& scene_data_addresses,
         const mesh_registry::MeshRegistry& mesh_registry
     ) -> Result<void>
     {
-        // Don't do anything if renderer is not initialized
-        if (this->vk_device_handle_ == nullptr)
-            return {};
+        const VkDevice vk_device_handle = context.get_device();
 
         const uint32_t frames_in_flight = frame_resources.get_frames_in_flight();
 
         // We use the first queue in the queue family
         VkQueue graphics_queue;
-        vkGetDeviceQueue(this->vk_device_handle_, context.get_queue_family(), 0, &graphics_queue);
+        vkGetDeviceQueue(vk_device_handle, context.get_queue_family(), 0, &graphics_queue);
 
         // The image in the frame buffer to render to; [0,1] for double-buffering, [0,1,2] for triple-buffering
-        const uint32_t frame_index = this->frame_counter_ % frames_in_flight;
+        const uint32_t frame_index = frame_counter.get_current_index(frames_in_flight);
 
-        // Don't wait if it's the first frames to be rendered as there's nothing to wait on
-        if (this->frame_counter_ >= frames_in_flight)
-        {
-            VkSemaphore timeline_semaphore_handle = this->timeline_semaphore_.get();
-
-            // Wait for the timeline value signaled by the previous rendered frame in this frame index
-            uint64_t wait_value = (this->frame_counter_ - frames_in_flight) + 1;
-
-            const VkSemaphoreWaitInfo wait_info = {
-                .sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
-                .semaphoreCount = 1,
-                .pSemaphores = &timeline_semaphore_handle,
-                .pValues = &wait_value,
-            };
-
-            if (const auto result = vkWaitSemaphores(this->vk_device_handle_, &wait_info, UINT64_MAX);
-                result != VK_SUCCESS)
-            {
-                error::DetailedError error = {
-                    .errc = make_error_code(error::VkResourcesError::SemaphoreWaitError),
-                    .detail = string_VkResult(result),
-                };
-
-                return Err(error);
-            }
-        }
+        // Wait until the frame that last used this slot has finished on the GPU (no-op for the first frames)
+        if (const auto result = frame_counter.wait_for_slot(frames_in_flight); !result.has_value())
+            return result.propagate();
 
         // This semaphore is signaled when the image has been acquired and can be rendered to
         VkSemaphore image_acquire_semaphore = frame_resources.get_semaphore(frame_index);
@@ -148,7 +85,7 @@ public:
         uint32_t image_index;
 
         const auto image_acquire_result = vkAcquireNextImageKHR(
-            this->vk_device_handle_, swapchain.get_handle(), UINT64_MAX, image_acquire_semaphore, nullptr, &image_index
+            vk_device_handle, swapchain.get_handle(), UINT64_MAX, image_acquire_semaphore, nullptr, &image_index
         );
 
         // If the swapchain is out of date, skip frame and try again
@@ -181,7 +118,7 @@ public:
         VkCommandBuffer command_buffer = frame_resources.get_command_buffer(frame_index);
 
         // Flush all commands from previous rendering
-        if (const auto result = vkResetCommandPool(this->vk_device_handle_, command_pool, 0); result != VK_SUCCESS)
+        if (const auto result = vkResetCommandPool(vk_device_handle, command_pool, 0); result != VK_SUCCESS)
         {
             error::DetailedError error = {
                 .errc = make_error_code(error::VkResourcesError::CommandPoolResetError),
@@ -329,13 +266,9 @@ public:
             .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
         };
 
-        // Signal the counter when all commands have been executed and the pool can be cleared
-        VkSemaphoreSubmitInfo signal_timeline_info = {
-            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-            .semaphore = this->timeline_semaphore_.get(),
-            .value = this->frame_counter_ + 1,
-            .stageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT,
-        };
+        // Signal the frame counter when all commands have been executed and the pool can be reused
+        VkSemaphoreSubmitInfo signal_timeline_info
+            = frame_counter.get_signal_info(VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT);
 
         std::array wait_semaphores = {wait_acquire_info};
         std::array signal_semaphores = {signal_render_finished_info, signal_timeline_info};
@@ -364,6 +297,9 @@ public:
 
             return Err(error);
         }
+
+        // The frame's commands have been submitted, so its slot in the frame counter is now spoken for
+        frame_counter.increment();
 
         // Submit render output presentation command to the swapchain
 
@@ -394,8 +330,6 @@ public:
 
             return Err(error);
         }
-
-        this->frame_counter_++;
 
         return {};
     }
@@ -453,15 +387,6 @@ private:
 
         vkCmdPipelineBarrier2(command_buffer, &dependency_info);
     }
-
-    // Non-owning handle for the Vulkan logical device
-    VkDevice vk_device_handle_ = nullptr;
-
-    // Monotonically increasing counter
-    uint64_t frame_counter_ = 0;
-
-    // Semaphore corresponding to the monotonic counter
-    UniqueHandle<VkSemaphore> timeline_semaphore_;
 };
 
-} // namespace cielim::vk::renderer
+} // namespace cielim::vk::recorder

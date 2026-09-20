@@ -50,11 +50,12 @@ target_sources(cielim
             ${CIELIM_CPP_SOURCE}/vk/allocator.cppm
             ${CIELIM_CPP_SOURCE}/vk/buffer.cppm
             ${CIELIM_CPP_SOURCE}/vk/context.cppm
+            ${CIELIM_CPP_SOURCE}/vk/frame_counter.cppm
             ${CIELIM_CPP_SOURCE}/vk/frame_resources.cppm
             ${CIELIM_CPP_SOURCE}/vk/mesh_registry.cppm
             ${CIELIM_CPP_SOURCE}/vk/pipeline.cppm
             ${CIELIM_CPP_SOURCE}/vk/push_constants.cppm
-            ${CIELIM_CPP_SOURCE}/vk/renderer.cppm
+            ${CIELIM_CPP_SOURCE}/vk/recorder.cppm
             ${CIELIM_CPP_SOURCE}/vk/shader.cppm
             ${CIELIM_CPP_SOURCE}/vk/surface.cppm
             ${CIELIM_CPP_SOURCE}/vk/swapchain.cppm
