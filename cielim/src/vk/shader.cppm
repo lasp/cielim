@@ -55,11 +55,13 @@ public:
 
         auto file_result = utils::file::read_file32(path);
 
+        const std::string file_name = path.filename().string();
+
         if (!file_result.has_value())
         {
             error::DetailedError error = {
                 .errc = make_error_code(error::VkShaderModuleError::FileOpenError),
-                .detail = "'" + path.filename().string() + "': " + file_result.error().message(),
+                .detail = "'" + file_name + "': " + error::sanitize_fragment(file_result.error().message()),
             };
 
             return Err(error);
@@ -77,7 +79,7 @@ public:
         {
             error::DetailedError error = {
                 .errc = make_error_code(error::VkShaderModuleError::ModuleCreateError),
-                .detail = "'" + path.stem().string() + "': " + string_VkResult(result),
+                .detail = "'" + file_name + "': " + string_VkResult(result),
             };
 
             return Err(error);
