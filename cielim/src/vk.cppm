@@ -14,6 +14,7 @@ export import :pipeline;
 export import :push_constants;
 export import :renderer;
 export import :shader;
+export import :surface;
 export import :swapchain;
 
 // Re-export module partition namespaces under module namespace for convenience
@@ -28,5 +29,6 @@ using namespace cielim::vk::pipeline;
 using namespace cielim::vk::push_constants;
 using namespace cielim::vk::renderer;
 using namespace cielim::vk::shader;
+using namespace cielim::vk::surface;
 using namespace cielim::vk::swapchain;
 } // namespace cielim::vk

@@ -104,7 +104,15 @@ auto run(const std::filesystem::path& base_path) -> int
 
     cielim::vk::Context vk_context;
 
-    if (auto const result = vk_context.init(window); !result.has_value())
+    if (auto const result = vk_context.init(); !result.has_value())
+    {
+        fatal_error(&window, result.error().message());
+        return EXIT_FAILURE;
+    }
+
+    cielim::vk::Surface vk_surface;
+
+    if (const auto result = vk_surface.init(vk_context, window); !result.has_value())
     {
         fatal_error(&window, result.error().message());
         return EXIT_FAILURE;
@@ -120,7 +128,7 @@ auto run(const std::filesystem::path& base_path) -> int
 
     cielim::vk::Swapchain vk_swapchain;
 
-    if (const auto result = vk_swapchain.init(vk_context, window);
+    if (const auto result = vk_swapchain.init(vk_context, vk_surface, window);
         !result.has_value() && result.error().errc != cielim::error::VkSwapchainError::NullExtent)
     {
         fatal_error(&window, result.error().message());
@@ -231,7 +239,7 @@ auto run(const std::filesystem::path& base_path) -> int
             case SDL_EVENT_QUIT: is_running = false; break;
 
             case SDL_EVENT_WINDOW_RESIZED:
-                if (const auto result = vk_swapchain.recreate(vk_context, window);
+                if (const auto result = vk_swapchain.recreate(vk_context, vk_surface, window);
                     !result.has_value() && result.error().errc != cielim::error::VkSwapchainError::NullExtent)
                 {
                     fatal_error(&window, result.error().message());
