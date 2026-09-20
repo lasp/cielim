@@ -151,7 +151,7 @@ public:
     [[nodiscard]] auto get_handle() const -> SDL_Window* { return window_; }
 
     // Returns window size on success, error code on failure
-    [[nodiscard]] auto get_size() const -> Result<std::pair<int, int>>
+    auto get_size() const -> Result<std::pair<int, int>>
     {
         int width = 0;
         int height = 0;

@@ -37,6 +37,7 @@ target_sources(cielim
             ${CIELIM_CPP_SOURCE}/default_shape.cppm
             ${CIELIM_CPP_SOURCE}/error.cppm
             ${CIELIM_CPP_SOURCE}/handle.cppm
+            ${CIELIM_CPP_SOURCE}/helpers.cppm
             ${CIELIM_CPP_SOURCE}/math.cppm
             ${CIELIM_CPP_SOURCE}/mesh_elements.cppm
             ${CIELIM_CPP_SOURCE}/result.cppm

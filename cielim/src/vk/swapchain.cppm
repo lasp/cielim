@@ -19,8 +19,8 @@ export module cielim.vk:swapchain;
 
 import cielim.error;
 import cielim.handle;
+import cielim.helpers;
 import cielim.result;
-import cielim.utils;
 import cielim.window;
 import :context;
 import :surface;
@@ -313,12 +313,12 @@ public:
     [[nodiscard]] auto get_handle() const -> VkSwapchainKHR { return this->swapchain_.get(); }
     [[nodiscard]] auto get_extent() const -> VkExtent2D { return this->extent_; }
     [[nodiscard]] auto get_num_images() const -> uint32_t { return this->swapchain_images_.size(); }
-    [[nodiscard]] auto get_image(const uint32_t index) const -> VkImage { return this->swapchain_images_.at(index); }
-    [[nodiscard]] auto get_view(const uint32_t index) const -> VkImageView { return this->swapchain_views_.at(index); }
+    auto get_image(const uint32_t index) const -> Result<VkImage> { return try_at(this->swapchain_images_, index); }
+    auto get_view(const uint32_t index) const -> Result<VkImageView> { return try_at(this->swapchain_views_, index); }
     [[nodiscard]] auto get_format() const -> VkFormat { return this->format_; }
     [[nodiscard]] auto get_color_space() const -> VkColorSpaceKHR { return this->color_space_; }
-    [[nodiscard]] auto get_semaphore(const uint32_t index) const -> VkSemaphore
-    { return this->image_finished_semaphores_.at(index); }
+    auto get_semaphore(const uint32_t index) const -> Result<VkSemaphore>
+    { return try_at(this->image_finished_semaphores_, index); }
 
 private:
     auto cleanup() -> void

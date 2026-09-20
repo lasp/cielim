@@ -13,6 +13,7 @@ module;
 
 export module cielim.vk:frame_resources;
 
+import cielim.helpers;
 import cielim.result;
 import :context;
 
@@ -140,12 +141,12 @@ public:
     }
 
     [[nodiscard]] auto get_frames_in_flight() const -> uint32_t { return this->frames_in_flight_; }
-    [[nodiscard]] auto get_command_pool(const uint32_t index) const -> VkCommandPool
-    { return this->command_pools_.at(index); }
-    [[nodiscard]] auto get_command_buffer(const uint32_t index) const -> VkCommandBuffer
-    { return this->command_buffers_.at(index); }
-    [[nodiscard]] auto get_semaphore(const uint32_t index) const -> VkSemaphore
-    { return this->image_acquire_semaphores_.at(index); }
+    auto get_command_pool(const uint32_t index) const -> Result<VkCommandPool>
+    { return try_at(this->command_pools_, index); }
+    auto get_command_buffer(const uint32_t index) const -> Result<VkCommandBuffer>
+    { return try_at(this->command_buffers_, index); }
+    auto get_semaphore(const uint32_t index) const -> Result<VkSemaphore>
+    { return try_at(this->image_acquire_semaphores_, index); }
 
 private:
     // Non-owning handle for the Vulkan logical device

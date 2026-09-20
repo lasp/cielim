@@ -85,7 +85,7 @@ public:
      * @param pool_size The number of slots in the resource pool asking to reuse a slot.
      * @return Void on success, error code on failure.
      */
-    [[nodiscard]] auto wait_for_slot(const uint32_t pool_size) const -> Result<void>
+    auto wait_for_slot(const uint32_t pool_size) const -> Result<void>
     {
         if (this->frame_counter_ < pool_size)
             return {}; // Nothing has used this slot yet
