@@ -91,12 +91,12 @@ public:
             );
             result != VK_SUCCESS)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkBufferError::BufferCreateError),
-                .detail = string_VkResult(result),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkBufferError::BufferCreateError),
+                    .detail = string_VkResult(result),
+                }
+            );
         }
 
         this->size_ = allocation_info.size;
@@ -131,31 +131,32 @@ public:
     {
         if (this->mapped_data_ == nullptr)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkBufferError::NullMappedMemory),
-                .detail = "",
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkBufferError::NullMappedMemory),
+                    .detail = "",
+                }
+            );
         }
 
         if (offset > this->size_)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkBufferError::BufferOverflow),
-                .detail = std::format("offset {} exceeds buffer size {}", offset, this->size_),
-            };
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkBufferError::BufferOverflow),
+                    .detail = std::format("offset {} exceeds buffer size {}", offset, this->size_),
+                }
+            );
         }
 
         if (const auto available_bytes = this->size_ - offset; size > available_bytes)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkBufferError::BufferOverflow),
-                .detail = std::format("need {} bytes, only {} available", size, available_bytes),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkBufferError::BufferOverflow),
+                    .detail = std::format("need {} bytes, only {} available", size, available_bytes),
+                }
+            );
         }
 
         std::memcpy(this->mapped_data_ + offset, data, size);

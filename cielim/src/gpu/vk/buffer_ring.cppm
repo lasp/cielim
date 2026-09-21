@@ -61,12 +61,12 @@ public:
     {
         if (num_buffers == 0)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkBufferError::InvalidBufferCount),
-                .detail = "a ring must have 1 or more buffers",
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkBufferError::InvalidBufferCount),
+                    .detail = "a ring must have 1 or more buffers",
+                }
+            );
         }
 
         this->num_buffers_ = num_buffers;

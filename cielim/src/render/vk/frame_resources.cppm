@@ -87,12 +87,12 @@ public:
                 );
                 result != VK_SUCCESS)
             {
-                error::DetailedError error = {
-                    .errc = make_error_code(error::VkResourcesError::CommandPoolCreateError),
-                    .detail = string_VkResult(result),
-                };
-
-                return Err(error);
+                return Err(
+                    error::DetailedError{
+                        .errc = make_error_code(error::VkResourcesError::CommandPoolCreateError),
+                        .detail = string_VkResult(result),
+                    }
+                );
             }
 
             VkCommandBufferAllocateInfo command_buffer_allocate_info = {
@@ -107,12 +107,12 @@ public:
                 );
                 result != VK_SUCCESS)
             {
-                error::DetailedError error = {
-                    .errc = make_error_code(error::VkResourcesError::CommandBufferCreateError),
-                    .detail = string_VkResult(result),
-                };
-
-                return Err(error);
+                return Err(
+                    error::DetailedError{
+                        .errc = make_error_code(error::VkResourcesError::CommandBufferCreateError),
+                        .detail = string_VkResult(result),
+                    }
+                );
             }
         }
 
@@ -130,12 +130,12 @@ public:
                 = vkCreateSemaphore(this->vk_device_handle_, &BINARY_SEMAPHORE_INFO, nullptr, &semaphore);
                 result != VK_SUCCESS)
             {
-                error::DetailedError error = {
-                    .errc = make_error_code(error::VkResourcesError::SemaphoreCreateError),
-                    .detail = std::string("image acquire semaphore: ") + string_VkResult(result),
-                };
-
-                return Err(error);
+                return Err(
+                    error::DetailedError{
+                        .errc = make_error_code(error::VkResourcesError::SemaphoreCreateError),
+                        .detail = std::string("image acquire semaphore: ") + string_VkResult(result),
+                    }
+                );
             }
         }
 

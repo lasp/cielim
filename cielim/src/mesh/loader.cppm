@@ -55,13 +55,13 @@ public:
 
         if (data_result.error() != fastgltf::Error::None)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::MeshError::MeshLoadError),
-                .detail = "'" + file_name
-                        + "': " + error::sanitize_fragment(std::string(fastgltf::getErrorMessage(data_result.error()))),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::MeshError::MeshLoadError),
+                    .detail = "'" + file_name + "': "
+                            + error::sanitize_fragment(std::string(fastgltf::getErrorMessage(data_result.error()))),
+                }
+            );
         }
 
         auto asset_result
@@ -69,13 +69,13 @@ public:
 
         if (asset_result.error() != fastgltf::Error::None)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::MeshError::MeshLoadError),
-                .detail = "'" + file_name + "': "
-                        + error::sanitize_fragment(std::string(fastgltf::getErrorMessage(asset_result.error()))),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::MeshError::MeshLoadError),
+                    .detail = "'" + file_name + "': "
+                            + error::sanitize_fragment(std::string(fastgltf::getErrorMessage(asset_result.error()))),
+                }
+            );
         }
 
         fastgltf::Asset& gltf_asset = asset_result.get();
@@ -91,12 +91,12 @@ public:
 
         if (position_iterator == primitive.attributes.end())
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::MeshError::MalformedMesh),
-                .detail = "'" + file_name + "': missing vertex positions",
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::MeshError::MalformedMesh),
+                    .detail = "'" + file_name + "': missing vertex positions",
+                }
+            );
         }
 
         const fastgltf::Accessor& position_accessor = gltf_asset.accessors[position_iterator->accessorIndex];
@@ -116,24 +116,24 @@ public:
 
         if (normal_iterator == primitive.attributes.end())
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::MeshError::MalformedMesh),
-                .detail = "'" + file_name + "': missing vertex normals",
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::MeshError::MalformedMesh),
+                    .detail = "'" + file_name + "': missing vertex normals",
+                }
+            );
         }
 
         const auto& normal_accessor = gltf_asset.accessors[normal_iterator->accessorIndex];
 
         if (normal_accessor.count != position_accessor.count)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::MeshError::MalformedMesh),
-                .detail = "'" + file_name + "': vertex position and normal counts do not match",
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::MeshError::MalformedMesh),
+                    .detail = "'" + file_name + "': vertex position and normal counts do not match",
+                }
+            );
         }
 
         fastgltf::iterateAccessorWithIndex<fastgltf::math::fvec3>(

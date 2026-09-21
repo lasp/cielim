@@ -101,12 +101,12 @@ public:
             );
             result != VK_SUCCESS)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkPipelineError::LayoutCreateError),
-                .detail = string_VkResult(result),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkPipelineError::LayoutCreateError),
+                    .detail = string_VkResult(result),
+                }
+            );
         }
 
         // Collect all of the shader stage info structs
@@ -219,12 +219,12 @@ public:
             );
             result != VK_SUCCESS)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkPipelineError::PipelineCreateError),
-                .detail = string_VkResult(result),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkPipelineError::PipelineCreateError),
+                    .detail = string_VkResult(result),
+                }
+            );
         }
 
         utils::log::info("Created pipeline with {} shader stages", stages.size());

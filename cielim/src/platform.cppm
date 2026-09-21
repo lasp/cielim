@@ -51,12 +51,12 @@ public:
 
         if (this->window_ == nullptr)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::WindowError::WindowCreateError),
-                .detail = SDL_GetError(),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::WindowError::WindowCreateError),
+                    .detail = SDL_GetError(),
+                }
+            );
         }
 
         utils::log::info("Created window ({}x{})", width, height);
@@ -88,12 +88,12 @@ public:
 
         if (sdl_extensions == nullptr)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::WindowError::ExtensionEnumerateError),
-                .detail = SDL_GetError(),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::WindowError::ExtensionEnumerateError),
+                    .detail = SDL_GetError(),
+                }
+            );
         }
 
         if (sdl_extension_count == 0)
@@ -117,12 +117,12 @@ public:
 
         if (!supported)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::WindowError::PresentationUnsupported),
-                .detail = "",
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::WindowError::PresentationUnsupported),
+                    .detail = "",
+                }
+            );
         }
 
         return {};
@@ -140,12 +140,12 @@ public:
 
         if (!created)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::WindowError::SurfaceCreateError),
-                .detail = SDL_GetError(),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::WindowError::SurfaceCreateError),
+                    .detail = SDL_GetError(),
+                }
+            );
         }
 
         return {};
@@ -164,12 +164,12 @@ public:
 
         if (!got_size)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::WindowError::GetSizeError),
-                .detail = SDL_GetError(),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::WindowError::GetSizeError),
+                    .detail = SDL_GetError(),
+                }
+            );
         }
 
         return std::make_pair(width, height);

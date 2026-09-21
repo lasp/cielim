@@ -72,12 +72,12 @@ public:
             );
             result != VK_SUCCESS)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkSwapchainError::SurfaceCapabilitiesError),
-                .detail = string_VkResult(result),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkSwapchainError::SurfaceCapabilitiesError),
+                    .detail = string_VkResult(result),
+                }
+            );
         }
 
         const VkSurfaceCapabilitiesKHR& surface_capabilities = surface_capabilities2.surfaceCapabilities;
@@ -98,12 +98,12 @@ public:
             );
             result != VK_SUCCESS)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkSwapchainError::SurfaceFormatsError),
-                .detail = string_VkResult(result),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkSwapchainError::SurfaceFormatsError),
+                    .detail = string_VkResult(result),
+                }
+            );
         }
 
         // Check that the required formats are supported (standard sRGB)
@@ -122,12 +122,12 @@ public:
 
         if (!found_format)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkSwapchainError::MissingSurfaceFormats),
-                .detail = "",
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkSwapchainError::MissingSurfaceFormats),
+                    .detail = "",
+                }
+            );
         }
 
         // We'll skip querying present modes and use VK_PRESENT_MODE_FIFO_KHR which is always present
@@ -166,12 +166,12 @@ public:
         // Null extent is not a valid swapchain size, this is non-fatal though and should be handled
         if (this->extent_.width == 0 || this->extent_.height == 0)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkSwapchainError::NullExtent),
-                .detail = "",
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkSwapchainError::NullExtent),
+                    .detail = "",
+                }
+            );
         }
 
         // Minimum number of images the swapchain should contain, dictated by the window manager
@@ -201,12 +201,12 @@ public:
             = vkCreateSwapchainKHR(this->vk_device_handle_, &swapchain_create_info, nullptr, this->swapchain_.put());
             result != VK_SUCCESS)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkSwapchainError::SwapchainCreateError),
-                .detail = string_VkResult(result),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkSwapchainError::SwapchainCreateError),
+                    .detail = string_VkResult(result),
+                }
+            );
         }
 
         // Get all of the images from the swapchain and map to our list of VkImages
@@ -225,12 +225,12 @@ public:
             );
             result != VK_SUCCESS)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkSwapchainError::GetImageError),
-                .detail = string_VkResult(result),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkSwapchainError::GetImageError),
+                    .detail = string_VkResult(result),
+                }
+            );
         }
 
         // Create image view for each image in the swapchain
@@ -250,12 +250,12 @@ public:
                 = vkCreateImageView(this->vk_device_handle_, &view_create_info, nullptr, &this->swapchain_views_[i]);
                 result != VK_SUCCESS)
             {
-                error::DetailedError error = {
-                    .errc = make_error_code(error::VkSwapchainError::ViewCreateError),
-                    .detail = string_VkResult(result),
-                };
-
-                return Err(error);
+                return Err(
+                    error::DetailedError{
+                        .errc = make_error_code(error::VkSwapchainError::ViewCreateError),
+                        .detail = string_VkResult(result),
+                    }
+                );
             }
 
             i++;
@@ -275,12 +275,12 @@ public:
                 = vkCreateSemaphore(this->vk_device_handle_, &BINARY_SEMAPHORE_INFO, nullptr, &semaphore);
                 result != VK_SUCCESS)
             {
-                error::DetailedError error = {
-                    .errc = make_error_code(error::VkResourcesError::SemaphoreCreateError),
-                    .detail = std::string("image finished semaphore: ") + string_VkResult(result),
-                };
-
-                return Err(error);
+                return Err(
+                    error::DetailedError{
+                        .errc = make_error_code(error::VkResourcesError::SemaphoreCreateError),
+                        .detail = std::string("image finished semaphore: ") + string_VkResult(result),
+                    }
+                );
             }
         }
 

@@ -40,12 +40,12 @@ auto try_at_ref(const Container& container, const std::size_t index)
 {
     if (index >= container.size())
     {
-        error::DetailedError error = {
-            .errc = std::make_error_code(std::errc::argument_out_of_domain),
-            .detail = std::format("index {} is out of bounds for size {}", index, container.size()),
-        };
-
-        return Err(error);
+        return Err(
+            error::DetailedError{
+                .errc = std::make_error_code(std::errc::argument_out_of_domain),
+                .detail = std::format("index {} is out of bounds for size {}", index, container.size()),
+            }
+        );
     }
 
     return std::cref(container[index]);
