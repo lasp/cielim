@@ -68,12 +68,12 @@ public:
             );
             result != VK_SUCCESS)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkResourcesError::SemaphoreCreateError),
-                .detail = string_VkResult(result),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkResourcesError::SemaphoreCreateError),
+                    .detail = string_VkResult(result),
+                }
+            );
         }
 
         return {};
@@ -102,12 +102,12 @@ public:
 
         if (const auto result = vkWaitSemaphores(this->vk_device_handle_, &wait_info, UINT64_MAX); result != VK_SUCCESS)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkResourcesError::SemaphoreWaitError),
-                .detail = string_VkResult(result),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkResourcesError::SemaphoreWaitError),
+                    .detail = string_VkResult(result),
+                }
+            );
         }
 
         return {};

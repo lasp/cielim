@@ -63,12 +63,12 @@ public:
         if (const auto result = vmaImportVulkanFunctionsFromVolk(&allocator_create_info, &vulkan_functions);
             result != VK_SUCCESS)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkAllocatorError::ImportFunctionsError),
-                .detail = string_VkResult(result),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkAllocatorError::ImportFunctionsError),
+                    .detail = string_VkResult(result),
+                }
+            );
         }
 
         allocator_create_info.pVulkanFunctions = &vulkan_functions;
@@ -76,12 +76,12 @@ public:
         if (const auto result = vmaCreateAllocator(&allocator_create_info, this->allocator_.put());
             result != VK_SUCCESS)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkAllocatorError::AllocatorCreateError),
-                .detail = string_VkResult(result),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkAllocatorError::AllocatorCreateError),
+                    .detail = string_VkResult(result),
+                }
+            );
         }
 
         utils::log::info("Initialized VMA allocator");

@@ -108,12 +108,12 @@ public:
         }
         else if (image_acquire_result != VK_SUCCESS)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkSwapchainError::AcquireImageError),
-                .detail = string_VkResult(image_acquire_result),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkSwapchainError::AcquireImageError),
+                    .detail = string_VkResult(image_acquire_result),
+                }
+            );
         }
 
         // This semaphore is signaled when the GPU is done rendering the frame
@@ -159,12 +159,12 @@ public:
         // Flush all commands from previous rendering
         if (const auto result = vkResetCommandPool(vk_device_handle, command_pool, 0); result != VK_SUCCESS)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkResourcesError::CommandPoolResetError),
-                .detail = string_VkResult(result),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkResourcesError::CommandPoolResetError),
+                    .detail = string_VkResult(result),
+                }
+            );
         }
 
         constexpr VkCommandBufferBeginInfo BEGIN_INFO = {
@@ -174,12 +174,12 @@ public:
         // Start recording commands to the command buffer
         if (const auto result = vkBeginCommandBuffer(command_buffer, &BEGIN_INFO); result != VK_SUCCESS)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkResourcesError::CommandBufferBeginError),
-                .detail = string_VkResult(result),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkResourcesError::CommandBufferBeginError),
+                    .detail = string_VkResult(result),
+                }
+            );
         }
 
         // Transition image to color write
@@ -279,12 +279,12 @@ public:
 
         if (const auto result = vkEndCommandBuffer(command_buffer); result != VK_SUCCESS)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkResourcesError::CommandBufferEndError),
-                .detail = string_VkResult(result),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkResourcesError::CommandBufferEndError),
+                    .detail = string_VkResult(result),
+                }
+            );
         }
 
         // Submit commands to the graphics queue
@@ -327,12 +327,12 @@ public:
 
         if (const auto result = vkQueueSubmit2(graphics_queue, 1, &submit_info, nullptr); result != VK_SUCCESS)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkRenderError::QueueSubmitError),
-                .detail = string_VkResult(result),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkRenderError::QueueSubmitError),
+                    .detail = string_VkResult(result),
+                }
+            );
         }
 
         // The frame's commands have been submitted, so its slot in the frame counter is now spoken for
@@ -360,12 +360,12 @@ public:
         }
         else if (present_result != VK_SUCCESS)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkRenderError::QueuePresentError),
-                .detail = string_VkResult(present_result),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkRenderError::QueuePresentError),
+                    .detail = string_VkResult(present_result),
+                }
+            );
         }
 
         return {};

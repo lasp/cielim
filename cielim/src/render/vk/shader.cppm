@@ -61,12 +61,12 @@ public:
 
         if (!file_result.has_value())
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkShaderModuleError::FileOpenError),
-                .detail = "'" + file_name + "': " + error::sanitize_fragment(file_result.error().message()),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkShaderModuleError::FileOpenError),
+                    .detail = "'" + file_name + "': " + error::sanitize_fragment(file_result.error().message()),
+                }
+            );
         }
 
         const VkShaderModuleCreateInfo module_create_info = {
@@ -79,12 +79,12 @@ public:
             = vkCreateShaderModule(this->vk_device_handle_, &module_create_info, nullptr, this->shader_.put());
             result != VK_SUCCESS)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkShaderModuleError::ModuleCreateError),
-                .detail = "'" + file_name + "': " + string_VkResult(result),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkShaderModuleError::ModuleCreateError),
+                    .detail = "'" + file_name + "': " + string_VkResult(result),
+                }
+            );
         }
 
         utils::log::info("Loaded shader '{}'", file_name);

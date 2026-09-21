@@ -150,12 +150,12 @@ private:
         uint32_t vk_api_version = 0;
         if (const auto result = vkEnumerateInstanceVersion(&vk_api_version); result != VK_SUCCESS)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkContextError::EnumerateVersionError),
-                .detail = string_VkResult(result),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkContextError::EnumerateVersionError),
+                    .detail = string_VkResult(result),
+                }
+            );
         }
 
         utils::log::info(
@@ -167,12 +167,12 @@ private:
 
         if (vk_api_version < VK_API_VERSION_1_4)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkContextError::VersionUnsupported),
-                .detail = "",
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkContextError::VersionUnsupported),
+                    .detail = "",
+                }
+            );
         }
 
         // Setup application info
@@ -201,12 +201,12 @@ private:
         if (const auto result = vkEnumerateInstanceLayerProperties(&inst_layer_count, inst_layers.data());
             result != VK_SUCCESS)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkContextError::EnumerateInstanceLayersError),
-                .detail = string_VkResult(result),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkContextError::EnumerateInstanceLayersError),
+                    .detail = string_VkResult(result),
+                }
+            );
         }
 
         std::vector<const char*> missing_inst_layers;
@@ -230,12 +230,12 @@ private:
 
         if (!missing_inst_layers.empty())
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkContextError::MissingInstanceLayer),
-                .detail = fmt::format("{}", fmt::join(missing_inst_layers, ", ")),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkContextError::MissingInstanceLayer),
+                    .detail = fmt::format("{}", fmt::join(missing_inst_layers, ", ")),
+                }
+            );
         }
 
         // Check if any required Vulkan instance extensions are missing
@@ -272,12 +272,12 @@ private:
             = vkEnumerateInstanceExtensionProperties(nullptr, &inst_ext_count, inst_extensions.data());
             result != VK_SUCCESS)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkContextError::EnumerateInstanceExtsError),
-                .detail = string_VkResult(result),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkContextError::EnumerateInstanceExtsError),
+                    .detail = string_VkResult(result),
+                }
+            );
         }
 
         std::vector<const char*> missing_inst_extensions;
@@ -301,12 +301,12 @@ private:
 
         if (!missing_inst_extensions.empty())
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkContextError::MissingInstanceExt),
-                .detail = fmt::format("{}", fmt::join(missing_inst_extensions, ", ")),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkContextError::MissingInstanceExt),
+                    .detail = fmt::format("{}", fmt::join(missing_inst_extensions, ", ")),
+                }
+            );
         }
 
         // Create Vulkan instance
@@ -341,12 +341,12 @@ private:
         if (const auto result = vkCreateInstance(&instance_create_info, nullptr, this->instance_.put());
             result != VK_SUCCESS)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkContextError::InstanceCreateError),
-                .detail = string_VkResult(result),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkContextError::InstanceCreateError),
+                    .detail = string_VkResult(result),
+                }
+            );
         }
 
         // Initialize Vulkan instance
@@ -358,12 +358,12 @@ private:
             );
             result != VK_SUCCESS)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkContextError::DebugMessengerCreateError),
-                .detail = string_VkResult(result),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkContextError::DebugMessengerCreateError),
+                    .detail = string_VkResult(result),
+                }
+            );
         }
 #endif
 
@@ -387,12 +387,12 @@ private:
             = vkEnumeratePhysicalDevices(this->instance_.get(), &num_devices, physical_devices.data());
             result != VK_SUCCESS || physical_devices.empty())
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkContextError::EnumeratePhysicalDevicesError),
-                .detail = string_VkResult(result),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkContextError::EnumeratePhysicalDevicesError),
+                    .detail = string_VkResult(result),
+                }
+            );
         }
 
         // Find a suitable physical device
@@ -450,12 +450,12 @@ private:
         // The physical device should've been found and the queue index should never reach max 32 bit value
         if (physical_device == nullptr || graphics_queue_family == std::numeric_limits<uint32_t>::max())
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkContextError::NoSupportedDevice),
-                .detail = "",
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkContextError::NoSupportedDevice),
+                    .detail = "",
+                }
+            );
         }
 
         this->physical_device_ = UniqueHandle(physical_device);
@@ -561,12 +561,12 @@ private:
             );
             result != VK_SUCCESS)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkContextError::EnumerateDeviceExtsError),
-                .detail = string_VkResult(result),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkContextError::EnumerateDeviceExtsError),
+                    .detail = string_VkResult(result),
+                }
+            );
         }
 
         std::vector<const char*> missing_dev_extensions;
@@ -590,12 +590,12 @@ private:
 
         if (!missing_dev_extensions.empty())
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkContextError::MissingDeviceExt),
-                .detail = fmt::format("{}", fmt::join(missing_dev_extensions, ", ")),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkContextError::MissingDeviceExt),
+                    .detail = fmt::format("{}", fmt::join(missing_dev_extensions, ", ")),
+                }
+            );
         }
 
         // Create the logical device
@@ -621,12 +621,12 @@ private:
             = vkCreateDevice(this->physical_device_.get(), &device_info, nullptr, this->device_.put());
             result != VK_SUCCESS)
         {
-            error::DetailedError error = {
-                .errc = make_error_code(error::VkContextError::DeviceCreateError),
-                .detail = string_VkResult(result),
-            };
-
-            return Err(error);
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::VkContextError::DeviceCreateError),
+                    .detail = string_VkResult(result),
+                }
+            );
         }
 
         volkLoadDevice(this->device_.get());
