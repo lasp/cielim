@@ -87,6 +87,8 @@ public:
             return Err(error);
         }
 
+        utils::log::info("Loaded shader '{}'", file_name);
+
         return {};
     }
 

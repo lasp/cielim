@@ -19,6 +19,7 @@ export module cielim.mesh:loader;
 
 import cielim.error;
 import cielim.result;
+// import cielim.utils; This causes C1116 with MSVC 14.51, can be re-introduced when compiler bug is fixed
 import :elements;
 
 export namespace cielim::mesh
@@ -153,6 +154,10 @@ public:
             index_accessor,
             [&](const uint32_t index, const size_t slot) -> void { mesh_data.indices[slot] = index; }
         );
+
+        /*utils::log::info(
+            "Loaded mesh '{}' ({} vertices, {} indices)", file_name, mesh_data.vertices.size(), mesh_data.indices.size()
+        );*/
 
         return std::move(mesh_data);
     }
