@@ -10,6 +10,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Find dependencies
 
+find_package(fastgltf CONFIG REQUIRED) # From vcpkg
 find_package(glm CONFIG REQUIRED) # From vcpkg
 find_package(SDL3 CONFIG REQUIRED) # From vcpkg
 find_package(spdlog CONFIG REQUIRED) # From vcpkg
@@ -44,8 +45,8 @@ target_sources(cielim
             ${CIELIM_CPP_SOURCE}/utils.cppm
             ${CIELIM_CPP_SOURCE}/math/projection.cppm
             ${CIELIM_CPP_SOURCE}/math/tensors.cppm
-            ${CIELIM_CPP_SOURCE}/mesh/default_shape.cppm
             ${CIELIM_CPP_SOURCE}/mesh/elements.cppm
+            ${CIELIM_CPP_SOURCE}/mesh/loader.cppm
             ${CIELIM_CPP_SOURCE}/snapshot/camera.cppm
             ${CIELIM_CPP_SOURCE}/utils/file.cppm
             ${CIELIM_CPP_SOURCE}/utils/log.cppm
@@ -69,6 +70,7 @@ target_sources(cielim
 
 # Link dependencies
 
+target_link_libraries(cielim PRIVATE fastgltf::fastgltf)
 target_link_libraries(cielim PRIVATE glm::glm)
 target_link_libraries(cielim PRIVATE SDL3::SDL3)
 target_link_libraries(cielim PRIVATE spdlog::spdlog)

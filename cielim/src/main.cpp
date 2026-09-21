@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <volk/volk.h>
@@ -186,7 +187,7 @@ auto run(const std::filesystem::path& base_path) -> int
 
     cielim::render::vk::MeshRegistry mesh_registry;
 
-    constexpr uint32_t MESH_REGISTRY_BUFFER_SIZE = 65536;
+    constexpr uint32_t MESH_REGISTRY_BUFFER_SIZE = 20971520;
 
     if (const auto result = mesh_registry.create(vk_context, vk_allocator, MESH_REGISTRY_BUFFER_SIZE);
         !result.has_value())
@@ -195,7 +196,19 @@ auto run(const std::filesystem::path& base_path) -> int
         return EXIT_FAILURE;
     }
 
-    if (const auto result = mesh_registry.upload(cielim::mesh::vertices, cielim::mesh::indices); !result.has_value())
+    std::filesystem::path shape_path = base_path / "content" / "meshes" / "vesta.glb";
+
+    auto shape_result = cielim::mesh::Loader::load_mesh(shape_path);
+
+    if (!shape_result.has_value())
+    {
+        fatal_error(&window, shape_result.error().message());
+        return EXIT_FAILURE;
+    }
+
+    auto [vertices, indices] = std::move(shape_result).value();
+
+    if (const auto result = mesh_registry.upload(vertices, indices); !result.has_value())
     {
         fatal_error(&window, result.error().message());
         return EXIT_FAILURE;
@@ -330,7 +343,7 @@ auto run(const std::filesystem::path& base_path) -> int
         delta_time = static_cast<float>(current_time_ms - previous_time_ms) / SECOND_IN_MS;
         previous_time_ms = current_time_ms;
 
-        constexpr float CAMERA_SPEED = 5.0f;
+        constexpr float CAMERA_SPEED = 100.0f;
 
         move_direction *= delta_time * CAMERA_SPEED;
 
