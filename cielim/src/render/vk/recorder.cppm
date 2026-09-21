@@ -196,9 +196,7 @@ public:
 
         // Setup basic rendering information
 
-        constexpr float GRAY_COLOR = 0.12f;
-
-        VkClearValue clear_color = {{GRAY_COLOR, GRAY_COLOR, GRAY_COLOR, GRAY_COLOR}};
+        VkClearValue clear_color = {{0.0f, 0.0f, 0.0f, 1.0f}};
 
         VkRenderingAttachmentInfo rendering_attachment_info = {
             .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
