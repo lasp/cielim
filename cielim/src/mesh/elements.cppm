@@ -7,22 +7,29 @@ module;
 
 #include <array>
 #include <cstdint>
+#include <vector>
 
 export module cielim.mesh:elements;
 
 export namespace cielim::mesh
 {
 
+struct Vertex
+{
+    std::array<float, 3> position;
+    std::array<float, 3> normal;
+};
+
+struct MeshData
+{
+    std::vector<Vertex> vertices;
+    std::vector<uint32_t> indices;
+};
+
 struct MeshHandle
 {
     // Index in the mesh registry's array of mesh info
     uint32_t index;
-};
-
-struct Vertex
-{
-    std::array<float, 3> position;
-    std::array<float, 3> color;
 };
 
 } // namespace cielim::mesh

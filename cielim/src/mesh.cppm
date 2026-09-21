@@ -5,5 +5,5 @@
 
 export module cielim.mesh;
 
-export import :default_shape;
 export import :elements;
+export import :loader;

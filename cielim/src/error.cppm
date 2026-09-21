@@ -148,6 +148,32 @@ struct ErrorType<WindowError>
     }
 };
 
+enum class MeshError : std::uint8_t
+{
+    MeshLoadError,
+    MalformedMesh,
+};
+
+template <>
+struct ErrorType<MeshError>
+{
+    static constexpr bool IS_ERROR = true;
+    static constexpr std::string_view CATEGORY_NAME = "MeshError";
+
+    static auto message(const MeshError error) -> std::string_view
+    {
+        using enum MeshError;
+
+        switch (error)
+        {
+        case MeshLoadError: return "failed to load mesh";
+        case MalformedMesh: return "mesh is malformed";
+        }
+
+        return "unknown mesh error";
+    }
+};
+
 enum class VkContextError : std::uint8_t
 {
     EnumerateVersionError,
