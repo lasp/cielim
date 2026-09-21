@@ -22,6 +22,7 @@ import cielim.error;
 import cielim.gpu.vk;
 import cielim.mesh;
 import cielim.result;
+import cielim.utils;
 
 export namespace cielim::render::vk
 {
@@ -83,6 +84,10 @@ public:
             !result.has_value())
             return Err(result.error().with_trace("failed to create mesh registry index buffer"));
 
+        constexpr float BYTES_IN_MB = 1048576.0f;
+
+        utils::log::info("Created mesh registry with {:.2f} MB", static_cast<float>(init_size) / BYTES_IN_MB);
+
         return {};
     }
 
@@ -123,6 +128,10 @@ public:
 
         vertex_write_pos_ += static_cast<int32_t>(vertex_info.size());
         index_write_pos_ += static_cast<uint32_t>(index_info.size());
+
+        utils::log::info(
+            "Uploaded mesh to mesh registry ({} vertices, {} indices)", vertex_info.size(), index_info.size()
+        );
 
         return mesh::MeshHandle{.index = mesh_index};
     }

@@ -20,6 +20,7 @@ export module cielim.platform;
 
 import cielim.error;
 import cielim.result;
+import cielim.utils;
 
 export namespace cielim::platform
 {
@@ -57,6 +58,8 @@ public:
 
             return Err(error);
         }
+
+        utils::log::info("Created window ({}x{})", width, height);
 
         return {};
     }

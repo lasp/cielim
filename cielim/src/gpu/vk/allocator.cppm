@@ -15,6 +15,7 @@ export module cielim.gpu.vk:allocator;
 import cielim.error;
 import cielim.handle;
 import cielim.result;
+import cielim.utils;
 import :context;
 
 export namespace cielim::gpu::vk
@@ -82,6 +83,8 @@ public:
 
             return Err(error);
         }
+
+        utils::log::info("Initialized VMA allocator");
 
         return {};
     }

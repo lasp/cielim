@@ -22,6 +22,7 @@ import cielim.error;
 import cielim.gpu.vk;
 import cielim.handle;
 import cielim.result;
+import cielim.utils;
 import :shader;
 import :swapchain;
 
@@ -225,6 +226,8 @@ public:
 
             return Err(error);
         }
+
+        utils::log::info("Created pipeline with {} shader stages", stages.size());
 
         return {};
     }

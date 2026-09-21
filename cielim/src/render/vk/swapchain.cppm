@@ -24,6 +24,7 @@ import cielim.handle;
 import cielim.helpers;
 import cielim.platform;
 import cielim.result;
+import cielim.utils;
 import :surface;
 
 export namespace cielim::render::vk
@@ -282,6 +283,13 @@ public:
                 return Err(error);
             }
         }
+
+        utils::log::info(
+            "Created swapchain with extent {}x{}, {} images",
+            this->extent_.width,
+            this->extent_.height,
+            this->swapchain_images_.size()
+        );
 
         return {};
     }
