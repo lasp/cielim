@@ -7,10 +7,3 @@ export module cielim.math;
 
 export import :projection;
 export import :tensors;
-
-// Re-export module partition namespaces under module namespace for convenience
-export namespace cielim::math
-{
-using namespace cielim::math::projection;
-using namespace cielim::math::tensors;
-} // namespace cielim::math

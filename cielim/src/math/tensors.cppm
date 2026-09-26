@@ -28,7 +28,7 @@ using glm::operator!=;
 
 } // namespace glm
 
-export namespace cielim::math::tensors
+export namespace cielim::math
 {
 
 // Float 2-component vector
@@ -66,6 +66,24 @@ using Mat4 = glm::mat4;
 
 // Float quaternion
 using Quat = glm::quat;
+
+// Trigonometric functions
+
+using glm::acos;
+using glm::asin;
+using glm::atan;
+using glm::cos;
+using glm::sin;
+using glm::tan;
+
+// Hyperbolic functions
+
+using glm::acosh;
+using glm::asinh;
+using glm::atanh;
+using glm::cosh;
+using glm::sinh;
+using glm::tanh;
 
 // Vector functions
 
@@ -126,4 +144,4 @@ using glm::slerp;
 
 using glm::value_ptr;
 
-} // namespace cielim::math::tensors
+} // namespace cielim::math

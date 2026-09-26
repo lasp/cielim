@@ -6,13 +6,11 @@
 
 module;
 
-#include <cmath>
-
 export module cielim.math:projection;
 
 import :tensors;
 
-export namespace cielim::math::projection
+export namespace cielim::math
 {
 
 /**
@@ -23,8 +21,7 @@ export namespace cielim::math::projection
  * @param z_near Distance from the camera to the near clipping plane in meters (must be positive).
  * @return A 4x4 perspective projection matrix.
  */
-[[nodiscard]] auto perspective_infinite_reverse_z(const float fov_x, const float fov_y, const float z_near)
-    -> tensors::Mat4
+[[nodiscard]] auto perspective_infinite_reverse_z(const float fov_x, const float fov_y, const float z_near) -> Mat4
 {
     float effective_z_near = 0.0f;
 
@@ -32,10 +29,10 @@ export namespace cielim::math::projection
     if (z_near > 0.0f)
         effective_z_near = z_near;
 
-    const float focal_length_x = 1.0f / std::tan(fov_x * 0.5f);
-    const float focal_length_y = 1.0f / std::tan(fov_y * 0.5f);
+    const float focal_length_x = 1.0f / tan(fov_x * 0.5f);
+    const float focal_length_y = 1.0f / tan(fov_y * 0.5f);
 
-    tensors::Mat4 perspective_matrix(0.0f);
+    Mat4 perspective_matrix(0.0f);
     perspective_matrix[0][0] = focal_length_x;
     perspective_matrix[2][1] = focal_length_y;
     perspective_matrix[3][2] = effective_z_near;
@@ -53,7 +50,7 @@ export namespace cielim::math::projection
  * @return A 4x4 perspective projection matrix.
  */
 [[nodiscard]] auto perspective_infinite_reverse_z_aspect(const float aspect, const float fov_y, const float z_near)
-    -> tensors::Mat4
+    -> Mat4
 {
     float effective_z_near = 0.0f;
 
@@ -61,10 +58,10 @@ export namespace cielim::math::projection
     if (z_near > 0.0f)
         effective_z_near = z_near;
 
-    const float focal_length_y = 1.0f / std::tan(fov_y * 0.5f);
+    const float focal_length_y = 1.0f / tan(fov_y * 0.5f);
     const float focal_length_x = focal_length_y / aspect;
 
-    tensors::Mat4 perspective_matrix(0.0f);
+    Mat4 perspective_matrix(0.0f);
     perspective_matrix[0][0] = focal_length_x;
     perspective_matrix[2][1] = focal_length_y;
     perspective_matrix[3][2] = effective_z_near;
@@ -73,4 +70,4 @@ export namespace cielim::math::projection
     return perspective_matrix;
 }
 
-} // namespace cielim::math::projection
+} // namespace cielim::math

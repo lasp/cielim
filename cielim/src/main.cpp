@@ -168,8 +168,8 @@ auto run(const std::filesystem::path& base_path) -> int
             vk_context,
             vk_swapchain,
             shader_stages,
-            VK_SHADER_STAGE_VERTEX_BIT,
-            sizeof(cielim::render::vk::SceneDataAddresses)
+            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+            sizeof(cielim::render::vk::SceneDataPushConstants)
         );
         !result.has_value())
     {
@@ -359,15 +359,19 @@ auto run(const std::filesystem::path& base_path) -> int
 
         // Render the scene view
 
+        constexpr float AU = 1.496e11f;
+
+        cielim::math::Vec3 sun_position(AU, 0.0f, 0.0f);
+
         const uint32_t frame_index = vk_frame_counter.get_current_index(frames_in_flight);
 
-        if (const auto result = view.update(camera, frame_index); !result.has_value())
+        if (const auto result = view.update(camera, sun_position, frame_index); !result.has_value())
         {
             fatal_error(&window, result.error().message());
             return EXIT_FAILURE;
         }
 
-        const auto camera_info_address_result = view.get_camera_info_address(frame_index);
+        const auto camera_info_address_result = view.get_scene_info_address(frame_index);
 
         if (!camera_info_address_result.has_value())
         {
@@ -375,9 +379,9 @@ auto run(const std::filesystem::path& base_path) -> int
             return EXIT_FAILURE;
         }
 
-        const cielim::render::vk::SceneDataAddresses push_constants = {
+        const cielim::render::vk::SceneDataPushConstants push_constants = {
             .vertex_info_address = mesh_registry.get_vertex_address(),
-            .frame_data_address = camera_info_address_result.value(),
+            .scene_info_address = camera_info_address_result.value(),
         };
 
         if (const auto result = cielim::render::vk::Recorder::draw_frame(

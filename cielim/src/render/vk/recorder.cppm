@@ -61,7 +61,7 @@ public:
         const FrameResources& frame_resources,
         FrameCounter& frame_counter,
         const Pipeline& render_pipeline,
-        const SceneDataAddresses& scene_data_addresses,
+        const SceneDataPushConstants& scene_data_addresses,
         const MeshRegistry& mesh_registry
     ) -> Result<void>
     {
