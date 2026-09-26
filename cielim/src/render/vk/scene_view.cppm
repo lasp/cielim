@@ -20,6 +20,12 @@ import cielim.snapshot;
 export namespace cielim::render::vk
 {
 
+struct SceneInfo
+{
+    math::Mat4 view_projection{};
+    math::Vec3 sun_position{};
+};
+
 class SceneView
 {
 public:
@@ -51,7 +57,7 @@ public:
         constexpr VkBufferUsageFlags FLAGS
             = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 
-        if (const auto result = this->camera_info_.create(context, allocator, frames_in_flight, 1, FLAGS);
+        if (const auto result = this->scene_info_.create(context, allocator, frames_in_flight, 1, FLAGS);
             !result.has_value())
             return Err(result.error().with_trace("failed to create scene view"));
 
@@ -61,24 +67,30 @@ public:
     /**
      * @brief Updates the view's camera info in its buffers from a camera.
      * @param camera The camera from which to update.
+     * @param sun_pos The position of the sun in the scene inertial frame.
      * @param frame_index The current frame index.
      */
-    auto update(const snapshot::Camera& camera, const uint32_t frame_index) -> Result<void>
+    auto update(const snapshot::Camera& camera, const math::Vec3& sun_pos, const uint32_t frame_index) -> Result<void>
     {
         const math::Mat4 view_projection = camera.get_view_projection_matrix();
 
-        if (const auto result = this->camera_info_.write(frame_index, 0, view_projection); !result.has_value())
+        const SceneInfo scene_info = {
+            .view_projection = view_projection,
+            .sun_position = sun_pos,
+        };
+
+        if (const auto result = this->scene_info_.write(frame_index, 0, scene_info); !result.has_value())
             return Err(result.error().with_trace("failed to update scene view"));
 
         return {};
     }
 
-    auto get_camera_info_address(const uint32_t frame_index) const -> Result<VkDeviceAddress>
-    { return this->camera_info_.get_address(frame_index); }
+    auto get_scene_info_address(const uint32_t frame_index) const -> Result<VkDeviceAddress>
+    { return this->scene_info_.get_address(frame_index); }
 
 private:
-    // The list of camera info buffers for each frame in flight
-    gpu::vk::BufferRing<math::Mat4> camera_info_;
+    // The list of scene info buffers for each frame in flight
+    gpu::vk::BufferRing<SceneInfo> scene_info_;
 };
 
 } // namespace cielim::render::vk
