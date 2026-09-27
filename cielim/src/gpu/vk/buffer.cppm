@@ -29,17 +29,15 @@ export namespace cielim::gpu::vk
 class Buffer
 {
 public:
-    Buffer() = default;
-
     // Delete copy constructors
 
     Buffer(const Buffer&) = delete;
     auto operator=(const Buffer&) -> Buffer& = delete;
 
-    // Use default move constructors
+    // Use default move constructor, delete move assignment
 
     Buffer(Buffer&&) = default;
-    auto operator=(Buffer&&) -> Buffer& = default;
+    auto operator=(Buffer&&) -> Buffer& = delete;
 
     ~Buffer()
     {
@@ -55,18 +53,20 @@ public:
      * @param usage_flags (Optional) Intended usage flags for the buffer.
      * @param alloc_flags (Optional) Memory allocation flags.
      * @param memory_usage (Optional) Intended memory usage for the buffer; determines memory type.
-     * @return Void on success, error code on failure.
+     * @return The buffer on success, error code on failure.
      */
-    auto create(
+    static auto create(
         const Context& context,
         const Allocator& allocator,
         const VkDeviceSize size,
         const VkBufferUsageFlags usage_flags = {},
         const VmaAllocationCreateFlags alloc_flags = {},
         const VmaMemoryUsage memory_usage = VMA_MEMORY_USAGE_AUTO
-    ) -> Result<void>
+    ) -> Result<Buffer>
     {
-        this->vma_allocator_handle_ = allocator.get_handle(); // This is specifically a non-owning (borrow) handle
+        Buffer buffer;
+
+        buffer.vma_allocator_handle_ = allocator.get_handle(); // This is specifically a non-owning (borrow) handle
 
         const VkBufferCreateInfo buffer_info = {
             .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -82,11 +82,11 @@ public:
         VmaAllocationInfo allocation_info = {};
 
         if (const auto result = vmaCreateBuffer(
-                this->vma_allocator_handle_,
+                buffer.vma_allocator_handle_,
                 &buffer_info,
                 &allocation_create_info,
-                this->buffer_.put(),
-                this->allocation_.put(),
+                buffer.buffer_.put(),
+                buffer.allocation_.put(),
                 &allocation_info
             );
             result != VK_SUCCESS)
@@ -100,23 +100,23 @@ public:
         }
 
         // The buffer can only access the requested size even if the VMA allocation is larger
-        this->size_ = size;
+        buffer.size_ = size;
 
         // Null pointer unless mapped memory was requested in alloc_flags
-        this->mapped_data_ = static_cast<std::byte*>(allocation_info.pMappedData);
+        buffer.mapped_data_ = static_cast<std::byte*>(allocation_info.pMappedData);
 
         // Get buffer device address if one was requested
         if ((usage_flags & VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT) != 0)
         {
             const VkBufferDeviceAddressInfo address_info = {
                 .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
-                .buffer = this->buffer_.get(),
+                .buffer = buffer.buffer_.get(),
             };
 
-            this->address_ = vkGetBufferDeviceAddress(context.get_device(), &address_info);
+            buffer.address_ = vkGetBufferDeviceAddress(context.get_device(), &address_info);
         }
 
-        return {};
+        return buffer;
     }
 
     /**
@@ -188,6 +188,8 @@ public:
     [[nodiscard]] auto get_device_address() const -> VkDeviceAddress { return this->address_; }
 
 private:
+    Buffer() = default;
+
     // Non-owning handle for the VMA allocator
     VmaAllocator vma_allocator_handle_ = nullptr;
 

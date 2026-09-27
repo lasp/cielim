@@ -19,6 +19,7 @@ module;
 export module cielim.platform;
 
 import cielim.error;
+import cielim.handle;
 import cielim.result;
 import cielim.utils;
 
@@ -28,12 +29,20 @@ export namespace cielim::platform
 class Window
 {
 public:
-    Window() = default;
+    // Delete copy constructors
+
+    Window(const Window&) = delete;
+    auto operator=(const Window&) -> Window& = delete;
+
+    // Use default move constructor, delete move assignment
+
+    Window(Window&&) = default;
+    auto operator=(Window&&) -> Window& = delete;
 
     ~Window()
     {
-        if (this->window_ != nullptr)
-            SDL_DestroyWindow(this->window_);
+        if (this->window_)
+            SDL_DestroyWindow(this->window_.get());
     }
 
     /**
@@ -42,14 +51,16 @@ public:
      * @param width The width for the window to be in pixels.
      * @param height The height for the window to be in pixels.
      * @param flags Bit string containing window flags.
-     * @return Void on success, error code on failure.
+     * @return The window on success, error code on failure.
      */
-    auto create_window(const std::string_view name, const uint16_t width, const uint16_t height, const uint64_t flags)
-        -> Result<void>
+    static auto create(const std::string_view name, const uint16_t width, const uint16_t height, const uint64_t flags)
+        -> Result<Window>
     {
-        this->window_ = SDL_CreateWindow(std::string(name).c_str(), width, height, flags);
+        Window window;
 
-        if (this->window_ == nullptr)
+        *window.window_.put() = SDL_CreateWindow(std::string(name).c_str(), width, height, flags);
+
+        if (!window.window_)
         {
             return Err(
                 error::DetailedError{
@@ -61,7 +72,7 @@ public:
 
         utils::log::info("Created window ({}x{})", width, height);
 
-        return {};
+        return window;
     }
 
     /**
@@ -72,7 +83,7 @@ public:
     auto error_popup(const std::string& message) const -> void
     {
         // Ignore any errors that may occur displaying this popup because the program is ending anyways
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Cielim - Fatal Error", message.c_str(), this->window_);
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Cielim - Fatal Error", message.c_str(), this->window_.get());
     }
 
     // ----- Vulkan interop functions -----
@@ -136,7 +147,7 @@ public:
      */
     auto vk_create_surface(const VkInstance instance, VkSurfaceKHR* surface) const -> Result<void>
     {
-        const bool created = SDL_Vulkan_CreateSurface(this->window_, instance, nullptr, surface);
+        const bool created = SDL_Vulkan_CreateSurface(this->window_.get(), instance, nullptr, surface);
 
         if (!created)
         {
@@ -152,7 +163,7 @@ public:
     }
 
     // Returns the window handle
-    [[nodiscard]] auto get_handle() const -> SDL_Window* { return window_; }
+    [[nodiscard]] auto get_handle() const -> SDL_Window* { return this->window_.get(); }
 
     // Returns window size on success, error code on failure
     auto get_size() const -> Result<std::pair<int, int>>
@@ -160,7 +171,7 @@ public:
         int width = 0;
         int height = 0;
 
-        const bool got_size = SDL_GetWindowSizeInPixels(this->window_, &width, &height);
+        const bool got_size = SDL_GetWindowSizeInPixels(this->window_.get(), &width, &height);
 
         if (!got_size)
         {
@@ -176,7 +187,9 @@ public:
     }
 
 private:
-    SDL_Window* window_ = nullptr;
+    Window() = default;
+
+    UniqueHandle<SDL_Window*> window_;
     uint8_t id_ = 0; // Not used right now, will be if we have more than one window
 };
 

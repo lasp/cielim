@@ -10,6 +10,7 @@ module;
 #include <optional>
 #include <span>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <volk/volk.h>
@@ -40,17 +41,15 @@ struct MeshInfo
 class MeshRegistry
 {
 public:
-    MeshRegistry() = default;
-
     // Delete copy constructors
 
     MeshRegistry(const MeshRegistry&) = delete;
     auto operator=(const MeshRegistry&) -> MeshRegistry& = delete;
 
-    // Use default move constructors
+    // Use default move constructor, delete move assignment
 
     MeshRegistry(MeshRegistry&&) = default;
-    auto operator=(MeshRegistry&&) -> MeshRegistry& = default;
+    auto operator=(MeshRegistry&&) -> MeshRegistry& = delete;
 
     ~MeshRegistry() = default;
 
@@ -59,36 +58,38 @@ public:
      * @param context The Vulkan context.
      * @param allocator The VMA allocator.
      * @param init_size Initial size in bytes for the registry's vertex and index buffers.
-     * @return Void on success, error code on failure.
+     * @return The mesh registry on success, error code on failure.
      */
-    auto create(const gpu::vk::Context& context, const gpu::vk::Allocator& allocator, const uint32_t init_size)
-        -> Result<void>
+    static auto create(const gpu::vk::Context& context, const gpu::vk::Allocator& allocator, const uint32_t init_size)
+        -> Result<MeshRegistry>
     {
-        if (const auto result = this->vertex_buffer_.create(
-                context,
-                allocator,
-                init_size,
-                VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
-                VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
-            );
-            !result.has_value())
-            return Err(result.error().with_trace("failed to create mesh registry vertex buffer"));
+        auto vertex_buffer_result = gpu::vk::Buffer::create(
+            context,
+            allocator,
+            init_size,
+            VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT,
+            VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
+        );
 
-        if (const auto result = this->index_buffer_.create(
-                context,
-                allocator,
-                init_size,
-                VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-                VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
-            );
-            !result.has_value())
-            return Err(result.error().with_trace("failed to create mesh registry index buffer"));
+        if (!vertex_buffer_result.has_value())
+            return Err(vertex_buffer_result.error().with_trace("failed to create mesh registry vertex buffer"));
+
+        auto index_buffer_result = gpu::vk::Buffer::create(
+            context,
+            allocator,
+            init_size,
+            VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+            VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
+        );
+
+        if (!index_buffer_result.has_value())
+            return Err(index_buffer_result.error().with_trace("failed to create mesh registry index buffer"));
 
         constexpr float BYTES_IN_MB = 1048576.0f;
 
         utils::log::info("Created mesh registry with {:.2f} MB", static_cast<float>(init_size) / BYTES_IN_MB);
 
-        return {};
+        return MeshRegistry(std::move(vertex_buffer_result).value(), std::move(index_buffer_result).value());
     }
 
     /**
@@ -150,6 +151,11 @@ public:
     { return this->vertex_buffer_.get_device_address(); }
 
 private:
+    MeshRegistry(gpu::vk::Buffer&& vertex_buffer, gpu::vk::Buffer&& index_buffer) :
+        vertex_buffer_(std::move(vertex_buffer)), index_buffer_(std::move(index_buffer))
+    {
+    }
+
     // List of mesh info structs
     std::vector<MeshInfo> meshes_;
 

@@ -5,6 +5,7 @@
 
 module;
 
+
 #include <volk/volk.h>
 #include <vulkan/vk_enum_string_helper.h>
 
@@ -24,17 +25,15 @@ export namespace cielim::gpu::vk
 class Allocator
 {
 public:
-    Allocator() = default;
-
     // Delete copy constructors
 
     Allocator(const Allocator&) = delete;
     auto operator=(const Allocator&) -> Allocator& = delete;
 
-    // Use default move constructors
+    // Use default move constructor, delete move assignment
 
     Allocator(Allocator&&) = default;
-    auto operator=(Allocator&&) -> Allocator& = default;
+    auto operator=(Allocator&&) -> Allocator& = delete;
 
     ~Allocator()
     {
@@ -43,12 +42,14 @@ public:
     }
 
     /**
-     * @brief Initializes the VMA allocator.
+     * @brief Creates the VMA allocator.
      * @param context The Vulkan context.
-     * @return Void on success, error code on failure.
+     * @return The allocator on success, error code on failure.
      */
-    auto init(const Context& context) -> Result<void>
+    static auto create(const Context& context) -> Result<Allocator>
     {
+        Allocator allocator;
+
         VmaAllocatorCreateInfo allocator_create_info = {
             .flags = VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT      // Uses memory budget feature
                    | VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT, // Required for buffer device address features
@@ -73,7 +74,7 @@ public:
 
         allocator_create_info.pVulkanFunctions = &vulkan_functions;
 
-        if (const auto result = vmaCreateAllocator(&allocator_create_info, this->allocator_.put());
+        if (const auto result = vmaCreateAllocator(&allocator_create_info, allocator.allocator_.put());
             result != VK_SUCCESS)
         {
             return Err(
@@ -86,12 +87,14 @@ public:
 
         utils::log::info("Initialized VMA allocator");
 
-        return {};
+        return allocator;
     }
 
     [[nodiscard]] auto get_handle() const -> VmaAllocator { return allocator_.get(); }
 
 private:
+    Allocator() = default;
+
     // The VMA allocator object
     UniqueHandle<VmaAllocator> allocator_;
 };

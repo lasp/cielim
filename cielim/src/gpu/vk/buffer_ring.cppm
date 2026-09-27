@@ -6,6 +6,7 @@
 module;
 
 #include <cstdint>
+#include <utility>
 #include <vector>
 
 #include <volk/volk.h>
@@ -28,17 +29,15 @@ template <typename T>
 class BufferRing
 {
 public:
-    BufferRing() = default;
-
     // Delete copy constructors
 
     BufferRing(const BufferRing&) = delete;
     auto operator=(const BufferRing&) -> BufferRing& = delete;
 
-    // Use default move constructors
+    // Use default move constructor, delete move assignment
 
     BufferRing(BufferRing&&) = default;
-    auto operator=(BufferRing&&) -> BufferRing& = default;
+    auto operator=(BufferRing&&) -> BufferRing& = delete;
 
     ~BufferRing() = default;
 
@@ -49,16 +48,18 @@ public:
      * @param num_buffers The number of buffers the ring should hold.
      * @param element_capacity The initial number of elements the buffers should hold.
      * @param usage_flags (Optional) Intended usage flags for the buffers.
-     * @return Void on success, error code on failure.
+     * @return The buffer ring on success, error code on failure.
      */
-    auto create(
+    static auto create(
         const Context& context,
         const Allocator& allocator,
         const uint32_t num_buffers,
         const uint32_t element_capacity,
         const VkBufferUsageFlags usage_flags = {}
-    ) -> Result<void>
+    ) -> Result<BufferRing>
     {
+        BufferRing ring;
+
         if (num_buffers == 0)
         {
             return Err(
@@ -69,29 +70,31 @@ public:
             );
         }
 
-        this->num_buffers_ = num_buffers;
+        ring.num_buffers_ = num_buffers;
 
-        // Create N buffers with default constructed buffers
-        this->gpu_buffers_.resize(this->num_buffers_);
+        ring.gpu_buffers_.reserve(ring.num_buffers_);
 
         /* Allocate each buffer as device-local memory. If available, it will be host-visible and can be written to
          * directly from the CPU. In the case that device-local memory that is host-visible is not available, a staging
          * buffer must be used to write into the buffer (not implemented rn). */
-        for (auto& buffer : this->gpu_buffers_)
+        for (uint32_t i = 0; i < ring.num_buffers_; i++)
         {
-            if (const auto result = buffer.create(
-                    context,
-                    allocator,
-                    element_capacity * sizeof(T),
-                    usage_flags,
-                    VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
-                        | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT
-                );
-                !result.has_value())
-                return result.propagate();
+            auto buffer_result = Buffer::create(
+                context,
+                allocator,
+                element_capacity * sizeof(T),
+                usage_flags,
+                VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
+                    | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT
+            );
+
+            if (!buffer_result.has_value())
+                return buffer_result.propagate();
+
+            ring.gpu_buffers_.emplace_back(std::move(buffer_result).value());
         }
 
-        return {};
+        return ring;
     }
 
     /**
@@ -128,6 +131,8 @@ public:
     }
 
 private:
+    BufferRing() = default;
+
     // The number of GPU buffers to hold
     uint32_t num_buffers_ = 0;
 

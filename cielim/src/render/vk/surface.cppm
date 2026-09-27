@@ -6,10 +6,13 @@
 
 module;
 
+#include <string>
+
 #include <volk/volk.h>
 
 export module cielim.render.vk:surface;
 
+import cielim.error;
 import cielim.gpu.vk;
 import cielim.handle;
 import cielim.platform;
@@ -21,17 +24,15 @@ export namespace cielim::render::vk
 class Surface
 {
 public:
-    Surface() = default;
-
     // Delete copy constructors
 
     Surface(const Surface&) = delete;
     auto operator=(const Surface&) -> Surface& = delete;
 
-    // Use default move constructors
+    // Use default move constructor, delete move assignment
 
     Surface(Surface&&) = default;
-    auto operator=(Surface&&) -> Surface& = default;
+    auto operator=(Surface&&) -> Surface& = delete;
 
     ~Surface()
     {
@@ -43,22 +44,26 @@ public:
      * @brief Creates the Vulkan surface for the given window.
      * @param context The Vulkan context, must have been initialized for window presentation.
      * @param window The window for which to create the surface.
-     * @return Void on success, error code on failure.
+     * @return The surface on success, error code on failure.
      */
-    auto init(const gpu::vk::Context& context, const platform::Window& window) -> Result<void>
+    static auto create(const gpu::vk::Context& context, const platform::Window& window) -> Result<Surface>
     {
-        this->vk_instance_handle_ = context.get_instance(); // This is specifically a non-owning (borrow) handle
+        Surface surface;
 
-        if (const auto result = window.vk_create_surface(this->vk_instance_handle_, this->surface_.put());
+        surface.vk_instance_handle_ = context.get_instance(); // This is specifically a non-owning (borrow) handle
+
+        if (const auto result = window.vk_create_surface(surface.vk_instance_handle_, surface.surface_.put());
             !result.has_value())
             return result.propagate();
 
-        return {};
+        return surface;
     }
 
     [[nodiscard]] auto get_handle() const -> VkSurfaceKHR { return this->surface_.get(); }
 
 private:
+    Surface() = default;
+
     // Non-owning handle for the Vulkan instance
     VkInstance vk_instance_handle_ = nullptr;
 

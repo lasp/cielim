@@ -9,7 +9,6 @@ module;
 #include <cstdint>
 #include <filesystem>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include <fastgltf/core.hpp>
@@ -159,7 +158,7 @@ public:
             "Loaded mesh '{}' ({} vertices, {} indices)", file_name, mesh_data.vertices.size(), mesh_data.indices.size()
         );*/
 
-        return std::move(mesh_data);
+        return mesh_data;
     }
 };
 

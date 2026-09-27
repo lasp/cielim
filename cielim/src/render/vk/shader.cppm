@@ -27,17 +27,15 @@ export namespace cielim::render::vk
 class Shader
 {
 public:
-    Shader() = default;
-
     // Delete copy constructors
 
     Shader(const Shader&) = delete;
     auto operator=(const Shader&) -> Shader& = delete;
 
-    // Use default move constructors
+    // Use default move constructor, delete move assignment
 
     Shader(Shader&&) = default;
-    auto operator=(Shader&&) -> Shader& = default;
+    auto operator=(Shader&&) -> Shader& = delete;
 
     ~Shader()
     {
@@ -49,11 +47,13 @@ public:
      * @brief Creates shader module object from compiled SPIR-V bytecode.
      * @param context The Vulkan context.
      * @param path The path to the .spv shader file.
-     * @return Void on success, error code on failure.
+     * @return The shader on success, error code on failure.
      */
-    auto create(const gpu::vk::Context& context, const std::filesystem::path& path) -> Result<void>
+    static auto create(const gpu::vk::Context& context, const std::filesystem::path& path) -> Result<Shader>
     {
-        this->vk_device_handle_ = context.get_device(); // This is specifically a non-owning (borrow) handle
+        Shader shader;
+
+        shader.vk_device_handle_ = context.get_device(); // This is specifically a non-owning (borrow) handle
 
         auto file_result = utils::file::read_file32(path);
 
@@ -76,7 +76,7 @@ public:
         };
 
         if (const auto result
-            = vkCreateShaderModule(this->vk_device_handle_, &module_create_info, nullptr, this->shader_.put());
+            = vkCreateShaderModule(shader.vk_device_handle_, &module_create_info, nullptr, shader.shader_.put());
             result != VK_SUCCESS)
         {
             return Err(
@@ -89,12 +89,14 @@ public:
 
         utils::log::info("Loaded shader '{}'", file_name);
 
-        return {};
+        return shader;
     }
 
     [[nodiscard]] auto get_handle() const -> VkShaderModule { return this->shader_.get(); }
 
 private:
+    Shader() = default;
+
     // Non-owning handle for the Vulkan logical device
     VkDevice vk_device_handle_ = nullptr;
 

@@ -10,7 +10,6 @@ module;
 #include <cstdint>
 #include <limits>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include <volk/volk.h>
@@ -33,27 +32,73 @@ export namespace cielim::render::vk
 class Swapchain
 {
 public:
-    Swapchain() = default;
-
     // Delete copy constructors
 
     Swapchain(const Swapchain&) = delete;
     auto operator=(const Swapchain&) -> Swapchain& = delete;
 
-    // Use default move constructors
+    // Use default move constructor, delete move assignment
 
     Swapchain(Swapchain&&) = default;
-    auto operator=(Swapchain&&) -> Swapchain& = default;
+    auto operator=(Swapchain&&) -> Swapchain& = delete;
 
     ~Swapchain() { this->cleanup(); }
 
     /**
-     * @brief Initializes the swapchain for the Vulkan context and window.
+     * @brief Creates the swapchain for the Vulkan context and window.
+     * @details Swapchain is left empty if the window has a size of 0x0.
+     * @param context The Vulkan context.
+     * @param surface The surface to which the swapchain is connected.
+     * @param window The window to which the swapchain is connected.
+     * @return The swapchain on success, error code on failure.
+     */
+    static auto create(const gpu::vk::Context& context, const Surface& surface, const platform::Window& window)
+        -> Result<Swapchain>
+    {
+        Swapchain swapchain;
+
+        if (const auto result = swapchain.init(context, surface, window);
+            !result.has_value() && result.error().errc != error::VkSwapchainError::NullExtent)
+            return result.propagate();
+
+        return swapchain;
+    }
+
+    /**
+     * @brief Destroys the swapchain and recreates it.
+     * @details Returns error if the window has a size of 0x0, leaving the swapchain empty until successful recreate.
      * @param context The Vulkan context.
      * @param surface The surface to which the swapchain is connected.
      * @param window The window to which the swapchain is connected.
      * @return Void on success, error code on failure.
      */
+    auto recreate(const gpu::vk::Context& context, const Surface& surface, const platform::Window& window)
+        -> Result<void>
+    {
+        // Wait for device to finish whatever it's doing
+        vkDeviceWaitIdle(this->vk_device_handle_);
+
+        // Destroy everything
+        this->cleanup();
+
+        return this->init(context, surface, window);
+    }
+
+    [[nodiscard]] auto get_handle() const -> VkSwapchainKHR { return this->swapchain_.get(); }
+    [[nodiscard]] auto get_extent() const -> VkExtent2D { return this->extent_; }
+    [[nodiscard]] auto get_num_images() const -> uint32_t { return this->swapchain_images_.size(); }
+    auto get_image(const uint32_t index) const -> Result<VkImage> { return try_at(this->swapchain_images_, index); }
+    auto get_view(const uint32_t index) const -> Result<VkImageView> { return try_at(this->swapchain_views_, index); }
+    [[nodiscard]] auto get_format() const -> VkFormat { return this->format_; }
+    [[nodiscard]] auto get_color_space() const -> VkColorSpaceKHR { return this->color_space_; }
+    auto get_semaphore(const uint32_t index) const -> Result<VkSemaphore>
+    { return try_at(this->image_finished_semaphores_, index); }
+
+private:
+    // Only constructible through create
+    Swapchain() = default;
+
+    // Builds the swapchain and its images, views, and semaphores, only called by create and recreate
     auto init(const gpu::vk::Context& context, const Surface& surface, const platform::Window& window) -> Result<void>
     {
         this->vk_device_handle_ = context.get_device(); // This is specifically a non-owning (borrow) handle
@@ -294,41 +339,6 @@ public:
         return {};
     }
 
-    /**
-     * @brief Destroys the swapchain and recreates it.
-     * @details This should not be called before init.
-     * @param context The Vulkan context.
-     * @param surface The surface to which the swapchain is connected.
-     * @param window The window to which the swapchain is connected.
-     * @return Void on success, error code on failure.
-     */
-    auto recreate(const gpu::vk::Context& context, const Surface& surface, const platform::Window& window)
-        -> Result<void>
-    {
-        // Don't do anything if this is called before init
-        if (this->vk_device_handle_ == nullptr)
-            return {};
-
-        // Wait for device to finish whatever it's doing
-        vkDeviceWaitIdle(this->vk_device_handle_);
-
-        // Destroy everything
-        this->cleanup();
-
-        return this->init(context, surface, window);
-    }
-
-    [[nodiscard]] auto get_handle() const -> VkSwapchainKHR { return this->swapchain_.get(); }
-    [[nodiscard]] auto get_extent() const -> VkExtent2D { return this->extent_; }
-    [[nodiscard]] auto get_num_images() const -> uint32_t { return this->swapchain_images_.size(); }
-    auto get_image(const uint32_t index) const -> Result<VkImage> { return try_at(this->swapchain_images_, index); }
-    auto get_view(const uint32_t index) const -> Result<VkImageView> { return try_at(this->swapchain_views_, index); }
-    [[nodiscard]] auto get_format() const -> VkFormat { return this->format_; }
-    [[nodiscard]] auto get_color_space() const -> VkColorSpaceKHR { return this->color_space_; }
-    auto get_semaphore(const uint32_t index) const -> Result<VkSemaphore>
-    { return try_at(this->image_finished_semaphores_, index); }
-
-private:
     auto cleanup() -> void
     {
         for (const auto& view : this->swapchain_views_)

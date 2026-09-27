@@ -7,6 +7,7 @@ module;
 
 #include <cstdint>
 #include <string>
+#include <utility>
 
 #include <volk/volk.h>
 
@@ -29,17 +30,15 @@ struct SceneInfo
 class SceneView
 {
 public:
-    SceneView() = default;
-
     // Delete copy constructors
 
     SceneView(const SceneView&) = delete;
     auto operator=(const SceneView&) -> SceneView& = delete;
 
-    // Use default move constructors
+    // Use default move constructor, delete move assignment
 
     SceneView(SceneView&&) = default;
-    auto operator=(SceneView&&) -> SceneView& = default;
+    auto operator=(SceneView&&) -> SceneView& = delete;
 
     ~SceneView() = default;
 
@@ -48,20 +47,22 @@ public:
      * @param context The Vulkan context.
      * @param allocator The VMA allocator.
      * @param frames_in_flight The number of frames in flight.
-     * @return Void on success, error code on failure.
+     * @return The scene view on success, error code on failure.
      */
-    auto create(const gpu::vk::Context& context, const gpu::vk::Allocator& allocator, const uint32_t frames_in_flight)
-        -> Result<void>
+    static auto
+    create(const gpu::vk::Context& context, const gpu::vk::Allocator& allocator, const uint32_t frames_in_flight)
+        -> Result<SceneView>
     {
         // These flags are needed so that we can fetch buffer contents from shaders with device addresses
         constexpr VkBufferUsageFlags FLAGS
             = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 
-        if (const auto result = this->scene_info_.create(context, allocator, frames_in_flight, 1, FLAGS);
-            !result.has_value())
-            return Err(result.error().with_trace("failed to create scene view"));
+        auto scene_info_result = gpu::vk::BufferRing<SceneInfo>::create(context, allocator, frames_in_flight, 1, FLAGS);
 
-        return {};
+        if (!scene_info_result.has_value())
+            return Err(scene_info_result.error().with_trace("failed to create scene view"));
+
+        return SceneView(std::move(scene_info_result).value());
     }
 
     /**
@@ -89,6 +90,8 @@ public:
     { return this->scene_info_.get_address(frame_index); }
 
 private:
+    explicit SceneView(gpu::vk::BufferRing<SceneInfo>&& scene_info) : scene_info_(std::move(scene_info)) {}
+
     // The list of scene info buffers for each frame in flight
     gpu::vk::BufferRing<SceneInfo> scene_info_;
 };

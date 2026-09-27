@@ -39,17 +39,15 @@ struct ShaderStage
 class Pipeline
 {
 public:
-    Pipeline() = default;
-
     // Delete copy constructors
 
     Pipeline(const Pipeline&) = delete;
     auto operator=(const Pipeline&) -> Pipeline& = delete;
 
-    // Use default move constructors
+    // Use default move constructor, delete move assignment
 
     Pipeline(Pipeline&&) = default;
-    auto operator=(Pipeline&&) -> Pipeline& = default;
+    auto operator=(Pipeline&&) -> Pipeline& = delete;
 
     ~Pipeline()
     {
@@ -62,27 +60,29 @@ public:
 
     /**
      * @brief Creates the Vulkan pipeline object.
-     * @details Vulkan pipelines are immutable, and so this function should never be called more than once.
+     * @details Vulkan pipelines are immutable, so changing any of its state requires creating a new pipeline.
      * @param context The Vulkan context.
      * @param swapchain The swapchain the pipeline should render to.
      * @param stages List of shader stages to include in the pipeline.
      * @param push_stages Shader stages that should receive push constants.
      * @param push_size Size in bytes of the push constants that shaders should receive.
-     * @return Void on success, error code on failure
+     * @return The pipeline on success, error code on failure
      */
-    auto create(
+    static auto create(
         const gpu::vk::Context& context,
         const Swapchain& swapchain,
         const std::span<const ShaderStage> stages,
         const VkShaderStageFlags push_stages,
         const uint32_t push_size
-    ) -> Result<void>
+    ) -> Result<Pipeline>
     {
-        this->vk_device_handle_ = context.get_device(); // This is specifically a non-owning (borrow) handle
+        Pipeline pipeline;
+
+        pipeline.vk_device_handle_ = context.get_device(); // This is specifically a non-owning (borrow) handle
 
         // Specify shader uniform data layout
 
-        this->push_stages_ = push_stages;
+        pipeline.push_stages_ = push_stages;
 
         VkPushConstantRange push_constant_range = {
             .stageFlags = push_stages,
@@ -97,7 +97,7 @@ public:
         };
 
         if (const auto result = vkCreatePipelineLayout(
-                this->vk_device_handle_, &layout_create_info, nullptr, this->pipeline_layout_.put()
+                pipeline.vk_device_handle_, &layout_create_info, nullptr, pipeline.pipeline_layout_.put()
             );
             result != VK_SUCCESS)
         {
@@ -210,12 +210,12 @@ public:
             .pMultisampleState = &multisample_state,
             .pColorBlendState = &color_blend_state,
             .pDynamicState = &dynamic_state,
-            .layout = this->pipeline_layout_.get(),
+            .layout = pipeline.pipeline_layout_.get(),
             .renderPass = nullptr,
         };
 
         if (const auto result = vkCreateGraphicsPipelines(
-                this->vk_device_handle_, nullptr, 1, &pipeline_info, nullptr, this->pipeline_.put()
+                pipeline.vk_device_handle_, nullptr, 1, &pipeline_info, nullptr, pipeline.pipeline_.put()
             );
             result != VK_SUCCESS)
         {
@@ -229,7 +229,7 @@ public:
 
         utils::log::info("Created pipeline with {} shader stages", stages.size());
 
-        return {};
+        return pipeline;
     }
 
     [[nodiscard]] auto get_push_stages() const -> VkShaderStageFlags { return this->push_stages_; }
@@ -237,6 +237,8 @@ public:
     [[nodiscard]] auto get_handle() const -> VkPipeline { return this->pipeline_.get(); }
 
 private:
+    Pipeline() = default;
+
     // Non-owning handle for the Vulkan logical device
     VkDevice vk_device_handle_ = nullptr;
 

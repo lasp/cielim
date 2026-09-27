@@ -25,17 +25,15 @@ export namespace cielim::render::vk
 class FrameResources
 {
 public:
-    FrameResources() = default;
-
     // Delete copy constructors
 
     FrameResources(const FrameResources&) = delete;
     auto operator=(const FrameResources&) -> FrameResources& = delete;
 
-    // Use default move constructors
+    // Use default move constructor, delete move assignment
 
     FrameResources(FrameResources&&) = default;
-    auto operator=(FrameResources&&) -> FrameResources& = default;
+    auto operator=(FrameResources&&) -> FrameResources& = delete;
 
     ~FrameResources()
     {
@@ -54,27 +52,29 @@ public:
     }
 
     /**
-     * @brief Initializes various frame resources for rendering.
+     * @brief Creates various frame resources for rendering.
      * @param context The Vulkan context.
      * @param triple_buffer Whether rendering should be triple buffered. If not, it will be double buffered.
-     * @return Void on success, error code on failure.
+     * @return The frame resources on success, error code on failure.
      */
-    auto init(const gpu::vk::Context& context, const bool triple_buffer) -> Result<void>
+    static auto create(const gpu::vk::Context& context, const bool triple_buffer) -> Result<FrameResources>
     {
-        this->vk_device_handle_ = context.get_device(); // This is specifically a non-owning (borrow) handle
+        FrameResources frame_resources;
+
+        frame_resources.vk_device_handle_ = context.get_device(); // This is specifically a non-owning (borrow) handle
 
         // Default to double-buffering
-        this->frames_in_flight_ = 2;
+        frame_resources.frames_in_flight_ = 2;
 
         if (triple_buffer)
-            this->frames_in_flight_ = 3;
+            frame_resources.frames_in_flight_ = 3;
 
         // Create command pools and command buffers
 
-        this->command_pools_.resize(this->frames_in_flight_);
-        this->command_buffers_.resize(this->frames_in_flight_);
+        frame_resources.command_pools_.resize(frame_resources.frames_in_flight_);
+        frame_resources.command_buffers_.resize(frame_resources.frames_in_flight_);
 
-        for (uint32_t i = 0; i < this->frames_in_flight_; i++)
+        for (uint32_t i = 0; i < frame_resources.frames_in_flight_; i++)
         {
             VkCommandPoolCreateInfo command_pool_create_info = {
                 .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -83,7 +83,10 @@ public:
             };
 
             if (const auto result = vkCreateCommandPool(
-                    this->vk_device_handle_, &command_pool_create_info, nullptr, &this->command_pools_[i]
+                    frame_resources.vk_device_handle_,
+                    &command_pool_create_info,
+                    nullptr,
+                    &frame_resources.command_pools_[i]
                 );
                 result != VK_SUCCESS)
             {
@@ -97,13 +100,15 @@ public:
 
             VkCommandBufferAllocateInfo command_buffer_allocate_info = {
                 .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-                .commandPool = this->command_pools_[i],
+                .commandPool = frame_resources.command_pools_[i],
                 .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
                 .commandBufferCount = 1,
             };
 
             if (const auto result = vkAllocateCommandBuffers(
-                    this->vk_device_handle_, &command_buffer_allocate_info, &this->command_buffers_[i]
+                    frame_resources.vk_device_handle_,
+                    &command_buffer_allocate_info,
+                    &frame_resources.command_buffers_[i]
                 );
                 result != VK_SUCCESS)
             {
@@ -122,12 +127,12 @@ public:
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
         };
 
-        this->image_acquire_semaphores_.resize(this->frames_in_flight_);
+        frame_resources.image_acquire_semaphores_.resize(frame_resources.frames_in_flight_);
 
-        for (auto& semaphore : this->image_acquire_semaphores_)
+        for (auto& semaphore : frame_resources.image_acquire_semaphores_)
         {
             if (const auto result
-                = vkCreateSemaphore(this->vk_device_handle_, &BINARY_SEMAPHORE_INFO, nullptr, &semaphore);
+                = vkCreateSemaphore(frame_resources.vk_device_handle_, &BINARY_SEMAPHORE_INFO, nullptr, &semaphore);
                 result != VK_SUCCESS)
             {
                 return Err(
@@ -139,7 +144,7 @@ public:
             }
         }
 
-        return {};
+        return frame_resources;
     }
 
     [[nodiscard]] auto get_frames_in_flight() const -> uint32_t { return this->frames_in_flight_; }
@@ -151,6 +156,8 @@ public:
     { return try_at(this->image_acquire_semaphores_, index); }
 
 private:
+    FrameResources() = default;
+
     // Non-owning handle for the Vulkan logical device
     VkDevice vk_device_handle_ = nullptr;
 

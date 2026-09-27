@@ -25,17 +25,15 @@ export namespace cielim::render::vk
 class FrameCounter
 {
 public:
-    FrameCounter() = default;
-
     // Delete copy constructors
 
     FrameCounter(const FrameCounter&) = delete;
     auto operator=(const FrameCounter&) -> FrameCounter& = delete;
 
-    // Use default move constructors
+    // Use default move constructor, delete move assignment
 
     FrameCounter(FrameCounter&&) = default;
-    auto operator=(FrameCounter&&) -> FrameCounter& = default;
+    auto operator=(FrameCounter&&) -> FrameCounter& = delete;
 
     ~FrameCounter()
     {
@@ -44,13 +42,15 @@ public:
     }
 
     /**
-     * @brief Initializes the frame counter.
+     * @brief Creates the frame counter.
      * @param context The Vulkan context.
-     * @return Void on success, error code on failure.
+     * @return The frame counter on success, error code on failure.
      */
-    auto init(const gpu::vk::Context& context) -> Result<void>
+    static auto create(const gpu::vk::Context& context) -> Result<FrameCounter>
     {
-        this->vk_device_handle_ = context.get_device(); // This is specifically a non-owning (borrow) handle
+        FrameCounter frame_counter;
+
+        frame_counter.vk_device_handle_ = context.get_device(); // This is specifically a non-owning (borrow) handle
 
         VkSemaphoreTypeCreateInfo timeline_semaphore_type_info = {
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
@@ -64,7 +64,10 @@ public:
         };
 
         if (const auto result = vkCreateSemaphore(
-                this->vk_device_handle_, &timeline_semaphore_info, nullptr, this->timeline_semaphore_.put()
+                frame_counter.vk_device_handle_,
+                &timeline_semaphore_info,
+                nullptr,
+                frame_counter.timeline_semaphore_.put()
             );
             result != VK_SUCCESS)
         {
@@ -76,7 +79,7 @@ public:
             );
         }
 
-        return {};
+        return frame_counter;
     }
 
     /**
@@ -135,6 +138,8 @@ public:
     auto increment() -> void { this->frame_counter_++; }
 
 private:
+    FrameCounter() = default;
+
     // Non-owning handle for the Vulkan logical device
     VkDevice vk_device_handle_ = nullptr;
 

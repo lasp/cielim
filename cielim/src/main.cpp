@@ -93,108 +93,125 @@ auto run(const std::filesystem::path& base_path) -> int
     constexpr int WINDOW_WIDTH = 1280;
     constexpr int WINDOW_HEIGHT = 720;
 
-    auto window = cielim::platform::Window();
+    auto window_result = cielim::platform::Window::create(
+        "cielim", WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE
+    );
 
-    auto win_result
-        = window.create_window("cielim", WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
-
-    if (!win_result.has_value())
+    if (!window_result.has_value())
     {
-        fatal_error(nullptr, win_result.error().message());
+        fatal_error(nullptr, window_result.error().message());
         return EXIT_FAILURE;
     }
 
-    cielim::gpu::vk::Context vk_context;
+    auto window = std::move(window_result).value();
 
-    if (auto const result = vk_context.init(); !result.has_value())
+    auto context_result = cielim::gpu::vk::Context::create();
+
+    if (!context_result.has_value())
     {
-        fatal_error(&window, result.error().message());
+        fatal_error(&window, context_result.error().message());
         return EXIT_FAILURE;
     }
 
-    cielim::gpu::vk::Allocator vk_allocator;
+    auto vk_context = std::move(context_result).value();
 
-    if (const auto result = vk_allocator.init(vk_context); !result.has_value())
+    auto allocator_result = cielim::gpu::vk::Allocator::create(vk_context);
+
+    if (!allocator_result.has_value())
     {
-        fatal_error(&window, result.error().message());
+        fatal_error(&window, allocator_result.error().message());
         return EXIT_FAILURE;
     }
 
-    cielim::render::vk::Surface vk_surface;
+    auto vk_allocator = std::move(allocator_result).value();
 
-    if (const auto result = vk_surface.init(vk_context, window); !result.has_value())
+    auto surface_result = cielim::render::vk::Surface::create(vk_context, window);
+
+    if (!surface_result.has_value())
     {
-        fatal_error(&window, result.error().message());
+        fatal_error(&window, surface_result.error().message());
         return EXIT_FAILURE;
     }
 
-    cielim::render::vk::Swapchain vk_swapchain;
+    auto vk_surface = std::move(surface_result).value();
 
-    if (const auto result = vk_swapchain.init(vk_context, vk_surface, window);
-        !result.has_value() && result.error().errc != cielim::error::VkSwapchainError::NullExtent)
+    auto swapchain_result = cielim::render::vk::Swapchain::create(vk_context, vk_surface, window);
+
+    if (!swapchain_result.has_value())
     {
-        fatal_error(&window, result.error().message());
+        fatal_error(&window, swapchain_result.error().message());
         return EXIT_FAILURE;
     }
 
-    cielim::render::vk::FrameResources vk_frame_resources;
+    auto vk_swapchain = std::move(swapchain_result).value();
 
-    if (const auto result = vk_frame_resources.init(vk_context, false); !result.has_value())
+    auto frame_resources_result = cielim::render::vk::FrameResources::create(vk_context, false);
+
+    if (!frame_resources_result.has_value())
     {
-        fatal_error(&window, result.error().message());
+        fatal_error(&window, frame_resources_result.error().message());
         return EXIT_FAILURE;
     }
+
+    auto vk_frame_resources = std::move(frame_resources_result).value();
 
     const uint32_t frames_in_flight = vk_frame_resources.get_frames_in_flight();
 
     std::filesystem::path cube_shader_path = base_path / "content" / "shaders" / "cube.spv";
 
-    cielim::render::vk::Shader cube_shader;
+    auto shader_result = cielim::render::vk::Shader::create(vk_context, cube_shader_path);
 
-    if (const auto result = cube_shader.create(vk_context, cube_shader_path); !result.has_value())
+    if (!shader_result.has_value())
     {
-        fatal_error(&window, result.error().message());
+        fatal_error(&window, shader_result.error().message());
         return EXIT_FAILURE;
     }
+
+    auto cube_shader = std::move(shader_result).value();
 
     std::vector<cielim::render::vk::ShaderStage> shader_stages = {
         {.stage_flag = VK_SHADER_STAGE_VERTEX_BIT, .shader_module = cube_shader, .entry_point = "VertMain"},
         {.stage_flag = VK_SHADER_STAGE_FRAGMENT_BIT, .shader_module = cube_shader, .entry_point = "FragMain"},
     };
 
-    cielim::render::vk::Pipeline vk_render_pipeline;
+    auto pipeline_result = cielim::render::vk::Pipeline::create(
+        vk_context,
+        vk_swapchain,
+        shader_stages,
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        sizeof(cielim::render::vk::SceneDataPushConstants)
+    );
 
-    if (const auto result = vk_render_pipeline.create(
-            vk_context,
-            vk_swapchain,
-            shader_stages,
-            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
-            sizeof(cielim::render::vk::SceneDataPushConstants)
-        );
-        !result.has_value())
+    if (!pipeline_result.has_value())
     {
-        fatal_error(&window, result.error().message());
+        fatal_error(&window, pipeline_result.error().message());
         return EXIT_FAILURE;
     }
 
-    cielim::render::vk::FrameCounter vk_frame_counter;
+    auto vk_render_pipeline = std::move(pipeline_result).value();
 
-    if (const auto result = vk_frame_counter.init(vk_context); !result.has_value())
+    auto frame_counter_result = cielim::render::vk::FrameCounter::create(vk_context);
+
+    if (!frame_counter_result.has_value())
     {
-        fatal_error(&window, result.error().message());
+        fatal_error(&window, frame_counter_result.error().message());
         return EXIT_FAILURE;
     }
 
-    cielim::render::vk::MeshRegistry mesh_registry;
+    auto vk_frame_counter = std::move(frame_counter_result).value();
 
     constexpr uint32_t MESH_REGISTRY_BUFFER_SIZE = 20971520;
 
-    if (const auto result = mesh_registry.create(vk_context, vk_allocator, MESH_REGISTRY_BUFFER_SIZE);
-        !result.has_value())
+    auto mesh_registry_result
+        = cielim::render::vk::MeshRegistry::create(vk_context, vk_allocator, MESH_REGISTRY_BUFFER_SIZE);
+
+    if (!mesh_registry_result.has_value())
     {
-        fatal_error(&window, result.error().message());
+        fatal_error(&window, mesh_registry_result.error().message());
         return EXIT_FAILURE;
     }
+
+    auto mesh_registry = std::move(mesh_registry_result).value();
 
     std::filesystem::path shape_path = base_path / "content" / "meshes" / "vesta.glb";
 
@@ -227,13 +244,15 @@ auto run(const std::filesystem::path& base_path) -> int
 
     camera.set_fov_aspect(cielim::math::radians(60.0f), view_width / view_height);
 
-    cielim::render::vk::SceneView view;
+    auto view_result = cielim::render::vk::SceneView::create(vk_context, vk_allocator, frames_in_flight);
 
-    if (const auto result = view.create(vk_context, vk_allocator, frames_in_flight); !result.has_value())
+    if (!view_result.has_value())
     {
-        fatal_error(&window, result.error().message());
+        fatal_error(&window, view_result.error().message());
         return EXIT_FAILURE;
     }
+
+    auto view = std::move(view_result).value();
 
     bool mouse_capture = true;
 

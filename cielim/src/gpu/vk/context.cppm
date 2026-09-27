@@ -85,17 +85,15 @@ export namespace cielim::gpu::vk
 class Context
 {
 public:
-    Context() = default;
-
     // Delete copy constructors
 
     Context(const Context&) = delete;
     auto operator=(const Context&) -> Context& = delete;
 
-    // Use default move constructors
+    // Use default move constructor, delete move assignment
 
     Context(Context&&) = default;
-    auto operator=(Context&&) -> Context& = default;
+    auto operator=(Context&&) -> Context& = delete;
 
     ~Context()
     {
@@ -111,31 +109,28 @@ public:
     }
 
     /**
-     * @brief Initializes the Vulkan context.
+     * @brief Creates the Vulkan context.
      * @param headless Whether the context should be initialized for headless (offscreen-only) use with no window
      * presentation capability.
-     * @return Void on success, error code on failure.
+     * @return The context on success, error code on failure.
      */
-    auto init(const bool headless = false) -> Result<void>
+    static auto create(const bool headless = false) -> Result<Context>
     {
-        if (this->is_initialized_)
-            return {}; // Don't initialize more than once
+        Context context;
 
         // Init the Vulkan instance
-        if (const auto result = this->init_instance(headless); !result.has_value())
+        if (const auto result = context.init_instance(headless); !result.has_value())
             return result.propagate();
 
         // Find physical devices
-        if (const auto result = this->find_physical_device(headless); !result.has_value())
+        if (const auto result = context.find_physical_device(headless); !result.has_value())
             return result.propagate();
 
         // Init the logical device
-        if (const auto result = this->init_device(headless); !result.has_value())
+        if (const auto result = context.init_device(headless); !result.has_value())
             return result.propagate();
 
-        this->is_initialized_ = true;
-
-        return {};
+        return context;
     }
 
     [[nodiscard]] auto get_instance() const -> VkInstance { return this->instance_.get(); }
@@ -144,6 +139,8 @@ public:
     [[nodiscard]] auto get_device() const -> VkDevice { return this->device_.get(); }
 
 private:
+    Context() = default;
+
     // Initializes the Vulkan instance required API version, layers, and extensions.
     auto init_instance(const bool headless) -> Result<void>
     {
@@ -458,7 +455,7 @@ private:
             );
         }
 
-        this->physical_device_ = UniqueHandle(physical_device);
+        *this->physical_device_.put() = physical_device;
         this->queue_family_index_ = graphics_queue_family;
 
         // Log properties of the physical device
@@ -633,8 +630,6 @@ private:
 
         return {};
     }
-
-    bool is_initialized_ = false;
 
 #ifndef NDEBUG
     UniqueHandle<VkDebugUtilsMessengerEXT> debug_messenger_; // Only included in debug builds

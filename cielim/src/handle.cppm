@@ -6,6 +6,7 @@
 
 module;
 
+#include <cassert>
 #include <utility>
 
 export module cielim.handle;
@@ -26,24 +27,26 @@ public:
     UniqueHandle(const UniqueHandle&) = delete;
     auto operator=(const UniqueHandle&) -> UniqueHandle& = delete;
 
-    // Null pointer on move to avoid double free
+    // Null pointer on move to avoid double free, move assignment is deleted so a live handle can't be overwritten
 
     UniqueHandle(UniqueHandle&& other) noexcept : handle_ptr_(std::exchange(other.handle_ptr_, Null)) {}
-    auto operator=(UniqueHandle&& other) noexcept -> UniqueHandle&
-    {
-        handle_ptr_ = std::exchange(other.handle_ptr_, Null);
-        return *this;
-    }
+    auto operator=(UniqueHandle&&) -> UniqueHandle& = delete;
 
     ~UniqueHandle() = default; // Deconstruction should be handled by owning class
 
     [[nodiscard]] explicit operator bool() const { return handle_ptr_ != Null; }
     [[nodiscard]] auto get() const -> T { return handle_ptr_; }
+
+    /**
+     * @brief Gets a pointer to the handle so it can be written by a creation function.
+     * @details The handle must be null so it doesn't override a live handle and leak it.
+     */
     [[nodiscard]] auto put() -> T*
     {
-        handle_ptr_ = Null;
+        assert(handle_ptr_ == Null && "UniqueHandle::put() called on a live handle");
         return &handle_ptr_;
     }
+
     auto reset() -> void { handle_ptr_ = Null; }
 
 private:

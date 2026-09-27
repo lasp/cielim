@@ -12,7 +12,6 @@ module;
 #include <fstream>
 #include <limits>
 #include <system_error>
-#include <utility>
 #include <vector>
 
 export module cielim.utils:file;
@@ -70,7 +69,7 @@ auto read_file(const std::filesystem::path& file_path) -> Result<std::vector<uin
         buffer.resize(file.gcount()); // Shrink buffer to EOF
     }
 
-    return std::move(buffer);
+    return buffer;
 }
 
 /**
@@ -94,7 +93,7 @@ auto read_file32(const std::filesystem::path& file_path) -> Result<std::vector<u
 
     std::memcpy(buffer.data(), byte_buffer.value().data(), byte_buffer.value().size());
 
-    return std::move(buffer);
+    return buffer;
 }
 
 } // namespace cielim::utils::file
