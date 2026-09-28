@@ -16,6 +16,23 @@ find_package(SDL3 CONFIG REQUIRED) # From vcpkg
 find_package(spdlog CONFIG REQUIRED) # From vcpkg
 find_package(Vulkan REQUIRED COMPONENTS volk) # From VulkanSDK
 
+# Vendored dependencies
+
+set(THIRD_PARTY_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/third_party")
+
+add_library(tinybvh INTERFACE)
+add_library(tinybvh::tinybvh ALIAS tinybvh)
+target_include_directories(tinybvh SYSTEM INTERFACE "${THIRD_PARTY_SOURCE}/tinybvh")
+
+# Enable AVX2 and FMA extensions for tinybvh and linked targets
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64|AMD64)$")
+    if(MSVC)
+        target_compile_options(tinybvh INTERFACE /arch:AVX2)
+    else()
+        target_compile_options(tinybvh INTERFACE -mavx2 -mfma)
+    endif()
+endif()
+
 add_executable(cielim)
 
 # Cielim c++ source code path
@@ -26,6 +43,7 @@ target_sources(cielim
     PRIVATE
         ${CIELIM_CPP_SOURCE}/main.cpp
         ${CIELIM_CPP_SOURCE}/gpu/vk/vma.cpp
+        ${CIELIM_CPP_SOURCE}/mesh/tinybvh.cpp
 )
 
 # Add C++20 module files
@@ -74,4 +92,5 @@ target_link_libraries(cielim PRIVATE fastgltf::fastgltf)
 target_link_libraries(cielim PRIVATE glm::glm)
 target_link_libraries(cielim PRIVATE SDL3::SDL3)
 target_link_libraries(cielim PRIVATE spdlog::spdlog)
+target_link_libraries(cielim PRIVATE tinybvh::tinybvh)
 target_link_libraries(cielim PRIVATE Vulkan::volk)
