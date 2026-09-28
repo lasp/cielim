@@ -1,0 +1,2 @@
+# Exclude third party code from GitHub language statistics and keep byte-identical to upstream
+cielim/third_party/** linguist-vendored -text
