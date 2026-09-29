@@ -63,6 +63,7 @@ target_sources(cielim
             ${CIELIM_CPP_SOURCE}/utils.cppm
             ${CIELIM_CPP_SOURCE}/math/projection.cppm
             ${CIELIM_CPP_SOURCE}/math/tensors.cppm
+            ${CIELIM_CPP_SOURCE}/mesh/bvh.cppm
             ${CIELIM_CPP_SOURCE}/mesh/elements.cppm
             ${CIELIM_CPP_SOURCE}/mesh/loader.cppm
             ${CIELIM_CPP_SOURCE}/snapshot/camera.cppm

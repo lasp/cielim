@@ -5,5 +5,6 @@
 
 export module cielim.mesh;
 
+export import :bvh;
 export import :elements;
 export import :loader;
