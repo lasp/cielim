@@ -8,6 +8,7 @@ module;
 #include <array>
 #include <cstdint>
 #include <filesystem>
+#include <format> // This can be replaced with fmt when C1116 is fixed
 #include <string>
 #include <vector>
 
@@ -57,8 +58,11 @@ public:
             return Err(
                 error::DetailedError{
                     .errc = make_error_code(error::MeshError::MeshLoadError),
-                    .detail = "'" + file_name + "': "
-                            + error::sanitize_fragment(std::string(fastgltf::getErrorMessage(data_result.error()))),
+                    .detail = std::format(
+                        "'{:s}': {:s}",
+                        file_name,
+                        error::sanitize_fragment(std::string(fastgltf::getErrorMessage(data_result.error())))
+                    ),
                 }
             );
         }
@@ -71,8 +75,11 @@ public:
             return Err(
                 error::DetailedError{
                     .errc = make_error_code(error::MeshError::MeshLoadError),
-                    .detail = "'" + file_name + "': "
-                            + error::sanitize_fragment(std::string(fastgltf::getErrorMessage(asset_result.error()))),
+                    .detail = std::format(
+                        "'{:s}': {:s}",
+                        file_name,
+                        error::sanitize_fragment(std::string(fastgltf::getErrorMessage(asset_result.error())))
+                    ),
                 }
             );
         }
@@ -93,7 +100,7 @@ public:
             return Err(
                 error::DetailedError{
                     .errc = make_error_code(error::MeshError::MalformedMesh),
-                    .detail = "'" + file_name + "': missing vertex positions",
+                    .detail = std::format("'{:s}': missing vertex positions", file_name),
                 }
             );
         }
@@ -118,7 +125,7 @@ public:
             return Err(
                 error::DetailedError{
                     .errc = make_error_code(error::MeshError::MalformedMesh),
-                    .detail = "'" + file_name + "': missing vertex normals",
+                    .detail = std::format("'{:s}': missing vertex normals", file_name),
                 }
             );
         }
@@ -130,7 +137,7 @@ public:
             return Err(
                 error::DetailedError{
                     .errc = make_error_code(error::MeshError::MalformedMesh),
-                    .detail = "'" + file_name + "': vertex position and normal counts do not match",
+                    .detail = std::format("'{:s}': vertex position and normal counts do not match", file_name),
                 }
             );
         }
@@ -145,6 +152,27 @@ public:
         // Populate mesh data indices
 
         const fastgltf::Accessor& index_accessor = gltf_asset.accessors[primitive.indicesAccessor.value()];
+
+        if (index_accessor.count == 0)
+        {
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::MeshError::MalformedMesh),
+                    .detail = std::format("'{:s}': missing triangle indices", file_name),
+                }
+            );
+        }
+
+        if (index_accessor.count % 3 != 0)
+        {
+            return Err(
+                error::DetailedError{
+                    .errc = make_error_code(error::MeshError::MalformedMesh),
+                    .detail
+                    = std::format("'{:s}': index count {} is not a multiple of 3", file_name, index_accessor.count),
+                }
+            );
+        }
 
         mesh_data.indices.resize(index_accessor.count);
 

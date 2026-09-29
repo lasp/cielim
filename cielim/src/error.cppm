@@ -152,6 +152,7 @@ enum class MeshError : std::uint8_t
 {
     MeshLoadError,
     MalformedMesh,
+    BvhBuildError,
 };
 
 template <>
@@ -168,6 +169,7 @@ struct ErrorType<MeshError>
         {
         case MeshLoadError: return "failed to load mesh";
         case MalformedMesh: return "mesh is malformed";
+        case BvhBuildError: return "failed to build mesh BVH";
         }
 
         return "unknown mesh error";
