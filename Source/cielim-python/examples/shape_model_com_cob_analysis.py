@@ -5,15 +5,17 @@ Goal:
     method across lighting. Bodies: Eros (default) and Itokawa.
 
     The ellipsoid's semi-axes are a least-squares radial fit to the surface (the mean-radius
-    ellipsoid), or with --ellipsoid dimensions half the published overall dimensions (Eros
-    34.4 x 11.2 x 11.2 km, Itokawa 535 x 294 x 209 m). Its centre and orientation come from the shape model: the uniform-density
-    volume centroid and the principal axes of the second moments about it, longest axis along the
-    largest moment. Each sample draws a phase angle, its azimuth about the boresight and a body
-    attitude, renders the body (<body>_normalized) and predicts the CoM as the measured CoB minus the
-    projected offset, scored against the true CoM:
+    ellipsoid), or with --ellipsoid dimensions half the published overall dimensions (Eros 34.4 x
+    11.2 x 11.2 km, Itokawa 535 x 294 x 209 m). Its centre and orientation come from the shape
+    model: the uniform-density volume centroid and the principal axes of the second moments about
+    it, longest axis along the largest moment. Each sample draws a phase angle, its azimuth about
+    the boresight and a body attitude, renders the body (<body>_normalized) and predicts the CoM as
+    the measured CoB minus the projected offset, scored against the true CoM:
 
         sphere model:      gamma(alpha) rho with rho the mean of the three semi-axes
-        ellipsoid model:   the ellipsoid offset of ellipsoid_com_cob_analysis
+        ellipsoid model:   the ellipsoid offset of ellipsoid_com_cob_analysis (Case A, orthographic)
+        full model:        geometric_cob_model.full_offset at the CoM's range: Case D plus the
+                           projective and limb-centre terms, for a camera at finite range
 
     ellipsoid_com_cob_analysis shows the ellipsoid model is sub-pixel on a rendered ellipsoid, so the
     errors here are the body-ellipsoid shape mismatch.
@@ -51,6 +53,7 @@ def _load_sibling(name):
 
 
 ec = _load_sibling("ellipsoid_com_cob_analysis")
+gm = _load_sibling("geometric_cob_model")
 colorList = ec.colorList
 matplotlib.rcParams.update({"font.size": 6})
 
@@ -96,7 +99,7 @@ registration_attitudes = [
     tuple(rbk.dcm_to_mrp(Rotation.from_euler("zyx", (30, 40, 50), degrees=True).as_matrix())),
 ]
 
-cases = ("body_sphere_model", "body_ellipsoid_model")
+cases = ("body_sphere_model", "body_ellipsoid_model", "body_ellipsoid_full_model")
 body_of = {name: name.split("_")[0] for name in cases}
 phase_bins_deg = ((5.0, 60.0), (60.0, 120.0), (120.0, 170.0))
 
@@ -105,6 +108,7 @@ def case_descriptions(display_name):
     return {
         "body_sphere_model": f"{display_name}, sphere model (mean radius)",
         "body_ellipsoid_model": f"{display_name}, ellipsoid model",
+        "body_ellipsoid_full_model": f"{display_name}, ellipsoid full model (finite range)",
     }
 
 
@@ -116,9 +120,16 @@ def registration_path(body):
     return os.path.join(support_directory(body), "registration.json")
 
 
-def output_directory_for(body, ellipsoid="radial"):
+def output_directory_for(body, ellipsoid="radial", range_radii=None):
     suffix = "" if ellipsoid == "radial" else f"-{ellipsoid}"
+    if range_radii is not None and range_radii != default_range_radii:
+        suffix += f"-range{range_radii:g}"
     return os.path.join(current_file_path, f"images-{body}-com-cob{suffix}")
+
+
+def _summary_directory(summary):
+    kind = summary["ellipsoid"].get("kind", "dimensions")  # runs before the radial fit have no kind
+    return output_directory_for(summary["body"], kind, summary.get("range_radii"))
 
 
 def load_obj(path):
@@ -592,7 +603,7 @@ def shape_model_com_cob_analysis(
     Returns:
         dict: The per-sample rows plus the run's settings.
     """
-    directory_path = output_directory or output_directory_for(body, ellipsoid)
+    directory_path = output_directory or output_directory_for(body, ellipsoid, range_radii)
     os.makedirs(directory_path, exist_ok=True)
 
     vertices, faces, km_per_unit = load_body_mesh(body)
@@ -699,6 +710,10 @@ def _run_samples(connector, body, fit, model, number_of_samples, seed, save_firs
         offsets = {
             "body_sphere_model": ec.sphere_offset(views["body"], suns["body"], rho),
             "body_ellipsoid_model": ec.ellipsoid_offset(views["body"], suns["body"], shape_matrix),
+            # Case D plus the projective and limb-centre terms, at the CoM's range (geometric_cob_model).
+            "body_ellipsoid_full_model": gm.full_offset(
+                shape_matrix, suns["body"], views["body"], np.linalg.norm(spacecraft_position - centres["body"])
+            ),
         }
         measured = {label: ec.binary_centroid(frame) for label, frame in frames.items()}
         true_com = {label: to_pixel(centre) for label, centre in centres.items()}
@@ -762,6 +777,7 @@ _predictions = {
     "body": [
         ("body_sphere_model", "sphere model", colorList[5]),
         ("body_ellipsoid_model", "ellipsoid model", "#00d0ff"),
+        ("body_ellipsoid_full_model", "ellipsoid full model", colorList[7]),
     ],
 }
 
@@ -840,9 +856,9 @@ def plot_sample_pair(frames, row, display_name, output_path):
     return output_path
 
 
-def replot_pairs(body=default_body, ellipsoid="radial", output_directory=None):
+def replot_pairs(body=default_body, ellipsoid="radial", output_directory=None, range_radii=None):
     """Rebuild the pair figures from a finished run's saved frames and run.json, without re-rendering."""
-    directory_path = output_directory or output_directory_for(body, ellipsoid)
+    directory_path = output_directory or output_directory_for(body, ellipsoid, range_radii)
     with open(os.path.join(directory_path, "run.json")) as handle:
         summary = json.load(handle)
     written = []
@@ -867,8 +883,7 @@ def threshold_sweep(summary, output_directory=None, thresholds=sweep_thresholds)
     the threshold, so nothing is re-rendered. Writes error-by-threshold.png and returns, per case, an
     (samples, thresholds) array of errors in px (nan where nothing is lit).
     """
-    kind = summary["ellipsoid"].get("kind", "dimensions")  # runs before the radial fit have no kind
-    directory_path = output_directory or output_directory_for(summary["body"], kind)
+    directory_path = output_directory or _summary_directory(summary)
     frames, rows = {}, []
     for row in summary["rows"]:
         stem = os.path.join(directory_path, f"sample{row['sample']:03d}")
@@ -890,7 +905,7 @@ def threshold_sweep(summary, output_directory=None, thresholds=sweep_thresholds)
                     errors[name][i, j] = np.linalg.norm(point - predicted)
 
     descriptions = case_descriptions(summary["display_name"])
-    case_colors = dict(zip(cases, (colorList[5], "#00a0d0")))
+    case_colors = dict(zip(cases, (colorList[5], "#00a0d0", colorList[7])))
     plt.figure(facecolor="w", edgecolor="k", figsize=(5, 3), dpi=200)
     for name, description in descriptions.items():
         plt.plot(
@@ -952,20 +967,7 @@ def _binned(x, y, edges):
     return np.array(centres), np.array(medians), np.array(upper)
 
 
-def gaussianity(values):
-    """
-    Mean, standard deviation and how Gaussian ``values`` are.
-
-    Skewness and excess kurtosis are both 0 for a Gaussian (heavy tails give positive kurtosis).
-    """
-    values = np.asarray(values, float)
-    values = values[np.isfinite(values)]
-    return {
-        "mean": float(values.mean()),
-        "std": float(values.std()),
-        "skewness": float(stats.skew(values)),
-        "excess_kurtosis": float(stats.kurtosis(values)),
-    }
+gaussianity = ec.gaussianity  # mean, sigma, skewness and excess kurtosis
 
 
 def plot_results(summary, output_directory=None, show_plots=False):
@@ -973,10 +975,9 @@ def plot_results(summary, output_directory=None, show_plots=False):
     rows = summary["rows"]
     if not rows:
         raise ValueError("no samples to plot")
-    kind = summary["ellipsoid"].get("kind", "dimensions")  # runs before the radial fit have no kind
-    directory_path = output_directory or output_directory_for(summary["body"], kind)
+    directory_path = output_directory or _summary_directory(summary)
     descriptions = case_descriptions(summary["display_name"])
-    case_colors = dict(zip(cases, (colorList[5], "#00a0d0")))
+    case_colors = dict(zip(cases, (colorList[5], "#00a0d0", colorList[7])))
     errors = {name: np.array([row[name]["error_px"] for row in rows]) for name in cases}
 
     for key, label, filename, edges in (
@@ -1095,15 +1096,16 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    directory = output_directory_for(args.body, args.ellipsoid, args.range_radii)
     if args.threshold_sweep:
-        with open(os.path.join(output_directory_for(args.body, args.ellipsoid), "run.json")) as handle:
+        with open(os.path.join(directory, "run.json")) as handle:
             threshold_sweep(json.load(handle))
         raise SystemExit
 
     if args.replot:
-        for path in replot_pairs(args.body, args.ellipsoid):
+        for path in replot_pairs(args.body, args.ellipsoid, range_radii=args.range_radii):
             print(f"Wrote {path}")
-        with open(os.path.join(output_directory_for(args.body, args.ellipsoid), "run.json")) as handle:
+        with open(os.path.join(directory, "run.json")) as handle:
             plot_results(json.load(handle), show_plots=args.show)
         raise SystemExit
 
