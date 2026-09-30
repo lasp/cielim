@@ -488,7 +488,7 @@ private:
 
         constexpr float BYTES_IN_GB = 1073741824.0f;
 
-        utils::log::info("Device heap total: {:.2f} GB", static_cast<float>(dev_local_bytes) / BYTES_IN_GB);
+        utils::log::info("Device heap total: {:.2f} GiB", static_cast<float>(dev_local_bytes) / BYTES_IN_GB);
 
         return {};
     }
