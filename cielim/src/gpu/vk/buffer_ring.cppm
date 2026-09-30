@@ -6,12 +6,11 @@
 module;
 
 #include <cstdint>
+#include <span>
 #include <utility>
 #include <vector>
 
 #include <volk/volk.h>
-
-#include <vma/vk_mem_alloc.h>
 
 export module cielim.gpu.vk:buffer_ring;
 
@@ -19,8 +18,8 @@ import cielim.error;
 import cielim.helpers;
 import cielim.result;
 import :allocator;
-import :buffer;
 import :context;
+import :device_buffer;
 
 export namespace cielim::gpu::vk
 {
@@ -65,7 +64,7 @@ public:
             return Err(
                 error::DetailedError{
                     .errc = make_error_code(error::VkBufferError::InvalidBufferCount),
-                    .detail = "a ring must have 1 or more buffers",
+                    .detail = "a ring must have one or more buffers",
                 }
             );
         }
@@ -74,19 +73,9 @@ public:
 
         ring.gpu_buffers_.reserve(ring.num_buffers_);
 
-        /* Allocate each buffer as device-local memory. If available, it will be host-visible and can be written to
-         * directly from the CPU. In the case that device-local memory that is host-visible is not available, a staging
-         * buffer must be used to write into the buffer (not implemented rn). */
         for (uint32_t i = 0; i < ring.num_buffers_; i++)
         {
-            auto buffer_result = Buffer::create(
-                context,
-                allocator,
-                element_capacity * sizeof(T),
-                usage_flags,
-                VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT
-                    | VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT
-            );
+            auto buffer_result = DeviceBuffer<T>::create(context, allocator, element_capacity, usage_flags);
 
             if (!buffer_result.has_value())
                 return buffer_result.propagate();
@@ -104,20 +93,42 @@ public:
      * @param value The element to write into the buffer.
      * @return Void on success, error code on failure.
      */
-    auto write(const uint32_t index, const uint32_t slot, const T& value) -> Result<void>
+    auto write(const uint32_t index, const uint32_t slot, const T& value) const -> Result<void>
     {
         const auto gpu_buffer_result = try_at_ref(this->gpu_buffers_, index);
 
         if (!gpu_buffer_result.has_value())
             return gpu_buffer_result.propagate();
 
-        const Buffer& gpu_buffer = gpu_buffer_result.value().get();
+        return gpu_buffer_result.value().get().write(slot, value);
+    }
 
-        // In the future, this should ideally resize buffer on overflow
-        if (const auto result = gpu_buffer.direct_write(slot * sizeof(T), &value, sizeof(T)); !result.has_value())
-            return result.propagate();
+    /**
+     * @brief Writes a list of items into one of the buffers in the ring.
+     * @param index The index by which the ring of buffers should be accessed.
+     * @param slot_offset The slot in the buffer at which the write should start.
+     * @param values The elements to write into the buffer.
+     * @return Void on success, error code on failure.
+     */
+    auto write_many(const uint32_t index, const uint32_t slot_offset, const std::span<const T> values) const
+        -> Result<void>
+    {
+        const auto gpu_buffer_result = try_at_ref(this->gpu_buffers_, index);
 
-        return {};
+        if (!gpu_buffer_result.has_value())
+            return gpu_buffer_result.propagate();
+
+        return gpu_buffer_result.value().get().write_many(slot_offset, values);
+    }
+
+    auto get_handle(const uint32_t index) const -> Result<VkBuffer>
+    {
+        const auto gpu_buffer_result = try_at_ref(this->gpu_buffers_, index);
+
+        if (!gpu_buffer_result.has_value())
+            return gpu_buffer_result.propagate();
+
+        return gpu_buffer_result.value().get().get_handle();
     }
 
     auto get_address(const uint32_t index) const -> Result<VkDeviceAddress>
@@ -127,7 +138,7 @@ public:
         if (!gpu_buffer_result.has_value())
             return gpu_buffer_result.propagate();
 
-        return gpu_buffer_result.value().get().get_device_address();
+        return gpu_buffer_result.value().get().get_address();
     }
 
 private:
@@ -137,7 +148,7 @@ private:
     uint32_t num_buffers_ = 0;
 
     // The list of GPU buffers sized by the number of frames in flight
-    std::vector<Buffer> gpu_buffers_;
+    std::vector<DeviceBuffer<T>> gpu_buffers_;
 };
 
 } // namespace cielim::gpu::vk

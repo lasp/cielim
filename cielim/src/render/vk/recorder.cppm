@@ -255,12 +255,12 @@ public:
 
         // Draw just the first (and only for now) object in the registry
 
-        auto first_mesh = mesh_registry.get_mesh({.index = 0});
+        const auto first_mesh = mesh_registry.get_mesh({.index = 0});
 
         if (first_mesh.has_value())
         {
-            const auto [vertex_offset, index_offset, index_count] = first_mesh.value();
-            vkCmdDrawIndexed(command_buffer, index_count, 1, index_offset, vertex_offset, 0);
+            const MeshInfo mesh = first_mesh.value();
+            vkCmdDrawIndexed(command_buffer, mesh.index_count, 1, mesh.index_offset, mesh.vertex_offset, 0);
         }
 
         vkCmdEndRendering(command_buffer);

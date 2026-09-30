@@ -200,10 +200,7 @@ auto run(const std::filesystem::path& base_path) -> int
 
     auto vk_frame_counter = std::move(frame_counter_result).value();
 
-    constexpr uint32_t MESH_REGISTRY_BUFFER_SIZE = 20971520;
-
-    auto mesh_registry_result
-        = cielim::render::vk::MeshRegistry::create(vk_context, vk_allocator, MESH_REGISTRY_BUFFER_SIZE);
+    auto mesh_registry_result = cielim::render::vk::MeshRegistry::create(vk_context, vk_allocator, {});
 
     if (!mesh_registry_result.has_value())
     {
@@ -223,9 +220,9 @@ auto run(const std::filesystem::path& base_path) -> int
         return EXIT_FAILURE;
     }
 
-    auto [vertices, indices] = std::move(shape_result).value();
+    const cielim::mesh::MeshData shape = std::move(shape_result).value();
 
-    if (const auto result = mesh_registry.upload(vertices, indices); !result.has_value())
+    if (const auto result = mesh_registry.upload(shape); !result.has_value())
     {
         fatal_error(&window, result.error().message());
         return EXIT_FAILURE;
