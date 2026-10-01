@@ -157,7 +157,7 @@ auto run(const std::filesystem::path& base_path) -> int
 
     const uint32_t frames_in_flight = vk_frame_resources.get_frames_in_flight();
 
-    std::filesystem::path cube_shader_path = base_path / "content" / "shaders" / "cube.spv";
+    std::filesystem::path cube_shader_path = base_path / "content" / "shaders" / "lighting.spv";
 
     auto shader_result = cielim::render::vk::Shader::create(vk_context, cube_shader_path);
 
