@@ -46,10 +46,13 @@ public:
 
     /**
      * @brief Draws a frame.
+     * @details This function does not wait on the timeline semaphore for the current frame. It is assumed this has
+     * already been done by the caller and all of the resources are up-to-date.
      * @param context The Vulkan context.
      * @param swapchain The swapchain to which the frame should be presented.
      * @param frame_resources The frame resources to use for drawing.
      * @param frame_counter The frame counter used to pace this stream's frames and reuse of its frame resources.
+     * @param frame_index The current frame index.
      * @param render_pipeline The pipeline to be used for rendering.
      * @param scene_data_addresses Push constant struct containing scene data device addresses.
      * @param mesh_registry The mesh registry from which the meshes to be rendered are pulled.
@@ -60,6 +63,7 @@ public:
         const Swapchain& swapchain,
         const FrameResources& frame_resources,
         FrameCounter& frame_counter,
+        const uint32_t frame_index,
         const Pipeline& render_pipeline,
         const SceneDataPushConstants& scene_data_addresses,
         const MeshRegistry& mesh_registry
@@ -67,18 +71,9 @@ public:
     {
         const VkDevice vk_device_handle = context.get_device();
 
-        const uint32_t frames_in_flight = frame_resources.get_frames_in_flight();
-
         // We use the first queue in the queue family
         VkQueue graphics_queue;
         vkGetDeviceQueue(vk_device_handle, context.get_queue_family(), 0, &graphics_queue);
-
-        // The image in the frame buffer to render to; [0,1] for double-buffering, [0,1,2] for triple-buffering
-        const uint32_t frame_index = frame_counter.get_current_index(frames_in_flight);
-
-        // Wait until the frame that last used this slot has finished on the GPU (no-op for the first frames)
-        if (const auto result = frame_counter.wait_for_slot(frames_in_flight); !result.has_value())
-            return result.propagate();
 
         // This semaphore is signaled when the image has been acquired and can be rendered to
         const auto image_acquire_semaphore_result = frame_resources.get_semaphore(frame_index);

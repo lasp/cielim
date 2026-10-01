@@ -39,7 +39,15 @@ def compile_shaders():
     source_dir = Path(os.path.join(cielim_path, "assets", "shaders"))
     output_dir = Path(os.path.join(cielim_path, "content", "shaders"))
 
+    # Shader modules have no entry points and are imported by other shaders
+    modules_dir = source_dir / "modules"
+
+    failed_shaders = []
+
     for shader in source_dir.rglob("*.slang"):
+        if modules_dir in shader.parents:
+            continue
+
         relative_path = shader.relative_to(source_dir).with_suffix(".spv")
         out_path = output_dir / relative_path
 
@@ -51,12 +59,11 @@ def compile_shaders():
                 str(shader),
                 "-target",
                 "spirv",
-                "-matrix-layout-column-major",  # Use column major layout (M x v)
+                "-matrix-layout-column-major",  # Use column major layout (multiplication is M x v)
+                "-fvk-use-scalar-layout",  # Use C-like scalar layout so shader structs match C++ structs
                 "-fvk-use-entrypoint-name",  # Allow a single shader to have multiple entrypoints
-                "-entry",
-                "VertMain",
-                "-entry",
-                "FragMain",
+                "-I",
+                str(modules_dir),  # Search path for imported shader modules
                 "-o",
                 str(out_path),
             ],
@@ -64,9 +71,15 @@ def compile_shaders():
             stderr=sys.stderr,
         )
 
-        process.wait()
+        if process.wait() != 0:
+            failed_shaders.append(shader.name)
+            print(f"Failed to compile {shader.name}")
+            continue
 
-        print(f"Finished compiling {shader.name}")
+        print(f"Successfully compiled {shader.name}")
+
+    if failed_shaders:
+        raise RuntimeError(f"Failed to compile shaders: {', '.join(failed_shaders)}")
 
 
 def configure(platform_name_: str, preset_: str):

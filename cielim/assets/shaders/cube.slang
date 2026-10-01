@@ -1,27 +1,10 @@
 // Copyright (c) 2026 Laboratory for Atmospheric and Space Physics
 // SPDX-License-Identifier: GPL-3.0+
 
-struct Vertex
-{
-    float3 vert_position;
-    float3 vert_normal;
-};
-
-struct SceneInfo
-{
-    float4x4 view_projection;
-    float3 sun_position;
-};
-
-struct PushConstants
-{
-    Vertex* vertex_info;
-    uint64_t not_used1;
-    SceneInfo* scene_info;
-};
+import push_constants;
 
 [[vk::push_constant]]
-PushConstants pc;
+SceneDataPushConstants pc;
 
 struct VertexOutput
 {
@@ -30,15 +13,18 @@ struct VertexOutput
 };
 
 [shader("vertex")]
-VertexOutput VertMain(uint vid : SV_VertexID)
+VertexOutput VertMain(uint vid : SV_VulkanVertexID)
 {
     VertexOutput output;
 
-    Vertex v = pc.vertex_info[vid];
+    const GeometryInfo geometry = pc.geometry_info_address[0];
+    const SceneInfo scene = pc.scene_info_address[0];
 
-    float4 world_pos = float4(v.vert_position, 1.0);
-    output.sv_position = mul(pc.scene_info[0].view_projection, world_pos);
-    output.normal = v.vert_normal;
+    Vertex v = geometry.vertex_address[vid];
+
+    float4 world_pos = float4(v.position, 1.0);
+    output.sv_position = mul(scene.view_projection, world_pos);
+    output.normal = v.normal;
 
     return output;
 }
@@ -47,7 +33,7 @@ VertexOutput VertMain(uint vid : SV_VertexID)
 float4 FragMain(VertexOutput vert_info) : SV_Target
 {
     float3 n_normal = normalize(vert_info.normal);
-    float3 sun_dir = normalize(pc.scene_info[0].sun_position);
+    float3 sun_dir = normalize(pc.scene_info_address[0].sun_position);
 
     float lambert = 0.3183f * max(0.0f, dot(n_normal, sun_dir));
 
