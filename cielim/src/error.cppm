@@ -114,6 +114,14 @@ template <ErrorEnum Enum>
 auto make_error_code(Enum e) noexcept -> std::error_code
 { return std::error_code(static_cast<int>(e), ErrorCategory<Enum>::instance()); }
 
+// Compares an error code against a custom error enum
+template <ErrorEnum Enum>
+[[nodiscard]] auto operator==(const std::error_code& lhs, const Enum rhs) noexcept -> bool
+{
+    const std::error_code rhs_code = make_error_code(rhs);
+    return lhs == rhs_code;
+}
+
 // ----- Specific error type implementations -----
 
 enum class WindowError : std::uint8_t
