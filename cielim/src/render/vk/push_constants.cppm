@@ -15,14 +15,14 @@ export namespace cielim::render::vk
 
 struct SceneDataPushConstants
 {
-    // Address to the buffer containing all unique mesh vertex info
-    VkDeviceAddress vertex_info_address = 0;
+    // Address to the buffer containing all unique mesh geometry info
+    VkDeviceAddress geometry_info_address = 0;
+
+    // Address to the buffer containing global scene data
+    VkDeviceAddress scene_info_address = 0;
 
     // Address to the buffer containing all individual object info
     VkDeviceAddress object_info_address = 0;
-
-    // Address to the buffer containing global frame data
-    VkDeviceAddress scene_info_address = 0;
 };
 
 } // namespace cielim::render::vk

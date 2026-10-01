@@ -10,3 +10,4 @@ export import :buffer;
 export import :buffer_ring;
 export import :context;
 export import :device_buffer;
+export import :synced_ring;

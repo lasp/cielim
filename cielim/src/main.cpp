@@ -200,7 +200,8 @@ auto run(const std::filesystem::path& base_path) -> int
 
     auto vk_frame_counter = std::move(frame_counter_result).value();
 
-    auto mesh_registry_result = cielim::render::vk::MeshRegistry::create(vk_context, vk_allocator, {});
+    auto mesh_registry_result
+        = cielim::render::vk::MeshRegistry::create(vk_context, vk_allocator, frames_in_flight, {});
 
     if (!mesh_registry_result.has_value())
     {
@@ -375,11 +376,33 @@ auto run(const std::filesystem::path& base_path) -> int
 
         // Render the scene view
 
+        // The image in the frame buffer to render to; [0,1] for double-buffering, [0,1,2] for triple-buffering
+        const uint32_t frame_index = vk_frame_counter.get_current_index(frames_in_flight);
+
+        // Wait until the frame that last used this slot has finished on the GPU (no-op for the first frames)
+        if (const auto result = vk_frame_counter.wait_for_slot(frames_in_flight); !result.has_value())
+        {
+            fatal_error(&window, result.error().message());
+            return EXIT_FAILURE;
+        }
+
+        if (const auto result = mesh_registry.update(frame_index); !result.has_value())
+        {
+            fatal_error(&window, result.error().message());
+            return EXIT_FAILURE;
+        }
+
+        const auto geometry_info_address_result = mesh_registry.get_geometry_info_address(frame_index);
+
+        if (!geometry_info_address_result.has_value())
+        {
+            fatal_error(&window, geometry_info_address_result.error().message());
+            return EXIT_FAILURE;
+        }
+
         constexpr float AU = 1.496e11f;
 
         cielim::math::Vec3 sun_position(AU, 0.0f, 0.0f);
-
-        const uint32_t frame_index = vk_frame_counter.get_current_index(frames_in_flight);
 
         if (const auto result = view.update(camera, sun_position, frame_index); !result.has_value())
         {
@@ -387,17 +410,17 @@ auto run(const std::filesystem::path& base_path) -> int
             return EXIT_FAILURE;
         }
 
-        const auto camera_info_address_result = view.get_scene_info_address(frame_index);
+        const auto scene_info_address_result = view.get_scene_info_address(frame_index);
 
-        if (!camera_info_address_result.has_value())
+        if (!scene_info_address_result.has_value())
         {
-            fatal_error(&window, camera_info_address_result.error().message());
+            fatal_error(&window, scene_info_address_result.error().message());
             return EXIT_FAILURE;
         }
 
         const cielim::render::vk::SceneDataPushConstants push_constants = {
-            .vertex_info_address = mesh_registry.get_vertex_address(),
-            .scene_info_address = camera_info_address_result.value(),
+            .geometry_info_address = geometry_info_address_result.value(),
+            .scene_info_address = scene_info_address_result.value(),
         };
 
         if (const auto result = cielim::render::vk::Recorder::draw_frame(
@@ -405,6 +428,7 @@ auto run(const std::filesystem::path& base_path) -> int
                 vk_swapchain,
                 vk_frame_resources,
                 vk_frame_counter,
+                frame_index,
                 vk_render_pipeline,
                 push_constants,
                 mesh_registry

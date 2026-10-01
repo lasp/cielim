@@ -75,7 +75,9 @@ target_sources(cielim
             ${CIELIM_CPP_SOURCE}/gpu/vk/buffer_ring.cppm
             ${CIELIM_CPP_SOURCE}/gpu/vk/context.cppm
             ${CIELIM_CPP_SOURCE}/gpu/vk/device_buffer.cppm
+            ${CIELIM_CPP_SOURCE}/gpu/vk/synced_ring.cppm
             ${CIELIM_CPP_SOURCE}/render/vk.cppm
+            ${CIELIM_CPP_SOURCE}/render/vk/elements.cppm
             ${CIELIM_CPP_SOURCE}/render/vk/frame_counter.cppm
             ${CIELIM_CPP_SOURCE}/render/vk/frame_resources.cppm
             ${CIELIM_CPP_SOURCE}/render/vk/mesh_registry.cppm

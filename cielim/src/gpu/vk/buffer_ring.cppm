@@ -1,7 +1,8 @@
 // Copyright (c) 2026 Laboratory for Atmospheric and Space Physics
 // SPDX-License-Identifier: GPL-3.0+
 
-/* Purpose: A ring of device-local GPU buffers. */
+/* Purpose: A ring of device-local GPU buffers. This should be used for buffers whose data is updated between frames in
+ * flight and whose data is only ever written to from the CPU. */
 
 module;
 
@@ -140,6 +141,8 @@ public:
 
         return gpu_buffer_result.value().get().get_address();
     }
+
+    [[nodiscard]] auto get_num_buffers() const -> uint32_t { return this->num_buffers_; }
 
 private:
     BufferRing() = default;

@@ -17,15 +17,10 @@ import cielim.gpu.vk;
 import cielim.math;
 import cielim.result;
 import cielim.snapshot;
+import :elements;
 
 export namespace cielim::render::vk
 {
-
-struct SceneInfo
-{
-    math::Mat4 view_projection{};
-    math::Vec3 sun_position{};
-};
 
 class SceneView
 {
@@ -67,11 +62,14 @@ public:
 
     /**
      * @brief Updates the view's camera info in its buffers from a camera.
+     * @details This should only be called after waiting on the frame index's frame counter slot.
      * @param camera The camera from which to update.
      * @param sun_pos The position of the sun in the scene inertial frame.
      * @param frame_index The current frame index.
+     * @return Void on success, error code on failure.
      */
-    auto update(const snapshot::Camera& camera, const math::Vec3& sun_pos, const uint32_t frame_index) -> Result<void>
+    auto update(const snapshot::Camera& camera, const math::Vec3& sun_pos, const uint32_t frame_index) const
+        -> Result<void>
     {
         const math::Mat4 view_projection = camera.get_view_projection_matrix();
 

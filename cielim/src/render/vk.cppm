@@ -5,6 +5,7 @@
 
 export module cielim.render.vk;
 
+export import :elements;
 export import :frame_counter;
 export import :frame_resources;
 export import :mesh_registry;
