@@ -27,7 +27,7 @@ def default_scene() -> cielim.Scene:
         ("RAW 16-bit"),
     ],
 )
-def test_Format(cielim_connection: cielim.Connector, default_scene: cielim.Scene, test_name):
+def test_format(cielim_connection: cielim.Connector, default_scene: cielim.Scene, test_name):
     """
     Tests raw image data is properly formatted.
     """

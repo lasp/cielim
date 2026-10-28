@@ -19,7 +19,7 @@ def default_scene() -> cielim.Scene:
     return scene
 
 
-def test_PerlinNoise(cielim_connection: cielim.Connector, default_scene: cielim.Scene):
+def test_perlin_noise(cielim_connection: cielim.Connector, default_scene: cielim.Scene):
     """
     Tests whether perlin noise is applied by comparing a base image to one with mesh deformation.
     """

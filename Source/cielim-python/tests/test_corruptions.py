@@ -114,7 +114,7 @@ def default_scene() -> cielim.Scene:
         (0.0, 0.0, 0.0, 0.0, 0.3),
     ],
 )
-def test_LensDistortion(
+def test_lens_distortion(
     cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, k1, k2, k3, p1, p2
 ):
     """
@@ -203,7 +203,7 @@ def test_LensDistortion(
     assert mismatch_fraction < 0.06, f"Too many mismatched pixels: {mismatch_fraction:.2%} " f"(max diff: {diff.max()})"
 
 
-def test_GaussianPSF(cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool):
+def test_gaussian_psf(cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool):
     """
     Renders a sub-pixel point source and fits a
     2D Gaussian to it, checking the fitted sigma matches the configured psf_sigma directly
@@ -272,7 +272,7 @@ def test_GaussianPSF(cielim_connection: cielim.Connector, default_scene: cielim.
         (100, 10000),
     ],
 )
-def test_DarkCurrent(
+def test_dark_current(
     cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, dark_current, sigma
 ):
     """
@@ -302,7 +302,7 @@ def test_DarkCurrent(
     "cosmic_rays",
     [5, 20, 50],
 )
-def test_CosmicRays(cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, cosmic_rays):
+def test_cosmic_rays(cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, cosmic_rays):
     """
     Checks that cosmic ray hits happen at the expected rate
      by rendering many frames, counting hits, and comparing the average against the configured rate .
@@ -353,7 +353,7 @@ def test_CosmicRays(cielim_connection: cielim.Connector, default_scene: cielim.S
     "read_noise",
     [50, 500, 5000, 20000],
 )
-def test_ReadNoise(cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, read_noise):
+def test_read_noise(cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, read_noise):
     """
     Tests that read noise matches the expected half-normal distribution (std, mean, and the
     fraction of pixels clipped to exactly zero), not just its standard deviation alone.
@@ -433,7 +433,7 @@ def test_ReadNoise(cielim_connection: cielim.Connector, default_scene: cielim.Sc
         (0.000025, 0.000025),
     ],
 )
-def test_PixelDefect(
+def test_pixel_defect(
     cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, stuck_rate, dead_rate
 ):
     """
@@ -482,7 +482,7 @@ def test_PixelDefect(
     "signal_gain",
     [0.25, 0.5, 0.75, 0.8, 1.5, 2.0],  # includes gain > 1 to verify amplification, not just attenuation
 )
-def test_SignalGain(cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, signal_gain):
+def test_signal_gain(cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, signal_gain):
     """
     Tests that gain scales the sensor's linear signal, by comparing the ratio of mean linear
     brightness (gained vs. base) directly against the configured gain.
