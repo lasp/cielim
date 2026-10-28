@@ -1,24 +1,14 @@
+import sys
+from pathlib import Path
+
 import cielim
 import cv2
 import numpy as np
 import pytest
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-@pytest.fixture
-def default_scene() -> cielim.Scene:
-    """
-    Set up the scene with the spacecraft looking directly at a sphere with zoomed-in fov.
-    """
-    scene = cielim.Scene()
-
-    scene.set_spacecraft_params(position=(0, 0, 50000), attitude=(0, 1, 0))
-
-    scene.set_lens_params(fov=(5 * np.pi / 180, 5 * np.pi / 180))  # Zoom in to make image close to orthogonal
-
-    index = scene.add_celestial_body("asteroid")
-    scene.set_celestial_body_params(index, mesh_shape="sphere_normalized", mesh_brdf="Lambertian", mesh_radius=1000)
-
-    return scene
+from scenes.common import default_scene
 
 
 @pytest.mark.parametrize(
@@ -31,13 +21,13 @@ def default_scene() -> cielim.Scene:
         ("Move Diagonal", [1000, 1000, 0]),
     ],
 )
-def test_camera_position(cielim_connection: cielim.Connector, default_scene: cielim.Scene, test_name, shift):
+def test_camera_position(cielim_connection: cielim.Connector, test_name, shift):
     """
     Tests the effect of moving the camera on the asteroid's apparent position in the image.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene()
 
     initial_x, initial_y, initial_z = scene.get_scene().spacecraft.position[:3]
     initial_spacecraft_position = np.array([initial_x, initial_y, initial_z])
@@ -82,9 +72,9 @@ def test_camera_position(cielim_connection: cielim.Connector, default_scene: cie
     largest_contour = max(moved_contours, key=cv2.contourArea)
     (moved_x, moved_y), moved_radius = cv2.minEnclosingCircle(largest_contour)
 
-    # X shift is not inverted because +x points left (Unreal uses left handed coordinates)
-    expected_pixel_shift_x = round(np.arctan(shift[0] / distance) * (image_width / camera_fov_horizontal))
-    expected_pixel_shift_y = -round(np.arctan(shift[1] / distance) * (image_height / camera_fov_vertical))
+    # Moving the camera right/up moves the object left/down in the image (image rows grow downward)
+    expected_pixel_shift_x = -round(np.arctan(shift[0] / distance) * (image_width / camera_fov_horizontal))
+    expected_pixel_shift_y = round(np.arctan(shift[1] / distance) * (image_height / camera_fov_vertical))
 
     actual_pixel_shift_x = moved_x - baseline_x
     actual_pixel_shift_y = moved_y - baseline_y
@@ -104,7 +94,7 @@ def test_camera_position(cielim_connection: cielim.Connector, default_scene: cie
         ("Move Farther", 10000),
     ],
 )
-def test_camera_distance(cielim_connection: cielim.Connector, default_scene: cielim.Scene, test_name, z_shift):
+def test_camera_distance(cielim_connection: cielim.Connector, test_name, z_shift):
     """
     Tests the effect of moving the camera along its boresight (Z) axis: the sphere's apparent
     center should stay put (a depth-only move causes no lateral pixel shift) while its apparent
@@ -112,7 +102,7 @@ def test_camera_distance(cielim_connection: cielim.Connector, default_scene: cie
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene()
 
     initial_x, initial_y, initial_z = scene.get_scene().spacecraft.position[:3]
 
@@ -174,14 +164,14 @@ def test_camera_distance(cielim_connection: cielim.Connector, default_scene: cie
         ("Roll (Z-axis)", [0, 0, 0.01]),
     ],
 )
-def test_camera_orientation(cielim_connection: cielim.Connector, default_scene: cielim.Scene, test_name, mrp_rotation):
+def test_camera_orientation(cielim_connection: cielim.Connector, test_name, mrp_rotation):
     """
     Tests the effect of modifying the camera's orientation using MRPs on the asteroid's apparent position in the image.
     The expected pixel shifts are computed based on the new orientation.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene()
 
     connector.send_init_request()
     connector.send_frame(scene.get_scene())

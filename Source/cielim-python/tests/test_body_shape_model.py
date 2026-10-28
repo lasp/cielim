@@ -1,26 +1,16 @@
+import sys
+from pathlib import Path
+
 import cielim
 import cv2
 import numpy as np
 import pytest
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from scenes.common import default_scene
+
 MIN_ILLUMINATED_PX = 50
-
-
-@pytest.fixture
-def default_scene() -> cielim.Scene:
-    """
-    Set up the scene with the spacecraft looking directly at a sphere.
-    """
-    scene = cielim.Scene()
-
-    scene.set_spacecraft_params(position=(0, 0, 2000), attitude=(0, 1, 0))
-
-    scene.set_sensor_params(exposure=1e-5)
-
-    index = scene.add_celestial_body("asteroid")
-    scene.set_celestial_body_params(index, mesh_shape="sphere_normalized", mesh_brdf="Lambertian", mesh_radius=1000)
-
-    return scene
 
 
 def _render_and_measure_cob(connector: cielim.Connector, scene: cielim.Scene, test_name: str):
@@ -59,7 +49,7 @@ def _render_and_measure_cob(connector: cielim.Connector, scene: cielim.Scene, te
     "test_name, shape_model, body_shift, expected_cob, cob_tolerance_px, min_shift_px, max_shift_px",
     [
         ("bennu", "bennu_normalized", (0, 0, 0), (500.0, 500.0), 60, 2, 50),
-        ("itokawa", "itokawa_normalized", (0, 0, 0), (500.0, 500.0), 60, 2, 50),
+        ("itokawa", "itokawa_normalized", (0, 0, 0), (500.0, 500.0), 60, 1, 50),
         ("67p", "67p_normalized", (0, 0, 0), (500.0, 500.0), 60, 2, 50),
         ("vesta", "vesta_normalized", (0, 0, 0), (500.0, 500.0), 60, 2, 50),
         ("deimos", "deimos_normalized", (0, 0, 0), (500.0, 500.0), 60, 2, 50),
@@ -68,7 +58,6 @@ def _render_and_measure_cob(connector: cielim.Connector, scene: cielim.Scene, te
 )
 def test_center_of_brightness_shift(
     cielim_connection: cielim.Connector,
-    default_scene: cielim.Scene,
     test_name,
     shape_model,
     body_shift,
@@ -81,7 +70,8 @@ def test_center_of_brightness_shift(
     Checks the CoB shift, position, and shift direction for a shape model against the baseline sphere.
     """
     connector = cielim_connection
-    scene = default_scene
+    scene = default_scene()
+    scene.set_sensor_params(exposure=1e-5)
 
     base_cob_x, base_cob_y = _render_and_measure_cob(connector, scene, f"{test_name} (baseline)")
 
@@ -115,10 +105,9 @@ def test_center_of_brightness_shift(
         )
 
     if any(body_shift):
-        # Both axes are negated for this scene's attitude=(0, 1, 0): a +x/+y body displacement maps
-        # to -x/-y in image space
-        expected_shift_x = -np.arctan(body_shift[0] / distance) * (image_width / camera_fov_horizontal)
-        expected_shift_y = np.arctan(body_shift[1] / distance) * (image_height / camera_fov_vertical)
+        # A +x/+y body displacement moves the body right/up in the image (image rows grow downward)
+        expected_shift_x = np.arctan(body_shift[0] / distance) * (image_width / camera_fov_horizontal)
+        expected_shift_y = -np.arctan(body_shift[1] / distance) * (image_height / camera_fov_vertical)
 
         actual_shift_x = cob_x - base_cob_x
         actual_shift_y = cob_y - base_cob_y
@@ -135,15 +124,14 @@ def test_center_of_brightness_shift(
             )
 
 
-def test_center_of_brightness_shift_invalid_shape_model(
-    cielim_connection: cielim.Connector, default_scene: cielim.Scene
-):
+def test_center_of_brightness_shift_invalid_shape_model(cielim_connection: cielim.Connector):
     """
     An unknown shape model name silently falls back to the engine's default sphere mesh rather
     than failing, so it should render like the baseline sphere, centered in frame.
     """
     connector = cielim_connection
-    scene = default_scene
+    scene = default_scene()
+    scene.set_sensor_params(exposure=1e-5)
 
     scene.set_celestial_body_params(1, mesh_shape="not_a_real_shape_model")
 

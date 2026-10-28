@@ -1,31 +1,22 @@
+import sys
+from pathlib import Path
+
 import cielim
 import cv2
 import numpy as np
-import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from scenes.common import default_scene
 
 
-@pytest.fixture
-def default_scene() -> cielim.Scene:
-    """
-    Set up the scene with the spacecraft looking directly at a sphere.
-    """
-    scene = cielim.Scene()
-
-    scene.set_spacecraft_params(position=(0, 0, 2000), attitude=(0, 1, 0))
-
-    index = scene.add_celestial_body("asteroid")
-    scene.set_celestial_body_params(index, mesh_shape="Sphere", mesh_brdf="Lambertian", mesh_radius=1000)
-
-    return scene
-
-
-def test_perlin_noise(cielim_connection: cielim.Connector, default_scene: cielim.Scene):
+def test_perlin_noise(cielim_connection: cielim.Connector):
     """
     Tests whether perlin noise is applied by comparing a base image to one with mesh deformation.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene(shape="Sphere")
 
     connector.send_init_request()
     connector.send_frame(scene.get_scene())

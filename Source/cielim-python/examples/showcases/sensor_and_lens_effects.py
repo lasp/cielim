@@ -10,6 +10,7 @@ Run:  python examples/showcases/sensor_and_lens_effects.py [--out DIR]
 """
 
 import argparse
+import sys
 from pathlib import Path
 
 import cielim
@@ -18,17 +19,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 from cielim.utils import plot_style as ps
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scenes.common import default_scene
+
 default_out_dir = Path(__file__).resolve().parents[1] / "images-showcase"
 
 
-def scene_setup() -> cielim.Scene:
-    """The spacecraft looking straight down at a Lambertian plane through a narrow 10 deg FoV."""
-    scene = cielim.Scene()
-    scene.set_spacecraft_params(position=(0, 0, 2000), attitude=(0, 1, 0))
-    scene.set_lens_params(fov=(10 * np.pi / 180, 10 * np.pi / 180))
-    index = scene.add_celestial_body("asteroid")
-    scene.set_celestial_body_params(index, mesh_shape="Plane", mesh_brdf="Lambertian", mesh_radius=1000)
-    return scene
+def plane_scene() -> cielim.Scene:
+    """A Lambertian plane filling the frame, so the corruptions show against an even field."""
+    return default_scene(shape="Plane", distance=2000, fov_deg=10)
 
 
 def render(connector: cielim.Connector, scene: cielim.Scene) -> np.ndarray:
@@ -58,7 +58,7 @@ def show_scene(ax, image_bgr, title, title_width_in=ps.page_w):
 
 def sensor_effects(connector: cielim.Connector, out_dir: Path):
     """One frame combining the sensor-model corruptions over the lit plane."""
-    scene = scene_setup()
+    scene = plane_scene()
 
     position, exposure = (0, 0, 100), 2e-5
     corruptions = {
@@ -94,7 +94,7 @@ def sensor_effects(connector: cielim.Connector, out_dir: Path):
 
 def lens_effects(connector: cielim.Connector, out_dir: Path):
     """Lens models side by side: a clean render, radial distortion, and a PSF-blurred render."""
-    scene = scene_setup()
+    scene = plane_scene()
 
     position, dist_radial, psf_sigma = (0, 0, 1000), (0.5, 0.0, 0.0), 50
     scene.set_spacecraft_params(position=position)  # closer -> distortion/blur are pronounced

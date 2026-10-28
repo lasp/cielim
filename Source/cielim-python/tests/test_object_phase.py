@@ -1,23 +1,14 @@
+import sys
+from pathlib import Path
+
 import cielim
 import cv2
 import numpy as np
 import pytest
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-@pytest.fixture
-def default_scene() -> cielim.Scene:
-    """
-    Set up the scene with the spacecraft looking directly at a sphere.
-    """
-    scene = cielim.Scene()
-
-    # Rotate so +x is right, +y is up, and +z is out of the page
-    scene.set_spacecraft_params(position=(0, 0, 4000), attitude=(1, 0, 0))
-
-    index = scene.add_celestial_body("asteroid")
-    scene.set_celestial_body_params(index, mesh_shape="sphere_normalized", mesh_brdf="Regolith", mesh_radius=1000)
-
-    return scene
+from scenes.common import default_scene
 
 
 def photocenter_offset_angle(mean_radius: float, distance: float, phase_angle_rad: float) -> float:
@@ -49,14 +40,14 @@ def test_photocenter_offset_formula():
     np.testing.assert_allclose(thetas[-1], expected_max_theta, rtol=1e-9)
 
 
-def test_phase_angle_new_moon(cielim_connection: cielim.Connector, default_scene: cielim.Scene):
+def test_phase_angle_new_moon(cielim_connection: cielim.Connector):
     """
     At 180 deg phase (sun directly behind the target from the camera's viewpoint), the camera
     should see only the unlit far hemisphere — the image should be near-black.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene(brdf="Regolith")
 
     scene.set_celestial_body_params(0, position=(0, 0, -1.496e11))
 
@@ -72,14 +63,14 @@ def test_phase_angle_new_moon(cielim_connection: cielim.Connector, default_scene
     assert mean_brightness < 5, f"Image was not near-black at 180 deg phase (mean pixel value={mean_brightness:.2f})"
 
 
-def test_phase_angle_brightness_scaling(cielim_connection: cielim.Connector, default_scene: cielim.Scene):
+def test_phase_angle_brightness_scaling(cielim_connection: cielim.Connector):
     """
     Total reflected brightness (sum of pixel values, i.e. image moment m00) should decrease
     monotonically as phase angle increases.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene(brdf="Regolith")
 
     phase_angles_deg = [0, 45, 90, 135]
     sun_positions = [
@@ -126,7 +117,6 @@ def test_phase_angle_brightness_scaling(cielim_connection: cielim.Connector, def
 )
 def test_phase_angle_scene(
     cielim_connection: cielim.Connector,
-    default_scene: cielim.Scene,
     test_name,
     sun_position,
     phase_angle,
@@ -136,7 +126,7 @@ def test_phase_angle_scene(
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene(brdf="Regolith")
 
     scene.set_celestial_body_params(0, position=sun_position)
 

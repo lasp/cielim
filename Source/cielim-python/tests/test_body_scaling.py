@@ -1,7 +1,14 @@
+import sys
+from pathlib import Path
+
 import cielim
 import cv2
 import numpy as np
 import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from scenes.common import default_scene
 
 # Minimum pixel shift that counts as real movement, not render/quantization noise.
 SHIFT_DETECTION_FLOOR_PX = 0.5
@@ -39,20 +46,6 @@ def expected_shift_bound_px(scene: cielim.Scene, axis_index: int, distortion_fac
     return pixel_radius * abs(distortion_factor - 1)
 
 
-@pytest.fixture
-def default_scene() -> cielim.Scene:
-    """
-    Set up the scene with the spacecraft looking directly at a sphere with the sun lighting left half.
-    """
-    scene = cielim.Scene()
-
-    scene.set_spacecraft_params(position=(0, 0, 2000), attitude=(0, 1, 0))
-    scene.set_celestial_body_params(0, position=(1.496e11, 0, 0))
-    index = scene.add_celestial_body("asteroid")
-    scene.set_celestial_body_params(index, mesh_shape="sphere_normalized", mesh_brdf="Lambertian", mesh_radius=1000)
-    return scene
-
-
 @pytest.mark.parametrize(
     "test_name, distortion",
     [
@@ -62,14 +55,15 @@ def default_scene() -> cielim.Scene:
         ("Uniform Scale", [1.5, 1.5, 1.5]),
     ],
 )
-def test_body_scaling(cielim_connection: cielim.Connector, default_scene: cielim.Scene, test_name, distortion):
+def test_body_scaling(cielim_connection: cielim.Connector, test_name, distortion):
     """
     Checks distorting the body shifts the CoB only along x, within geometric bounds, and that
     pixel coverage tracks the projected size change.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene()
+    scene.set_celestial_body_params(0, position=(1.496e11, 0, 0))  # sun to the side, lighting half the sphere
 
     connector.send_init_request()
     connector.send_frame(scene.get_scene())

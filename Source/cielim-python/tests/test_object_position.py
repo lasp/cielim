@@ -1,7 +1,14 @@
+import sys
+from pathlib import Path
+
 import cielim
 import cv2
 import numpy as np
 import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from scenes.common import default_scene
 
 
 def moments_centroid(image_gray: np.ndarray, test_name: str) -> tuple[float, float]:
@@ -11,24 +18,6 @@ def moments_centroid(image_gray: np.ndarray, test_name: str) -> tuple[float, flo
     moments = cv2.moments(image_gray)
     assert moments["m00"] > 0, f"No illuminated body detected in rendered image for test: {test_name}"
     return moments["m10"] / moments["m00"], moments["m01"] / moments["m00"]
-
-
-@pytest.fixture
-def default_scene() -> cielim.Scene:
-    """
-    Set up the scene with the spacecraft looking directly at a sphere.
-    """
-    scene = cielim.Scene()
-
-    # Rotate so +x is right, +y is up, and +z is out of the page
-    scene.set_spacecraft_params(position=(0, 0, 50000), attitude=(1, 0, 0))
-
-    scene.set_lens_params(fov=(5 * np.pi / 180, 5 * np.pi / 180))  # Zoom in to make image close to orthogonal
-
-    index = scene.add_celestial_body("asteroid")
-    scene.set_celestial_body_params(index, mesh_shape="sphere_normalized", mesh_brdf="Regolith", mesh_radius=1000)
-
-    return scene
 
 
 @pytest.mark.parametrize(
@@ -41,14 +30,14 @@ def default_scene() -> cielim.Scene:
         ("Move Diagonal", [1000, 1000, 0]),
     ],
 )
-def test_object_position(cielim_connection: cielim.Connector, default_scene: cielim.Scene, test_name, shift):
+def test_object_position(cielim_connection: cielim.Connector, test_name, shift):
     """
     Tests the asteroid movement in image space when shifted in 3D (X, Y).
     Parameters: Changing asteroid position in meters and verifying pixel shift.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene()
 
     initial_x, initial_y, initial_z = scene.get_scene().celestialBodies[1].position[:3]
 
@@ -112,16 +101,14 @@ def test_object_position(cielim_connection: cielim.Connector, default_scene: cie
         ("Y-axis", [0, 1000, 0]),
     ],
 )
-def test_object_position_symmetry(
-    cielim_connection: cielim.Connector, default_scene: cielim.Scene, test_name, axis_shift
-):
+def test_object_position_symmetry(cielim_connection: cielim.Connector, test_name, axis_shift):
     """
     Opposite shifts along the same axis should produce opposite, canceling pixel shifts a
     self-consistency check that catches sign errors.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene()
 
     initial_x, initial_y, initial_z = scene.get_scene().celestialBodies[1].position[:3]
 
@@ -159,7 +146,7 @@ def test_object_position_symmetry(
         ("Move Farther", -10000),
     ],
 )
-def test_object_distance(cielim_connection: cielim.Connector, default_scene: cielim.Scene, test_name, z_shift):
+def test_object_distance(cielim_connection: cielim.Connector, test_name, z_shift):
     """
     Tests the effect of moving the asteroid along the boresight (Z) axis: its apparent center
     should stay put (a depth-only move causes no lateral pixel shift) while its apparent size
@@ -167,7 +154,7 @@ def test_object_distance(cielim_connection: cielim.Connector, default_scene: cie
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene()
 
     initial_x, initial_y, initial_z = scene.get_scene().celestialBodies[1].position[:3]
 

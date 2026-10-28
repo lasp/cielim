@@ -1,21 +1,13 @@
+import sys
+from pathlib import Path
+
 import cielim
 import numpy as np
 import pytest
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-@pytest.fixture
-def default_scene() -> cielim.Scene:
-    """
-    Set up the scene with the spacecraft looking directly at a sphere.
-    """
-    scene = cielim.Scene()
-
-    scene.set_spacecraft_params(position=(0, 0, 2000), attitude=(0, 1, 0))
-
-    index = scene.add_celestial_body("asteroid")
-    scene.set_celestial_body_params(index, mesh_shape="sphere_normalized", mesh_brdf="Lambertian", mesh_radius=1000)
-
-    return scene
+from scenes.common import default_scene
 
 
 @pytest.mark.parametrize(
@@ -27,13 +19,13 @@ def default_scene() -> cielim.Scene:
         ("RAW 16-bit"),
     ],
 )
-def test_format(cielim_connection: cielim.Connector, default_scene: cielim.Scene, test_name):
+def test_format(cielim_connection: cielim.Connector, test_name):
     """
     Tests raw image data is properly formatted.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene()
 
     connector.send_init_request()
     connector.send_frame(scene.get_scene())

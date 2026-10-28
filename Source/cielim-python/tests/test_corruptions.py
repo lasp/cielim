@@ -1,8 +1,15 @@
+import sys
+from pathlib import Path
+
 import cielim
 import cv2
 import numpy as np
 import pytest
 from scipy.optimize import curve_fit
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from scenes.common import default_scene
 
 gamma_encoding = 2.2
 default_full_well_capacity = 50000
@@ -71,23 +78,6 @@ def fit_psf_sigma(image_gray: np.ndarray, window: int = 50) -> tuple[float, floa
         return sigma_x_guess, sigma_y_guess
 
 
-@pytest.fixture
-def default_scene() -> cielim.Scene:
-    """
-    Set up the scene with the spacecraft looking directly at a plane.
-    """
-    scene = cielim.Scene()
-
-    scene.set_spacecraft_params(position=(0, 0, 2000), attitude=(0, 1, 0))
-
-    scene.set_lens_params(fov=(10 * np.pi / 180, 10 * np.pi / 180))
-
-    index = scene.add_celestial_body("asteroid")
-    scene.set_celestial_body_params(index, mesh_shape="Plane", mesh_brdf="Lambertian", mesh_radius=1000)
-
-    return scene
-
-
 @pytest.mark.parametrize(
     "k1, k2, k3, p1, p2",
     [
@@ -101,13 +91,13 @@ def default_scene() -> cielim.Scene:
         (0.0, 0.0, 0.0, 0.0, 0.3),
     ],
 )
-def test_lens_distortion(cielim_connection: cielim.Connector, default_scene: cielim.Scene, k1, k2, k3, p1, p2):
+def test_lens_distortion(cielim_connection: cielim.Connector, k1, k2, k3, p1, p2):
     """
     Tests that lens distortion is distorting the image as expected.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene(shape="Plane", distance=2000, fov_deg=10)
 
     scene.set_spacecraft_params(position=(0, 0, 1000))  # Move closer to make effects more pronounced
 
@@ -183,7 +173,7 @@ def test_lens_distortion(cielim_connection: cielim.Connector, default_scene: cie
     assert mismatch_fraction < 0.06, f"Too many mismatched pixels: {mismatch_fraction:.2%} " f"(max diff: {diff.max()})"
 
 
-def test_gaussian_psf(cielim_connection: cielim.Connector, default_scene: cielim.Scene):
+def test_gaussian_psf(cielim_connection: cielim.Connector):
     """
     Renders a sub-pixel point source and fits a
     2D Gaussian to it, checking the fitted sigma matches the configured psf_sigma directly
@@ -191,7 +181,7 @@ def test_gaussian_psf(cielim_connection: cielim.Connector, default_scene: cielim
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene(shape="Plane", distance=2000, fov_deg=10)
 
     scene.set_celestial_body_params(1, mesh_shape="sphere_normalized", mesh_radius=10)
     scene.set_spacecraft_params(position=(0, 0, 400_000))
@@ -245,14 +235,14 @@ def test_gaussian_psf(cielim_connection: cielim.Connector, default_scene: cielim
         (100, 10000),
     ],
 )
-def test_dark_current(cielim_connection: cielim.Connector, default_scene: cielim.Scene, dark_current, sigma):
+def test_dark_current(cielim_connection: cielim.Connector, dark_current, sigma):
     """
     Tests whether dark current is being added to the image.
     See RandomFuncs.ush for RNG implementation.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene(shape="Plane", distance=2000, fov_deg=10)
 
     scene.delete_celestial_body(1)
 
@@ -270,14 +260,14 @@ def test_dark_current(cielim_connection: cielim.Connector, default_scene: cielim
     "cosmic_rays",
     [5, 20, 50],
 )
-def test_cosmic_rays(cielim_connection: cielim.Connector, default_scene: cielim.Scene, cosmic_rays):
+def test_cosmic_rays(cielim_connection: cielim.Connector, cosmic_rays):
     """
     Checks that cosmic ray hits happen at the expected rate
      by rendering many frames, counting hits, and comparing the average against the configured rate .
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene(shape="Plane", distance=2000, fov_deg=10)
 
     scene.delete_celestial_body(1)
 
@@ -318,14 +308,14 @@ def test_cosmic_rays(cielim_connection: cielim.Connector, default_scene: cielim.
     "read_noise",
     [50, 500, 5000, 20000],
 )
-def test_read_noise(cielim_connection: cielim.Connector, default_scene: cielim.Scene, read_noise):
+def test_read_noise(cielim_connection: cielim.Connector, read_noise):
     """
     Tests that read noise matches the expected half-normal distribution (std, mean, and the
     fraction of pixels clipped to exactly zero), not just its standard deviation alone.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene(shape="Plane", distance=2000, fov_deg=10)
 
     scene.delete_celestial_body(1)
 
@@ -385,14 +375,14 @@ def test_read_noise(cielim_connection: cielim.Connector, default_scene: cielim.S
         (0.000025, 0.000025),
     ],
 )
-def test_pixel_defect(cielim_connection: cielim.Connector, default_scene: cielim.Scene, stuck_rate, dead_rate):
+def test_pixel_defect(cielim_connection: cielim.Connector, stuck_rate, dead_rate):
     """
     Tests stuck and dead pixels can be added to image.
     See RandomFuncs.ush for RNG implementation.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene(shape="Plane", distance=2000, fov_deg=10)
 
     scene.set_spacecraft_params(position=(0, 0, 100))  # Make spacecraft closer to plane to fill screen
     scene.set_sensor_params(exposure=2e-5)  # Reduce exposure time so image is gray
@@ -429,14 +419,14 @@ def test_pixel_defect(cielim_connection: cielim.Connector, default_scene: cielim
     "signal_gain",
     [0.25, 0.5, 0.75, 0.8, 1.5, 2.0],  # includes gain > 1 to verify amplification, not just attenuation
 )
-def test_signal_gain(cielim_connection: cielim.Connector, default_scene: cielim.Scene, signal_gain):
+def test_signal_gain(cielim_connection: cielim.Connector, signal_gain):
     """
     Tests that gain scales the sensor's linear signal, by comparing the ratio of mean linear
     brightness (gained vs. base) directly against the configured gain.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene(shape="Plane", distance=2000, fov_deg=10)
 
     scene.set_sensor_params(gamma=gamma_encoding, exposure=1e-5)
 

@@ -1,7 +1,14 @@
+import sys
+from pathlib import Path
+
 import cielim
 import cv2
 import numpy as np
 import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from scenes.common import default_scene
 
 baseline_exposure = 0.001  # seconds, matches Scene.__init__ default
 baseline_qe = (1.0, 1.0, 1.0)
@@ -20,29 +27,14 @@ def lit_pixel_mean(image_gray: np.ndarray) -> float:
     return float(np.mean(lit)) if lit.size else 0.0
 
 
-@pytest.fixture
-def default_scene() -> cielim.Scene:
-    """
-    Set up the scene with the spacecraft looking directly at a sphere.
-    """
-    scene = cielim.Scene()
-
-    scene.set_spacecraft_params(position=(0, 0, 2000), attitude=(0, 1, 0))
-
-    index = scene.add_celestial_body("asteroid")
-    scene.set_celestial_body_params(index, mesh_shape="sphere_normalized", mesh_brdf="Lambertian", mesh_radius=1000)
-
-    return scene
-
-
-def test_image_brightness(cielim_connection: cielim.Connector, default_scene: cielim.Scene):
+def test_image_brightness(cielim_connection: cielim.Connector):
     """
     Tests that reducing exposure time, transmission factor, and QE reduces image brightness,
     and that brightness scales proportionally (not just directionally) with exposure time.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene()
 
     scene.set_sensor_params(
         exposure=baseline_exposure,
@@ -117,14 +109,14 @@ def test_image_brightness(cielim_connection: cielim.Connector, default_scene: ci
     np.testing.assert_array_less(low_qe_mean, base_mean, err_msg="Brightness did not decrease with lower QE.")
 
 
-def test_near_zero_exposure_produces_black_image(cielim_connection: cielim.Connector, default_scene: cielim.Scene):
+def test_near_zero_exposure_produces_black_image(cielim_connection: cielim.Connector):
     """
     Tests that a vanishingly short exposure time (effectively no shutter time to collect photons)
     produces a fully black image.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene()
 
     scene.set_sensor_params(exposure=near_zero_exposure)
 
@@ -149,7 +141,6 @@ def test_near_zero_exposure_produces_black_image(cielim_connection: cielim.Conne
 )
 def test_camera_fov(
     cielim_connection: cielim.Connector,
-    default_scene: cielim.Scene,
     test_name,
     fov_x_rad,
     fov_y_rad,
@@ -160,7 +151,7 @@ def test_camera_fov(
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene()
 
     scene.set_lens_params(fov=(fov_x_rad, fov_y_rad))
 
@@ -213,16 +204,14 @@ def test_camera_fov(
     )
 
 
-def test_camera_fov_overflow(cielim_connection: cielim.Connector, default_scene: cielim.Scene):
+def test_camera_fov_overflow(cielim_connection: cielim.Connector):
     """
     Tests that an object much larger than the frame is clipped to the
     image bounds instead of crashing the render or producing an out-of-frame measurement.
     """
     connector = cielim_connection
 
-    scene = default_scene
-
-    scene.set_lens_params(fov=(5 * np.pi / 180, 5 * np.pi / 180))
+    scene = default_scene(distance=2000)  # close enough that the sphere overfills the 5 deg frame
 
     connector.send_init_request()
     connector.send_frame(scene.get_scene())
@@ -261,7 +250,6 @@ def test_camera_fov_overflow(cielim_connection: cielim.Connector, default_scene:
 )
 def test_camera_resolution(
     cielim_connection: cielim.Connector,
-    default_scene: cielim.Scene,
     test_name,
     resolution_w,
     resolution_h,
@@ -272,7 +260,7 @@ def test_camera_resolution(
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene()
 
     connector.send_init_request()
     connector.send_frame(scene.get_scene())

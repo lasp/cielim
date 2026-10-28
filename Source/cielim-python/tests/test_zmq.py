@@ -1,21 +1,13 @@
+import sys
+from pathlib import Path
+
 import cielim
 import numpy as np
 import pytest
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-@pytest.fixture
-def default_scene() -> cielim.Scene:
-    """
-    Set up the scene with the spacecraft looking directly at a sphere.
-    """
-    scene = cielim.Scene()
-
-    scene.set_spacecraft_params(position=(0, 0, 2000), attitude=(0, 1, 0))
-
-    index = scene.add_celestial_body("asteroid")
-    scene.set_celestial_body_params(index, mesh_shape="sphere_normalized", mesh_brdf="Lambertian", mesh_radius=1000)
-
-    return scene
+from scenes.common import default_scene
 
 
 def test_ping(cielim_connection: cielim.Connector):
@@ -28,10 +20,10 @@ def test_ping(cielim_connection: cielim.Connector):
         print(f"Fail in test_ping: {e}")
 
 
-def test_init_scene(cielim_connection: cielim.Connector, default_scene: cielim.Scene):
+def test_init_scene(cielim_connection: cielim.Connector):
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene()
 
     # Init to ensure clean setup
 
@@ -87,10 +79,10 @@ def test_init_scene(cielim_connection: cielim.Connector, default_scene: cielim.S
         (0, -500, 2000),
     ],
 )
-def test_send_frame(cielim_connection: cielim.Connector, default_scene: cielim.Scene, position):
+def test_send_frame(cielim_connection: cielim.Connector, position):
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene()
 
     # Init to ensure clean setup
 
@@ -140,10 +132,10 @@ def test_send_frame(cielim_connection: cielim.Connector, default_scene: cielim.S
         (0, -500, 2000),
     ],
 )
-def test_request_image(cielim_connection: cielim.Connector, default_scene: cielim.Scene, position):
+def test_request_image(cielim_connection: cielim.Connector, position):
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene()
 
     # Init to ensure clean setup
 

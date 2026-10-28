@@ -1,28 +1,20 @@
+import sys
+from pathlib import Path
+
 import cielim
 import cv2
 import numpy as np
 import pytest
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-@pytest.fixture
-def default_scene() -> cielim.Scene:
-    """
-    Set up the scene with the spacecraft looking directly at a sphere.
-    """
-    scene = cielim.Scene()
-
-    scene.set_spacecraft_params(position=(0, 0, 2000), attitude=(0, 1, 0))
-
-    index = scene.add_celestial_body("asteroid")
-    scene.set_celestial_body_params(index, mesh_shape="sphere_normalized", mesh_brdf="Lambertian", mesh_radius=1000)
-
-    return scene
+from scenes.common import default_scene
 
 
-def test_request_image_and_center_of_brightness(cielim_connection: cielim.Connector, default_scene: cielim.Scene):
+def test_request_image_and_center_of_brightness(cielim_connection: cielim.Connector):
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene()
 
     connector.send_init_request()
     connector.send_frame(scene.get_scene())
@@ -40,10 +32,10 @@ def test_request_image_and_center_of_brightness(cielim_connection: cielim.Connec
     )
 
 
-def test_request_only_center_of_brightness(cielim_connection: cielim.Connector, default_scene: cielim.Scene):
+def test_request_only_center_of_brightness(cielim_connection: cielim.Connector):
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene()
 
     connector.send_frame(scene.get_scene())
     [image, center_of_brightness, _] = connector.request_image_for_camera_id(1, False, True)
@@ -74,10 +66,10 @@ def test_request_only_center_of_brightness(cielim_connection: cielim.Connector, 
         (2000, 1500, 250, 250),
     ],
 )
-def test_coverage(cielim_connection: cielim.Connector, default_scene: cielim.Scene, center_x, center_y, width, height):
+def test_coverage(cielim_connection: cielim.Connector, center_x, center_y, width, height):
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene()
 
     scene.get_scene().camera.areaOfInterest.centerX = center_x
     scene.get_scene().camera.areaOfInterest.centerY = center_y

@@ -53,7 +53,7 @@ def add_body(scene, name, position, mean_radius=mean_radius, albedo=albedo, brdf
 
 
 def scene_with_bodies(camera_distance, bodies, exposure_time=0.001, width=width, height=height):
-    """Build a Scene with the given bodies plus a sun, matching default_scene's camera setup.
+    """Build a Scene with the given bodies plus a sun, matching scene_at_distance's camera setup.
 
     `bodies` is a list of dicts: {"name", "position", optional "mean_radius"/"albedo"/"brdf"}.
     """
