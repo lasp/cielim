@@ -273,7 +273,8 @@ void USceneData::SpawnCelestialBodies()
 			// Meshes are ~1,000 units radius so we must scale down to normalize to 1 unit radius (1 unit = 1 meter)
 			constexpr float MeshNormFactor = 1.0f / 1000.0f;
 			const float RadiusScale = CelestialBodyRadius;
-			const FVector ActorScale = TempCelestialBody->GetPrincipleAxisDistortions() * RadiusScale * MeshNormFactor;
+			// Uniform: principal axis distortions are baked into the mesh in ACelestialBody::LoadMesh
+			const FVector ActorScale = FVector(RadiusScale * MeshNormFactor);
 
 			if (ActorScale.X > 0.0f && ActorScale.Y > 0.0f && ActorScale.Z > 0.0f)
 				TempCelestialBody->SetActorScale3D(ActorScale);

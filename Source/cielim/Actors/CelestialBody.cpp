@@ -40,13 +40,22 @@ void ACelestialBody::LoadMesh(const FCelestialBodyMeshModel &Model)
 
 	// Set asteroid shape model
 
-	if (const uint32 NumTriangles = MeshAsset->GetNumTriangles(0);
-		!this->MeshModel.HasPerlinNoise || NumTriangles > 15000)
+	FVector Distortion = this->GetPrincipleAxisDistortions();
+	if (Distortion.X <= 0.0 || Distortion.Y <= 0.0 || Distortion.Z <= 0.0)
 	{
-		if (this->MeshModel.HasPerlinNoise && NumTriangles > 15000)
-			UE_LOG(LogCielim, Warning, TEXT("Mesh has too many triangles (%d), cannot do procedural deformations."),
-				   NumTriangles);
+		UE_LOG(LogCielim, Warning, TEXT("Principal axis distortion was invalid (<= 0), none is being applied."));
+		Distortion = FVector::OneVector;
+	}
+	const bool bIsDistorted = !Distortion.Equals(FVector::OneVector);
 
+	const uint32 NumTriangles = MeshAsset->GetNumTriangles(0);
+	const bool bApplyNoise = this->MeshModel.HasPerlinNoise && NumTriangles <= 15000;
+	if (this->MeshModel.HasPerlinNoise && !bApplyNoise)
+		UE_LOG(LogCielim, Warning, TEXT("Mesh has too many triangles (%d), cannot do procedural deformations."),
+			   NumTriangles);
+
+	if (!bApplyNoise && !bIsDistorted)
+	{
 		UE_LOG(LogCielim, Display, TEXT("Loading static mesh..."));
 
 		UStaticMeshComponent *StaticMesh = NewObject<UStaticMeshComponent>(this, UStaticMeshComponent::StaticClass());
@@ -73,33 +82,41 @@ void ACelestialBody::LoadMesh(const FCelestialBodyMeshModel &Model)
 
 		// Apply fractal perlin noise
 
-		const int Octaves = this->MeshModel.Octaves > 0 ? this->MeshModel.Octaves : 3;
-		const float BaseFrequency = this->MeshModel.BaseFrequency > 0 ? this->MeshModel.BaseFrequency : 0.1;
-		const float BaseAmplitude = this->MeshModel.BaseAmplitude > 0 ? this->MeshModel.BaseAmplitude : 5;
-		const float Persistence = this->MeshModel.Persistence > 0 ? this->MeshModel.Persistence : 0.4;
+		if (bApplyNoise)
+		{
+			const int Octaves = this->MeshModel.Octaves > 0 ? this->MeshModel.Octaves : 3;
+			const float BaseFrequency = this->MeshModel.BaseFrequency > 0 ? this->MeshModel.BaseFrequency : 0.1;
+			const float BaseAmplitude = this->MeshModel.BaseAmplitude > 0 ? this->MeshModel.BaseAmplitude : 5;
+			const float Persistence = this->MeshModel.Persistence > 0 ? this->MeshModel.Persistence : 0.4;
 
-		const FVector RandomSeedOffset = FMath::VRand() * 100.0f;
+			const FVector RandomSeedOffset = FMath::VRand() * 100.0f;
+
+			for (FVector &Vertex : Vertices)
+			{
+				float Frequency = BaseFrequency;
+				float Amplitude = 1.0f;
+				float MaxValue = 0.0f;
+				float Total = 0.0f;
+
+				for (int i = 0; i < Octaves; i++)
+				{
+					const float SimpleNoise = FMath::PerlinNoise3D(Vertex * Frequency + RandomSeedOffset);
+					Total += SimpleNoise * Amplitude;
+					MaxValue += Amplitude;
+
+					Frequency *= 2.0f;
+					Amplitude *= Persistence;
+				}
+
+				const float Noise = Total / MaxValue;
+				Vertex += Vertex.GetSafeNormal() * Noise * BaseAmplitude;
+			}
+		}
+
+		// Apply principal axis distortions in the mesh frame, after the noise as the actor scale used to
 
 		for (FVector &Vertex : Vertices)
-		{
-			float Frequency = BaseFrequency;
-			float Amplitude = 1.0f;
-			float MaxValue = 0.0f;
-			float Total = 0.0f;
-
-			for (int i = 0; i < Octaves; i++)
-			{
-				const float SimpleNoise = FMath::PerlinNoise3D(Vertex * Frequency + RandomSeedOffset);
-				Total += SimpleNoise * Amplitude;
-				MaxValue += Amplitude;
-
-				Frequency *= 2.0f;
-				Amplitude *= Persistence;
-			}
-
-			const float Noise = Total / MaxValue;
-			Vertex += Vertex.GetSafeNormal() * Noise * BaseAmplitude;
-		}
+			Vertex *= Distortion;
 
 		UProceduralMeshComponent *ProceduralMesh =
 			NewObject<UProceduralMeshComponent>(this, UProceduralMeshComponent::StaticClass());
@@ -109,7 +126,20 @@ void ACelestialBody::LoadMesh(const FCelestialBodyMeshModel &Model)
 
 		// Give procedural mesh modified geometry data
 
-		UKismetProceduralMeshLibrary::CalculateTangentsForMesh(Vertices, Triangles, UV0, Normals, Tangents);
+		if (bApplyNoise)
+		{
+			// The noise is not a linear map, so the normals have to be rebuilt from the triangles
+			UKismetProceduralMeshLibrary::CalculateTangentsForMesh(Vertices, Triangles, UV0, Normals, Tangents);
+		}
+		else
+		{
+			// x -> S x: normals transform by the inverse transpose S^-1, tangents by S itself, which keeps
+			// them orthogonal. Exact, and unlike a rebuild it keeps the asset's hard edges and seams.
+			for (int32 Index = 0; Index < Normals.Num(); ++Index)
+				Normals[Index] = (Normals[Index] / Distortion).GetSafeNormal();
+			for (int32 Index = 0; Index < Tangents.Num(); ++Index)
+				Tangents[Index].TangentX = (Tangents[Index].TangentX * Distortion).GetSafeNormal();
+		}
 
 		TArray<FColor> VertexColors;
 		VertexColors.Init(FColor::White, Vertices.Num());
