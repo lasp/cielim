@@ -1,12 +1,11 @@
 import os
 
+import cielim
 import cv2
 import numpy as np
 import pytest
-from matplotlib import pyplot as plt
-
-import cielim
 from cielim.utils import plot_style as ps
+from matplotlib import pyplot as plt
 
 # Read at import time so it survives pytest.main() re-importing this file as a module.
 show_plots = os.environ.get("show_plots", "False") == "True"

@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
-
 from cielim.utils import orbital_motion
 
 mu = 1e10

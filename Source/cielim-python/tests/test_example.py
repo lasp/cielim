@@ -1,6 +1,5 @@
-import numpy as np
-
 import cielim
+import numpy as np
 
 
 def test_example(cielim_connection):

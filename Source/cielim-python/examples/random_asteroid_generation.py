@@ -2,14 +2,12 @@ import json
 import os
 import time
 
+import cielim
 import cv2
 import numpy as np
-from numpy import ndarray
-
-import cielim
-from cielim.utils import orbital_motion
+from cielim.utils import orbital_motion, scene_dynamics
 from cielim.utils import rigid_body_kinematics as rbk
-from cielim.utils import scene_dynamics
+from numpy import ndarray
 
 current_file_path = os.path.dirname(__file__)
 

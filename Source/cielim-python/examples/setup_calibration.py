@@ -1,7 +1,7 @@
-import cv2
 import math
 
 import cielim
+import cv2
 
 
 def scene_setup() -> cielim.Scene:

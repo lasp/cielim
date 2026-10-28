@@ -1,10 +1,9 @@
 import json
 import os
 
+import cielim
 import cv2
 import numpy as np
-
-import cielim
 from cielim import variable_map
 from cielim.utils import rigid_body_kinematics as rbk
 

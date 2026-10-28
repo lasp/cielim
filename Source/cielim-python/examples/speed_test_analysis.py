@@ -21,10 +21,9 @@ import os
 
 import matplotlib as mpl
 import numpy as np
+from cielim.utils import plot_style
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
-
-from cielim.utils import plot_style
 
 current_file_path = os.path.dirname(__file__)
 

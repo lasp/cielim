@@ -1,7 +1,6 @@
+import cielim
 import numpy as np
 import pytest
-
-import cielim
 
 
 @pytest.fixture

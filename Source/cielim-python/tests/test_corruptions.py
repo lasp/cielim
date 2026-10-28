@@ -1,11 +1,10 @@
+import cielim
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
-from scipy.optimize import curve_fit
-
-import cielim
 from cielim.utils import plot_style as ps
+from scipy.optimize import curve_fit
 
 gamma_encoding = 2.2
 default_full_well_capacity = 50000

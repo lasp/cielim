@@ -1,9 +1,8 @@
+import cielim
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
-
-import cielim
 
 
 def show_render(image_gray: np.ndarray, title: str) -> None:

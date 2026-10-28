@@ -1,10 +1,9 @@
+import cielim
 import cv2
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
-
-import cielim
 
 baseline_exposure = 0.001  # seconds, matches Scene.__init__ default
 baseline_qe = (1.0, 1.0, 1.0)

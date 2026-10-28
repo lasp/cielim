@@ -11,15 +11,13 @@ import cv2
 import matplotlib
 
 matplotlib.use("Agg")  # Use non-interactive backend for matplotlib
+import cielim
 import numpy as np
 import spiceypy as spice
-from matplotlib import pyplot as plt
-from PIL import Image
-
-import cielim
 from cielim.utils import qe_curve_fit as qefit
 from cielim.utils import rigid_body_kinematics as rbk
-
+from matplotlib import pyplot as plt
+from PIL import Image
 
 here = Path(__file__).resolve()
 cielim_root = here.parents[1]

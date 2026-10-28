@@ -1,9 +1,8 @@
 import os
-
-import pytest
-from typing import Generator
+from collections.abc import Generator
 
 import cielim
+import pytest
 
 
 def pytest_addoption(parser):

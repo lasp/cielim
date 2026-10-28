@@ -1,9 +1,8 @@
+import cielim
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
-
-import cielim
 
 # Minimum pixel shift that counts as real movement, not render/quantization noise.
 SHIFT_DETECTION_FLOOR_PX = 0.5

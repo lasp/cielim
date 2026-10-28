@@ -1,6 +1,5 @@
 import numpy as np
 import pytest
-
 from cielim.utils import image_comparison_toolkit as image_comparison
 
 

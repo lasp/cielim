@@ -1,9 +1,8 @@
+import cielim
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
-
-import cielim
 
 MIN_ILLUMINATED_PX = 50
 
