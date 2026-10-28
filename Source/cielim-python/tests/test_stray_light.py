@@ -32,13 +32,37 @@ Run standalone with plots:  ``python test_stray_light.py``
 """
 
 import os
+import sys
+from pathlib import Path
 
-import cielim
 import cv2
 import numpy as np
 import pytest
-from cielim.utils import plot_style as ps
 from matplotlib import pyplot as plt
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from scenes.stray_light import (
+    au,
+    bright_centroid,
+    calibrate_exposure,
+    ghost_half,
+    ghost_positions,
+    ghost_target,
+    ghost_window_peak,
+    height,
+    region,
+    region_peak,
+    render_color,
+    render_gray,
+    stray_light_scene,
+    stray_light_tuning,
+    sun_at_angle,
+    sweep_baffle,
+    sweep_cal_angle,
+    sweep_fov,
+    width,
+)
 
 # Read at import time so it survives pytest.main() re-importing this file as a module.
 show_plots = os.environ.get("show_plots", "False") == "True"
@@ -52,50 +76,9 @@ requires_params = pytest.mark.skipif(
     reason="stray-light shader tunables are hard-coded; re-wire params then set params_hardcoded=False",
 )
 
-# --- Scene constants -------------------------------------------------------------
-fov = 20 * np.pi / 180  # square FoV keeps UV/pixel geometry isotropic
-width = 1000
-height = 1000
-au = 1.496e11  # meters
-# The flare multiplies the raw solar spectral radiance (enormous compared to a lit surface), so
-# it needs a far shorter exposure than the object tests to avoid painting the whole frame white.
-# base_exposure lands the on-axis core mid-range for the simple centered tests; the ghost/sweep
-# tests instead auto-calibrate their exposure (see calibrate_exposure) because the right value
-# depends on the parameters under test and on the unknown absolute radiance scale.
-base_exposure = 1e-9
-
 # Lateral sun offset that lands the core ~1/3 of the way toward the right edge, leaving room
 # for the ghosts (which sit between image center and the core) and a corona annulus.
 default_sun_offset_x = 1.8e10
-
-# Representative (green / center-channel) ghost offsets from LensFlares.usf: each ghost sits at
-# offset * SunUV, i.e. offset of the way along the vector from image center to the sun core.
-ghost_offsets = {1: 0.325, 2: 0.2, 3: 0.45, 4: 0.85}
-
-# ===========================================================================
-# TUNING KNOBS — the single place to dial in the ghost look.
-# ===========================================================================
-# Every off-center / sweep scene renders with these values (they map 1:1 onto
-# set_stray_light_params -> StrayLightModel -> the shader). The wide corona otherwise buries the
-# ghosts off-axis, so keep its amplitude low and the ghosts bright enough to read against it.
-#
-# Two ways to tune (both re-run the sweep with the filmstrip):
-#   1. Edit the values below, then:            python tests/test_stray_light.py
-#   2. Override on the command line (no edit):  python tests/test_stray_light.py ghost_transmittance=5 corona_intensity=0.05
-#      (per-ghost sizes take a comma list:      python tests/test_stray_light.py ghost_relative_sizes=1,2,1,1)
-# Ranges in [brackets] are the typical tuning ranges (useful look), not hard limits.
-stray_light_tuning = {
-    "ghost_transmittance": 3.0,  # overall ghost brightness [0.5, 1.5]
-    "ghost_size": 1.25,  # overall ghost size [0.1, 1.25]
-    "ghost_relative_sizes": (0.5, 0.5, 0.5, 1.0),  # per-ghost size (1st, 2nd, 3rd, 4th/orb), each [0.25, 1]
-    "ghost_brightness_size_exponent": 2.0,  # smaller ghosts get brighter (2 = area-conserving)
-    "core_size": 0.5,  # sun core disc size [0.1, 1]
-    "corona_intensity": 0.01,  # wide-corona amplitude (lower = fainter wash) [0, 1]
-    "corona_falloff_exponent": 1.5,  # corona drop-off (higher = tighter); exposure-independent [0.5, 2]
-    "num_rays": 6.0,  # number of symmetric rays (even = mirror-symmetric) [0, 15]
-    "ray_sharpness": 24.0,  # ray narrowness (higher = crisper rays) [0, 30]
-    "ray_weight": 0.8,  # ray strength relative to the random streaks [0, 1]
-}
 
 
 def _apply_tuning_overrides(spec):
@@ -130,87 +113,6 @@ def _ghost_params(overrides=None):
     return params
 
 
-def stray_light_scene(
-    sun_offset=(0.0, 0.0),
-    sun_distance=au,
-    sun_position=None,
-    exposure=base_exposure,
-    width=width,
-    height=height,
-    fov=fov,
-    grayscale=None,
-    stray_light=None,
-):
-    """Build a scene with the sun in front of the camera and the stray-light pass enabled.
-
-    Args:
-        sun_offset: (x, y) lateral offset of the sun, in meters, at ``sun_distance`` along +Z.
-        sun_distance: sun distance along the +Z optical axis, in meters.
-        sun_position: full (x, y, z) sun position, in meters. Overrides sun_offset/sun_distance
-            when given (used by the off-boresight sweep to place the sun at an arbitrary angle).
-        exposure: sensor exposure time, in seconds.
-        width, height: sensor resolution, in pixels.
-        fov: (square) field of view, in radians.
-        grayscale: if not None, sets the sensor's grayscale image flag.
-        stray_light: dict of overrides passed to ``set_stray_light_params`` (merged on top of
-            ``enabled=True``). Pass ``{"enabled": False}`` to keep the pass off.
-    """
-    scene = cielim.Scene()
-    scene.set_spacecraft_params(position=(0, 0, 0), attitude=(0, 0, 0))  # look toward +Z
-    scene.set_lens_params(fov=(fov, fov))
-    scene.set_sensor_params(resolution=(width, height), exposure=exposure)
-    if grayscale is not None:
-        scene.set_camera_params(grayscale=grayscale)
-
-    params = {"enabled": True}
-    if stray_light:
-        params.update(stray_light)
-    scene.set_stray_light_params(**params)
-
-    if sun_position is None:
-        sx, sy = sun_offset
-        sun_position = (sx, sy, sun_distance)
-    scene.set_celestial_body_params(0, position=tuple(sun_position))
-    return scene
-
-
-def sun_at_angle(angle_deg, distance=au):
-    """Sun position at ``angle_deg`` off the +Z boresight, in the x-z plane."""
-    a = np.radians(angle_deg)
-    return (distance * np.sin(a), 0.0, distance * np.cos(a))
-
-
-def render_gray(connector, scene):
-    """Send a scene (with a warm-up frame) and return the grayscale image."""
-    image = render_color(connector, scene)
-    if len(image.shape) == 3:
-        return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    return image
-
-
-def render_color(connector, scene):
-    """Send a scene (with a warm-up frame) and return the raw (BGR) image."""
-    connector.send_init_request()
-    connector.send_frame(scene.get_scene())
-    connector.request_image_for_camera_id(1)  # warm-up
-    connector.send_frame(scene.get_scene())
-    image, _, _ = connector.request_image_for_camera_id(1)
-    if image is None:
-        raise AssertionError("No image returned from renderer")
-    return image
-
-
-def bright_centroid(gray, frac=0.6):
-    """Return (cx, cy) centroid of pixels brighter than ``frac`` of the image max."""
-    peak = float(np.max(gray))
-    if peak <= 0:
-        return None
-    ys, xs = np.nonzero(gray >= frac * peak)
-    if len(xs) == 0:
-        return None
-    return float(xs.mean()), float(ys.mean())
-
-
 def bright_pixel_count(gray, frac=0.6):
     """Count pixels brighter than ``frac`` of the image max."""
     peak = float(np.max(gray))
@@ -219,54 +121,9 @@ def bright_pixel_count(gray, frac=0.6):
     return int(np.count_nonzero(gray >= frac * peak))
 
 
-def region(gray, center, half):
-    """Return the square window of half-size ``half`` centered on ``center`` (x, y)."""
-    cx, cy = int(round(center[0])), int(round(center[1]))
-    h, w = gray.shape[:2]
-    return gray[max(0, cy - half) : min(h, cy + half), max(0, cx - half) : min(w, cx + half)]
-
-
-def region_peak(gray, center, half):
-    """Peak pixel value in a window around ``center``."""
-    win = region(gray, center, half)
-    return float(np.max(win)) if win.size else 0.0
-
-
-# Exposure auto-calibration ------------------------------------------------------
-#
-# The absolute solar-radiance scale (and therefore the right exposure) is not known a priori;
-# a fixed exposure either clips the whole frame to white (losing all ghost/color structure) or
-# leaves it black. Below saturation the peak pixel rises monotonically with exposure roughly as
-# exposure**(1/gamma), so we probe once and rescale to land the brightest configuration just
-# below saturation. Results are cached per scene key so parametrized tests don't re-calibrate.
+# Calibrated exposures (see scenes.stray_light.calibrate_exposure), cached per scene key so
+# parametrized tests don't re-calibrate.
 _exposure_cache = {}
-
-
-def calibrate_exposure(connector, build_scene, target=160, probe=1e-11, gamma=2.2, max_iters=7, measure=None):
-    """Return an exposure whose measured brightness is near ``target`` (and below saturation).
-
-    ``build_scene(exposure)`` must return a Scene. Converges in a few renders: it rescales by
-    (target/measured)**gamma when unsaturated and backs off hard when clipped or black.
-
-    ``measure(gray) -> float`` selects the quantity to drive to ``target``; defaults to the global
-    max pixel. Pass a region measure (e.g. ``ghost_window_peak``) when the bright core (which clips
-    to 255 at the ghost/corona-visible exposures) would otherwise pin the global max and defeat it.
-    """
-    if measure is None:
-        measure = lambda gray: float(np.max(gray))
-    exposure = probe
-    for _ in range(max_iters):
-        m = float(measure(render_gray(connector, build_scene(exposure))))
-        if m <= 1.0:  # too dark
-            exposure *= 50.0
-            continue
-        if m >= 253.0:  # clipped — drop hard and re-probe
-            exposure *= 0.1
-            continue
-        if 0.85 * target <= m <= 1.15 * target:
-            return exposure
-        exposure *= (target / m) ** gamma
-    return exposure
 
 
 def cached_exposure(connector, key, build_scene, target=160, measure=None):
@@ -274,13 +131,6 @@ def cached_exposure(connector, key, build_scene, target=160, measure=None):
     if key not in _exposure_cache:
         _exposure_cache[key] = calibrate_exposure(connector, build_scene, target=target, measure=measure)
     return _exposure_cache[key]
-
-
-def ghost_positions(core_pix, img_center):
-    """Map each ghost index to its expected pixel position: center + offset*(core - center)."""
-    mx, my = img_center
-    cx, cy = core_pix
-    return {idx: (mx + off * (cx - mx), my + off * (cy - my)) for idx, off in ghost_offsets.items()}
 
 
 def _show(gray, title):
@@ -437,10 +287,6 @@ def test_flare_brightness_scales_with_exposure(cielim_connection):
 # ===========================================================================
 
 
-ghost_half = 45  # half-window (px) around a ghost position for peak measurements
-ghost_target = 150  # calibration target peak (below saturation so size/brightness stay measurable)
-
-
 def ghost_residual_map(gray, core, sigma=15, core_mask_r=110):
     """High-pass residual isolating the ghost "bumps" in the strip between center and core.
 
@@ -466,16 +312,6 @@ def ghost_residual_map(gray, core, sigma=15, core_mask_r=110):
 def ghost_band_signal(gray, core, **kw):
     """Total ghost-band signal — rises with ghostSize / ghostTransmittance."""
     return float(ghost_residual_map(gray, core, **kw).sum())
-
-
-def ghost_window_peak(gray, ghost_idx=3, half=ghost_half):
-    """Peak pixel in the given ghost's window — a calibration measure that ignores the bright core,
-    which clips to 255 at the ghost-visible exposures and would otherwise pin the global max."""
-    core = bright_centroid(gray, frac=0.9)
-    if core is None:
-        return 0.0
-    g = ghost_positions(core, (width / 2.0, height / 2.0))[ghost_idx]
-    return region_peak(gray, g, half)
 
 
 def _ghost_scene(exposure, stray_light=None, sun_offset_x=None):
@@ -855,51 +691,7 @@ def test_grayscale_from_image_settings(cielim_connection):
     assert color_spread > 5, f"Color flare should show chromatic ghost separation, got max |B-R|={color_spread}"
 
 
-# ===========================================================================
-# Off-boresight sweep: progressively offset the sun off boresight through the shield regimes
-# ===========================================================================
-#
-# A narrow FoV is used so the sun genuinely leaves the frame partway through the sweep, exercising
-# all three regimes of the angle-based (baffle-shield) gating in one pass:
-#   |angle| <= FoV/2                      -> sun in frame: core visible and tracks the sun
-#   FoV/2 < |angle| < FoV/2 + baffle      -> sun off frame but within the shield: ghosts still streak in
-#   |angle| > FoV/2 + baffle              -> beyond the shield: no stray light at all
-# With FoV = 20 deg (half-angle 10) and baffle = 35 deg the cutoff is 45 deg, so the sweep angles
-# below sit cleanly in each regime: {0, +-4, +-8} in frame, +-20 off-frame-but-flaring, +-55 dark.
-
-sweep_fov = np.radians(20)  # narrow FoV so the sun leaves the frame; half-angle = 10 deg
-sweep_baffle = 35.0  # baffle shield (deg); stray-light cutoff = FoV/2 + this = 45 deg
-sweep_cal_angle = 8  # exposure-calibration angle (in frame, near the edge, ghosts clear of the core)
 sweep_angles = [-55, -30, -16, -8, 0, 8, 16, 30, 55]
-
-# One side only, walking out from boresight; separate from sweep_angles, which
-# test_ghost_sweep_across_boresight needs for its negative and beyond-cutoff assertions.
-showcase_sweep_angles = [0, 8, 16, 32]
-
-# Sized so the four panels placed in one row span the text width at scale 1.0, with a gutter.
-sweep_gutter_in = 0.06
-sweep_panel_h = (ps.page_w - (len(showcase_sweep_angles) - 1) * sweep_gutter_in) / len(showcase_sweep_angles)
-
-# Tuned to illustrate the model, not to reproduce the test baseline: graded ghost sizes for a
-# legible chain and the sun at 0.88 of the frame half-width to give it room to spread.
-showcase_flare_offset_x = 0.88 * np.tan(fov / 2) * au
-
-showcase_flare_exposure = 4.0e-10
-
-# Ghost sizing is counter-intuitive: support radius is 0.01^(1/(e_k*sigma_k)), so a larger sigma
-# gives a larger, softer blob. Ghosts 1 and 3 are shrunk below a pixel; the count is fixed at four.
-showcase_flare_tuning = {
-    "core_size": 0.9,  # large, soft core (1/e radius = core_size/8 in UV; the frame spans 0.5)
-    "corona_intensity": 0.004,  # faint, so the corona does not flood the frame into a grey wash
-    "corona_falloff_exponent": 1.4,
-    "num_rays": 6.0,  # even keeps the star mirror-symmetric
-    "ray_sharpness": 4.0,  # broad, soft lobes (24 baseline is crisp)
-    "ray_weight": 0.5,
-    "ghost_size": 1.0,
-    "ghost_relative_sizes": (0.25, 1.0, 0.25, 0.9),  # 1 and 3 collapsed away; 2 and 4 grown large
-    "ghost_brightness_size_exponent": 0.3,
-    "ghost_transmittance": 5.0,
-}
 
 
 def _sweep_scene(angle_deg, exposure, extra=None):
@@ -1098,99 +890,6 @@ def test_ghost_parameters_respond_off_axis(cielim_connection):
         assert core is not None, "No flare core found in off-axis scene"
         signals.append(ghost_band_signal(gray, core))
     assert signals[-1] > signals[0], f"Larger ghostSize should raise the off-axis ghost band: {signals}"
-
-
-def _save_context(name, params, files, **extra):
-    """Record the stray-light parameters showcase figure ``name`` was rendered with, beside it.
-
-    NOT drawn on the figure: the settings are written as ``<showcase_dir>/<name>.json`` by
-    :func:`plot_style.save_context`, so retuning updates the record in the same run that produces
-    the images instead of leaving a transcribed copy to drift.
-
-    Args:
-        name (str): Figure set name; also the JSON's stem.
-        params (dict): Effective stray-light tuning (the merged stray_light_tuning + overrides).
-        files (list): Image filenames the record describes.
-        **extra: Additional scene facts to append (exposure, FoV, sun placement, ...).
-    """
-    order = (
-        "core_size",
-        "corona_intensity",
-        "corona_falloff_exponent",
-        "num_rays",
-        "ray_sharpness",
-        "ray_weight",
-        "ghost_size",
-        "ghost_relative_sizes",
-        "ghost_transmittance",
-        "ghost_brightness_size_exponent",
-        "baffle_shield_angle",
-    )
-
-    def fmt(value):
-        return list(value) if isinstance(value, (tuple, list)) else value
-
-    facts = {key: fmt(params[key]) for key in order if key in params}
-    facts.update(extra)
-    return ps.save_context(name, facts, files=files)
-
-
-# Showcase: page-ready stray-light demo images (opt-in via the showcase_dir env var)
-
-
-@requires_params
-@pytest.mark.showcase
-def test_showcase_stray_light(cielim_connection):
-    """Save page-ready stray-light demo images: one well-composed flare + the off-boresight sweep.
-
-    Scene images are shown in grayscale (a render displayed for viewing, not a numeric comparison).
-    """
-    ps.apply_showcase_style()
-
-    def _flare_scene(exposure):
-        return _ghost_scene(exposure, showcase_flare_tuning, sun_offset_x=showcase_flare_offset_x)
-
-    exp = showcase_flare_exposure
-    gray = render_gray(cielim_connection, _flare_scene(exp))
-    # Half text width; at full width it ran the height of a page. Bare — what it was rendered with
-    # goes in the sidecar JSON beside it, so nothing in the image can go stale.
-    fig, ax = plt.subplots(figsize=ps.figsize_half())
-    ax.imshow(gray, cmap=ps.scene_cmap, vmin=0, vmax=255)
-    ax.axis("off")
-    fig.tight_layout()
-    _save_context(
-        "stray_light_flare",
-        _ghost_params(showcase_flare_tuning),
-        ["stray_light_flare.png"],
-        exposure_s=f"{exp:.3g}",
-        fov_deg=f"{np.degrees(fov):g}",
-        sun_off_axis=f"{showcase_flare_offset_x / (np.tan(fov / 2) * au):.2f}x_half_frame",
-    )
-    ps.save_showcase(fig, "stray_light_flare")
-    plt.close(fig)
-
-    exp_sweep = cached_exposure(
-        cielim_connection,
-        "sweep",
-        lambda e: _sweep_scene(sweep_cal_angle, e),
-        target=ghost_target,
-        measure=ghost_window_peak,
-    )
-    angles = showcase_sweep_angles
-    grays = [render_gray(cielim_connection, _sweep_scene(a, exp_sweep)) for a in angles]
-    # One file per angle so the row is laid out by the document, not baked in; each a quarter of
-    # the text width. Bare rasters straight from the render, no margins or resampling.
-    for angle, gray_sweep in zip(angles, grays):
-        ps.save_showcase_raster(gray_sweep, f"sweep_{angle:02d}deg", sweep_panel_h)
-    _save_context(
-        "stray_light_sweep",
-        _ghost_params({"baffle_shield_angle": sweep_baffle}),
-        [f"sweep_{a:02d}deg.png" for a in angles],
-        exposure_s=f"{exp_sweep:.3g}",
-        fov_deg=f"{np.degrees(sweep_fov):g}",
-        cutoff_deg=f"{np.degrees(sweep_fov) / 2 + sweep_baffle:g}",
-        angles_deg=[int(a) for a in angles],
-    )
 
 
 if __name__ == "__main__":

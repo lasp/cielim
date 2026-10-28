@@ -33,19 +33,3 @@ def test_save_context_creates_missing_directory(tmp_path):
     ps.save_context("distant_objects", {"crop_px": "26x26"}, directory=str(target))
 
     assert (target / "distant_objects.json").exists()
-
-
-def test_save_context_is_a_noop_without_showcase_dir(tmp_path, monkeypatch):
-    monkeypatch.delenv("showcase_dir", raising=False)
-
-    assert ps.save_context("stray_light_flare", {"fov_deg": 10}) is None
-    assert not list(tmp_path.iterdir())
-
-
-def test_save_context_defaults_to_showcase_dir(tmp_path, monkeypatch):
-    monkeypatch.setenv("showcase_dir", str(tmp_path))
-
-    path = ps.save_context("lens_effects", {"psf_sigma": 50})
-
-    assert path == str(tmp_path / "lens_effects.json")
-    assert json.loads((tmp_path / "lens_effects.json").read_text())["psf_sigma"] == 50

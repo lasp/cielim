@@ -1,7 +1,7 @@
 """Shared matplotlib styling for cielim showcase / comparison figures.
 
 One place to enforce the presentation look used across the comparison toolkit, the scenario
-comparisons, and the feature-demo showcase tests:
+comparisons, and the feature-demo showcases in ``examples/showcases``:
 
   * 10 pt Helvetica (falls back to Arial -> DejaVu Sans if Helvetica isn't installed)
   * inferno as the default colormap for *numerical* figures (diff heatmaps, profiles, ...)
@@ -11,8 +11,8 @@ comparisons, and the feature-demo showcase tests:
 -- no tight-bbox cropping, which would make every saved width depend on how much decoration the
 figure happens to carry. So a figure dropped into the document at scale 1.0 spans the text block
 exactly, its 10 pt text really prints at 10 pt, and stacked figures line up edge to edge. Build
-every figure with the ``figsize_*`` helpers and save it with :func:`save_figure` /
-:func:`save_showcase`; do not pass ``bbox_inches="tight"``.
+every figure with the ``figsize_*`` helpers and save it with :func:`save_figure`; do not pass
+``bbox_inches="tight"``.
 
 Convention: numerical / analysis figures use inferno; a scene image shown on its own for viewing
 (a render or a real frame, not a numerical comparison) is displayed with ``scene_cmap`` (grayscale)
@@ -120,13 +120,7 @@ def wrap_to_width(text, width_in, fontsize=body_pt, family="monospace"):
     return textwrap.fill(text, width=chars)
 
 
-def showcase_dir():
-    """Directory to save showcase PNGs into, from the ``showcase_dir`` env var (None if unset)."""
-    d = os.environ.get("showcase_dir")
-    return d if d else None
-
-
-def save_context(name, facts, files=None, directory=None):
+def save_context(name, facts, directory, files=None):
     """Write ``<directory>/<name>.json``: the record of what figure set ``name`` was rendered with.
 
     The figures themselves carry no settings text, so this is where the settings live — next to the
@@ -134,27 +128,21 @@ def save_context(name, facts, files=None, directory=None):
     where it can drift. Several of these values are derived (transition distances, thresholds,
     calibrated exposures), so they move whenever the model does.
 
-    ``directory`` defaults to :func:`showcase_dir`, so this is a no-op returning None when the
-    ``showcase_dir`` env var is unset — the same opt-in as :func:`save_showcase`.
-
     Args:
         name (str): Figure set name; also the JSON's stem.
         facts (dict): Settings to record. Insertion order is preserved in the file.
+        directory (str | Path): Where to write; created if missing.
         files (list, optional): Image filenames this record describes.
-        directory (str, optional): Where to write. Defaults to :func:`showcase_dir`.
 
     Returns:
-        str | None: The path written, or None when there is nowhere to write.
+        str: The path written.
     """
-    out = directory or showcase_dir()
-    if not out:
-        return None
-    os.makedirs(out, exist_ok=True)
+    os.makedirs(directory, exist_ok=True)
     record = {"figure": name}
     if files is not None:
         record["files"] = list(files)
     record.update(facts)
-    path = os.path.join(out, f"{name}.json")
+    path = os.path.join(directory, f"{name}.json")
     with open(path, "w") as handle:
         json.dump(record, handle, indent=2, default=str)
         handle.write("\n")
@@ -171,18 +159,6 @@ def save_figure(fig, path):
     os.makedirs(os.path.dirname(str(path)) or ".", exist_ok=True)
     fig.savefig(str(path), dpi=save_dpi)
     return str(path)
-
-
-def save_showcase(fig, name):
-    """Save ``fig`` as ``<showcase_dir>/<name>.png`` at page dpi. No-op when showcase_dir is unset.
-
-    Returns the saved path (or None). See :func:`save_figure` for why the canvas is not tight-cropped.
-    """
-    out = showcase_dir()
-    if not out:
-        return None
-    os.makedirs(out, exist_ok=True)
-    return save_figure(fig, os.path.join(out, f"{name}.png"))
 
 
 def save_raster_panel(img, path, height_in, px=1024, exact_height=False):
@@ -215,16 +191,3 @@ def save_raster_panel(img, path, height_in, px=1024, exact_height=False):
     os.makedirs(os.path.dirname(str(path)) or ".", exist_ok=True)
     im.save(str(path), dpi=(dpi, dpi))
     return str(path)
-
-
-def save_showcase_raster(img, name, height_in, px=1024, exact_height=False):
-    """Raster counterpart of :func:`save_showcase`: write ``img`` to ``<showcase_dir>/<name>.png``.
-
-    No-op returning None when the showcase_dir env var is unset. ``name`` goes straight into the
-    filename, so it must already be filesystem-safe.
-    """
-    out = showcase_dir()
-    if not out:
-        return None
-    os.makedirs(out, exist_ok=True)
-    return save_raster_panel(img, os.path.join(out, f"{name}.png"), height_in, px, exact_height)

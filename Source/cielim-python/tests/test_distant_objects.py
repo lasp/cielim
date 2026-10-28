@@ -1,19 +1,27 @@
+import sys
+from pathlib import Path
+
 import cielim
 import cv2
 import numpy as np
 import pytest
-from cielim.utils import plot_style as ps
 
-# Scene constants matching asteroid_departure.py
-fov_x = 20 * np.pi / 180
-fov_y = 15 * np.pi / 180
-width = 2000
-height = 1500
-mean_radius = 1000
-albedo = 1.0
-sun_position = [0, 0, -1.496e11]
-sun_index = 0
-asteroid_index = 1
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from scenes.distant_objects import (
+    albedo,
+    asteroid_index,
+    compute_transition_distance,
+    fov_x,
+    fov_y,
+    height,
+    mean_radius,
+    scene_at_distance,
+    scene_with_phase_angle,
+    sun_index,
+    sun_position,
+    width,
+)
 
 
 def compute_coverage(radius, distance, fov_x, fov_y, width, height):
@@ -25,63 +33,6 @@ def compute_coverage(radius, distance, fov_x, fov_y, width, height):
     frac_y = angular_radius / pixel_ang_y
     coverage = np.pi * frac_x * frac_y
     return min(coverage, 1.0)
-
-
-def _pixel_size_threshold(phase_angle_deg, on_grid=False):
-    """Return the PixelSize threshold used by IsCelestialBodyResolvable at the given phase angle.
-
-    Unified for on-grid and off-grid (C++ uses the same formula for both, keeping the two
-    paths in lockstep avoids the compromise problem where the right rasterized size at
-    transition depends on the object's position in the pixel grid):
-      clamp(3 / (1 + cos α), 4, 15)
-    Aims for a ~1.5-pixel mesh crescent at transition for α in [110°, 143°], capped at 15
-    past ~143° so the rasterized bounding box doesn't balloon when the crescent goes sub-pixel.
-
-    Evaluates to 4 for α ≤ 110°, 4.8 at 112°, 10.23 at 135°, 15 (capped) from ~143° up.
-    The ``on_grid`` parameter is accepted for backward-compat with call sites but no longer
-    affects the result.
-    """
-    del on_grid  # unified threshold — kept in signature only for backward compat
-    alpha = np.radians(phase_angle_deg)
-    crescent_factor = max(1.0 + np.cos(alpha), 0.1)
-    return float(np.clip(3.0 / crescent_factor, 4.0, 15.0))
-
-
-def compute_transition_distance(width=width, height=height, phase_angle_deg=0, on_grid=False):
-    """Approximate distance where IsCelestialBodyResolvable switches to distant rendering."""
-    bounds_radius = mean_radius * np.sqrt(3)
-    proj_m00 = 1.0 / np.tan(fov_x / 2)
-    proj_m11 = 1.0 / np.tan(fov_y / 2)
-    screen_multiple = max(0.5 * proj_m00, 0.5 * proj_m11)
-    max_dim = max(width, height)
-    threshold = _pixel_size_threshold(phase_angle_deg, on_grid=on_grid)
-    return screen_multiple * bounds_radius * max_dim * 2 / threshold
-
-
-def default_scene(camera_distance, width=width, height=height):
-    """Create a Scene matching asteroid_departure.py at the given camera distance.
-
-    Returns a ``cielim.Scene`` (send it via ``render_frame``). The Scene constructor already sets the
-    camera id/name, body-frame MRPs, and spacecraft name; only the fields this test cares about are
-    overridden here. The Scene's default sun (index 0) is moved behind the camera to front-light +Z.
-    """
-    scene = cielim.Scene()
-    scene.set_celestial_body_params(sun_index, position=tuple(sun_position))
-
-    # Asteroid (index 1): a normalized sphere mesh.
-    scene.add_celestial_body("asteroid")
-    scene.set_celestial_body_params(
-        asteroid_index,
-        mesh_shape="sphere_normalized",
-        mesh_radius=mean_radius,
-        albedo=albedo,
-        mesh_brdf="Regolith",
-    )
-
-    scene.set_lens_params(fov=(fov_x, fov_y))
-    scene.set_sensor_params(resolution=(width, height), exposure=0.001)
-    scene.set_spacecraft_params(position=(0, 0, -camera_distance))
-    return scene
 
 
 def add_body(scene, name, position, mean_radius=mean_radius, albedo=albedo, brdf="Regolith"):
@@ -212,7 +163,7 @@ def test_distant_object_position(cielim_connection, test_name, camera_distance):
     connector = cielim_connection
     connector.send_init_request()
 
-    scene = default_scene(camera_distance)
+    scene = scene_at_distance(camera_distance)
     render_frame(connector, scene)  # warm-up
     image, cob, _ = render_frame(connector, scene)
 
@@ -268,14 +219,14 @@ def test_distant_object_size(cielim_connection, test_name, width, height, expect
 
     # Render just before transition (mesh)
     connector.send_init_request()
-    scene = default_scene(dist_before, width, height)
+    scene = scene_at_distance(dist_before, width, height)
     render_frame(connector, scene)
     image_before, _, _ = render_frame(connector, scene)
     gray_before = to_gray_thresholded(image_before)
 
     # Render just after transition (distant object)
     connector.send_init_request()
-    scene = default_scene(dist_after, width, height)
+    scene = scene_at_distance(dist_after, width, height)
     render_frame(connector, scene)
     image_after, _, _ = render_frame(connector, scene)
     gray_after = to_gray_thresholded(image_after)
@@ -387,7 +338,7 @@ def test_distant_object_brightness(cielim_connection, test_name, object_z_shift,
     connector = cielim_connection
     connector.send_init_request()
 
-    scene = default_scene(baseline_distance)
+    scene = scene_at_distance(baseline_distance)
     scene.set_sensor_params(exposure=exposure_time)
     render_frame(connector, scene)  # warm-up
 
@@ -424,22 +375,6 @@ def test_distant_object_brightness(cielim_connection, test_name, object_z_shift,
         atol=0.03,
         err_msg=f"Brightness ratio does not match coverage ratio for {test_name}",
     )
-
-
-def scene_with_phase_angle(
-    camera_distance, phase_angle_deg, brdf_model="Regolith", exposure_time=None, width=width, height=height
-):
-    """Create a Scene at the given phase angle by rotating the sun position."""
-    alpha = np.radians(phase_angle_deg)
-    sun_dist = 1.496e11
-    sun_pos = (sun_dist * np.sin(alpha), 0.0, -sun_dist * np.cos(alpha))
-
-    scene = default_scene(camera_distance, width, height)
-    scene.set_celestial_body_params(asteroid_index, mesh_brdf=brdf_model)
-    scene.set_celestial_body_params(sun_index, position=sun_pos)
-    if exposure_time is not None:
-        scene.set_sensor_params(exposure=exposure_time)
-    return scene
 
 
 # ---------------------------------------------------------------------------
@@ -589,7 +524,7 @@ off_grid_high_phase_params = [
 
 
 def _run_high_phase_angle_continuity(
-    cielim_connection, test_name, brdf_model, phase_angle_deg, exposure_time, width, height, on_grid, rtol=0.25
+    cielim_connection, test_name, brdf_model, phase_angle_deg, exposure_time, width, height, rtol=0.25
 ):
     """Shared body for on-grid / off-grid variants of the high-phase continuity test.
 
@@ -598,9 +533,7 @@ def _run_high_phase_angle_continuity(
     attenuated to 0.6× (flux is spread across the 5 lit pixels of the plus) so the peak
     is dimmer than the mesh's surface-radiance peak by design.
     """
-    transition_dist = compute_transition_distance(
-        width=width, height=height, phase_angle_deg=phase_angle_deg, on_grid=on_grid
-    )
+    transition_dist = compute_transition_distance(width=width, height=height, phase_angle_deg=phase_angle_deg)
     # Use a 0.5% margin on each side of the transition so that tiny float-precision
     # differences between Python's K and C++'s ComputeBoundsScreenSize × viewport don't
     # accidentally place the "after" sample inside the mesh regime (or vice versa). The
@@ -660,7 +593,6 @@ def test_high_phase_angle_continuity_on_grid(cielim_connection, test_name, brdf_
         exposure_time,
         width=2000,
         height=1500,
-        on_grid=True,
         rtol=0.25,
     )
 
@@ -683,7 +615,6 @@ def test_high_phase_angle_continuity_off_grid(cielim_connection, test_name, brdf
         exposure_time,
         width=2001,
         height=1501,
-        on_grid=False,
         rtol=0.5,
     )
 
@@ -850,125 +781,6 @@ def test_distant_object_occluded_by_mesh(cielim_connection):
         rtol=0.3,
         atol=0.02,
         err_msg=f"Occluded center should match mesh-only: both={b_both:.4f}, mesh={b_mesh:.4f}",
-    )
-
-
-# Showcase: page-ready distant-object demo images (opt-in via the showcase_dir env var)
-
-showcase_gutter_in = 0.06
-
-# Every panel shows the same 2*half square, so the target visibly shrinks inside a fixed window.
-# 13 fits the widest target (the alpha=135 crescent at 0.2*d_t, 8x22 px) with ~2 px to spare.
-showcase_crop_half = 13
-
-
-def _lit_bbox(gray, near, reach):
-    """``(x0, x1, y0, y1)`` of the lit pixels within ±``reach`` of ``near``, or None if none are.
-
-    Windowed on purpose. Measuring the lit box over the whole frame is what the reported
-    ``footprint`` does, and that is right for a number that describes the render — but for choosing
-    a crop center it is a trap: one stray nonzero pixel anywhere in the frame stretches the box
-    across the image and drags the center to the middle of nowhere, silently. Restricting to a
-    generous window around the peak keeps a hot pixel from moving the target off-panel.
-    """
-    cx, cy = int(near[0]), int(near[1])
-    h, w = gray.shape
-    x0, x1 = max(cx - reach, 0), min(cx + reach + 1, w)
-    y0, y1 = max(cy - reach, 0), min(cy + reach + 1, h)
-    ys, xs = np.nonzero(gray[y0:y1, x0:x1])
-    if not len(xs):
-        return None
-    return x0 + int(xs.min()), x0 + int(xs.max()), y0 + int(ys.min()), y0 + int(ys.max())
-
-
-@pytest.mark.showcase
-def test_showcase_distant_objects(cielim_connection):
-    """The mesh -> distant handover, at low and high phase angle.
-
-    One file per panel, named for the phase angle and the range it was rendered at, e.g.
-    ``distant_a135_0pnt45dt.png``. Every panel shows the same fixed-size crop, so the target visibly
-    shrinks with range; the point of the pair is why the threshold has to grow with phase angle: at
-    high alpha only a thin crescent is lit, so the body's *bounding box* is still several pixels
-    across when its visible signal has already gone sub-pixel.
-
-    Brightness is normalised per phase-angle row, so panels from the two rows are NOT photometrically
-    comparable with each other — within a row they are.
-    """
-    connector = cielim_connection
-
-    # Multiples of d_t. The far column sits well past it: coverage saturates just after the transition.
-    factors = [0.2, 0.45, 0.9, 1.05, 3.0]
-    phase_angles = [0, 135]
-    exposure, half = 1e-4, showcase_crop_half
-    panel_h = (ps.page_w - (len(factors) - 1) * showcase_gutter_in) / len(factors)
-    footprints, row_maxes, panel_files = {}, {}, []
-
-    for phase_angle_deg in phase_angles:
-        transition = compute_transition_distance(phase_angle_deg=phase_angle_deg)
-
-        crops = []
-        for factor in factors:
-            scene = scene_with_phase_angle(transition * factor, phase_angle_deg, "Lambertian", exposure_time=exposure)
-            connector.send_init_request()
-            render_frame(connector, scene)  # warm-up; the first frame after an init can be blank
-            image, _, _ = render_frame(connector, scene)
-            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if image.ndim == 3 else image
-            peak_y, peak_x = np.unravel_index(np.argmax(gray), gray.shape)
-
-            # On the lit bounding box, not the brightest pixel: at high phase that would cut a horn off.
-            box = _lit_bbox(gray, near=(peak_x, peak_y), reach=4 * half)
-            if box is None:
-                box = (int(peak_x), int(peak_x), int(peak_y), int(peak_y))
-            bx0, bx1, by0, by1 = box
-            assert bx1 - bx0 < 2 * half and by1 - by0 < 2 * half, (
-                f"alpha={phase_angle_deg}, {factor:g}*d_t: lit target is "
-                f"{bx1 - bx0 + 1}x{by1 - by0 + 1} px and does not fit the {2 * half}x{2 * half} "
-                f"crop — it would be clipped. Raise showcase_crop_half."
-            )
-            x = int(np.clip((bx0 + bx1 + 1) // 2, half, gray.shape[1] - half))
-            y = int(np.clip((by0 + by1 + 1) // 2, half, gray.shape[0] - half))
-
-            # Measured over the whole frame: disagreeing with the windowed box means signal outside it.
-            lit_y, lit_x = np.nonzero(gray)
-            footprint = f"{lit_x.max() - lit_x.min() + 1}x{lit_y.max() - lit_y.min() + 1}" if len(lit_x) else "-"
-            crops.append((gray[y - half : y + half, x - half : x + half], footprint))
-
-        # One display range per row, or the dim high-phase crescent is not visible at all.
-        row_max = max(int(crop.max()) for crop, _ in crops) or 255
-        row_maxes[phase_angle_deg] = row_max
-        footprints[phase_angle_deg] = ",".join(fp for _, fp in crops)
-
-        # Baked into the pixels: bare rasters have no imshow to apply the range at draw time.
-        for factor, (crop, _) in zip(factors, crops):
-            panel = np.clip(np.rint(crop.astype(np.float64) * (255.0 / row_max)), 0, 255).astype(np.uint8)
-            tag = f"{factor:.2f}".replace(".", "pnt")
-            name = f"distant_a{phase_angle_deg:03d}_{tag}dt"
-            ps.save_showcase_raster(panel, name, panel_h)
-            panel_files.append(f"{name}.png")
-
-    # Written beside the panels, not drawn on them; several values are derived and move with the model.
-    ps.save_context(
-        "distant_objects",
-        {
-            "fov_deg": f"{np.degrees(fov_x):g}x{np.degrees(fov_y):g}",
-            "resolution": f"{width}x{height}",
-            "mean_radius_m": mean_radius,
-            "geometric_albedo": albedo,
-            "brdf": "Lambertian",
-            "exposure_s": exposure,
-            "crop_px": f"{2 * half}x{2 * half}",
-            "crop_center": "lit bounding box",
-            "factors_of_d_t": factors,
-            "d_t_alpha0_m": float(f"{compute_transition_distance(phase_angle_deg=0):.3g}"),
-            "d_t_alpha135_m": float(f"{compute_transition_distance(phase_angle_deg=135):.3g}"),
-            "threshold_px": f"{_pixel_size_threshold(0):g}/{_pixel_size_threshold(135):.1f}",
-            "footprints_a000": footprints.get(0, "-"),
-            "footprints_a135": footprints.get(135, "-"),
-            "display": "per-row normalised",
-            "row_max_a000": row_maxes.get(0, "-"),
-            "row_max_a135": row_maxes.get(135, "-"),
-        },
-        files=panel_files,
     )
 
 
