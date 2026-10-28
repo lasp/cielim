@@ -11,17 +11,6 @@ default_full_well_capacity = 50000
 read_noise_clip_factor = np.sqrt((np.pi - 1) / (2 * np.pi))
 
 
-def show_render(image: np.ndarray, title: str) -> None:
-    plt.figure()
-    if image.ndim == 3:
-        plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-    else:
-        plt.imshow(image, cmap="gray", vmin=0, vmax=255)
-    plt.title(title)
-    plt.tight_layout()
-    plt.show()
-
-
 def gaussian_2d(coords, amplitude, x0, y0, sigma_x, sigma_y, offset):
     x, y = coords
     return offset + amplitude * np.exp(-(((x - x0) ** 2) / (2 * sigma_x**2) + ((y - y0) ** 2) / (2 * sigma_y**2)))
@@ -114,9 +103,7 @@ def default_scene() -> cielim.Scene:
         (0.0, 0.0, 0.0, 0.0, 0.3),
     ],
 )
-def test_lens_distortion(
-    cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, k1, k2, k3, p1, p2
-):
+def test_lens_distortion(cielim_connection: cielim.Connector, default_scene: cielim.Scene, k1, k2, k3, p1, p2):
     """
     Tests that lens distortion is distorting the image as expected.
     """
@@ -194,16 +181,11 @@ def test_lens_distortion(
     diff = np.abs(distorted_image.astype(np.int32) - distorted_base.astype(np.int32))
     mismatch_fraction = np.mean(diff > 1)
 
-    if show_plots:
-        show_render(base_image, "base image")
-        show_render(distorted_base, f"expected distortion (k1={k1}, k2={k2}, k3={k3}, p1={p1}, p2={p2})")
-        show_render(distorted_image, f"engine distortion (mismatch={mismatch_fraction:.2%}, max diff={diff.max()})")
-
     # Some pixels will be off because cv can smooth edges (6% allowance)
     assert mismatch_fraction < 0.06, f"Too many mismatched pixels: {mismatch_fraction:.2%} " f"(max diff: {diff.max()})"
 
 
-def test_gaussian_psf(cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool):
+def test_gaussian_psf(cielim_connection: cielim.Connector, default_scene: cielim.Scene):
     """
     Renders a sub-pixel point source and fits a
     2D Gaussian to it, checking the fitted sigma matches the configured psf_sigma directly
@@ -223,9 +205,6 @@ def test_gaussian_psf(cielim_connection: cielim.Connector, default_scene: cielim
     baseline_sigma_x, baseline_sigma_y = fit_psf_sigma(baseline_gray)
     baseline_sigma = (baseline_sigma_x + baseline_sigma_y) / 2
 
-    if show_plots:
-        show_render(baseline_gray, f"baseline (sigma={baseline_sigma:.2f}px)")
-
     # KNOWN ENGINE BUG: ACameraModel::SetCameraParameters (CameraModel.cpp) hardcodes
     # CorruptionParams.KernelWidth = 7 (radius 3px) regardless of Sigma, so GaussianPSF.usf can
     # never blur wider than ~3px no matter what psf_sigma is configured — sigma values much above
@@ -244,10 +223,6 @@ def test_gaussian_psf(cielim_connection: cielim.Connector, default_scene: cielim
     fitted_sigma_x, fitted_sigma_y = fit_psf_sigma(image_gray)
 
     expected_sigma = np.sqrt(psf_sigma**2 + baseline_sigma**2)
-
-    if show_plots:
-        fitted_sigma = (fitted_sigma_x + fitted_sigma_y) / 2
-        show_render(image_gray, f"psf_sigma={psf_sigma} (fitted={fitted_sigma:.2f}px, expected={expected_sigma:.2f}px)")
 
     np.testing.assert_allclose(
         [fitted_sigma_x, fitted_sigma_y],
@@ -272,9 +247,7 @@ def test_gaussian_psf(cielim_connection: cielim.Connector, default_scene: cielim
         (100, 10000),
     ],
 )
-def test_dark_current(
-    cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, dark_current, sigma
-):
+def test_dark_current(cielim_connection: cielim.Connector, default_scene: cielim.Scene, dark_current, sigma):
     """
     Tests whether dark current is being added to the image.
     See RandomFuncs.ush for RNG implementation.
@@ -292,9 +265,6 @@ def test_dark_current(
     connector.send_frame(scene.get_scene())
     image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
-    if show_plots:
-        show_render(image, f"dark_current={dark_current}, sigma={sigma}")
-
     np.testing.assert_(image[..., :3].any(), "No noise was applied")
 
 
@@ -302,7 +272,7 @@ def test_dark_current(
     "cosmic_rays",
     [5, 20, 50],
 )
-def test_cosmic_rays(cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, cosmic_rays):
+def test_cosmic_rays(cielim_connection: cielim.Connector, default_scene: cielim.Scene, cosmic_rays):
     """
     Checks that cosmic ray hits happen at the expected rate
      by rendering many frames, counting hits, and comparing the average against the configured rate .
@@ -317,7 +287,7 @@ def test_cosmic_rays(cielim_connection: cielim.Connector, default_scene: cielim.
 
     num_frames = 30
     hit_counts = []
-    for frame_idx in range(num_frames):
+    for _ in range(num_frames):
         connector.send_init_request()
         connector.send_frame(scene.get_scene())
         image, _, _ = connector.request_image_for_camera_id(1, True, False)
@@ -326,9 +296,6 @@ def test_cosmic_rays(cielim_connection: cielim.Connector, default_scene: cielim.
         _, thresh = cv2.threshold(image_gray, 200, 255, cv2.THRESH_BINARY)
         num_labels, _ = cv2.connectedComponents(thresh)
         hit_counts.append(num_labels - 1)  # exclude the background label
-
-        if show_plots and frame_idx == 0:
-            show_render(thresh, f"cosmic_rays={cosmic_rays} (frame 0, {num_labels - 1} hits)")
 
     mean_hits = np.mean(hit_counts)
 
@@ -353,7 +320,7 @@ def test_cosmic_rays(cielim_connection: cielim.Connector, default_scene: cielim.
     "read_noise",
     [50, 500, 5000, 20000],
 )
-def test_read_noise(cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, read_noise):
+def test_read_noise(cielim_connection: cielim.Connector, default_scene: cielim.Scene, read_noise):
     """
     Tests that read noise matches the expected half-normal distribution (std, mean, and the
     fraction of pixels clipped to exactly zero), not just its standard deviation alone.
@@ -385,19 +352,6 @@ def test_read_noise(cielim_connection: cielim.Connector, default_scene: cielim.S
     expected_std = sigma * read_noise_clip_factor
     # For X ~ N(0, sigma), Y = max(X, 0): E[Y] = sigma / sqrt(2*pi), and P(Y = 0) = 0.5.
     expected_mean = sigma / np.sqrt(2 * np.pi)
-
-    if show_plots:
-        plt.figure()
-        plt.hist(linearized.ravel(), bins=100, density=True, label="measured")
-        x = np.linspace(1e-6, linearized.max(), 200)
-        half_normal_pdf = np.sqrt(2 / np.pi) / sigma * np.exp(-(x**2) / (2 * sigma**2))
-        plt.plot(x, half_normal_pdf, color="red", label="expected half-normal")
-        plt.title(
-            f"read_noise={read_noise} (std={measured_std:.4f} vs {expected_std:.4f}, " f"zero_frac={zero_fraction:.2f})"
-        )
-        plt.legend()
-        plt.tight_layout()
-        plt.show()
 
     np.testing.assert_allclose(
         measured_std,
@@ -433,9 +387,7 @@ def test_read_noise(cielim_connection: cielim.Connector, default_scene: cielim.S
         (0.000025, 0.000025),
     ],
 )
-def test_pixel_defect(
-    cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, stuck_rate, dead_rate
-):
+def test_pixel_defect(cielim_connection: cielim.Connector, default_scene: cielim.Scene, stuck_rate, dead_rate):
     """
     Tests stuck and dead pixels can be added to image.
     See RandomFuncs.ush for RNG implementation.
@@ -451,9 +403,6 @@ def test_pixel_defect(
     connector.send_init_request()
     connector.send_frame(scene.get_scene())
     image, _, _ = connector.request_image_for_camera_id(1, True, False)
-
-    if show_plots:
-        show_render(image, f"stuck_rate={stuck_rate}, dead_rate={dead_rate}")
 
     is_white = (image == [255, 255, 255]).all(axis=-1)
     is_black = (image == [0, 0, 0]).all(axis=-1)
@@ -482,7 +431,7 @@ def test_pixel_defect(
     "signal_gain",
     [0.25, 0.5, 0.75, 0.8, 1.5, 2.0],  # includes gain > 1 to verify amplification, not just attenuation
 )
-def test_signal_gain(cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, signal_gain):
+def test_signal_gain(cielim_connection: cielim.Connector, default_scene: cielim.Scene, signal_gain):
     """
     Tests that gain scales the sensor's linear signal, by comparing the ratio of mean linear
     brightness (gained vs. base) directly against the configured gain.
@@ -513,10 +462,6 @@ def test_signal_gain(cielim_connection: cielim.Connector, default_scene: cielim.
     assert np.any(valid), "No lit, unsaturated pixels found in either image; can't measure gain."
 
     measured_ratio = np.mean(gain_linear[valid]) / np.mean(base_linear[valid])
-
-    if show_plots:
-        show_render(base_image, "base")
-        show_render(gain_image, f"gain={signal_gain} (measured ratio={measured_ratio:.3f})")
 
     np.testing.assert_allclose(
         measured_ratio,

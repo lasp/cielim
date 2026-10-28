@@ -1,16 +1,7 @@
 import cielim
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 import pytest
-
-
-def show_render(image_gray: np.ndarray, title: str) -> None:
-    plt.figure()
-    plt.imshow(image_gray, cmap="gray", vmin=0, vmax=255)
-    plt.title(title)
-    plt.tight_layout()
-    plt.show()
 
 
 @pytest.fixture
@@ -40,9 +31,7 @@ def default_scene() -> cielim.Scene:
         ("Move Diagonal", [1000, 1000, 0]),
     ],
 )
-def test_camera_position(
-    cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, test_name, shift
-):
+def test_camera_position(cielim_connection: cielim.Connector, default_scene: cielim.Scene, test_name, shift):
     """
     Tests the effect of moving the camera on the asteroid's apparent position in the image.
     """
@@ -70,9 +59,6 @@ def test_camera_position(
     largest_contour = max(baseline_contours, key=cv2.contourArea)
     (baseline_x, baseline_y), baseline_radius = cv2.minEnclosingCircle(largest_contour)
 
-    if show_plots:
-        show_render(baseline_image, f"{test_name} (baseline)")
-
     camera_fov_horizontal = scene.get_scene().camera.lensModel.fieldOfView[0]
     camera_fov_vertical = scene.get_scene().camera.lensModel.fieldOfView[1]
     image_width, image_height = scene.get_scene().camera.sensorModel.resolution
@@ -96,9 +82,6 @@ def test_camera_position(
     largest_contour = max(moved_contours, key=cv2.contourArea)
     (moved_x, moved_y), moved_radius = cv2.minEnclosingCircle(largest_contour)
 
-    if show_plots:
-        show_render(moved_image, test_name)
-
     # X shift is not inverted because +x points left (Unreal uses left handed coordinates)
     expected_pixel_shift_x = round(np.arctan(shift[0] / distance) * (image_width / camera_fov_horizontal))
     expected_pixel_shift_y = -round(np.arctan(shift[1] / distance) * (image_height / camera_fov_vertical))
@@ -121,9 +104,7 @@ def test_camera_position(
         ("Move Farther", 10000),
     ],
 )
-def test_camera_distance(
-    cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, test_name, z_shift
-):
+def test_camera_distance(cielim_connection: cielim.Connector, default_scene: cielim.Scene, test_name, z_shift):
     """
     Tests the effect of moving the camera along its boresight (Z) axis: the sphere's apparent
     center should stay put (a depth-only move causes no lateral pixel shift) while its apparent
@@ -150,9 +131,6 @@ def test_camera_distance(
     largest_contour = max(baseline_contours, key=cv2.contourArea)
     (baseline_x, baseline_y), baseline_radius = cv2.minEnclosingCircle(largest_contour)
 
-    if show_plots:
-        show_render(baseline_image, f"{test_name} (baseline)")
-
     scene.set_spacecraft_params(position=(initial_x, initial_y, initial_z + z_shift))
 
     connector.send_init_request()
@@ -169,9 +147,6 @@ def test_camera_distance(
 
     largest_contour = max(moved_contours, key=cv2.contourArea)
     (moved_x, moved_y), moved_radius = cv2.minEnclosingCircle(largest_contour)
-
-    if show_plots:
-        show_render(moved_image, test_name)
 
     print(f"Test: {test_name}")
     print(f"Baseline (center, radius): (({baseline_x}, {baseline_y}), {baseline_radius})")
@@ -199,9 +174,7 @@ def test_camera_distance(
         ("Roll (Z-axis)", [0, 0, 0.01]),
     ],
 )
-def test_camera_orientation(
-    cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, test_name, mrp_rotation
-):
+def test_camera_orientation(cielim_connection: cielim.Connector, default_scene: cielim.Scene, test_name, mrp_rotation):
     """
     Tests the effect of modifying the camera's orientation using MRPs on the asteroid's apparent position in the image.
     The expected pixel shifts are computed based on the new orientation.
@@ -224,9 +197,6 @@ def test_camera_orientation(
 
     largest_contour = max(baseline_contours, key=cv2.contourArea)
     (baseline_x, baseline_y), baseline_radius = cv2.minEnclosingCircle(largest_contour)
-
-    if show_plots:
-        show_render(baseline_image, f"{test_name} (baseline)")
 
     camera_fov_horizontal = scene.get_scene().camera.lensModel.fieldOfView[0]
     camera_fov_vertical = scene.get_scene().camera.lensModel.fieldOfView[1]
@@ -254,9 +224,6 @@ def test_camera_orientation(
 
     largest_contour = max(moved_contours, key=cv2.contourArea)
     (moved_x, moved_y), moved_radius = cv2.minEnclosingCircle(largest_contour)
-
-    if show_plots:
-        show_render(moved_image, test_name)
 
     expected_pixel_shift_x = -rotation_axis[1] * theta * (image_width / camera_fov_horizontal)
     expected_pixel_shift_y = rotation_axis[0] * theta * (image_height / camera_fov_vertical)

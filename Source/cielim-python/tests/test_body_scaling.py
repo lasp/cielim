@@ -1,6 +1,5 @@
 import cielim
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
@@ -12,7 +11,7 @@ SHIFT_BOUND_MARGIN = 1.2
 BRIGHTNESS_CHANGE_MARGIN = 1.01
 
 
-def measure_cob(image, test_name: str = "", show_plots: bool = False):
+def measure_cob(image):
     if len(image.shape) == 3:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
@@ -20,15 +19,6 @@ def measure_cob(image, test_name: str = "", show_plots: bool = False):
     assert moments["m00"] != 0, "No brightness detected."
 
     cob_x, cob_y = moments["m10"] / moments["m00"], moments["m01"] / moments["m00"]
-
-    if show_plots:
-        plt.figure()
-        plt.imshow(image, cmap="gray")
-        plt.scatter(cob_x, cob_y, c="red", marker="x", label="center of brightness")
-        plt.title(test_name)
-        plt.legend()
-        plt.tight_layout()
-        plt.show()
 
     return cob_x, cob_y, moments["m00"]
 
@@ -72,9 +62,7 @@ def default_scene() -> cielim.Scene:
         ("Uniform Scale", [1.5, 1.5, 1.5]),
     ],
 )
-def test_body_scaling(
-    cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, test_name, distortion
-):
+def test_body_scaling(cielim_connection: cielim.Connector, default_scene: cielim.Scene, test_name, distortion):
     """
     Checks distorting the body shifts the CoB only along x, within geometric bounds, and that
     pixel coverage tracks the projected size change.
@@ -87,9 +75,7 @@ def test_body_scaling(
     connector.send_frame(scene.get_scene())
     base_image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
-    base_cob_x, base_cob_y, base_brightness_sum = measure_cob(
-        base_image, f"{test_name} (baseline)", show_plots=show_plots
-    )
+    base_cob_x, base_cob_y, base_brightness_sum = measure_cob(base_image)
 
     scene.set_celestial_body_params(1, mesh_distortions=distortion)
 
@@ -97,7 +83,7 @@ def test_body_scaling(
     connector.send_frame(scene.get_scene())
     image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
-    cob_x, cob_y, brightness_sum = measure_cob(image, test_name, show_plots=show_plots)
+    cob_x, cob_y, brightness_sum = measure_cob(image)
 
     diff_x = abs(cob_x - base_cob_x)
     diff_y = abs(cob_y - base_cob_y)

@@ -1,14 +1,8 @@
-import os
-
 import cielim
 import cv2
 import numpy as np
 import pytest
 from cielim.utils import plot_style as ps
-from matplotlib import pyplot as plt
-
-# Read at import time so it survives pytest.main() re-importing this file as a module.
-show_plots = os.environ.get("show_plots", "False") == "True"
 
 # Scene constants matching asteroid_departure.py
 fov_x = 20 * np.pi / 180
@@ -199,38 +193,6 @@ def bright_pixel_values(gray, half_window=6):
     return region[region > 0]
 
 
-def show_size_comparison(
-    image_before, image_after, dist_before, dist_after, transition_dist, extent_before, extent_after, width, height
-):
-    """Display side-by-side 12x12 crops around image center before/after the transition."""
-    if not show_plots:
-        return
-
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
-
-    crop = 6  # 12x12 box
-    cy, cx = height // 2, width // 2
-
-    for ax, img, dist, extent, label in [
-        (axes[0], image_before, dist_before, extent_before, "Before (mesh)"),
-        (axes[1], image_after, dist_after, extent_after, "After (distant obj)"),
-    ]:
-        region = img[cy - crop : cy + crop, cx - crop : cx + crop]
-        if len(region.shape) == 3:
-            region = cv2.cvtColor(region, cv2.COLOR_BGR2RGB)
-        ax.imshow(region, cmap="gray" if len(region.shape) == 2 else None, interpolation="nearest")
-        ax.set_title(f"{label}\n{dist / 1e6:.1f} Mm — {extent[0]}×{extent[1]} px")
-        ax.axhline(crop - 0.5, color="r", linewidth=0.5, linestyle="--")
-        ax.axvline(crop - 0.5, color="r", linewidth=0.5, linestyle="--")
-
-    fig.suptitle(
-        f"Object size across transition — {width}×{height} " f"(threshold ≈ {transition_dist / 1e6:.3f} Mm)",
-        fontsize=13,
-    )
-    plt.tight_layout()
-    plt.show()
-
-
 # ---------------------------------------------------------------------------
 # Test 1: Position — CoB should match image center for a centered distant object
 # ---------------------------------------------------------------------------
@@ -324,10 +286,6 @@ def test_distant_object_size(cielim_connection, test_name, width, height, expect
 
     extent_before = bright_pixel_extent(gray_before)
     extent_after = bright_pixel_extent(gray_after)
-
-    show_size_comparison(
-        image_before, image_after, dist_before, dist_after, transition_dist, extent_before, extent_after, width, height
-    )
 
     # The distant object quad must match the expected size for this resolution
     assert extent_after == expected_quad, (
@@ -548,23 +506,6 @@ def test_intensity_continuity(cielim_connection, test_name, brdf_model, phase_an
         f"diff={max_after - max_before:+6.1f}  ratio={ratio:5.3f}"
     )
 
-    if show_plots:
-        crop = 6
-        cy, cx = height // 2, width // 2
-        fig, axes = plt.subplots(1, 2, figsize=(10, 4))
-        for ax, img, val, label in [
-            (axes[0], image_before, max_before, "Mesh"),
-            (axes[1], image_after, max_after, "Distant"),
-        ]:
-            region = img[cy - crop : cy + crop, cx - crop : cx + crop]
-            if len(region.shape) == 3:
-                region = cv2.cvtColor(region, cv2.COLOR_BGR2RGB)
-            ax.imshow(region, cmap="gray" if len(region.shape) == 2 else None, interpolation="nearest")
-            ax.set_title(f"{label} (max={val:.0f})")
-        fig.suptitle(f"{test_name}: mesh={max_before:.0f} → distant={max_after:.0f}", fontsize=13)
-        plt.tight_layout()
-        plt.show()
-
     np.testing.assert_allclose(
         max_after,
         max_before,
@@ -597,16 +538,6 @@ def test_cosine_loss(cielim_connection, brdf_model):
         render_frame(connector, scene)
         image, _, _ = render_frame(connector, scene)
         brightnesses.append(measure_brightness(image))
-
-    if show_plots:
-        fig, ax = plt.subplots(figsize=(6, 4))
-        ax.plot(phase_angles, brightnesses, "o-", label=brdf_model)
-        ax.set_xlabel("Phase angle (deg)")
-        ax.set_ylabel("Linearized max brightness")
-        ax.set_title(f"Cosine loss — {brdf_model}")
-        ax.legend()
-        plt.tight_layout()
-        plt.show()
 
     # Brightness should trend downward with phase angle, but strict per-pair monotonicity is
     # brittle: at low α consecutive samples can saturate and tie, and the shader's pixel-snap
@@ -701,23 +632,6 @@ def _run_high_phase_angle_continuity(
     max_before = float(np.max(gray_before))
     max_after = float(np.max(gray_after))
 
-    if show_plots:
-        crop = 10
-        cy, cx = height // 2, width // 2
-        fig, axes = plt.subplots(1, 2, figsize=(10, 4))
-        for ax, img, val, label in [
-            (axes[0], image_before, max_before, "Mesh"),
-            (axes[1], image_after, max_after, "Distant"),
-        ]:
-            region = img[cy - crop : cy + crop, cx - crop : cx + crop]
-            if len(region.shape) == 3:
-                region = cv2.cvtColor(region, cv2.COLOR_BGR2RGB)
-            ax.imshow(region, cmap="gray" if len(region.shape) == 2 else None, interpolation="nearest")
-            ax.set_title(f"{label} (max={val:.0f})")
-        fig.suptitle(f"{test_name}: mesh={max_before:.0f} → distant={max_after:.0f}", fontsize=13)
-        plt.tight_layout()
-        plt.show()
-
     # At high phase angles, accept that one or both may be very dim
     if max_before < 2 and max_after < 2:
         pytest.skip(f"Both images too dim to compare at {phase_angle_deg}° (mesh={max_before}, distant={max_after})")
@@ -803,46 +717,11 @@ def test_exposure_scaling(cielim_connection, brdf_model):
     connector.send_init_request()
 
     brightnesses = []
-    images = []
     for exposure in exposures:
         scene = scene_with_phase_angle(camera_distance, phase_angle_deg, brdf_model, exposure_time=exposure)
         render_frame(connector, scene)  # warm-up
         image, _, _ = render_frame(connector, scene)
         brightnesses.append(measure_combined_brightness(image))
-        images.append(image)
-
-    if show_plots:
-        # Brightness-vs-exposure line plot in 0-255 pixel space.
-        fig, ax = plt.subplots(figsize=(7, 4))
-        ax.plot(exposures, brightnesses, "o-", label=brdf_model)
-        ax.set_xscale("log")
-        ax.set_xlabel("Exposure time (s)")
-        ax.set_ylabel("Combined brightness — pixel value (0-255)")
-        ax.set_ylim(0, 260)
-        ax.axhline(255, color="gray", linewidth=0.5, linestyle="--", label="saturation (255)")
-        ax.set_title(f"Exposure scaling — {brdf_model}")
-        ax.legend()
-        ax.grid(True, which="both", linewidth=0.3, alpha=0.5)
-        plt.tight_layout()
-        plt.show()
-
-        # Image strip — central crop at each exposure.
-        crop = 8
-        cy, cx = height // 2, width // 2
-        fig, axes = plt.subplots(1, len(exposures), figsize=(1.6 * len(exposures), 2.5))
-        for ax, img, exp, b in zip(axes, images, exposures, brightnesses):
-            region = img[cy - crop : cy + crop, cx - crop : cx + crop]
-            if len(region.shape) == 3:
-                region = cv2.cvtColor(region, cv2.COLOR_BGR2RGB)
-            ax.imshow(
-                region, cmap="gray" if len(region.shape) == 2 else None, interpolation="nearest", vmin=0, vmax=255
-            )
-            ax.set_title(f"{exp:g}s\nB={b:.0f}", fontsize=9)
-            ax.set_xticks([])
-            ax.set_yticks([])
-        fig.suptitle(f"Exposure scaling — {brdf_model}", fontsize=12)
-        plt.tight_layout()
-        plt.show()
 
     # Endpoint check: brightness at the longest exposure must exceed brightness at the
     # shortest (or be at the sensor ceiling, in which case the longest already maxed out).
@@ -896,7 +775,6 @@ def test_multibody_with_rasterized(cielim_connection):
     cy = height // 2
     px_r, _ = predict_pixel(distant_right, camera_distance)
     px_l, _ = predict_pixel(distant_left, camera_distance)
-    px_off, _ = predict_pixel(distant_offscreen, camera_distance)
 
     print(
         f"\n[multibody] peak={int(np.max(gray))} "
@@ -904,23 +782,6 @@ def test_multibody_with_rasterized(cielim_connection):
         f"right@{int(px_r)}={int(np.max(gray[cy - 40 : cy + 40, int(px_r) - 40 : int(px_r) + 40]))} "
         f"left@{int(px_l)}={int(np.max(gray[cy - 40 : cy + 40, int(px_l) - 40 : int(px_l) + 40]))}"
     )
-
-    if show_plots:
-        # Full frame with the predicted body positions marked, so a failed assertion can be
-        # read against where each body was expected to land.
-        fig, ax = plt.subplots(figsize=(10, 7.5))
-        ax.imshow(gray, cmap="gray", interpolation="nearest", vmin=0, vmax=255)
-        for px, py, label, color in [
-            (width / 2, cy, "rasterized (center)", "lime"),
-            (px_r, cy, "distant_right", "cyan"),
-            (px_l, cy, "distant_left", "magenta"),
-            (px_off, cy, "distant_offscreen", "orange"),
-        ]:
-            ax.scatter([px], [py], s=160, facecolors="none", edgecolors=color, linewidths=1.5)
-            ax.annotate(label, (px, py), color=color, fontsize=8, xytext=(6, 6), textcoords="offset points")
-        ax.set_title(f"Multi-body frame — peak={int(np.max(gray))}")
-        plt.tight_layout()
-        plt.show()
 
     # 1. The frame is not black — this mix used to black the whole image.
     assert int(np.max(gray)) > 50, "Frame is black — multi-body + rasterized regression"
@@ -958,12 +819,11 @@ def test_distant_object_occluded_by_mesh(cielim_connection):
         render_frame(connector, scene)  # warm-up
         image, _, _ = render_frame(connector, scene)
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
-        brightness = (float(np.max(crop_center(gray, 20))) / 255.0) ** srgb_gamma  # linearized
-        return brightness, gray
+        return (float(np.max(crop_center(gray, 20))) / 255.0) ** srgb_gamma  # linearized
 
-    b_distant, gray_distant = center_brightness([{"name": "distant", "position": distant, "albedo": 1.0}])
-    b_mesh, gray_mesh = center_brightness([{"name": "occluder", "position": occluder, "albedo": 0.05}])
-    b_both, gray_both = center_brightness(
+    b_distant = center_brightness([{"name": "distant", "position": distant, "albedo": 1.0}])
+    b_mesh = center_brightness([{"name": "occluder", "position": occluder, "albedo": 0.05}])
+    b_both = center_brightness(
         [
             {"name": "occluder", "position": occluder, "albedo": 0.05},
             {"name": "distant", "position": distant, "albedo": 1.0},
@@ -971,26 +831,6 @@ def test_distant_object_occluded_by_mesh(cielim_connection):
     )
 
     print(f"\n[occlusion] distant_only={b_distant:.4f} mesh_only={b_mesh:.4f} both={b_both:.4f}")
-
-    if show_plots:
-        # Central crops of the three scenarios. Occlusion is working when "both" looks like
-        # "mesh only" (distant hidden); a bleed-through shows up as "both" matching "distant only".
-        crop = 20
-        cy0, cx0 = height // 2, width // 2
-        fig, axes = plt.subplots(1, 3, figsize=(12, 4.5))
-        for ax, g, b, label in [
-            (axes[0], gray_distant, b_distant, "distant only"),
-            (axes[1], gray_mesh, b_mesh, "mesh only (occluder)"),
-            (axes[2], gray_both, b_both, "both (should == mesh)"),
-        ]:
-            region = g[cy0 - crop : cy0 + crop, cx0 - crop : cx0 + crop]
-            ax.imshow(region, cmap="gray", interpolation="nearest", vmin=0, vmax=255)
-            ax.set_title(f"{label}\nlinear b={b:.4f}", fontsize=10)
-            ax.set_xticks([])
-            ax.set_yticks([])
-        fig.suptitle("Occlusion — distant object behind a dim rasterized mesh", fontsize=13)
-        plt.tight_layout()
-        plt.show()
 
     # Control: the distant object is clearly visible when nothing occludes it.
     assert b_distant > 0.02, f"Distant object not visible unoccluded (b_distant={b_distant:.4f})"
@@ -1133,7 +973,4 @@ def test_showcase_distant_objects(cielim_connection):
 
 
 if __name__ == "__main__":
-    # Set the env var BEFORE pytest re-imports this file so the module-level
-    # `show_plots` reads it as True in the freshly-imported test module.
-    os.environ["show_plots"] = "False"
     pytest.main([__file__, "-v"])
