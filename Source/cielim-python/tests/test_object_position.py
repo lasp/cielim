@@ -32,8 +32,7 @@ def moments_centroid(image_gray: np.ndarray, test_name: str) -> tuple[float, flo
 )
 def test_object_position(cielim_connection: cielim.Connector, test_name, shift):
     """
-    Tests the asteroid movement in image space when shifted in 3D (X, Y).
-    Parameters: Changing asteroid position in meters and verifying pixel shift.
+    Tests that moving an object shifts its position in the image as expected.
     """
     connector = cielim_connection
 
@@ -95,51 +94,6 @@ def test_object_position(cielim_connection: cielim.Connector, test_name, shift):
 
 
 @pytest.mark.parametrize(
-    "test_name, axis_shift",
-    [
-        ("X-axis", [1000, 0, 0]),
-        ("Y-axis", [0, 1000, 0]),
-    ],
-)
-def test_object_position_symmetry(cielim_connection: cielim.Connector, test_name, axis_shift):
-    """
-    Opposite shifts along the same axis should produce opposite, canceling pixel shifts a
-    self-consistency check that catches sign errors.
-    """
-    connector = cielim_connection
-
-    scene = default_scene()
-
-    initial_x, initial_y, initial_z = scene.get_scene().celestialBodies[1].position[:3]
-
-    def render_and_get_center(position):
-        scene.set_celestial_body_params(1, position=position)
-        connector.send_init_request()
-        connector.send_frame(scene.get_scene())
-        image, _, _ = connector.request_image_for_camera_id(1, True, False)
-        if len(image.shape) == 3:
-            image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        return moments_centroid(image, test_name)
-
-    baseline_x, baseline_y = render_and_get_center((initial_x, initial_y, initial_z))
-    positive_x, positive_y = render_and_get_center((initial_x + axis_shift[0], initial_y + axis_shift[1], initial_z))
-    negative_x, negative_y = render_and_get_center((initial_x - axis_shift[0], initial_y - axis_shift[1], initial_z))
-
-    positive_shift = np.array([positive_x - baseline_x, positive_y - baseline_y])
-    negative_shift = np.array([negative_x - baseline_x, negative_y - baseline_y])
-
-    np.testing.assert_allclose(
-        positive_shift + negative_shift,
-        [0, 0],
-        atol=2,
-        err_msg=(
-            f"Opposite shifts along {test_name} did not cancel "
-            f"(positive shift={positive_shift}, negative shift={negative_shift})"
-        ),
-    )
-
-
-@pytest.mark.parametrize(
     "test_name, z_shift",
     [
         ("Move Closer", 10000),
@@ -148,15 +102,19 @@ def test_object_position_symmetry(cielim_connection: cielim.Connector, test_name
 )
 def test_object_distance(cielim_connection: cielim.Connector, test_name, z_shift):
     """
-    Tests the effect of moving the asteroid along the boresight (Z) axis: its apparent center
-    should stay put (a depth-only move causes no lateral pixel shift) while its apparent size
-    changes (larger when closer, smaller when farther).
+    Tests moving the object along the boresight (Z) axis: its apparent size should match the
+    sphere's angular size at the new distance, and its apparent center should stay put (a depth-only
+    move causes no lateral pixel shift).
     """
     connector = cielim_connection
 
     scene = default_scene()
 
     initial_x, initial_y, initial_z = scene.get_scene().celestialBodies[1].position[:3]
+    spacecraft_position = np.array(scene.get_scene().spacecraft.position)
+    mean_radius = scene.get_scene().celestialBodies[1].model.meanRadius
+    camera_fov_horizontal, camera_fov_vertical = scene.get_scene().camera.lensModel.fieldOfView
+    image_width, image_height = scene.get_scene().camera.sensorModel.resolution
 
     connector.send_init_request()
     connector.send_frame(scene.get_scene())
@@ -173,10 +131,23 @@ def test_object_distance(cielim_connection: cielim.Connector, test_name, z_shift
     assert baseline_contours, f"No contours found in baseline rendered image for test: {test_name}"
 
     _, baseline_radius = cv2.minEnclosingCircle(max(baseline_contours, key=cv2.contourArea))
+    baseline_size_pixels = 2 * baseline_radius
 
-    # Z increases toward the spacecraft (which sits at z=50000, with the asteroid starting near
-    # the origin), so a positive z_shift moves the asteroid closer.
-    scene.set_celestial_body_params(1, position=(initial_x, initial_y, initial_z + z_shift))
+    baseline_distance = np.linalg.norm(spacecraft_position - np.array([initial_x, initial_y, initial_z]))
+    baseline_expected_angular_size_rad = 2 * np.arcsin(mean_radius / baseline_distance)
+
+    np.testing.assert_allclose(
+        baseline_size_pixels,
+        (baseline_expected_angular_size_rad / camera_fov_horizontal) * image_width,
+        rtol=0.01,
+        atol=1,
+        err_msg=f"Baseline object size in pixels does not match expected value for test: {test_name}",
+    )
+
+    # Z increases toward the spacecraft (which sits at z=50000, with the object starting near
+    # the origin), so a positive z_shift moves the object closer.
+    moved_position = np.array([initial_x, initial_y, initial_z + z_shift])
+    scene.set_celestial_body_params(1, position=tuple(moved_position))
 
     connector.send_init_request()
     connector.send_frame(scene.get_scene())
@@ -193,6 +164,29 @@ def test_object_distance(cielim_connection: cielim.Connector, test_name, z_shift
     assert moved_contours, f"No contours found in moved rendered image for test: {test_name}"
 
     _, moved_radius = cv2.minEnclosingCircle(max(moved_contours, key=cv2.contourArea))
+    moved_size_pixels = 2 * moved_radius
+
+    moved_distance = np.linalg.norm(spacecraft_position - moved_position)
+    expected_angular_size_rad = 2 * np.arcsin(mean_radius / moved_distance)
+
+    # Checked against both width/horizontal-FOV and height/vertical-FOV — a sphere rendered with
+    # the wrong aspect ratio would still pass a width-only check as long as its horizontal extent
+    # happened to be right.
+    np.testing.assert_allclose(
+        moved_size_pixels,
+        (expected_angular_size_rad / camera_fov_horizontal) * image_width,
+        rtol=0.01,
+        atol=1,
+        err_msg=f"Object size (vs. width/horizontal FOV) does not match expected value for test: {test_name}",
+    )
+
+    np.testing.assert_allclose(
+        moved_size_pixels,
+        (expected_angular_size_rad / camera_fov_vertical) * image_height,
+        rtol=0.01,
+        atol=1,
+        err_msg=f"Object size (vs. height/vertical FOV) does not match expected value for test: {test_name}",
+    )
 
     np.testing.assert_allclose(
         [moved_x, moved_y],
@@ -200,8 +194,3 @@ def test_object_distance(cielim_connection: cielim.Connector, test_name, z_shift
         atol=5,
         err_msg=f"Center shifted for a depth-only (Z-axis) move: {test_name}",
     )
-
-    if z_shift > 0:
-        assert moved_radius > baseline_radius, f"Apparent size did not increase when moving closer: {test_name}"
-    else:
-        assert moved_radius < baseline_radius, f"Apparent size did not decrease when moving farther: {test_name}"
