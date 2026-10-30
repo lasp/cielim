@@ -194,3 +194,86 @@ def test_object_distance(cielim_connection: cielim.Connector, test_name, z_shift
         atol=5,
         err_msg=f"Center shifted for a depth-only (Z-axis) move: {test_name}",
     )
+
+
+@pytest.mark.parametrize(
+    "test_name, axis, angle_deg",
+    [
+        ("Rotate X", (1, 0, 0), 60),
+        ("Rotate Y", (0, 1, 0), 60),
+        ("Rotate Z", (0, 0, 1), 30),
+    ],
+)
+def test_object_orientation(cielim_connection: cielim.Connector, test_name, axis, angle_deg):
+    """
+    Tests rotating a plane facing the camera: rotating about X should squish its contour along the
+    image's y axis, rotating about Y should squish it along the image's x axis, and rotating about
+    Z (the boresight) should rotate the contour in the image without changing its size.
+    """
+    connector = cielim_connection
+
+    scene = default_scene(shape="Plane", distance=2000)
+
+    connector.send_init_request()
+    connector.send_frame(scene.get_scene())
+    baseline_image, _, _ = connector.request_image_for_camera_id(1, True, False)
+
+    if len(baseline_image.shape) == 3:
+        baseline_image = cv2.cvtColor(baseline_image, cv2.COLOR_BGR2GRAY)
+
+    _, baseline_thresh = cv2.threshold(baseline_image, 10, 255, cv2.THRESH_BINARY)
+    baseline_contours, _ = cv2.findContours(baseline_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    assert baseline_contours, f"No contours found in baseline rendered image for test: {test_name}"
+
+    baseline_contour = max(baseline_contours, key=cv2.contourArea)
+    _, _, baseline_w, baseline_h = cv2.boundingRect(baseline_contour)
+    _, _, baseline_angle = cv2.minAreaRect(baseline_contour)
+
+    mrp = tuple(np.tan(np.radians(angle_deg) / 4) * np.array(axis))
+    scene.set_celestial_body_params(1, mesh_attitude=mrp)
+
+    connector.send_init_request()
+    connector.send_frame(scene.get_scene())
+    rotated_image, _, _ = connector.request_image_for_camera_id(1, True, False)
+
+    if len(rotated_image.shape) == 3:
+        rotated_image = cv2.cvtColor(rotated_image, cv2.COLOR_BGR2GRAY)
+
+    _, rotated_thresh = cv2.threshold(rotated_image, 10, 255, cv2.THRESH_BINARY)
+    rotated_contours, _ = cv2.findContours(rotated_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    assert rotated_contours, f"No contours found in rotated rendered image for test: {test_name}"
+
+    rotated_contour = max(rotated_contours, key=cv2.contourArea)
+    _, _, rotated_w, rotated_h = cv2.boundingRect(rotated_contour)
+    _, (rotated_rect_w, rotated_rect_h), rotated_angle = cv2.minAreaRect(rotated_contour)
+
+    squish = np.cos(np.radians(angle_deg))
+
+    if axis == (1, 0, 0):
+        np.testing.assert_allclose(rotated_w, baseline_w, rtol=0.05, err_msg=f"Width changed for test: {test_name}")
+        np.testing.assert_allclose(
+            rotated_h, baseline_h * squish, rtol=0.05, err_msg=f"Height not squished for test: {test_name}"
+        )
+    elif axis == (0, 1, 0):
+        np.testing.assert_allclose(
+            rotated_w, baseline_w * squish, rtol=0.05, err_msg=f"Width not squished for test: {test_name}"
+        )
+        np.testing.assert_allclose(rotated_h, baseline_h, rtol=0.05, err_msg=f"Height changed for test: {test_name}")
+    else:
+        np.testing.assert_allclose(
+            sorted([rotated_rect_w, rotated_rect_h]),
+            sorted([baseline_w, baseline_h]),
+            rtol=0.05,
+            err_msg=f"Contour size changed for a boresight rotation: {test_name}",
+        )
+        # minAreaRect angles repeat every 90 deg and image rows grow downward, so compare the size of
+        # the rotation modulo 90 rather than its direction
+        rotation = (rotated_angle - baseline_angle) % 90
+        np.testing.assert_allclose(
+            min(rotation, 90 - rotation),
+            angle_deg,
+            atol=2,
+            err_msg=f"Contour did not rotate by {angle_deg} deg for test: {test_name}",
+        )
