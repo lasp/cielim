@@ -175,9 +175,7 @@ def test_lens_distortion(cielim_connection: cielim.Connector, k1, k2, k3, p1, p2
 
 def test_gaussian_psf(cielim_connection: cielim.Connector):
     """
-    Renders a sub-pixel point source and fits a
-    2D Gaussian to it, checking the fitted sigma matches the configured psf_sigma directly
-    rather than only checking that blur reduces edge variance.
+    Tests that PSF is added to the image with the configured sigma.
     """
     connector = cielim_connection
 
@@ -220,6 +218,35 @@ def test_gaussian_psf(cielim_connection: cielim.Connector):
         f"expected ({expected_sigma:.2f} = psf_sigma {psf_sigma} combined in quadrature with the "
         f"source's inherent spread {baseline_sigma:.2f})",
     )
+
+
+def test_shot_noise(cielim_connection: cielim.Connector):
+    """
+    Tests that shot noise is added to the image.
+    """
+    connector = cielim_connection
+
+    scene = default_scene(shape="Plane", distance=2000, fov_deg=10)
+
+    scene.set_sensor_params(exposure=1e-5)  # Set exposure such that plane is gray so diff is perceptible
+    scene.set_corruption_params(shot_noise=False)
+
+    connector.send_init_request()
+    connector.send_frame(scene.get_scene())
+    base_image, _, _ = connector.request_image_for_camera_id(1, True, False)
+
+    scene.set_corruption_params(shot_noise=True)
+
+    connector.send_init_request()
+    connector.send_frame(scene.get_scene())
+    noisy_image, _, _ = connector.request_image_for_camera_id(1, True, False)
+
+    image = cv2.absdiff(base_image, noisy_image)
+
+    # Amplify the difference to make it more visible for debugging
+    image = cv2.multiply(image, np.ones(image.shape, dtype=image.dtype), scale=50.0)
+
+    np.testing.assert_(image[..., :3].any(), "No noise was applied")
 
 
 @pytest.mark.parametrize(
