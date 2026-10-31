@@ -4,7 +4,7 @@ from . import cielimMessage_pb2 as cielimProto
 from .cielimMessage_pb2 import CielimMessage
 
 
-class Scene(object):
+class Scene:
     """
     A class to represent a scene; acts as a wrapper for cielim message object.
     """
