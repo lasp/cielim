@@ -31,16 +31,15 @@ import itertools
 import json
 import os
 
+import cielim
 import cv2
 import matplotlib
 import numpy as np
+from cielim.utils import rigid_body_kinematics as rbk
 from matplotlib import pyplot as plt
 from scipy import stats
 from scipy.optimize import least_squares
 from scipy.spatial.transform import Rotation
-
-import cielim
-from cielim.utils import rigid_body_kinematics as rbk
 
 current_file_path = os.path.dirname(__file__)
 

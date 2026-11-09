@@ -1,9 +1,9 @@
 import numpy as np
 from numpy import ndarray
 
+from ..scene import Scene
 from . import orbital_motion
 from . import rigid_body_kinematics as rbk
-from ..scene import Scene
 
 
 def set_orbital_elements(

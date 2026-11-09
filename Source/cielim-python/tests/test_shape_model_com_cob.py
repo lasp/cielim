@@ -23,6 +23,9 @@ def sm():
 
 @pytest.fixture(scope="module", params=["eros", "itokawa"])
 def body(sm, request):
+    obj_path = Path(sm.support_directory(request.param)) / sm.bodies[request.param]["obj"]
+    if not obj_path.exists():
+        pytest.skip(f"{request.param} shape model not found at {obj_path}")
     vertices, faces, km_per_unit = sm.load_body_mesh(request.param)
     fit = sm.body_ellipsoid(request.param, vertices, faces, km_per_unit, "dimensions")
     return request.param, vertices, faces, km_per_unit, fit

@@ -38,12 +38,11 @@ import re
 from pathlib import Path
 
 import cv2
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
+from cielim.utils import plot_style as ps
 from matplotlib.colors import ListedColormap
 from PIL import Image
-
-from cielim.utils import plot_style as ps
 
 threshold = 10
 

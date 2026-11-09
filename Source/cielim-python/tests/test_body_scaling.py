@@ -1,9 +1,14 @@
+import sys
+from pathlib import Path
+
+import cielim
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
-import cielim
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from scenes.common import default_scene
 
 # Minimum pixel shift that counts as real movement, not render/quantization noise.
 SHIFT_DETECTION_FLOOR_PX = 0.5
@@ -13,7 +18,7 @@ SHIFT_BOUND_MARGIN = 1.2
 BRIGHTNESS_CHANGE_MARGIN = 1.01
 
 
-def measure_cob(image, test_name: str = "", show_plots: bool = False):
+def measure_cob(image):
     if len(image.shape) == 3:
         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
@@ -21,15 +26,6 @@ def measure_cob(image, test_name: str = "", show_plots: bool = False):
     assert moments["m00"] != 0, "No brightness detected."
 
     cob_x, cob_y = moments["m10"] / moments["m00"], moments["m01"] / moments["m00"]
-
-    if show_plots:
-        plt.figure()
-        plt.imshow(image, cmap="gray")
-        plt.scatter(cob_x, cob_y, c="red", marker="x", label="center of brightness")
-        plt.title(test_name)
-        plt.legend()
-        plt.tight_layout()
-        plt.show()
 
     return cob_x, cob_y, moments["m00"]
 
@@ -50,20 +46,6 @@ def expected_shift_bound_px(scene: cielim.Scene, axis_index: int, distortion_fac
     return pixel_radius * abs(distortion_factor - 1)
 
 
-@pytest.fixture
-def default_scene() -> cielim.Scene:
-    """
-    Set up the scene with the spacecraft looking directly at a sphere with the sun lighting left half.
-    """
-    scene = cielim.Scene()
-
-    scene.set_spacecraft_params(position=(0, 0, 2000), attitude=(0, 1, 0))
-    scene.set_celestial_body_params(0, position=(1.496e11, 0, 0))
-    index = scene.add_celestial_body("asteroid")
-    scene.set_celestial_body_params(index, mesh_shape="sphere_normalized", mesh_brdf="Lambertian", mesh_radius=1000)
-    return scene
-
-
 @pytest.mark.parametrize(
     "test_name, distortion",
     [
@@ -73,24 +55,21 @@ def default_scene() -> cielim.Scene:
         ("Uniform Scale", [1.5, 1.5, 1.5]),
     ],
 )
-def test_body_scaling(
-    cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, test_name, distortion
-):
+def test_body_scaling(cielim_connection: cielim.Connector, test_name, distortion):
     """
     Checks distorting the body shifts the CoB only along x, within geometric bounds, and that
     pixel coverage tracks the projected size change.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene()
+    scene.set_celestial_body_params(0, position=(1.496e11, 0, 0))  # sun to the side, lighting half the sphere
 
     connector.send_init_request()
     connector.send_frame(scene.get_scene())
     base_image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
-    base_cob_x, base_cob_y, base_brightness_sum = measure_cob(
-        base_image, f"{test_name} (baseline)", show_plots=show_plots
-    )
+    base_cob_x, base_cob_y, base_brightness_sum = measure_cob(base_image)
 
     scene.set_celestial_body_params(1, mesh_distortions=distortion)
 
@@ -98,7 +77,7 @@ def test_body_scaling(
     connector.send_frame(scene.get_scene())
     image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
-    cob_x, cob_y, brightness_sum = measure_cob(image, test_name, show_plots=show_plots)
+    cob_x, cob_y, brightness_sum = measure_cob(image)
 
     diff_x = abs(cob_x - base_cob_x)
     diff_y = abs(cob_y - base_cob_y)

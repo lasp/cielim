@@ -1,9 +1,8 @@
 import argparse
 import os
 
-import delimited_protobuf
-
 import cielim
+import delimited_protobuf
 
 current_file_path = os.path.dirname(__file__)
 

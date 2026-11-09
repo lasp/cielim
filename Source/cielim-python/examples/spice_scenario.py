@@ -2,11 +2,10 @@ import json
 import os
 import urllib.request
 
+import cielim
 import cv2
 import numpy as np
 import spiceypy as spice
-
-import cielim
 from cielim.utils import rigid_body_kinematics as rbk
 
 current_file_path = os.path.dirname(__file__)

@@ -2,10 +2,9 @@ import json
 import os
 import pickle
 
+import cielim
 import cv2
 import numpy as np
-
-import cielim
 from cielim import variable_map
 
 current_file_path = os.path.dirname(__file__)

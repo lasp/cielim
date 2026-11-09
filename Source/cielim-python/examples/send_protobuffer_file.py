@@ -1,9 +1,8 @@
 import argparse
 import os
 
-import cv2
-
 import cielim
+import cv2
 
 current_file_path = os.path.dirname(__file__)
 

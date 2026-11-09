@@ -2,15 +2,14 @@ import contextlib
 import os
 from pathlib import Path
 
+import cielim
 import cv2
 import numpy as np
 import spiceypy as spice
 from astropy.io import fits
-from matplotlib import pyplot as plt
-
-import cielim
 from cielim.utils import qe_curve_fit as qefit
 from cielim.utils import rigid_body_kinematics as rbk
+from matplotlib import pyplot as plt
 
 # ---- Paths (portable) ----
 current_file_path = os.path.dirname(__file__)

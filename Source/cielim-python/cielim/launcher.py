@@ -6,8 +6,8 @@ import signal
 import socket
 import subprocess
 import sys
-from sys import platform
 from pathlib import Path
+from sys import platform
 
 _default_app_path = os.path.join(str(Path(__file__).resolve().parent.parent.parent.parent), "Binaries")
 

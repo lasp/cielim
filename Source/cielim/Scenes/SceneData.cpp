@@ -129,7 +129,11 @@ void USceneData::ParseCommand(const TSharedPtr<FCircularQueueData> &CommandData,
 		if (auto *Instance = GetWorld()->GetParameterCollectionInstance(ActiveSunLightMPC); Instance != nullptr)
 		{
 			const FName ParamName = FName("SunDirection");
-			Instance->SetVectorParameterValue(ParamName, this->SunLight->GetActorForwardVector().GetSafeNormal());
+			const FVector3f SunDirection =
+				static_cast<FVector3f>(this->SunLight->GetActorForwardVector().GetSafeNormal());
+
+			Instance->SetVectorParameterValue(ParamName,
+											  FLinearColor(SunDirection.X, SunDirection.Y, SunDirection.Z, 0.0f));
 		}
 
 		ReturnData->query = CommandType::REQUEST_IMAGE;

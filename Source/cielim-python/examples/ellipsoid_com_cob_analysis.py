@@ -26,15 +26,14 @@ import importlib.util
 import json
 import os
 
+import cielim
 import cv2
 import matplotlib
 import numpy as np
+from cielim.utils import rigid_body_kinematics as rbk
 from matplotlib import pyplot as plt
 from scipy import stats
 from scipy.spatial.transform import Rotation
-
-import cielim
-from cielim.utils import rigid_body_kinematics as rbk
 
 matplotlib.rcParams.update({"font.size": 6})
 colorsInt = len(matplotlib.colormaps["inferno"].colors) / (10.0)

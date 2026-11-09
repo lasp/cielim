@@ -1,5 +1,4 @@
 import numpy as np
-
 from cielim.utils import rigid_body_kinematics as rbk
 
 

@@ -1,33 +1,14 @@
+import sys
+from pathlib import Path
+
+import cielim
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
-import cielim
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-
-def show_render(image_gray: np.ndarray, title: str) -> None:
-    plt.figure()
-    plt.imshow(image_gray, cmap="gray", vmin=0, vmax=255)
-    plt.title(title)
-    plt.tight_layout()
-    plt.show()
-
-
-@pytest.fixture
-def default_scene() -> cielim.Scene:
-    """
-    Set up the scene with the spacecraft looking directly at a sphere.
-    """
-    scene = cielim.Scene()
-
-    # Rotate so +x is right, +y is up, and +z is out of the page
-    scene.set_spacecraft_params(position=(0, 0, 4000), attitude=(1, 0, 0))
-
-    index = scene.add_celestial_body("asteroid")
-    scene.set_celestial_body_params(index, mesh_shape="sphere_normalized", mesh_brdf="Regolith", mesh_radius=1000)
-
-    return scene
+from scenes.common import default_scene
 
 
 def photocenter_offset_angle(mean_radius: float, distance: float, phase_angle_rad: float) -> float:
@@ -59,14 +40,14 @@ def test_photocenter_offset_formula():
     np.testing.assert_allclose(thetas[-1], expected_max_theta, rtol=1e-9)
 
 
-def test_phase_angle_new_moon(cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool):
+def test_phase_angle_new_moon(cielim_connection: cielim.Connector):
     """
     At 180 deg phase (sun directly behind the target from the camera's viewpoint), the camera
     should see only the unlit far hemisphere — the image should be near-black.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene(brdf="Regolith")
 
     scene.set_celestial_body_params(0, position=(0, 0, -1.496e11))
 
@@ -79,22 +60,17 @@ def test_phase_angle_new_moon(cielim_connection: cielim.Connector, default_scene
 
     mean_brightness = np.mean(image)
 
-    if show_plots:
-        show_render(image, f"180 deg phase (mean={mean_brightness:.2f})")
-
     assert mean_brightness < 5, f"Image was not near-black at 180 deg phase (mean pixel value={mean_brightness:.2f})"
 
 
-def test_phase_angle_brightness_scaling(
-    cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool
-):
+def test_phase_angle_brightness_scaling(cielim_connection: cielim.Connector):
     """
     Total reflected brightness (sum of pixel values, i.e. image moment m00) should decrease
     monotonically as phase angle increases.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene(brdf="Regolith")
 
     phase_angles_deg = [0, 45, 90, 135]
     sun_positions = [
@@ -119,9 +95,6 @@ def test_phase_angle_brightness_scaling(
         assert m00 > 0, f"Image was blank at phase angle {phase_angle_deg} deg."
         brightnesses.append(m00)
 
-        if show_plots:
-            show_render(image, f"phase={phase_angle_deg} deg (m00={m00:.0f})")
-
     for i in range(1, len(brightnesses)):
         max_prior = max(brightnesses[:i])
         assert brightnesses[i] < max_prior, (
@@ -144,8 +117,6 @@ def test_phase_angle_brightness_scaling(
 )
 def test_phase_angle_scene(
     cielim_connection: cielim.Connector,
-    default_scene: cielim.Scene,
-    show_plots: bool,
     test_name,
     sun_position,
     phase_angle,
@@ -155,7 +126,7 @@ def test_phase_angle_scene(
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene(brdf="Regolith")
 
     scene.set_celestial_body_params(0, position=sun_position)
 
@@ -197,13 +168,6 @@ def test_phase_angle_scene(
     assert moments["m00"] != 0, f"Image was blank — no illuminated body detected for test: {test_name}"
     actual_cob_x = round(moments["m10"] / moments["m00"])
     actual_cob_y = image_height - round(moments["m01"] / moments["m00"])
-
-    if show_plots:
-        show_render(
-            image,
-            f"{test_name} (actual CoB=({actual_cob_x}, {actual_cob_y}), "
-            f"expected=({expected_cob_x}, {expected_cob_y}))",
-        )
 
     np.testing.assert_allclose(
         [actual_cob_x, actual_cob_y],

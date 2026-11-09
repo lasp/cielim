@@ -2,9 +2,9 @@ from pathlib import Path
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MaxNLocator, ScalarFormatter
 import numpy as np
 import pandas as pd
+from matplotlib.ticker import MaxNLocator, ScalarFormatter
 from scipy.integrate import simpson
 from scipy.optimize import basinhopping
 

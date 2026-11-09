@@ -24,13 +24,11 @@ import csv
 import os
 import time
 
+import cielim
 import cv2
 import numpy as np
-
-import cielim
-from cielim.utils import orbital_motion
+from cielim.utils import orbital_motion, scene_dynamics
 from cielim.utils import rigid_body_kinematics as rbk
-from cielim.utils import scene_dynamics
 from cielim.utils.qe_curve_fit import const_au
 
 current_file_path = os.path.dirname(__file__)

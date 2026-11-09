@@ -1,26 +1,19 @@
+import sys
+from pathlib import Path
+
+import cielim
 import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 from scipy.optimize import curve_fit
 
-import cielim
-from cielim.utils import plot_style as ps
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from scenes.common import default_scene
 
 gamma_encoding = 2.2
 default_full_well_capacity = 50000
 read_noise_clip_factor = np.sqrt((np.pi - 1) / (2 * np.pi))
-
-
-def show_render(image: np.ndarray, title: str) -> None:
-    plt.figure()
-    if image.ndim == 3:
-        plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
-    else:
-        plt.imshow(image, cmap="gray", vmin=0, vmax=255)
-    plt.title(title)
-    plt.tight_layout()
-    plt.show()
 
 
 def gaussian_2d(coords, amplitude, x0, y0, sigma_x, sigma_y, offset):
@@ -85,23 +78,6 @@ def fit_psf_sigma(image_gray: np.ndarray, window: int = 50) -> tuple[float, floa
         return sigma_x_guess, sigma_y_guess
 
 
-@pytest.fixture
-def default_scene() -> cielim.Scene:
-    """
-    Set up the scene with the spacecraft looking directly at a plane.
-    """
-    scene = cielim.Scene()
-
-    scene.set_spacecraft_params(position=(0, 0, 2000), attitude=(0, 1, 0))
-
-    scene.set_lens_params(fov=(10 * np.pi / 180, 10 * np.pi / 180))
-
-    index = scene.add_celestial_body("asteroid")
-    scene.set_celestial_body_params(index, mesh_shape="Plane", mesh_brdf="Lambertian", mesh_radius=1000)
-
-    return scene
-
-
 @pytest.mark.parametrize(
     "k1, k2, k3, p1, p2",
     [
@@ -115,15 +91,13 @@ def default_scene() -> cielim.Scene:
         (0.0, 0.0, 0.0, 0.0, 0.3),
     ],
 )
-def test_LensDistortion(
-    cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, k1, k2, k3, p1, p2
-):
+def test_lens_distortion(cielim_connection: cielim.Connector, k1, k2, k3, p1, p2):
     """
     Tests that lens distortion is distorting the image as expected.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene(shape="Plane", distance=2000, fov_deg=10)
 
     scene.set_spacecraft_params(position=(0, 0, 1000))  # Move closer to make effects more pronounced
 
@@ -195,24 +169,17 @@ def test_LensDistortion(
     diff = np.abs(distorted_image.astype(np.int32) - distorted_base.astype(np.int32))
     mismatch_fraction = np.mean(diff > 1)
 
-    if show_plots:
-        show_render(base_image, "base image")
-        show_render(distorted_base, f"expected distortion (k1={k1}, k2={k2}, k3={k3}, p1={p1}, p2={p2})")
-        show_render(distorted_image, f"engine distortion (mismatch={mismatch_fraction:.2%}, max diff={diff.max()})")
-
     # Some pixels will be off because cv can smooth edges (6% allowance)
     assert mismatch_fraction < 0.06, f"Too many mismatched pixels: {mismatch_fraction:.2%} " f"(max diff: {diff.max()})"
 
 
-def test_GaussianPSF(cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool):
+def test_gaussian_psf(cielim_connection: cielim.Connector):
     """
-    Renders a sub-pixel point source and fits a
-    2D Gaussian to it, checking the fitted sigma matches the configured psf_sigma directly
-    rather than only checking that blur reduces edge variance.
+    Tests that PSF is added to the image with the configured sigma.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene(shape="Plane", distance=2000, fov_deg=10)
 
     scene.set_celestial_body_params(1, mesh_shape="sphere_normalized", mesh_radius=10)
     scene.set_spacecraft_params(position=(0, 0, 400_000))
@@ -223,9 +190,6 @@ def test_GaussianPSF(cielim_connection: cielim.Connector, default_scene: cielim.
     baseline_gray = cv2.cvtColor(baseline_image, cv2.COLOR_BGR2GRAY)
     baseline_sigma_x, baseline_sigma_y = fit_psf_sigma(baseline_gray)
     baseline_sigma = (baseline_sigma_x + baseline_sigma_y) / 2
-
-    if show_plots:
-        show_render(baseline_gray, f"baseline (sigma={baseline_sigma:.2f}px)")
 
     # KNOWN ENGINE BUG: ACameraModel::SetCameraParameters (CameraModel.cpp) hardcodes
     # CorruptionParams.KernelWidth = 7 (radius 3px) regardless of Sigma, so GaussianPSF.usf can
@@ -246,10 +210,6 @@ def test_GaussianPSF(cielim_connection: cielim.Connector, default_scene: cielim.
 
     expected_sigma = np.sqrt(psf_sigma**2 + baseline_sigma**2)
 
-    if show_plots:
-        fitted_sigma = (fitted_sigma_x + fitted_sigma_y) / 2
-        show_render(image_gray, f"psf_sigma={psf_sigma} (fitted={fitted_sigma:.2f}px, expected={expected_sigma:.2f}px)")
-
     np.testing.assert_allclose(
         [fitted_sigma_x, fitted_sigma_y],
         [expected_sigma, expected_sigma],
@@ -258,6 +218,35 @@ def test_GaussianPSF(cielim_connection: cielim.Connector, default_scene: cielim.
         f"expected ({expected_sigma:.2f} = psf_sigma {psf_sigma} combined in quadrature with the "
         f"source's inherent spread {baseline_sigma:.2f})",
     )
+
+
+def test_shot_noise(cielim_connection: cielim.Connector):
+    """
+    Tests that shot noise is added to the image.
+    """
+    connector = cielim_connection
+
+    scene = default_scene(shape="Plane", distance=2000, fov_deg=10)
+
+    scene.set_sensor_params(exposure=1e-5)  # Set exposure such that plane is gray so diff is perceptible
+    scene.set_corruption_params(shot_noise=False)
+
+    connector.send_init_request()
+    connector.send_frame(scene.get_scene())
+    base_image, _, _ = connector.request_image_for_camera_id(1, True, False)
+
+    scene.set_corruption_params(shot_noise=True)
+
+    connector.send_init_request()
+    connector.send_frame(scene.get_scene())
+    noisy_image, _, _ = connector.request_image_for_camera_id(1, True, False)
+
+    image = cv2.absdiff(base_image, noisy_image)
+
+    # Amplify the difference to make it more visible for debugging
+    image = cv2.multiply(image, np.ones(image.shape, dtype=image.dtype), scale=50.0)
+
+    np.testing.assert_(image[..., :3].any(), "No noise was applied")
 
 
 @pytest.mark.parametrize(
@@ -273,16 +262,14 @@ def test_GaussianPSF(cielim_connection: cielim.Connector, default_scene: cielim.
         (100, 10000),
     ],
 )
-def test_DarkCurrent(
-    cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, dark_current, sigma
-):
+def test_dark_current(cielim_connection: cielim.Connector, dark_current, sigma):
     """
     Tests whether dark current is being added to the image.
     See RandomFuncs.ush for RNG implementation.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene(shape="Plane", distance=2000, fov_deg=10)
 
     scene.delete_celestial_body(1)
 
@@ -293,9 +280,6 @@ def test_DarkCurrent(
     connector.send_frame(scene.get_scene())
     image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
-    if show_plots:
-        show_render(image, f"dark_current={dark_current}, sigma={sigma}")
-
     np.testing.assert_(image[..., :3].any(), "No noise was applied")
 
 
@@ -303,14 +287,14 @@ def test_DarkCurrent(
     "cosmic_rays",
     [5, 20, 50],
 )
-def test_CosmicRays(cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, cosmic_rays):
+def test_cosmic_rays(cielim_connection: cielim.Connector, cosmic_rays):
     """
     Checks that cosmic ray hits happen at the expected rate
      by rendering many frames, counting hits, and comparing the average against the configured rate .
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene(shape="Plane", distance=2000, fov_deg=10)
 
     scene.delete_celestial_body(1)
 
@@ -318,7 +302,7 @@ def test_CosmicRays(cielim_connection: cielim.Connector, default_scene: cielim.S
 
     num_frames = 30
     hit_counts = []
-    for frame_idx in range(num_frames):
+    for _ in range(num_frames):
         connector.send_init_request()
         connector.send_frame(scene.get_scene())
         image, _, _ = connector.request_image_for_camera_id(1, True, False)
@@ -327,9 +311,6 @@ def test_CosmicRays(cielim_connection: cielim.Connector, default_scene: cielim.S
         _, thresh = cv2.threshold(image_gray, 200, 255, cv2.THRESH_BINARY)
         num_labels, _ = cv2.connectedComponents(thresh)
         hit_counts.append(num_labels - 1)  # exclude the background label
-
-        if show_plots and frame_idx == 0:
-            show_render(thresh, f"cosmic_rays={cosmic_rays} (frame 0, {num_labels - 1} hits)")
 
     mean_hits = np.mean(hit_counts)
 
@@ -354,14 +335,14 @@ def test_CosmicRays(cielim_connection: cielim.Connector, default_scene: cielim.S
     "read_noise",
     [50, 500, 5000, 20000],
 )
-def test_ReadNoise(cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, read_noise):
+def test_read_noise(cielim_connection: cielim.Connector, read_noise):
     """
     Tests that read noise matches the expected half-normal distribution (std, mean, and the
     fraction of pixels clipped to exactly zero), not just its standard deviation alone.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene(shape="Plane", distance=2000, fov_deg=10)
 
     scene.delete_celestial_body(1)
 
@@ -386,19 +367,6 @@ def test_ReadNoise(cielim_connection: cielim.Connector, default_scene: cielim.Sc
     expected_std = sigma * read_noise_clip_factor
     # For X ~ N(0, sigma), Y = max(X, 0): E[Y] = sigma / sqrt(2*pi), and P(Y = 0) = 0.5.
     expected_mean = sigma / np.sqrt(2 * np.pi)
-
-    if show_plots:
-        plt.figure()
-        plt.hist(linearized.ravel(), bins=100, density=True, label="measured")
-        x = np.linspace(1e-6, linearized.max(), 200)
-        half_normal_pdf = np.sqrt(2 / np.pi) / sigma * np.exp(-(x**2) / (2 * sigma**2))
-        plt.plot(x, half_normal_pdf, color="red", label="expected half-normal")
-        plt.title(
-            f"read_noise={read_noise} (std={measured_std:.4f} vs {expected_std:.4f}, " f"zero_frac={zero_fraction:.2f})"
-        )
-        plt.legend()
-        plt.tight_layout()
-        plt.show()
 
     np.testing.assert_allclose(
         measured_std,
@@ -434,16 +402,14 @@ def test_ReadNoise(cielim_connection: cielim.Connector, default_scene: cielim.Sc
         (0.000025, 0.000025),
     ],
 )
-def test_PixelDefect(
-    cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, stuck_rate, dead_rate
-):
+def test_pixel_defect(cielim_connection: cielim.Connector, stuck_rate, dead_rate):
     """
     Tests stuck and dead pixels can be added to image.
     See RandomFuncs.ush for RNG implementation.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene(shape="Plane", distance=2000, fov_deg=10)
 
     scene.set_spacecraft_params(position=(0, 0, 100))  # Make spacecraft closer to plane to fill screen
     scene.set_sensor_params(exposure=2e-5)  # Reduce exposure time so image is gray
@@ -452,9 +418,6 @@ def test_PixelDefect(
     connector.send_init_request()
     connector.send_frame(scene.get_scene())
     image, _, _ = connector.request_image_for_camera_id(1, True, False)
-
-    if show_plots:
-        show_render(image, f"stuck_rate={stuck_rate}, dead_rate={dead_rate}")
 
     is_white = (image == [255, 255, 255]).all(axis=-1)
     is_black = (image == [0, 0, 0]).all(axis=-1)
@@ -483,14 +446,14 @@ def test_PixelDefect(
     "signal_gain",
     [0.25, 0.5, 0.75, 0.8, 1.5, 2.0],  # includes gain > 1 to verify amplification, not just attenuation
 )
-def test_SignalGain(cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool, signal_gain):
+def test_signal_gain(cielim_connection: cielim.Connector, signal_gain):
     """
     Tests that gain scales the sensor's linear signal, by comparing the ratio of mean linear
     brightness (gained vs. base) directly against the configured gain.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene(shape="Plane", distance=2000, fov_deg=10)
 
     scene.set_sensor_params(gamma=gamma_encoding, exposure=1e-5)
 
@@ -515,120 +478,9 @@ def test_SignalGain(cielim_connection: cielim.Connector, default_scene: cielim.S
 
     measured_ratio = np.mean(gain_linear[valid]) / np.mean(base_linear[valid])
 
-    if show_plots:
-        show_render(base_image, "base")
-        show_render(gain_image, f"gain={signal_gain} (measured ratio={measured_ratio:.3f})")
-
     np.testing.assert_allclose(
         measured_ratio,
         signal_gain,
         rtol=0.1,
         err_msg=f"Measured linear brightness ratio ({measured_ratio:.3f}) does not match configured gain ({signal_gain})",
     )
-
-
-# Showcase: page-ready sensor- and lens-model demo images (opt-in via showcase_dir)
-
-
-def _render(connector, scene):
-    """Send a scene and return the rendered image (BGR).
-
-    The first image requested after an init can come back blank (the same reason Connector.connect
-    renders and discards a dummy scene), which silently turns a showcase panel black. Request twice
-    and keep the second.
-    """
-    connector.send_init_request()
-    connector.send_frame(scene.get_scene())
-    connector.request_image_for_camera_id(1, True, False)
-    image, _, _ = connector.request_image_for_camera_id(1, True, False)
-    return image
-
-
-def _show_scene(ax, image_bgr, title, title_width_in=ps.page_w):
-    """Display a rendered scene image (native color, not inferno) on ``ax``.
-
-    The title is wrapped to ``title_width_in`` so it stays 10 pt instead of setting the figure's
-    width (figures are built at the page's text width and saved at that size).
-    """
-    ax.imshow(cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB), interpolation="nearest")
-    ax.set_title(ps.wrap_to_width(title, title_width_in, ps.body_pt, family="sans"))
-    ax.axis("off")
-
-
-@pytest.mark.showcase
-def test_showcase_sensor_effects(cielim_connection, default_scene):
-    """One frame combining the sensor-model corruptions: read noise, dark current, stuck/dead
-    pixels, and cosmic rays over a simple lit target."""
-    ps.apply_showcase_style()
-    connector = cielim_connection
-    scene = default_scene
-
-    position, exposure = (0, 0, 100), 2e-5
-    corruptions = {
-        "read_noise": 3000,
-        "dc_rate": 50,
-        "dc_sigma": 800,
-        "stuck_px_rate": 0.0005,
-        "dead_px_rate": 0.0005,
-        "cosmic_rays": 100,
-    }
-
-    scene.set_spacecraft_params(position=position)  # fill the frame with the lit plane
-    scene.set_sensor_params(exposure=exposure)  # low exposure -> mid-gray field so the effects read
-    scene.set_corruption_params(**corruptions)
-
-    image = _render(connector, scene)
-
-    # Half text width rather than a full page; the title stays 10 pt and wraps.
-    title = "Sensor model — read noise, dark current, dead/stuck pixels, cosmic rays"
-    lines = ps.wrap_to_width(title, ps.half_w, ps.body_pt, family="sans").count("\n") + 1
-    fig, ax = plt.subplots(figsize=ps.figsize_half(title_lines=lines))
-    _show_scene(ax, image, title, title_width_in=ps.half_w)
-    fig.tight_layout()
-    ps.save_showcase(fig, "sensor_effects")
-    ps.save_context(
-        "sensor_effects",
-        {"target": "lit plane", "position_m": list(position), "exposure_s": exposure, **corruptions},
-        files=["sensor_effects.png"],
-    )
-    plt.close(fig)
-
-
-@pytest.mark.showcase
-def test_showcase_lens_effects(cielim_connection, default_scene):
-    """Lens models side-by-side: a clean render, radial distortion, and a PSF-blurred render."""
-    ps.apply_showcase_style()
-    connector = cielim_connection
-    scene = default_scene
-    position, dist_radial, psf_sigma = (0, 0, 1000), (0.5, 0.0, 0.0), 50
-    scene.set_spacecraft_params(position=position)  # closer -> distortion/blur are pronounced
-
-    clean = _render(connector, scene)
-
-    scene.set_corruption_params(dist_radial=dist_radial, dist_tangent=(0.0, 0.0))
-    distorted = _render(connector, scene)
-
-    scene.set_corruption_params(dist_radial=(0.0, 0.0, 0.0), dist_tangent=(0.0, 0.0), psf_sigma=psf_sigma)
-    blurred = _render(connector, scene)
-
-    panel_w = ps.page_w / 3
-    fig, axes = plt.subplots(1, 3, figsize=ps.figsize_strip(3))
-    _show_scene(axes[0], clean, "Clean", title_width_in=panel_w)
-    _show_scene(axes[1], distorted, "Radial distortion (k1=0.5)", title_width_in=panel_w)
-    _show_scene(axes[2], blurred, "Gaussian PSF (σ=50)", title_width_in=panel_w)
-    fig.suptitle("Lens models")
-    fig.tight_layout()
-    ps.save_showcase(fig, "lens_effects")
-    ps.save_context(
-        "lens_effects",
-        {
-            "target": "lit plane",
-            "position_m": list(position),
-            "panels": ["clean", "radial distortion", "gaussian psf"],
-            "dist_radial_k": list(dist_radial),
-            "dist_tangent_p": [0.0, 0.0],
-            "psf_sigma": psf_sigma,
-        },
-        files=["lens_effects.png"],
-    )
-    plt.close(fig)

@@ -1,10 +1,14 @@
+import sys
+from pathlib import Path
+
+import cielim
 import cv2
-import matplotlib.patches as mpatches
-import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 
-import cielim
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from scenes.common import default_scene
 
 baseline_exposure = 0.001  # seconds, matches Scene.__init__ default
 baseline_qe = (1.0, 1.0, 1.0)
@@ -23,40 +27,14 @@ def lit_pixel_mean(image_gray: np.ndarray) -> float:
     return float(np.mean(lit)) if lit.size else 0.0
 
 
-def show_render(image_gray: np.ndarray, title: str, bbox=None) -> None:
-    plt.figure()
-    plt.imshow(image_gray, cmap="gray", vmin=0, vmax=255)
-    if bbox is not None:
-        x, y, w, h = bbox
-        plt.gca().add_patch(mpatches.Rectangle((x, y), w, h, edgecolor="red", facecolor="none", linewidth=2))
-    plt.title(title)
-    plt.tight_layout()
-    plt.show()
-
-
-@pytest.fixture
-def default_scene() -> cielim.Scene:
-    """
-    Set up the scene with the spacecraft looking directly at a sphere.
-    """
-    scene = cielim.Scene()
-
-    scene.set_spacecraft_params(position=(0, 0, 2000), attitude=(0, 1, 0))
-
-    index = scene.add_celestial_body("asteroid")
-    scene.set_celestial_body_params(index, mesh_shape="sphere_normalized", mesh_brdf="Lambertian", mesh_radius=1000)
-
-    return scene
-
-
-def test_image_brightness(cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool):
+def test_image_brightness(cielim_connection: cielim.Connector):
     """
     Tests that reducing exposure time, transmission factor, and QE reduces image brightness,
     and that brightness scales proportionally (not just directionally) with exposure time.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene()
 
     scene.set_sensor_params(
         exposure=baseline_exposure,
@@ -74,9 +52,6 @@ def test_image_brightness(cielim_connection: cielim.Connector, default_scene: ci
     image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     base_mean = lit_pixel_mean(image_gray)
 
-    if show_plots:
-        show_render(image_gray, f"baseline (mean={base_mean:.1f})")
-
     assert np.max(image_gray) < 255, (
         "Baseline render is fully saturated (max pixel = 255) — the exposure-halving check below "
         "can't detect a brightness difference against a clipped signal. Lower baseline_exposure or "
@@ -91,9 +66,6 @@ def test_image_brightness(cielim_connection: cielim.Connector, default_scene: ci
 
     low_exposure_image_gray = cv2.cvtColor(low_exposure_image, cv2.COLOR_BGR2GRAY)
     low_exposure_mean = lit_pixel_mean(low_exposure_image_gray)
-
-    if show_plots:
-        show_render(low_exposure_image_gray, f"halved exposure (mean={low_exposure_mean:.1f})")
 
     np.testing.assert_array_less(
         low_exposure_mean, base_mean, err_msg="Brightness did not decrease with lower exposure."
@@ -117,9 +89,6 @@ def test_image_brightness(cielim_connection: cielim.Connector, default_scene: ci
     low_transmission_image_gray = cv2.cvtColor(low_transmission_image, cv2.COLOR_BGR2GRAY)
     low_transmission_mean = lit_pixel_mean(low_transmission_image_gray)
 
-    if show_plots:
-        show_render(low_transmission_image_gray, f"reduced transmission (mean={low_transmission_mean:.1f})")
-
     np.testing.assert_array_less(
         low_transmission_mean, base_mean, err_msg="Brightness did not decrease with lower transmission."
     )
@@ -137,22 +106,17 @@ def test_image_brightness(cielim_connection: cielim.Connector, default_scene: ci
     low_qe_image_gray = cv2.cvtColor(low_qe_image, cv2.COLOR_BGR2GRAY)
     low_qe_mean = lit_pixel_mean(low_qe_image_gray)
 
-    if show_plots:
-        show_render(low_qe_image_gray, f"reduced QE (mean={low_qe_mean:.1f})")
-
     np.testing.assert_array_less(low_qe_mean, base_mean, err_msg="Brightness did not decrease with lower QE.")
 
 
-def test_near_zero_exposure_produces_black_image(
-    cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool
-):
+def test_near_zero_exposure_produces_black_image(cielim_connection: cielim.Connector):
     """
     Tests that a vanishingly short exposure time (effectively no shutter time to collect photons)
     produces a fully black image.
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene()
 
     scene.set_sensor_params(exposure=near_zero_exposure)
 
@@ -161,9 +125,6 @@ def test_near_zero_exposure_produces_black_image(
     image, _, _ = connector.request_image_for_camera_id(1, True, False)
 
     image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-    if show_plots:
-        show_render(image_gray, "near-zero exposure")
 
     assert np.all(image_gray == 0), "Image was not fully black with a near-zero exposure time."
 
@@ -180,8 +141,6 @@ def test_near_zero_exposure_produces_black_image(
 )
 def test_camera_fov(
     cielim_connection: cielim.Connector,
-    default_scene: cielim.Scene,
-    show_plots: bool,
     test_name,
     fov_x_rad,
     fov_y_rad,
@@ -192,7 +151,7 @@ def test_camera_fov(
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene()
 
     scene.set_lens_params(fov=(fov_x_rad, fov_y_rad))
 
@@ -212,10 +171,7 @@ def test_camera_fov(
     assert contours, f"No contours found in rendered image for test: {test_name}"
 
     largest_contour = max(contours, key=cv2.contourArea)
-    x, y, w, h = cv2.boundingRect(largest_contour)
-
-    if show_plots:
-        show_render(image, test_name, bbox=(x, y, w, h))
+    _, _, w, h = cv2.boundingRect(largest_contour)
 
     connector.send_init_request()  # Make sure scene is cleared
 
@@ -248,16 +204,14 @@ def test_camera_fov(
     )
 
 
-def test_camera_fov_overflow(cielim_connection: cielim.Connector, default_scene: cielim.Scene, show_plots: bool):
+def test_camera_fov_overflow(cielim_connection: cielim.Connector):
     """
     Tests that an object much larger than the frame is clipped to the
     image bounds instead of crashing the render or producing an out-of-frame measurement.
     """
     connector = cielim_connection
 
-    scene = default_scene
-
-    scene.set_lens_params(fov=(5 * np.pi / 180, 5 * np.pi / 180))
+    scene = default_scene(distance=2000)  # close enough that the sphere overfills the 5 deg frame
 
     connector.send_init_request()
     connector.send_frame(scene.get_scene())
@@ -274,9 +228,6 @@ def test_camera_fov_overflow(cielim_connection: cielim.Connector, default_scene:
 
     largest_contour = max(contours, key=cv2.contourArea)
     x, y, w, h = cv2.boundingRect(largest_contour)
-
-    if show_plots:
-        show_render(image, "FOV overflow", bbox=(x, y, w, h))
 
     connector.send_init_request()
 
@@ -299,8 +250,6 @@ def test_camera_fov_overflow(cielim_connection: cielim.Connector, default_scene:
 )
 def test_camera_resolution(
     cielim_connection: cielim.Connector,
-    default_scene: cielim.Scene,
-    show_plots: bool,
     test_name,
     resolution_w,
     resolution_h,
@@ -311,7 +260,7 @@ def test_camera_resolution(
     """
     connector = cielim_connection
 
-    scene = default_scene
+    scene = default_scene()
 
     connector.send_init_request()
     connector.send_frame(scene.get_scene())
@@ -327,10 +276,7 @@ def test_camera_resolution(
     assert base_contours, f"No contours found in baseline rendered image for test: {test_name}"
 
     largest_base_contour = max(base_contours, key=cv2.contourArea)
-    x_base, y_base, w_base, h_base = cv2.boundingRect(largest_base_contour)
-
-    if show_plots:
-        show_render(base_image, f"{test_name} (baseline resolution)", bbox=(x_base, y_base, w_base, h_base))
+    _, _, w_base, h_base = cv2.boundingRect(largest_base_contour)
 
     image_width_base, image_height_base = scene.get_scene().camera.sensorModel.resolution
 
@@ -353,10 +299,7 @@ def test_camera_resolution(
     assert contours, f"No contours found in rendered image for test: {test_name}"
 
     largest_contour = max(contours, key=cv2.contourArea)
-    x, y, w, h = cv2.boundingRect(largest_contour)
-
-    if show_plots:
-        show_render(image, f"{test_name} ({resolution_w}x{resolution_h})", bbox=(x, y, w, h))
+    _, _, w, h = cv2.boundingRect(largest_contour)
 
     w_ratio_to_res = w / resolution_w
     h_ratio_to_res = h / resolution_h
